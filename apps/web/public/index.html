@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Sakhi Journal</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="screen" data-recording="false">
+      <header class="header">
+        <h1>Journal</h1>
+        <p class="subtitle">Take a pause, tap the mic, and talk it through.</p>
+      </header>
+
+      <section class="mic-container">
+        <button
+          class="mic-button"
+          type="button"
+          aria-live="polite"
+          aria-pressed="false"
+          aria-label="Start recording your journal entry"
+        >
+          <span class="mic-button__glow" aria-hidden="true"></span>
+          <span class="mic-button__ping" aria-hidden="true"></span>
+          <span class="mic-button__icon mic-button__icon--mic" aria-hidden="true">
+            <svg width="108" height="108" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 16a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Z"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M5 11v2a7 7 0 0 0 14 0v-2"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+              />
+              <path
+                d="M12 19v3"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+              />
+            </svg>
+          </span>
+          <span class="mic-button__icon mic-button__icon--stop" aria-hidden="true">
+            <svg width="96" height="96" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
+            </svg>
+          </span>
+        </button>
+
+        <div class="helper" id="helper" aria-live="polite">
+          <span class="helper-text helper-text--idle" data-helper="idle">Tap the mic to start speaking.</span>
+          <span class="helper-text helper-text--prompt" data-helper="prompt" hidden>
+            We need permission to use your microphone.
+          </span>
+          <span class="helper-text helper-text--denied" data-helper="denied" hidden>
+            Microphone access is blocked. Update your browser settings and try again.
+          </span>
+          <span class="helper-text helper-text--unsupported" data-helper="unsupported" hidden>
+            Recording isn’t supported in this browser yet. Try a modern Chromium, Safari, or Firefox build.
+          </span>
+          <span class="helper-text helper-text--recording" data-helper="recording" role="status" hidden>
+            <span class="helper-dot" aria-hidden="true"></span>
+            Recording… <span id="timer">00:00</span> — tap to stop
+          </span>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <a class="type-link" href="#type">Type instead</a>
+      </footer>
+    </main>
+
+    <script>
+      const screenEl = document.querySelector(".screen");
+      const buttonEl = document.querySelector(".mic-button");
+      const timerEl = document.getElementById("timer");
+      const helperMessages = Array.from(document.querySelectorAll("[data-helper]"));
+
+      let recording = false;
+      let requesting = false;
+      let seconds = 0;
+      let timer;
+      let mediaRecorder = null;
+      let activeStream = null;
+      let chunks = [];
+
+      const supportsRecording =
+        typeof MediaRecorder !== "undefined" &&
+        navigator.mediaDevices &&
+        typeof navigator.mediaDevices.getUserMedia === "function";
+
+      function showHelper(name) {
+        helperMessages.forEach((el) => {
+          if (el.dataset.helper === name) {
+            el.removeAttribute("hidden");
+          } else {
+            el.setAttribute("hidden", "hidden");
+          }
+        });
+      }
+
+      function formatTime(value) {
+        const mins = String(Math.floor(value / 60)).padStart(2, "0");
+        const secs = String(value % 60).padStart(2, "0");
+        return mins + ":" + secs;
+      }
+
+      function setRecording(next) {
+        recording = next;
+        screenEl.dataset.recording = String(recording);
+        buttonEl.setAttribute("aria-pressed", String(recording));
+
+        if (recording) {
+          showHelper("recording");
+          buttonEl.setAttribute("aria-label", "Stop recording your journal entry");
+          seconds = 0;
+          timerEl.textContent = formatTime(seconds);
+          timer = setInterval(() => {
+            seconds += 1;
+            timerEl.textContent = formatTime(seconds);
+          }, 1000);
+        } else {
+          showHelper("idle");
+          buttonEl.setAttribute("aria-label", "Start recording your journal entry");
+          clearInterval(timer);
+          timer = null;
+          seconds = 0;
+          timerEl.textContent = formatTime(seconds);
+        }
+      }
+
+      function ensureSupport() {
+        if (!supportsRecording) {
+          buttonEl.disabled = true;
+          buttonEl.setAttribute("aria-disabled", "true");
+          showHelper("unsupported");
+          return false;
+        }
+        return true;
+      }
+
+      async function requestStream() {
+        if (!ensureSupport()) return null;
+        if (activeStream) return activeStream;
+
+        requesting = true;
+        showHelper("prompt");
+        buttonEl.setAttribute("aria-busy", "true");
+        buttonEl.disabled = true;
+
+        try {
+          activeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          showHelper("idle");
+        } catch (err) {
+          console.error("Microphone permission denied or error", err);
+          showHelper("denied");
+          activeStream = null;
+        } finally {
+          requesting = false;
+          buttonEl.removeAttribute("aria-busy");
+          buttonEl.disabled = false;
+        }
+
+        return activeStream;
+      }
+
+      async function startRecording() {
+        if (requesting) return;
+        const stream = await requestStream();
+        if (!stream) return;
+
+        chunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.addEventListener("dataavailable", (event) => {
+          if (event.data && event.data.size) chunks.push(event.data);
+        });
+        mediaRecorder.addEventListener("stop", () => {
+          if (chunks.length) {
+            const blob = new Blob(chunks, { type: chunks[0] ? chunks[0].type : "audio/webm" });
+            console.info("Recorded audio blob", blob);
+          }
+          chunks = [];
+        });
+
+        mediaRecorder.start();
+        setRecording(true);
+      }
+
+      function stopRecording() {
+        if (!recording) return;
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+        setRecording(false);
+
+        if (activeStream) {
+          activeStream.getTracks().forEach((track) => track.stop());
+          activeStream = null;
+        }
+      }
+
+      buttonEl.addEventListener("click", () => {
+        if (!ensureSupport() || requesting) return;
+        if (recording) {
+          stopRecording();
+        } else {
+          startRecording();
+        }
+      });
+
+      if (ensureSupport()) {
+        showHelper("idle");
+      }
+    </script>
+  </body>
+</html>

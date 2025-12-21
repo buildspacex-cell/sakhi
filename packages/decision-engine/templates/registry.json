@@ -1,0 +1,95 @@
+[
+  {
+    "intent": "wardrobe",
+    "slots": [
+      { "key": "setting", "question": "Is it more formal or casual?", "fallback": "conference", "voi": 0.6 },
+      { "key": "indoor", "question": "Mostly indoors or outdoors?", "fallback": "indoors", "voi": 0.4 },
+      { "key": "climate", "question": "Any climate notes (humid/cool)?", "fallback": "temperate", "voi": 0.5 }
+    ],
+    "tinyAction": "Save as ready outfit template",
+    "options": [
+      {
+        "label": "Classic polished",
+        "rationale": "Structured co-ord with loafers—easy for ${setting} and works for ${indoor}."
+      },
+      {
+        "label": "Personalized power",
+        "rationale": "Pastel pantsuit + soft blouse; comfortable in ${climate} weather."
+      },
+      {
+        "label": "Playful confidence",
+        "rationale": "Midi dress + blazer for ${setting}; statement earrings keep it lively."
+      }
+    ],
+    "learning": [
+      { "key": "wardrobe.setting", "value": "${setting}" }
+    ]
+  },
+  {
+    "intent": "preworkout-meal",
+    "slots": [
+      { "key": "window", "question": "How long until the workout?", "fallback": "45m", "voi": 0.7 },
+      { "key": "intensity", "question": "What type of workout?", "fallback": "vinyasa", "voi": 0.3 }
+    ],
+    "tinyAction": "Set pre-class snack reminder 60m prior",
+    "options": [
+      { "label": "Smooth start", "rationale": "Banana + protein smoothie about ${window} before ${intensity}." },
+      { "label": "Savory focus", "rationale": "Avocado toast with egg for steady carbs." },
+      { "label": "Light crunch", "rationale": "Yogurt + oats + berries if you prefer spoonable." }
+    ],
+    "learning": [
+      { "key": "preworkout.window", "value": "${window}" }
+    ]
+  },
+  {
+    "intent": "travel-pack",
+    "slots": [
+      { "key": "climate", "question": "Destination climate?", "fallback": "mild", "voi": 0.5 },
+      { "key": "duration", "question": "How many days?", "fallback": "4", "voi": 0.4 },
+      { "key": "activities", "question": "Key activities?", "fallback": "mixed", "voi": 0.6 }
+    ],
+    "tinyAction": "Add capsule checklist",
+    "options": [
+      { "label": "Capsule essentials", "rationale": "${duration}-day mix-n-match capsule adjusted for ${climate}." },
+      { "label": "Activity ready", "rationale": "Slots in footwear + gear for ${activities}." },
+      { "label": "Care kit", "rationale": "Toiletries + meds in zip cubes; docs in flat pouch." }
+    ],
+    "learning": [
+      { "key": "travel.climate", "value": "${climate}" }
+    ]
+  },
+  {
+    "intent": "route",
+    "slots": [
+      { "key": "arrival", "question": "Arrival time?", "fallback": "09:00", "voi": 0.5 },
+      { "key": "stakes", "question": "How critical is on-time arrival?", "fallback": "high", "voi": 0.6 },
+      { "key": "comfort", "question": "Comfort or speed?", "fallback": "balance", "voi": 0.4 }
+    ],
+    "tinyAction": "Add ETA reminder",
+    "options": [
+      { "label": "Reliable", "rationale": "Leave earlier; ride-share buffer keeps ${stakes} stakes safe." },
+      { "label": "Transit + last mile", "rationale": "Metro avoids traffic; short cab for final stretch." },
+      { "label": "Comfort mode", "rationale": "Drive + calm playlist to arrive by ${arrival}." }
+    ],
+    "learning": [
+      { "key": "route.comfort", "value": "${comfort}" }
+    ]
+  },
+  {
+    "intent": "gift",
+    "slots": [
+      { "key": "recipient", "question": "Who is it for?", "fallback": "friend", "voi": 0.5 },
+      { "key": "occasion", "question": "What’s the occasion?", "fallback": "birthday", "voi": 0.6 },
+      { "key": "budget", "question": "Budget range?", "fallback": "$75", "voi": 0.7 }
+    ],
+    "tinyAction": "Save shortlist",
+    "options": [
+      { "label": "Personal hook", "rationale": `${recipient} + ${occasion}: thoughtful item around ${budget}.` },
+      { "label": "Experience", "rationale": "Shared mini-experience to create a memory." },
+      { "label": "Utility upgrade", "rationale": "Daily-use item they wouldn’t splurge on." }
+    ],
+    "learning": [
+      { "key": "gift.budget", "value": "${budget}" }
+    ]
+  }
+]

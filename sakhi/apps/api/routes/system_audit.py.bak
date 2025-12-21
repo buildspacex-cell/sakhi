@@ -1,0 +1,101 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends
+
+from sakhi.apps.api.core.db import get_db
+
+router = APIRouter()
+
+SQL = """
+WITH
+j AS (
+  SELECT MAX(ts) AS latest, COUNT(*) AS cnt
+  FROM journal_entries
+),
+je AS (
+  SELECT MAX(created_at) AS latest, COUNT(*) AS cnt
+  FROM journal_embeddings
+),
+r AS (
+  SELECT MAX(created_at) AS latest, COUNT(*) AS cnt
+  FROM reflections
+),
+m AS (
+  SELECT MAX(updated_at) AS latest, COUNT(*) AS cnt
+  FROM meta_reflection_scores
+),
+pm AS (
+  SELECT MAX(updated_at) AS latest
+  FROM personal_model
+),
+rf AS (
+  SELECT MAX(updated_at) AS latest,
+         COUNT(*) AS cnt
+  FROM rhythm_forecasts
+),
+tl AS (
+  SELECT MAX(updated_at) AS latest, COUNT(*) AS cnt
+  FROM theme_rhythm_links
+),
+ps AS (
+  SELECT MAX(updated_at) AS latest, COUNT(*) AS cnt
+  FROM presence_state
+),
+ds AS (
+  SELECT MAX(updated_at) AS latest, COUNT(*) AS cnt
+  FROM dialog_states
+),
+ac AS (
+  SELECT MAX(created_at) AS latest, COUNT(*) AS cnt
+  FROM analytics_cache
+),
+se AS (
+  SELECT MAX(created_at) AS latest, COUNT(*) AS cnt
+  FROM system_events
+),
+dbg AS (
+  SELECT MAX(created_at) AS latest, COUNT(*) AS cnt
+  FROM debug_traces
+)
+SELECT
+  now() AS audit_time,
+
+  (SELECT latest FROM j) AS journal_latest,
+  (SELECT cnt FROM j) AS journal_count,
+  (SELECT latest FROM je) AS embedding_latest,
+  (SELECT cnt FROM je) AS embedding_count,
+
+  (SELECT latest FROM r) AS reflections_latest,
+  (SELECT cnt FROM r) AS reflections_count,
+
+  (SELECT latest FROM m) AS meta_latest,
+  (SELECT cnt FROM m) AS meta_count,
+
+  (SELECT latest FROM pm) AS personal_model_latest,
+
+  (SELECT latest FROM rf) AS forecast_latest,
+  (SELECT cnt FROM rf) AS forecast_count,
+
+  (SELECT latest FROM tl) AS theme_links_latest,
+  (SELECT cnt FROM tl) AS theme_links_count,
+
+  (SELECT latest FROM ps) AS presence_latest,
+  (SELECT cnt FROM ps) AS presence_count,
+
+  (SELECT latest FROM ds) AS dialog_latest,
+  (SELECT cnt FROM ds) AS dialog_count,
+
+  (SELECT latest FROM ac) AS analytics_latest,
+  (SELECT cnt FROM ac) AS analytics_count,
+
+  (SELECT latest FROM se) AS system_event_latest,
+  (SELECT cnt FROM se) AS system_event_count,
+
+  (SELECT latest FROM dbg) AS debug_latest,
+  (SELECT cnt FROM dbg) AS debug_count;
+"""
+
+@router.get("/system/audit")
+async def system_audit(db=Depends(get_db)):
+    row = await db.fetchrow(SQL)
+    return dict(row)

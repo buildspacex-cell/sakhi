@@ -1,0 +1,6 @@
+min_state_confidence: 0.6
+min_phrase_confidence: 0.6
+max_suggestions_per_thread: 0
+anti_repeat_hours: 8
+show_ayurvedic_terms: false
+opt_in_explanations: false

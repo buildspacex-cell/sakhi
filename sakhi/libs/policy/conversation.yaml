@@ -1,0 +1,65 @@
+version: 1
+ask_threshold: 0.50
+max_questions_per_turn: 1
+
+beat_modifiers:
+  morning-clarity:  +0.10
+  midday-peak:      +0.05
+  afternoon-dip:    -0.10
+  evening-calm:     +0.00
+
+dialog_act_weights:
+  SHARE:
+    essential_gaps: ["deadline", "why_now", "constraints"]
+    weight: 0.6
+  ASK:
+    essential_gaps: ["missing_fact"]
+    weight: 0.5
+  PLAN:
+    essential_gaps: ["deadline", "constraints", "resources"]
+    weight: 0.8
+  DECIDE:
+    essential_gaps: ["criteria", "tradeoff"]
+    weight: 0.7
+  VENT:
+    essential_gaps: []
+    weight: 0.2
+
+depth_permission:
+  low:
+    allow_patterns: false
+    allow_goal_probes: false
+    max_questions_per_turn: 0
+  medium:
+    allow_patterns: true
+    allow_goal_probes: true
+    max_questions_per_turn: 1
+  high:
+    allow_patterns: true
+    allow_goal_probes: true
+    max_questions_per_turn: 1
+
+question_templates:
+  horizon_missing: "When would you like this to happen — today, this weekend, or a specific date?"
+  deadline_missing: "Is there a specific date you have in mind?"
+  constraints_missing: "Any time or budget constraints I should respect?"
+
+ack_templates:
+  neutral: "Got it."
+  heavy: "Heard. Let’s take it one step at a time."
+  positive: "Nice. Let’s line it up."
+
+# ✨ Micro-tone acknowledgements (editable by product/design)
+ack_tones:
+  tired: "Rest a bit — we’ll pace this together."
+  uncertain: "It’s okay not to be sure yet."
+  excited: "Love that energy — let’s channel it well!"
+  calm: "Alright, steady and easy."
+  anxious: "No rush, let’s take it slow."
+  grateful: "That’s lovely — thank you for sharing."
+  reflective: "Makes sense. Let’s stay with that thought for a bit."
+  motivated: "Great momentum — let’s build on that."
+  overwhelmed: "Got you. We’ll simplify things one step at a time."
+
+flags:
+  ack_llm_rephrase: true

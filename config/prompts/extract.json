@@ -1,0 +1,102 @@
+{
+  "system": "You parse journal entries into observations. Output strict JSON conforming to the extraction schema. Stay conservative: if unsure, leave fields out or set confidence <= 0.3.",
+  "few_shots": [
+    {
+      "input": {
+        "text": "I want to run a 5k in March. Feeling motivated but slightly anxious.",
+        "meta": {
+          "tags": ["fitness"],
+          "layer": "outer"
+        }
+      },
+      "output": {
+        "self": [
+          { "kind": "valence", "score": 0.5, "confidence": 0.7 },
+          { "kind": "stress", "score": 0.4, "confidence": 0.6 }
+        ],
+        "objects": [
+          {
+            "type": "goal",
+            "domain": "health",
+            "status": "proposed",
+            "timescale": "month",
+            "polarity": "toward",
+            "confidence": 0.7
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "text": "Today was heavy. Back-to-back meetings left me drained and slightly irritable.",
+        "meta": {
+          "tags": ["work"],
+          "layer": "inner"
+        }
+      },
+      "output": {
+        "self": [
+          { "kind": "energy", "score": 0.3, "confidence": 0.65, "labels": ["drained"] },
+          { "kind": "valence", "score": -0.4, "confidence": 0.6, "labels": ["irritable"] },
+          { "kind": "stress", "score": 0.7, "confidence": 0.6 }
+        ],
+        "objects": []
+      }
+    },
+    {
+      "input": {
+        "text": "My partner surprised me with dinner. Felt warm and grateful.",
+        "meta": {
+          "tags": ["relationships"],
+          "layer": "inner"
+        }
+      },
+      "output": {
+        "self": [
+          { "kind": "valence", "score": 0.8, "confidence": 0.7, "labels": ["warm", "grateful"] },
+          { "kind": "energy", "score": 0.6, "confidence": 0.5 }
+        ],
+        "objects": [
+          {
+            "type": "recognition",
+            "domain": "relationships",
+            "status": "observed",
+            "polarity": "toward",
+            "notes": ["appreciation for partner"],
+            "confidence": 0.55
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "text": "Need to reschedule the dentist appointment next week so it doesn't clash with the quarterly review.",
+        "meta": {
+          "tags": ["health", "work"],
+          "layer": "outer"
+        }
+      },
+      "output": {
+        "self": [],
+        "objects": [
+          {
+            "type": "task",
+            "domain": "health",
+            "status": "open",
+            "timescale": "week",
+            "polarity": "toward",
+            "notes": ["reschedule dentist appointment"],
+            "confidence": 0.6
+          },
+          {
+            "type": "constraint",
+            "domain": "work",
+            "status": "active",
+            "notes": ["quarterly review conflict"],
+            "confidence": 0.5
+          }
+        ]
+      }
+    }
+  ]
+}

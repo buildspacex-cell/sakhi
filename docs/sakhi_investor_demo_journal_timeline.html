@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sakhi — Journal Timeline</title>
+  <style>
+    :root {
+      --bg: #0e0f12;
+      --fg: #f4f4f5;
+      --muted: #a1a1aa;
+      --accent: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 720px;
+      text-align: left;
+    }
+
+    .brand {
+      text-align: center;
+      font-size: 16px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    .card {
+      border: 1px solid rgba(229, 231, 235, 0.2);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 32px 28px;
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .entry {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .time {
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .text {
+      font-size: 18px;
+      line-height: 1.6;
+      color: var(--accent);
+    }
+
+    .continue {
+      margin-top: 36px;
+      display: inline-block;
+      padding: 12px 30px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      color: var(--fg);
+      text-decoration: none;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .continue:hover {
+      background: var(--fg);
+      color: var(--bg);
+    }
+
+    @media (max-width: 640px) {
+      .entry { grid-template-columns: 1fr; }
+      .time { font-size: 12px; }
+      .text { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">Sakhi</div>
+
+    <div class="card">
+      <div class="timeline">
+        <div class="entry">
+          <div class="time">Yesterday</div>
+          <div class="text">
+            “Kept saying yes. Ended up drained and cancelled on friends at the last minute.”
+          </div>
+        </div>
+        <div class="entry">
+          <div class="time">This morning</div>
+          <div class="text">
+            “Tried to rest but felt guilty for not pushing through. Wondering if I’m falling behind.”
+          </div>
+        </div>
+        <div class="entry">
+          <div class="time">Just now</div>
+          <div class="text">
+            “I know I need some space, but I keep filling it. Not sure what to drop without disappointing people.”
+          </div>
+        </div>
+      </div>
+
+      <a class="continue" href="sakhi_investor_demo_reflection.html">Continue</a>
+    </div>
+  </div>
+</body>
+</html>

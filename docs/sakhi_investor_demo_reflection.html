@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sakhi — Reflection</title>
+  <style>
+    :root {
+      --bg: #0e0f12;
+      --fg: #f4f4f5;
+      --muted: #a1a1aa;
+      --accent: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 680px;
+      padding: 48px 32px;
+      text-align: center;
+    }
+
+    .brand {
+      font-size: 16px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 40px;
+    }
+
+    .card {
+      border: 1px solid rgba(229, 231, 235, 0.2);
+      border-radius: 16px;
+      padding: 40px 32px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .text {
+      font-size: 20px;
+      line-height: 1.6;
+      color: var(--accent);
+    }
+
+    .question {
+      margin-top: 28px;
+      font-size: 18px;
+      color: var(--fg);
+    }
+
+    .actions {
+      margin-top: 36px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .btn {
+      padding: 10px 22px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--fg);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .btn:hover {
+      background: var(--fg);
+      color: var(--bg);
+    }
+
+    .continue {
+      margin-top: 48px;
+      display: inline-block;
+      padding: 14px 36px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      color: var(--fg);
+      text-decoration: none;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .continue:hover {
+      background: var(--fg);
+      color: var(--bg);
+    }
+
+    @media (max-width: 600px) {
+      .text { font-size: 18px; }
+      .question { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="brand">Sakhi</div>
+
+    <div class="card">
+      <div class="text">
+        Looking across the last few days, I’m noticing a pattern.<br /><br />
+        Your energy seems to dip after long stretches of responsibility without pause.
+      </div>
+
+      <div class="question">
+        I might be wrong — but does that feel accurate?
+      </div>
+
+      <div class="actions">
+        <button class="btn">Yes</button>
+        <button class="btn">Not sure</button>
+        <button class="btn">No</button>
+      </div>
+    </div>
+
+    <a href="sakhi_investor_demo_memory.html" class="continue">Continue</a>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "api",
+  "scripts": {
+    "dev": "uvicorn apps.api.main:app --reload --port 8000"
+  },
+  "dependencies": {}
+}

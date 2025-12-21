@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .bg-white { background-color: #ffffff; }
+  .bg-black { background-color: #000000; }
+  .bg-red-500 { background-color: #ef4444; }
+  .bg-slate-50 { background-color: #f8fafc; }
+  .border-slate-200 { border-color: #e2e8f0; }
+  .border-slate-300 { border-color: #cbd5f5; }
+  .text-white { color: #ffffff; }
+  .text-black { color: #000000; }
+  .text-blue-600 { color: #2563eb; }
+  .text-red-600 { color: #dc2626; }
+  .text-green-600 { color: #16a34a; }
+  .text-xl { font-size: 20px; line-height: 28px; font-weight: 600; }
+  .text-2xl { font-size: 24px; line-height: 32px; font-weight: 600; }
+  .text-lg { font-size: 18px; line-height: 28px; font-weight: 500; }
+  .text-base { font-size: 16px; line-height: 24px; }
+  .text-sm { font-size: 14px; line-height: 20px; }
+  .font-semibold { font-weight: 600; }
+  .font-medium { font-weight: 500; }
+  .rounded-2xl { border-radius: 24px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-4 { margin-top: 16px; }
+  .mt-6 { margin-top: 24px; }
+  .mt-8 { margin-top: 32px; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .gap-4 { gap: 16px; }
+  .p-3 { padding: 12px; }
+  .p-4 { padding: 16px; }
+  .px-3 { padding-left: 12px; padding-right: 12px; }
+  .px-4 { padding-left: 16px; padding-right: 16px; }
+  .pt-4 { padding-top: 16px; }
+  .pt-12 { padding-top: 48px; }
+  .py-2 { padding-top: 8px; padding-bottom: 8px; }
+  .py-3 { padding-top: 12px; padding-bottom: 12px; }
+  .pb-6 { padding-bottom: 24px; }
+  .pb-12 { padding-bottom: 48px; }
+  .h-40 { height: 160px; }
+  .w-40 { width: 160px; }
+  .w-48 { width: 192px; }
+  .h-48 { height: 192px; }
+  .min-h-\[140px\] { min-height: 140px; }
+  .active\:opacity-80:active { opacity: 0.8; }
+}

@@ -1,0 +1,44 @@
+version: '3.9'
+
+# NOTE: Postgres lives remotely (Supabase) for this project, so the stack does not
+# provision a local database by default. See the commented section at the bottom
+# for instructions on adding Postgres locally if your workflow requires it.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sakhi-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    container_name: sakhi-meilisearch
+    environment:
+      MEILI_NO_ANALYTICS: 'true'
+    ports:
+      - "7700:7700"
+    restart: unless-stopped
+    profiles:
+      - search
+
+# To run with Meilisearch enabled:
+#   docker compose --profile search up -d
+
+# If you ever want to bring Postgres on-device instead of using Supabase,
+# uncomment the block below and point SAKHI_POSTGRES_DSN at the local container.
+#
+#  postgres:
+#    image: postgres:15-alpine
+#    container_name: sakhi-postgres
+#    environment:
+#      POSTGRES_DB: sakhi
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: postgres
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - ./postgres-data:/var/lib/postgresql/data
+#    restart: unless-stopped
+#

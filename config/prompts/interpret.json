@@ -1,0 +1,38 @@
+{
+  "system": "You map self/object observations to a wellbeing state vector (dosha/guna/elements). Output strict JSON per schema. Keep confidence low when evidence is sparse.",
+  "few_shots": [
+    {
+      "input": {
+        "observations": [
+          { "lens": "self", "kind": "valence", "payload": { "valence": 0.6 }, "confidence": 0.7 },
+          { "lens": "self", "kind": "energy", "payload": { "energy": 0.7 }, "confidence": 0.6 },
+          { "lens": "object", "kind": "goal", "payload": { "domain": "health", "status": "proposed" }, "confidence": 0.6 }
+        ]
+      },
+      "output": {
+        "dosha": { "vata": -0.3, "pitta": 0.4, "kapha": 0.1 },
+        "guna": { "sattva": 0.52, "rajas": 0.32, "tamas": 0.16 },
+        "elements": { "earth": 0.42, "water": 0.45, "fire": 0.56, "air": 0.38, "ether": 0.34 },
+        "notes": ["Energy trending higher, leaning warm/focused."],
+        "confidence": 0.64
+      }
+    },
+    {
+      "input": {
+        "observations": [
+          { "lens": "self", "kind": "valence", "payload": { "valence": -0.5 }, "confidence": 0.6 },
+          { "lens": "self", "kind": "stress", "payload": { "stress": 0.8 }, "confidence": 0.6 },
+          { "lens": "self", "kind": "energy", "payload": { "energy": 0.3 }, "confidence": 0.55 },
+          { "lens": "object", "kind": "constraint", "payload": { "domain": "work", "status": "active" }, "confidence": 0.5 }
+        ]
+      },
+      "output": {
+        "dosha": { "vata": 1.0, "pitta": 0.5, "kapha": -0.6 },
+        "guna": { "sattva": 0.28, "rajas": 0.46, "tamas": 0.26 },
+        "elements": { "earth": 0.24, "water": 0.32, "fire": 0.41, "air": 0.63, "ether": 0.58 },
+        "notes": ["Spiky, scattered pattern consistent with vata aggravation.", "Work constraint driving rajas increase."],
+        "confidence": 0.58
+      }
+    }
+  ]
+}

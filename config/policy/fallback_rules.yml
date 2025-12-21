@@ -1,0 +1,30 @@
+vata_keywords:
+- scattered
+- racing
+- anxious
+- dry
+- cold
+- light
+pitta_keywords:
+- irritated
+- hot
+- sharp
+- intense
+- driven
+kapha_keywords:
+- heavy
+- slow
+- dull
+- sleepy
+- stuck
+weights:
+  vata: 0.8
+  pitta: 0.8
+  kapha: 0.8
+defaults:
+  vata: 0.0
+  pitta: 0.0
+  kapha: 0.0
+  sattva: 0.33
+  rajas: 0.34
+  tamas: 0.33

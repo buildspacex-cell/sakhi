@@ -1,0 +1,92 @@
+async def run_loop(user_id: str, text: str, session_slug: str = "journal") -> Dict[str, Any]:
+    session_id = await ensure_session(user_id, session_slug)
+
+    summary_before = await get_summary(session_id)
+    tone_info = detect_tone(text)
+    mode = classify_archetype(text, summary_before)
+
+    await append_turn(
+        user_id=user_id,
+        session_id=session_id,
+        role="user",
+        text=text,
+        tone=tone_info.get("tone"),
+        archetype=mode,
+    )
+
+    history = await load_recent_turns(session_id, limit=HISTORY_LIMIT)
+    context = await build_context(user_id, session_id)
+    context.update(
+        {
+            "tone": tone_info.get("tone"),
+            "mood": tone_info.get("mood"),
+            "archetype": mode,
+            "summary": summary_before,
+            "history": history,
+        }
+    )
+
+    objective = (
+        "Move toward a concrete next step or a meaningful reflection, "
+        "asking at most one critical slot."
+    )
+
+    parsed, confidence = fast_parse(text)
+    reply: str | None = None
+    confirmations: List[str] = []
+    assistant_archetype = "directive"
+
+    if confidence >= 0.85 and parsed.kind != "none":
+        actions = [action.dict() for action in parsed.to_actions()]
+        confirmations = await dispatch_actions(user_id, actions)
+    else:
+        llm_out = await talk_with_objective(user_id, text, context, objective)
+        reply, actions = extract_actions_and_reply(llm_out)
+        if actions:
+            confirmations = await dispatch_actions(user_id, actions)
+            if any(action.get("type") in {"log_journal", "summarize_reflection"} for action in actions):
+                assistant_archetype = "reflect"
+            elif any(action.get("type") == "search_entities" for action in actions):
+                assistant_archetype = "research"
+            else:
+                assistant_archetype = "act"
+        else:
+            assistant_archetype = "dialog"
+
+    await append_turn(
+        user_id=user_id,
+        session_id=session_id,
+        role="assistant",
+        text=reply or "",
+        tone=None,
+        archetype=assistant_archetype,
+    )
+
+    tasks, deps = await load_graph(user_id)
+    frontier = compute_frontier(tasks, deps)
+    ranked = rank_frontier(frontier, context, {})
+    frontier_top = [task.get("title") for task in ranked[:3]]
+
+    recent_for_summary = await load_recent_turns(session_id, limit=HISTORY_LIMIT)
+    assistant_turns = [turn for turn in recent_for_summary if turn["role"] == "assistant"]
+    if assistant_turns and len(assistant_turns) % SUMMARY_ROLL_EVERY == 0:
+        new_summary = await roll_summary(summary_before, recent_for_summary)
+        if new_summary:
+            await set_summary(session_id, new_summary)
+            summary_before = new_summary
+
+    await write_journal_entry(user_id, text, reply)
+
+    return {
+        "reply": reply,
+"confirmations": confirmations,
+"suggestions": frontier_top,
+"frontierTop3": frontier_top,
+"lastObjective": objective,
+"tone": tone_info.get("tone"),
+"mood": tone_info.get("mood"),
+"archetype": assistant_archetype,
+"usedSummary": bool(summary_before),
+"historyCount": len(recent_for_summary),
+"sessionId": session_id,
+    }

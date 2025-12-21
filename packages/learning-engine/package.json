@@ -1,0 +1,30 @@
+{
+  "name": "@sakhi/learning-engine",
+  "version": "0.1.0",
+  "description": "Listens to conversation events and writes memories (episodic, traits, preferences).",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@sakhi/contracts": "workspace:*",
+    "@sakhi/event-bus": "workspace:*",
+    "@sakhi/memory-service": "workspace:*"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3"
+  }
+}

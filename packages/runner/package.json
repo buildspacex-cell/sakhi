@@ -1,0 +1,32 @@
+{
+  "name": "@sakhi/runner",
+  "version": "0.1.0",
+  "description": "CLI runner that ties together the Sakhi conversation pipeline for local testing.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "sakhi-runner": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "pnpm run build && node dist/index.js",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@sakhi/contracts": "workspace:*",
+    "@sakhi/event-bus": "workspace:*",
+    "@sakhi/facet-extractor": "workspace:*",
+    "@sakhi/context-builder": "workspace:*",
+    "@sakhi/planner": "workspace:*",
+    "@sakhi/orchestrator": "workspace:*",
+    "@sakhi/memory-service": "workspace:*",
+    "@sakhi/learning-engine": "workspace:*",
+    "@sakhi/action-router": "workspace:*",
+    "@sakhi/policy-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3"
+  }
+}

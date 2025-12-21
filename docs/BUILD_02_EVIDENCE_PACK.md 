@@ -1,0 +1,262 @@
+# BUILD_02 — Evidence Pack
+
+### Recognition Before Insight (Inner Human Mirror Core)
+
+This document defines **Build 02 of Phase-2**: the **Evidence Pack**.
+
+The Evidence Pack is the layer that turns Sakhi from *“intelligently reflective”* into *“undeniably accurate.”*
+
+It exists to solve one problem:
+
+> **Insight without recognition does not create trust.**
+
+---
+
+## 1. Canonical Purpose
+
+The Evidence Pack ensures that **every non-trivial reflection Sakhi offers is grounded in lived, recognizable reality**.
+
+Before Sakhi:
+
+* reframes
+* expands
+* questions
+* names a pattern
+
+It must first be able to say:
+
+> *“Here is what you actually lived — this is why I’m seeing this.”*
+
+This is **not explanation**.
+This is **recognition**.
+
+---
+
+## 2. What the Evidence Pack Is (And Is Not)
+
+### It **IS**
+
+* deterministic
+* time-grounded
+* human-readable
+* minimal (1–3 anchors)
+* pre-interpretive
+
+### It **IS NOT**
+
+* advice
+* insight
+* diagnosis
+* narrative framing
+* persuasion
+
+If an Evidence Pack feels “clever,” it is wrong.
+
+---
+
+## 3. Position in the Architecture
+
+```
+Memory
+  ↓
+Pattern / Narrative / Rhythm Engines
+  ↓
+Evidence Pack   ← (THIS BUILD)
+  ↓
+Deliberation Scaffold
+  ↓
+Reflection & Language
+```
+
+**Key rule:**
+Evidence Pack always precedes insight.
+
+---
+
+## 4. Inputs (What This Build Consumes)
+
+The Evidence Pack **does not introduce new signals**.
+
+It uses existing data only:
+
+### Primary Sources
+
+* `memory_episodic`
+* `episodes` (legacy overlap)
+* `bridging_reflections`
+* `daily_reflection_cache`
+* `context_recalls`
+
+### Supporting Signals
+
+* salience scores
+* recurrence counts
+* narrative phase markers
+* confidence metrics from pattern engines
+
+---
+
+## 5. Output: EvidencePack Object (Canonical Shape)
+
+The Evidence Pack is an **ephemeral object**, injected into turn context.
+
+```json
+EvidencePack = {
+  "pattern_label": "string | null",
+  "confidence": 0.0 - 1.0,
+  "anchors": [
+    {
+      "when": "ISO timestamp or relative time",
+      "what_happened": "plain human language",
+      "why_it_matters": "signal-level relevance (not interpretation)",
+      "recurrence_or_contrast": "recurring | contrast | inflection"
+    }
+  ],
+  "sources_used": ["episodic", "daily", "narrative"],
+  "selection_reason": "salience | recurrence | contrast"
+}
+```
+
+---
+
+## 6. Anchor Selection Rules (Non-Negotiable)
+
+### Quantity
+
+* Minimum: **1**
+* Maximum: **3**
+* Default: **2**
+
+More than 3 dilutes recognition.
+
+---
+
+### Ranking Logic (Deterministic)
+
+Anchors are selected using a weighted score:
+
+```
+anchor_score =
+  (salience * 0.4)
++ (recency * 0.2)
++ (recurrence * 0.2)
++ (narrative_relevance * 0.2)
+```
+
+No LLM involvement.
+
+---
+
+### Language Rules
+
+* First-person framing allowed (“you noticed…”, “you shared…”)
+* No abstraction
+* No labels
+* No conclusions
+* No emotional adjectives beyond what user expressed
+
+---
+
+## 7. What “Why It Matters” Means (Important)
+
+`why_it_matters` **does not explain the user**.
+
+It explains **signal relevance** only.
+
+✅ Correct:
+
+> “This came up during a week where energy dipped and priorities conflicted.”
+
+❌ Incorrect:
+
+> “This shows avoidance behavior.”
+
+---
+
+## 8. Storage & Lifecycle
+
+### Persistence
+
+* **Not written** to long-term memory
+* **Not written** to personal_model
+* May be optionally logged in `debug_traces` for replay
+
+### Lifetime
+
+* Valid for a single turn
+* Recomputed freely
+* Disposable
+
+---
+
+## 9. Who Can Use the Evidence Pack
+
+### Allowed Consumers
+
+* Deliberation Scaffold
+* Reflection / Language layer
+* Reflection Trace (Build 04)
+
+### Forbidden Uses
+
+* Task mutation
+* Identity updates
+* Scoring or ranking the person
+* Behavioral nudging
+
+---
+
+## 10. Failure Modes to Guard Against
+
+This build fails if:
+
+* Evidence sounds like interpretation ❌
+* Anchors feel cherry-picked ❌
+* Language feels persuasive ❌
+* Sakhi proceeds to insight without surfacing evidence ❌
+
+---
+
+## 11. Definition of “Done”
+
+This build is complete when:
+
+* Users respond with **recognition**, not surprise
+  (“Yes — that’s exactly what happened.”)
+* Disagreement feels safe
+  (“That doesn’t feel like the right example.”)
+* Reflection feels grounded before it feels insightful
+* Trust increases even when insight is uncomfortable
+
+---
+
+## 12. Codex Execution Instructions (High-Level)
+
+**Ask Codex to:**
+
+1. Implement `select_evidence_anchors()` engine
+2. Enforce anchor ranking + caps
+3. Produce EvidencePack object per turn
+4. Inject EvidencePack into `/v2/turn` context (read-only)
+5. Add unit tests for:
+
+   * recurrence selection
+   * contrast detection
+   * recency bias
+   * low-confidence fallback
+
+---
+
+## 13. Canonical Law
+
+> **If Sakhi cannot show the lived evidence,
+> it is not allowed to show the insight.**
+
+This rule protects trust.
+
+---
+
+**Build:** Phase-2 / Build-02
+**Status:** Canonical
+**Depends on:** Memory, Pattern, Narrative engines
+**Unlocks:** Deliberation Scaffold (Build-03)

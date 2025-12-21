@@ -1,0 +1,10 @@
+{
+  "confirm_task_creation": [
+    "Would you like me to note this down as a task?",
+    "Shall I add this to your plan?"
+  ],
+  "ask_due_date": [
+    "When would you like to get this done?",
+    "Is there a day this week that works best?"
+  ]
+}
