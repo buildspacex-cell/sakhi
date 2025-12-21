@@ -9,6 +9,7 @@ from typing import Any, Dict
 from copy import deepcopy
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from uuid import uuid4
 
@@ -64,6 +65,12 @@ BUILD32_MODE = os.getenv("SAKHI_BUILD32_MODE", "0") == "1"
 logger.info("[turn_v2] Build32 mode=%s", BUILD32_MODE)
 
 _UNIFIED_INGEST_SCHEMA_OK: bool | None = None
+
+
+@router.post("/turn")
+async def __turn_v2_probe(request: Request):
+    print("🔥 TURN V2 PROBE HIT", request.url)
+    return JSONResponse({"probe": "ok"})
 
 
 async def _unified_ingest_schema_ok() -> bool:
