@@ -20,11 +20,8 @@ RUN python -m pip install --no-cache-dir "poetry==1.8.3" \
 # Copy full code (monorepo)
 COPY . .
 
-# Switch to API app directory for runtime
-WORKDIR /app/apps/api
-
 # Expose API port
 EXPOSE 8080
 
 # Start FastAPI
-CMD ["uvicorn", "sakhi.apps.api.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
