@@ -239,7 +239,7 @@ async def _turn_lightweight(body: TurnIn, user_id: str) -> Dict[str, Any]:
 
 
 @router.post("/turn")
-async def turn_v2(body: TurnIn, user: str | None = Query(default=None), request: Request):
+async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(default=None)):
     user_id, person_label, person_key = resolve_person(request, user)
     print("TURN V2 FASTAPI ROUTE HIT", user)
     logger.info("ACTIVE_DEV_PERSON", extra={"person_id": user_id, "person_label": person_label, "person_key": person_key})
