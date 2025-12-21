@@ -1469,6 +1469,8 @@ app.include_router(person_router.router)
 LOGGER.info("Printing registered routes (startup debug)")
 for r in app.routes:
     LOGGER.info("route %s %s", r.methods, r.path)
+    # Also print directly to stdout so Railway captures it even if logger config filters JSON logs
+    print(f"{r.methods} {r.path}")
 
 
 @app.get("/beats", tags=["rhythm"])
