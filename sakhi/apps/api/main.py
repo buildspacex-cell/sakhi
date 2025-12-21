@@ -1466,6 +1466,10 @@ app.include_router(person_router.router)
 app.include_router(person_edit_router.router)
 app.include_router(person_router.router)
 
+# Temporary: print all registered routes to verify FastAPI routing
+for r in app.routes:
+    print(f"{r.methods} {r.path}")
+
 
 @app.get("/beats", tags=["rhythm"])
 async def beats(user_id: str | None = None) -> Dict[str, Any]:
