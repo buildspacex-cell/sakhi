@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Mono-repo skeleton for the Sakhi AI companion"
 authors = ["Codex <codex@example.com>"]
 readme = "README.md"
-packages = [{ include = "sakhi" }]
+packages = [
+  { include = "sakhi", from = "../.." }
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
