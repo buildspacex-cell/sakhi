@@ -1,7 +1,8 @@
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_BASE ||
-  "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL;
+if (!API_BASE) {
+  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
+}
 const API_KEY =
   process.env.NEXT_PUBLIC_API_KEY || process.env.EXPO_PUBLIC_API_KEY || "";
 

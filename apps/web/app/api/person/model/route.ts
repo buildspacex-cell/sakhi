@@ -8,9 +8,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "person_id required" }, { status: 400 });
   }
 
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL;
+  if (!API_BASE) {
+    throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
+  }
+
   const upstream = await fetch(
-    `${apiBase}/person/model?person_id=${encodeURIComponent(personId)}`
+    `${API_BASE}/person/model?person_id=${encodeURIComponent(personId)}`
   );
   const payload = await upstream.json();
   return NextResponse.json(payload, { status: upstream.status });

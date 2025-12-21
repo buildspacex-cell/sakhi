@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL;
+
+if (!API_BASE) {
+  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
+}
 
 export async function POST(req: NextRequest) {
   try {

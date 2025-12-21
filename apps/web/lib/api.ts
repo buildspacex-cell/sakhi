@@ -1,4 +1,11 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.API_BASE_URL;
+
+if (!API_BASE) {
+  throw new Error('Missing NEXT_PUBLIC_API_BASE_URL');
+}
 
 type MemoryObservePayload = {
   person_id: string;

@@ -46,7 +46,11 @@ const DEFAULT_PERSON_ID =
   process.env.DEMO_USER_ID ??
   '565bdb63-124b-4692-a039-846fddceff90';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL;
+
+if (!API_BASE) {
+  throw new Error('Missing NEXT_PUBLIC_API_BASE_URL');
+}
 
 const cardStyle: CSSProperties = {
   border: '1px solid rgba(249, 115, 22, 0.15)',
