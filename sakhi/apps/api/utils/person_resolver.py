@@ -5,7 +5,7 @@ from typing import Tuple
 from sakhi.config.dev_persons import DEV_PERSONS
 
 
-def resolve_person(request) -> Tuple[str, str, str]:
+def resolve_person(request, user_key: str | None = None) -> Tuple[str, str, str]:
     """
     Resolve active dev person.
     Priority:
@@ -13,7 +13,7 @@ def resolve_person(request) -> Tuple[str, str, str]:
       2. X-DEV-USER header
       3. default = 'a'
     """
-    user_key = request.query_params.get("user")
+    user_key = user_key or request.query_params.get("user")
 
     if user_key in DEV_PERSONS:
         p = DEV_PERSONS[user_key]
