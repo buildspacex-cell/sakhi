@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "sakhi"
+name = "sakhi-api"
 version = "0.1.0"
 description = "Mono-repo skeleton for the Sakhi AI companion"
 authors = ["Codex <codex@example.com>"]
