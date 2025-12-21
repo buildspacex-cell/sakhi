@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type React from "react";
 
@@ -102,6 +102,14 @@ const devSelectStyle: React.CSSProperties = {
 };
 
 export default function ExperiencePage() {
+  return (
+    <Suspense fallback={null}>
+      <ExperiencePageContent />
+    </Suspense>
+  );
+}
+
+function ExperiencePageContent() {
   const searchParams = useSearchParams();
   const DEV_USERS = useMemo(
     () => ({
@@ -111,13 +119,14 @@ export default function ExperiencePage() {
     []
   );
   const searchUser = searchParams.get("user");
-  const [devUser, setDevUser] = useState<string>(searchUser || "a");
+  const initialDevUser = searchUser === "b" ? ("b" as const) : ("a" as const);
+  const [devUser, setDevUser] = useState<keyof typeof DEV_USERS>(initialDevUser);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem("dev_user");
       if (!searchUser && stored && stored !== devUser) {
-        setDevUser(stored);
+        setDevUser(stored as keyof typeof DEV_USERS);
         return;
       }
       window.localStorage.setItem("dev_user", devUser);
@@ -125,10 +134,15 @@ export default function ExperiencePage() {
       url.searchParams.set("user", devUser);
       window.history.replaceState({}, "", url.toString());
     }
-  }, [devUser, searchUser]);
+  }, [devUser, searchUser, DEV_USERS]);
 
   const devLabel = DEV_USERS[devUser]?.label || devUser;
-  const withUser = (path: string) => `${path}?user=${encodeURIComponent(devUser)}`;
+  const withUser = (
+    path: "/experience/listening" | "/experience/type"
+  ) => ({
+    pathname: path,
+    query: { user: devUser },
+  });
 
   return (
     <div style={pageStyle}>
@@ -141,7 +155,7 @@ export default function ExperiencePage() {
         <div style={{ marginBottom: 16 }}>
           <select
             value={devUser}
-            onChange={(e) => setDevUser(e.target.value)}
+            onChange={(e) => setDevUser(e.target.value as keyof typeof DEV_USERS)}
             style={devSelectStyle}
             aria-label="Select dev user"
           >
@@ -179,7 +193,7 @@ export default function ExperiencePage() {
           tell me what’s been on your mind.
         </div>
 
-        <Link href={withUser("/experience/type")} style={{ textDecoration: "none" }}>
+          <Link href={withUser("/experience/type")} style={{ textDecoration: "none" }}>
           <div style={altInputStyle}>Type instead</div>
         </Link>
 

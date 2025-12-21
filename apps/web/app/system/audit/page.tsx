@@ -1,5 +1,8 @@
 import React from "react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??

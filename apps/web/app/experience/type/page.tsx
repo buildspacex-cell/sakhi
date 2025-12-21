@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type React from "react";
 
@@ -209,9 +209,18 @@ const devSelectStyle: React.CSSProperties = {
 };
 
 export default function ExperienceTypePage() {
+  return (
+    <Suspense fallback={null}>
+      <ExperienceTypePageContent />
+    </Suspense>
+  );
+}
+
+function ExperienceTypePageContent() {
   const searchParams = useSearchParams();
   const searchUser = searchParams.get("user");
-  const [devUser, setDevUser] = useState<string>(searchUser || "a");
+  const initialUser: "a" | "b" = searchUser === "b" ? "b" : "a";
+  const [devUser, setDevUser] = useState<"a" | "b">(initialUser);
 
   const [text, setText] = useState("");
   const [captured, setCaptured] = useState(false);
@@ -227,7 +236,7 @@ export default function ExperienceTypePage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem("dev_user");
-      if (!searchUser && stored && stored !== devUser) {
+      if (!searchUser && stored && (stored === "a" || stored === "b") && stored !== devUser) {
         setDevUser(stored);
         return;
       }
@@ -335,7 +344,7 @@ export default function ExperienceTypePage() {
           <div style={{ marginBottom: 16 }}>
             <select
               value={devUser}
-              onChange={(e) => setDevUser(e.target.value)}
+              onChange={(e) => setDevUser(e.target.value === "b" ? "b" : "a")}
               style={devSelectStyle}
               aria-label="Select dev user"
             >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type React from "react";
 
@@ -291,6 +291,14 @@ const lowEvidenceBannerStyle: React.CSSProperties = {
 };
 
 export default function ExperienceWeeklyPage() {
+  return (
+    <Suspense fallback={null}>
+      <ExperienceWeeklyPageContent />
+    </Suspense>
+  );
+}
+
+function ExperienceWeeklyPageContent() {
   const searchParams = useSearchParams();
   const [weekly, setWeekly] = useState<WeeklyItem | null>(null);
   const [loading, setLoading] = useState(false);
@@ -298,8 +306,9 @@ export default function ExperienceWeeklyPage() {
   const [systemPrompt, setSystemPrompt] = useState<string>(DEFAULT_SYSTEM_PROMPT);
   const [userPrompt, setUserPrompt] = useState<string>(DEFAULT_USER_PROMPT);
   const [activeTab, setActiveTab] = useState<string | null>(null);
+  const isDevEnv = process.env.NODE_ENV !== "production";
   const [showDebugPanel, setShowDebugPanel] = useState<boolean>(
-    process.env.NODE_ENV !== "production" && (searchParams.get("debug") === "true" || process.env.NODE_ENV !== "production")
+    isDevEnv && (searchParams.get("debug") === "true" || isDevEnv)
   );
   const DEV_USERS = useMemo(
     () => ({
@@ -309,7 +318,8 @@ export default function ExperienceWeeklyPage() {
     []
   );
   const searchUser = searchParams.get("user");
-  const [devUser, setDevUser] = useState<string>(searchUser || "a");
+  const initialUser: "a" | "b" = searchUser === "b" ? "b" : "a";
+  const [devUser, setDevUser] = useState<"a" | "b">(initialUser);
 
   const debugEnabled = useMemo(
     () => searchParams.get("debug") === "true" || process.env.NODE_ENV !== "production",
@@ -319,7 +329,7 @@ export default function ExperienceWeeklyPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem("dev_user");
-      if (!searchUser && stored && stored !== devUser) {
+      if (!searchUser && stored && (stored === "a" || stored === "b") && stored !== devUser) {
         setDevUser(stored);
         return;
       }
@@ -538,7 +548,7 @@ export default function ExperienceWeeklyPage() {
           <div style={voiceControlStyle}>
             <select
               value={devUser}
-              onChange={(e) => setDevUser(e.target.value)}
+              onChange={(e) => setDevUser(e.target.value === "b" ? "b" : "a")}
               style={devSelectStyle}
             >
               {Object.entries(DEV_USERS).map(([key, value]) => (

@@ -17,6 +17,17 @@ import {
 import React from "react";
 import { normalizeSoulState } from "@ui/soulViewModel";
 
+const ResponsiveContainerAny = ResponsiveContainer as unknown as React.ComponentType<any>;
+const PieChartAny = PieChart as unknown as React.ComponentType<any>;
+const PieAny = Pie as unknown as React.ComponentType<any>;
+const CellAny = Cell as unknown as React.ComponentType<any>;
+const LegendAny = Legend as unknown as React.ComponentType<any>;
+const TooltipAny = Tooltip as unknown as React.ComponentType<any>;
+const BarChartAny = BarChart as unknown as React.ComponentType<any>;
+const BarAny = Bar as unknown as React.ComponentType<any>;
+const XAxisAny = XAxis as unknown as React.ComponentType<any>;
+const YAxisAny = YAxis as unknown as React.ComponentType<any>;
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const swrOpts = { fetcher, dedupingInterval: 60_000, revalidateOnFocus: false };
 
@@ -50,17 +61,17 @@ export default function SoulValuesPage() {
         <Card title="Values Wheel">
           {valuesData.length ? (
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={valuesData} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="80%" label>
+              <ResponsiveContainerAny width="100%" height="100%">
+                <PieChartAny>
+                  <PieAny data={valuesData} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="80%" label>
                     {valuesData.map((slice, idx) => (
-                      <Cell key={idx} fill={slice.fill} />
+                      <CellAny key={idx} fill={slice.fill} />
                     ))}
-                  </Pie>
-                  <Legend />
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+                  </PieAny>
+                  <LegendAny />
+                  <TooltipAny />
+                </PieChartAny>
+              </ResponsiveContainerAny>
             </div>
           ) : (
             <p className="text-sm text-stone-400">No values yet.</p>
@@ -68,14 +79,14 @@ export default function SoulValuesPage() {
         </Card>
         <Card title="Longing vs Aversions">
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={aversionVsLonging}>
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="value" fill="#0ea5e9" />
-              </BarChart>
-            </ResponsiveContainer>
+            <ResponsiveContainerAny width="100%" height="100%">
+              <BarChartAny data={aversionVsLonging}>
+                <XAxisAny dataKey="name" />
+                <YAxisAny allowDecimals={false} />
+                <TooltipAny />
+                <BarAny dataKey="value" fill="#0ea5e9" />
+              </BarChartAny>
+            </ResponsiveContainerAny>
           </div>
         </Card>
       </div>

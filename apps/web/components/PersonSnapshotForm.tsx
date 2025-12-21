@@ -18,7 +18,8 @@ export function PersonSnapshotForm({ initialPersonId }: Props) {
     const nextId = value.trim() || initialPersonId;
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('person_id', nextId);
-    router.push(`${pathname}?${params.toString()}`);
+    const nextUrl = `${pathname}?${params.toString()}`;
+    router.push(nextUrl as any);
   };
 
   return (

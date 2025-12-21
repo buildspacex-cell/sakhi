@@ -12,7 +12,6 @@ type Preferences = {
 
 type TurnResponse = {
   reply?: string;
-  moment_model?: { confidence?: number };
   moment_model?: { confidence?: number; recommended_companion_mode?: string };
   evidence_pack?: { anchors?: string[]; confidence?: number };
   deliberation_scaffold?: { options?: string[]; signals_used?: string[] };

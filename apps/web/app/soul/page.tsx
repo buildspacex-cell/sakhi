@@ -31,6 +31,28 @@ import {
   Treemap,
 } from "recharts";
 
+// Recharts types can clash with React 18 JSX inference in strict TS; cast to loosen.
+const ResponsiveContainerAny = ResponsiveContainer as unknown as React.ComponentType<any>;
+const RadialBarChartAny = RadialBarChart as unknown as React.ComponentType<any>;
+const RadialBarAny = RadialBar as unknown as React.ComponentType<any>;
+const BarChartAny = BarChart as unknown as React.ComponentType<any>;
+const BarAny = Bar as unknown as React.ComponentType<any>;
+const PieChartAny = PieChart as unknown as React.ComponentType<any>;
+const PieAny = Pie as unknown as React.ComponentType<any>;
+const LineChartAny = LineChart as unknown as React.ComponentType<any>;
+const LineAny = Line as unknown as React.ComponentType<any>;
+const PolarGridAny = PolarGrid as unknown as React.ComponentType<any>;
+const LegendAny = Legend as unknown as React.ComponentType<any>;
+const TooltipAny = Tooltip as unknown as React.ComponentType<any>;
+const XAxisAny = XAxis as unknown as React.ComponentType<any>;
+const YAxisAny = YAxis as unknown as React.ComponentType<any>;
+const PolarAngleAxisAny = PolarAngleAxis as unknown as React.ComponentType<any>;
+const PolarRadiusAxisAny = PolarRadiusAxis as unknown as React.ComponentType<any>;
+const RadarChartAny = RadarChart as unknown as React.ComponentType<any>;
+const RadarAny = Radar as unknown as React.ComponentType<any>;
+const TreemapAny = Treemap as unknown as React.ComponentType<any>;
+const CellAny = Cell as unknown as React.ComponentType<any>;
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const swrOpts = { fetcher, dedupingInterval: 60_000, revalidateOnFocus: false };
 
@@ -108,11 +130,11 @@ export default function SoulDashboard() {
       <section className="grid gap-4 md:grid-cols-3">
         <Card title="Coherence">
           <div className="h-32">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadialBarChart innerRadius="60%" outerRadius="100%" data={coherenceGauge} startAngle={90} endAngle={-270}>
-                <RadialBar dataKey="value" cornerRadius={8} fill="#22c55e" />
-              </RadialBarChart>
-            </ResponsiveContainer>
+            <ResponsiveContainerAny width="100%" height="100%">
+              <RadialBarChartAny innerRadius="60%" outerRadius="100%" data={coherenceGauge} startAngle={90} endAngle={-270}>
+                <RadialBarAny dataKey="value" cornerRadius={8} fill="#22c55e" />
+              </RadialBarChartAny>
+            </ResponsiveContainerAny>
           </div>
           <div className="text-lg font-semibold text-stone-800">{Math.round((summarized.coherence || 0) * 100)}%</div>
           <p className="text-sm text-stone-500">Higher is more aligned.</p>
@@ -129,20 +151,20 @@ export default function SoulDashboard() {
         <Card title="Values Wheel">
           {valuesWheel.length ? (
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadialBarChart innerRadius="30%" outerRadius="90%" data={valuesWheel} startAngle={90} endAngle={-270}>
-                  <PolarGrid gridType="circle" />
-                  <RadialBar
+              <ResponsiveContainerAny width="100%" height="100%">
+                <RadialBarChartAny innerRadius="30%" outerRadius="90%" data={valuesWheel} startAngle={90} endAngle={-270}>
+                  <PolarGridAny gridType="circle" />
+                  <RadialBarAny
                     minAngle={10}
                     background
                     clockWise
                     dataKey="score"
                     cornerRadius={6}
-                    onMouseEnter={(_, idx) => setSelectedValue(valuesWheel[idx]?.name || null)}
+                    onMouseEnter={(_: unknown, idx: number) => setSelectedValue(valuesWheel[idx]?.name || null)}
                   />
-                  <Legend />
-                </RadialBarChart>
-              </ResponsiveContainer>
+                  <LegendAny />
+                </RadialBarChartAny>
+              </ResponsiveContainerAny>
               <p className="mt-2 text-sm text-stone-600">
                 {selectedValue ? `Focused on ${selectedValue}` : "Hover a slice to highlight a value"}
               </p>
@@ -155,14 +177,14 @@ export default function SoulDashboard() {
         <Card title="Friction Map">
           {frictionCounts.length ? (
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={frictionCounts}>
-                  <XAxis dataKey="name" hide />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#0ea5e9" />
-                </BarChart>
-              </ResponsiveContainer>
+              <ResponsiveContainerAny width="100%" height="100%">
+                <BarChartAny data={frictionCounts}>
+                  <XAxisAny dataKey="name" hide />
+                  <YAxisAny />
+                  <TooltipAny />
+                  <BarAny dataKey="value" fill="#0ea5e9" />
+                </BarChartAny>
+              </ResponsiveContainerAny>
             </div>
           ) : (
             <p className="text-sm text-stone-500">No friction patterns yet.</p>
@@ -173,17 +195,17 @@ export default function SoulDashboard() {
       <section className="grid gap-4 md:grid-cols-2">
         <Card title="Shadow/Light Balance">
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={balancePie} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="80%">
+            <ResponsiveContainerAny width="100%" height="100%">
+              <PieChartAny>
+                <PieAny data={balancePie} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="80%">
                   {balancePie.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <CellAny key={`cell-${index}`} fill={entry.color} />
                   ))}
-                </Pie>
-                <Legend />
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+                </PieAny>
+                <LegendAny />
+                <TooltipAny />
+              </PieChartAny>
+            </ResponsiveContainerAny>
           </div>
         </Card>
         <Card title="Conflict/Friction Heatmap">
@@ -202,16 +224,16 @@ export default function SoulDashboard() {
         <Card title="Shadow vs Light">
           {series.length ? (
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={series}>
-                  <XAxis dataKey="ts" hide />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="shadow" stroke="#b91c1c" />
-                  <Line type="monotone" dataKey="light" stroke="#047857" />
-                </LineChart>
-              </ResponsiveContainer>
+              <ResponsiveContainerAny width="100%" height="100%">
+                <LineChartAny data={series}>
+                  <XAxisAny dataKey="ts" hide />
+                  <YAxisAny />
+                  <TooltipAny />
+                  <LegendAny />
+                  <LineAny type="monotone" dataKey="shadow" stroke="#b91c1c" />
+                  <LineAny type="monotone" dataKey="light" stroke="#047857" />
+                </LineChartAny>
+              </ResponsiveContainerAny>
             </div>
           ) : (
             <p className="text-sm text-stone-500">No timeline data yet.</p>

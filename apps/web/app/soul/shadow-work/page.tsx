@@ -6,6 +6,13 @@ import React from "react";
 import { summarizeSoul, normalizeSoulState } from "@ui/soulViewModel";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 
+const ResponsiveContainerAny = ResponsiveContainer as unknown as React.ComponentType<any>;
+const BarChartAny = BarChart as unknown as React.ComponentType<any>;
+const BarAny = Bar as unknown as React.ComponentType<any>;
+const XAxisAny = XAxis as unknown as React.ComponentType<any>;
+const YAxisAny = YAxis as unknown as React.ComponentType<any>;
+const TooltipAny = Tooltip as unknown as React.ComponentType<any>;
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function SoulShadowWorkPage() {
@@ -48,14 +55,14 @@ export default function SoulShadowWorkPage() {
       <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
         <div className="mb-2 text-sm font-medium text-stone-600">Shadow vs Light Intensity</div>
         <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={shadowLightBars}>
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="value" fill="#9333ea" />
-            </BarChart>
-          </ResponsiveContainer>
+          <ResponsiveContainerAny width="100%" height="100%">
+            <BarChartAny data={shadowLightBars}>
+              <XAxisAny dataKey="name" />
+              <YAxisAny allowDecimals={false} />
+              <TooltipAny />
+              <BarAny dataKey="value" fill="#9333ea" />
+            </BarChartAny>
+          </ResponsiveContainerAny>
         </div>
       </section>
 

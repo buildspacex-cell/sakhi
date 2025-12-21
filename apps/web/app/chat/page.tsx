@@ -14,7 +14,10 @@ export default function Chat() {
 
   const send = async () => {
     if (!input.trim() || isSending) return;
-    const nextMessages = [...messages, { role: "user", text: input }];
+    const nextMessages: Message[] = [
+      ...messages,
+      { role: "user", text: input },
+    ];
     setMessages(nextMessages);
     setIsSending(true);
 

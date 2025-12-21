@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type React from "react";
 
@@ -267,6 +267,14 @@ const breathingKeyframes = `
 `;
 
 export default function ListeningPage() {
+  return (
+    <Suspense fallback={null}>
+      <ListeningPageContent />
+    </Suspense>
+  );
+}
+
+function ListeningPageContent() {
   const searchParams = useSearchParams();
   const [captured, setCaptured] = useState(false);
   const [transcript, setTranscript] = useState<string>(
@@ -289,13 +297,14 @@ export default function ListeningPage() {
     []
   );
   const searchUser = searchParams.get("user");
-  const [devUser, setDevUser] = useState<string>(searchUser || "a");
+  const initialDevUser = searchUser === "b" ? ("b" as const) : ("a" as const);
+  const [devUser, setDevUser] = useState<keyof typeof DEV_USERS>(initialDevUser);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem("dev_user");
       if (!searchUser && stored && stored !== devUser) {
-        setDevUser(stored);
+        setDevUser(stored as keyof typeof DEV_USERS);
         return;
       }
       window.localStorage.setItem("dev_user", devUser);
@@ -303,13 +312,9 @@ export default function ListeningPage() {
       url.searchParams.set("user", devUser);
       window.history.replaceState({}, "", url.toString());
     }
-  }, [devUser, searchUser]);
+  }, [devUser, searchUser, DEV_USERS]);
 
-  useEffect(() => {
-    fetchWeekly();
-  }, [devUser]);
-
-  const fetchWeekly = async () => {
+  const fetchWeekly = useCallback(async () => {
     setWeeklyLoading(true);
     try {
       const res = await fetch(`/api/memory/weekly?user=${encodeURIComponent(devUser)}&limit=1`);
@@ -335,7 +340,11 @@ export default function ListeningPage() {
     } finally {
       setWeeklyLoading(false);
     }
-  };
+  }, [devUser]);
+
+  useEffect(() => {
+    fetchWeekly();
+  }, [devUser, fetchWeekly]);
 
   const submitToApi = async (text: string) => {
     if (!text.trim()) return;
@@ -411,7 +420,7 @@ export default function ListeningPage() {
           <div style={{ marginBottom: 16 }}>
             <select
               value={devUser}
-              onChange={(e) => setDevUser(e.target.value)}
+              onChange={(e) => setDevUser(e.target.value as keyof typeof DEV_USERS)}
               style={devSelectStyle}
               aria-label="Select dev user"
             >
