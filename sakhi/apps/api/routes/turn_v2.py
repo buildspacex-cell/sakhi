@@ -1105,21 +1105,25 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "plans": generated_plans,
         "triage": turn_context.get("triage"),
     }
-    enqueue_turn_jobs(
-        turn_id,
-        user_id,
-        queued_jobs,
-        {
-            "text": body.text,
-            "ts": datetime.datetime.utcnow().isoformat(),
-            "facets": facets_for_worker,
-            "thread_id": user_id,
-            "behavior_profile": behavior_profile,
-            "mode": "today",
-            "emotion_update": emotion_update,
-            "persona_update": persona_update,
-        },
-    )
+    disable_queue = os.getenv("SAKHI_DISABLE_QUEUE") == "1"
+    if disable_queue:
+        logger.error("[turn_v2] queue disabled via SAKHI_DISABLE_QUEUE, skipping enqueue turn_id=%s", turn_id)
+    else:
+        enqueue_turn_jobs(
+            turn_id,
+            user_id,
+            queued_jobs,
+            {
+                "text": body.text,
+                "ts": datetime.datetime.utcnow().isoformat(),
+                "facets": facets_for_worker,
+                "thread_id": user_id,
+                "behavior_profile": behavior_profile,
+                "mode": "today",
+                "emotion_update": emotion_update,
+                "persona_update": persona_update,
+            },
+        )
 
     logger.error(
         "[turn_v2] response snapshot entry_id=%s session_id=%s minimal_mode=%s queued_jobs=%s",
