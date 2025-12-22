@@ -58,14 +58,20 @@ async def orchestrate_turn(
 
     minimal_write = capture_only or os.getenv("SAKHI_TURN_MINIMAL_WRITE") == "1" or os.getenv("SAKHI_UNIFIED_INGEST") != "1"
 
-    entry = await observe_entry(
-        person_id=person_id,
-        text=text,
-        source="conversation",
-        clarity_hint=clarity_hint,
-    )
+    try:
+        entry = await observe_entry(
+            person_id=person_id,
+            text=text,
+            source="conversation",
+            clarity_hint=clarity_hint,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        LOGGER.exception("[orchestrate_turn] observe_entry failed person_id=%s error=%s", person_id, exc)
+        entry = {}
     entry_id = entry.get("id")
     result["entry_id"] = entry_id
+    if not entry_id:
+        LOGGER.warning("[orchestrate_turn] missing entry_id person_id=%s capture_only=%s", person_id, capture_only)
 
     if minimal_write:
         # Persist the journal row and return quickly. Heavy work (embeddings, topics,

@@ -257,6 +257,13 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         return await _turn_lightweight(body, user_id)
 
     minimal_mode = body.capture_only or os.getenv("SAKHI_TURN_MINIMAL_WRITE") == "1" or os.getenv("SAKHI_UNIFIED_INGEST") != "1"
+    logger.info(
+        "[turn_v2] env capture_only=%s minimal_mode=%s TURN_MINIMAL=%s UNIFIED_INGEST=%s",
+        body.capture_only,
+        minimal_mode,
+        os.getenv("SAKHI_TURN_MINIMAL_WRITE"),
+        os.getenv("SAKHI_UNIFIED_INGEST"),
+    )
 
     fast_ingest = {}  # Build 50: avoid ingest work in route; delegate to workers
     turn_context = await orchestrate_turn(
@@ -1111,6 +1118,14 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             "emotion_update": emotion_update,
             "persona_update": persona_update,
         },
+    )
+
+    logger.info(
+        "[turn_v2] response snapshot entry_id=%s session_id=%s minimal_mode=%s queued_jobs=%s",
+        entry_id,
+        session_id,
+        minimal_mode,
+        queued_jobs,
     )
 
     return {
