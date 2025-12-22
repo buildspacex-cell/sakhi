@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type React from "react";
 import type { Route } from "next";
@@ -16,6 +16,14 @@ const palette = {
 const FADE_DURATION_MS = 400;
 
 export default function QuietSpace() {
+  return (
+    <Suspense fallback={null}>
+      <QuietSpaceContent />
+    </Suspense>
+  );
+}
+
+function QuietSpaceContent() {
   const router = useRouter();
   const search = useSearchParams();
   const [isFading, setIsFading] = useState(false);
