@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type React from "react";
+import type { Route } from "next";
 
 const palette = {
   bg: "#0e0f12",
@@ -217,6 +218,7 @@ export default function ExperienceTypePage() {
 }
 
 function ExperienceTypePageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const searchUser = searchParams.get("user");
   const initialUser: "a" | "b" = searchUser === "b" ? "b" : "a";
@@ -301,6 +303,11 @@ function ExperienceTypePageContent() {
       setText(bodyText);
       setDebugData(data.debug ?? null);
       fetchWeekly();
+      const entryId = data.entry_id || data.turn_id || data.sessionId || data.person_id;
+      if (entryId) {
+        const next = `/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route;
+        router.replace(next);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
