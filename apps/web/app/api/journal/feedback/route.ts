@@ -6,6 +6,7 @@ type FeedbackBody = {
   emotional_shift?: "lighter" | "calmer" | "same" | "stirred_up";
   shift_explained_text?: string | null;
   return_intent?: "yes" | "maybe" | "no";
+  memory_signal_text?: string | null;
 };
 
 export async function POST(req: NextRequest) {
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
   const emotional_shift = body.emotional_shift;
   const return_intent = body.return_intent;
   const shift_explained_text = (body.shift_explained_text || "").trim() || null;
+  const memory_signal_text = (body.memory_signal_text || "").trim() || null;
 
   if (!journal_id || !emotional_shift || !return_intent) {
     return NextResponse.json({ error: "journal_id, emotional_shift, and return_intent are required" }, { status: 400 });
@@ -32,6 +34,7 @@ export async function POST(req: NextRequest) {
     emotional_shift,
     shift_explained_text,
     return_intent,
+    memory_signal_text,
     created_at,
   };
 

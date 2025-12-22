@@ -286,7 +286,7 @@ function ExperienceTypePageContent() {
       const res = await fetch(`${turnApiPath}?user=${encodeURIComponent(devUser)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: bodyText }),
+        body: JSON.stringify({ text: bodyText, capture_only: true }),
       });
       if (!res.ok) {
         const message = await res.text();
@@ -307,6 +307,7 @@ function ExperienceTypePageContent() {
       fetchWeekly();
       const entryId = data.entry_id || data.turn_id || data.sessionId || data.session_id || data.person_id;
       if (entryId) {
+        setEntryId(entryId);
         const next = `/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route;
         router.replace(next);
       }

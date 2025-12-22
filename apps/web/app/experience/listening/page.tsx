@@ -359,7 +359,7 @@ function ListeningPageContent() {
       const res = await fetch(`${turnApiPath}?user=${encodeURIComponent(devUser)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, capture_only: true }),
       });
       if (!res.ok) {
         const message = await res.text();
@@ -381,8 +381,6 @@ function ListeningPageContent() {
       const entryId = data.entry_id || data.turn_id || data.sessionId || data.session_id || data.person_id;
       if (entryId) {
         setEntryId(entryId);
-      }
-      if (entryId) {
         const next = `/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route;
         router.replace(next);
       }

@@ -33,6 +33,7 @@ function ExperienceFeedbackContent() {
   const [emotionalShift, setEmotionalShift] = useState<EmotionalShift | null>(null);
   const [returnIntent, setReturnIntent] = useState<ReturnIntent | null>(null);
   const [details, setDetails] = useState("");
+  const [memorySignal, setMemorySignal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const canSubmit = emotionalShift !== null && returnIntent !== null && journalId.length > 0;
 
@@ -71,6 +72,7 @@ function ExperienceFeedbackContent() {
           emotional_shift: emotionalShift,
           shift_explained_text: details || null,
           return_intent: returnIntent,
+          memory_signal_text: memorySignal || null,
         }),
       });
       if (!res.ok) {
@@ -219,6 +221,16 @@ function ExperienceFeedbackContent() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={questionStyle}>Is there anything you’d want Sakhi to understand or remember from this?</div>
+          <textarea
+            style={textareaStyle}
+            value={memorySignal}
+            onChange={(e) => setMemorySignal(e.target.value)}
+            aria-label="Optional memory signal"
+          />
         </div>
 
         <button type="button" style={doneStyle} onClick={submit} disabled={!canSubmit || submitting}>
