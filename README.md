@@ -36,3 +36,14 @@ Set `SAKHI_LOG_COLOR=0` to disable ANSI colors. Key events (classifier/chat resp
   poetry run python scripts/run_schedulers.py
   ```
 - Defaults: reflections enqueue every 24h and presence every 6h. Override with `SCHED_REFLECTION_INTERVAL_SEC` / `SCHED_PRESENCE_INTERVAL_SEC`, or disable presence with `ENABLE_PRESENCE_JOBS=0`.
+
+## Local Development (Production Parity)
+- Create `.env.local` from `.env.local.example` (values only; no feature flags). Removing it should make the API fail loudly at startup.
+- Build and run the API with the same Dockerfile Railway uses:
+  ```bash
+  docker build -t sakhi-api .
+  docker run --env-file .env.local -p 8080:8080 sakhi-api
+  ```
+  This image/command is identical to production; if it breaks locally, it will break on Railway.
+- Optional infra helper: bring up dependencies only (no API) with `docker compose -f docker-compose.local.yml up -d`, then run the API container via `docker run ...` above.
+- Web app: from repo root run `pnpm --filter web dev`; choose the API target by setting `NEXT_PUBLIC_API_BASE_URL` (local Docker: `http://localhost:8080`, Railway: deployed URL). No proxy rewrites or conditional logic.

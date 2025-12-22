@@ -7,7 +7,7 @@ export default function ExperienceJournalRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/experience/type");
+    router.replace("/experience");
   }, [router]);
 
   return null;

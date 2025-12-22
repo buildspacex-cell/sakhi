@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type React from "react";
 
@@ -12,11 +12,10 @@ const palette = {
 
 const FADE_DURATION_MS = 400;
 
-export default function ExperienceGate() {
+export default function QuietSpace() {
   const router = useRouter();
   const search = useSearchParams();
   const [isFading, setIsFading] = useState(false);
-  const [isHoveringBegin, setIsHoveringBegin] = useState(false);
   const hasNavigated = useRef(false);
 
   const user = search?.get("user");
@@ -75,12 +74,9 @@ export default function ExperienceGate() {
   const beginStyle: React.CSSProperties = {
     marginTop: "32px",
     fontSize: "13px",
-    color: isHoveringBegin ? palette.fg : palette.muted,
+    color: palette.muted,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
-    cursor: "pointer",
-    display: "inline-block",
-    transition: "color 160ms ease, opacity 160ms ease",
   };
 
   return (
@@ -88,13 +84,7 @@ export default function ExperienceGate() {
       <section style={textWrapperStyle}>
         <p style={lineOneStyle}>This is a quiet space to unload your mind.</p>
         <p style={lineTwoStyle}>Say whatever is present - you don’t need to sort it.</p>
-        <span
-          style={beginStyle}
-          onMouseEnter={() => setIsHoveringBegin(true)}
-          onMouseLeave={() => setIsHoveringBegin(false)}
-        >
-          Begin
-        </span>
+        <span style={beginStyle}>Begin</span>
       </section>
     </main>
   );
