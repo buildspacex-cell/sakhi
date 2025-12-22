@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type React from "react";
+import type { Route } from "next";
 
 const palette = {
   bg: "#0e0f12",
@@ -30,7 +31,7 @@ export default function QuietSpace() {
     hasNavigated.current = true;
     setIsFading(true);
     window.setTimeout(() => {
-      router.replace(nextPath);
+      router.replace(nextPath as Route);
     }, FADE_DURATION_MS);
   }, [nextPath, router]);
 
