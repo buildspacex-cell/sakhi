@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL;
-if (!API_BASE) {
-  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
-}
+import { getApiBase } from "@/lib/api-base";
 
 export async function POST(req: Request) {
   console.log("TURN-V2 ROUTE HIT");
   const body = await req.json();
   const user = new URL(req.url).searchParams.get("user") || "a";
-  const r = await fetch(`${API_BASE}/v2/turn?user=${encodeURIComponent(user)}`, {
+  const apiBase = getApiBase();
+  const r = await fetch(`${apiBase}/v2/turn?user=${encodeURIComponent(user)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

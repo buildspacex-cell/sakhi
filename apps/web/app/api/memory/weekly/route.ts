@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL;
-
-if (!API_BASE) {
-  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
-}
+import { getApiBase } from "@/lib/api-base";
 
 export async function GET(req: NextRequest) {
+  const API_BASE = getApiBase();
   const currentParams = new URL(req.url).searchParams;
   const user = currentParams.get("user") || "a";
   const url = new URL(`${API_BASE}/memory/dev/weekly`);

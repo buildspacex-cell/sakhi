@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
+import { getApiBase } from "@/lib/api-base";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL;
 const API_KEY =
   process.env.NEXT_PUBLIC_API_KEY || process.env.EXPO_PUBLIC_API_KEY || "";
 
-if (!API_BASE) {
-  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
-}
-
 export async function POST(request: Request) {
+  const API_BASE = getApiBase();
   const body = await request.json();
   const payload = body?.messages
     ? body

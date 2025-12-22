@@ -1,11 +1,8 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  process.env.API_BASE_URL;
+import { getApiBase } from "./api-base";
 
-if (!API_BASE) {
-  throw new Error('Missing NEXT_PUBLIC_API_BASE_URL');
-}
+const resolveApiBase = () =>
+  getApiBase() ??
+  (process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BASE_URL);
 
 type MemoryObservePayload = {
   person_id: string;
@@ -94,6 +91,7 @@ export const api = {
       postJson<{ ok: boolean }>('/api/person/preference/upsert', payload),
   },
   async post<T = any>(url: string, payload: unknown): Promise<{ data: T; status: number }> {
+    const API_BASE = resolveApiBase();
     const response = await fetch(`${API_BASE}${url}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -121,6 +119,7 @@ export const api = {
 };
 
 export async function addEntry(content: string, accessToken?: string): Promise<void> {
+  const API_BASE = resolveApiBase();
   const response = await fetch(`${API_BASE}/journal/turn`, {
     method: 'POST',
     headers: {
