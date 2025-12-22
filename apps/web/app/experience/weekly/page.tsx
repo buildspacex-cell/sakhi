@@ -322,7 +322,7 @@ function ExperienceWeeklyPageContent() {
   const initialUser: "a" | "b" = searchUser === "b" ? "b" : "a";
   const [devUser, setDevUser] = useState<"a" | "b">(initialUser);
 
-  const debugEnabled = useMemo(() => searchParams.get("debug") === "true", [searchParams]);
+  const debugEnabled = useMemo(() => true, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
