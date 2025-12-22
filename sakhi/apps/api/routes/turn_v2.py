@@ -1121,7 +1121,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         },
     )
 
-    logger.info(
+    logger.error(
         "[turn_v2] response snapshot entry_id=%s session_id=%s minimal_mode=%s queued_jobs=%s",
         entry_id,
         session_id,

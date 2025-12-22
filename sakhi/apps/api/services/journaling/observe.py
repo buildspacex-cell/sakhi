@@ -22,6 +22,7 @@ async def observe_entry(
 
     entry_id = str(uuid.uuid4())
     db = await get_db()
+    LOGGER.error("[observe_entry] start person_id=%s layer=journal", person_id)
     try:
         await db.execute(
             """

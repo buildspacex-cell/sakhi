@@ -57,6 +57,13 @@ async def orchestrate_turn(
     }
 
     minimal_write = capture_only or os.getenv("SAKHI_TURN_MINIMAL_WRITE") == "1" or os.getenv("SAKHI_UNIFIED_INGEST") != "1"
+    LOGGER.error(
+        "[orchestrate_turn] start person_id=%s capture_only=%s minimal_write=%s text_len=%s",
+        person_id,
+        capture_only,
+        minimal_write,
+        len(text or ""),
+    )
 
     try:
         LOGGER.error("[orchestrate_turn] observe_entry start person_id=%s capture_only=%s", person_id, capture_only)
@@ -175,6 +182,14 @@ async def orchestrate_turn(
         len(generated_plans),
         bool(rhythm_trigger_result and rhythm_trigger_result.get("applied")),
         bool(meta_trigger_result and meta_trigger_result.get("applied")),
+    )
+    LOGGER.error(
+        "[orchestrate_turn] end person_id=%s entry_id=%s minimal_write=%s intents=%s plans=%s",
+        person_id,
+        entry_id,
+        minimal_write,
+        len(stored_intents),
+        len(generated_plans),
     )
     return result
 
