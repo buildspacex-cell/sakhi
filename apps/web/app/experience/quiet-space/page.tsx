@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type React from "react";
 import type { Route } from "next";
 
+export const dynamic = "force-dynamic";
+
 const palette = {
   bg: "#0e0f12",
   fg: "#f4f4f5",
