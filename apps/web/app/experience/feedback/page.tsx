@@ -35,7 +35,8 @@ function ExperienceFeedbackContent() {
   const [details, setDetails] = useState("");
   const [memorySignal, setMemorySignal] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const canSubmit = emotionalShift !== null && returnIntent !== null && journalId.length > 0;
+  const hasRequiredAnswers = emotionalShift !== null && returnIntent !== null;
+  const canSubmit = hasRequiredAnswers;
 
   const optionStyle = useMemo(
     () => ({
@@ -129,7 +130,7 @@ function ExperienceFeedbackContent() {
   const textareaStyle: React.CSSProperties = {
     width: "100%",
     minHeight: "120px",
-    background: "rgba(255,255,255,0.02)",
+    background: "rgba(255,255,255,0.04)",
     border: `1px solid ${palette.border}`,
     borderRadius: "12px",
     padding: "14px",
