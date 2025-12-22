@@ -248,7 +248,7 @@ async def _turn_lightweight(body: TurnIn, user_id: str) -> Dict[str, Any]:
 @router.post("/turn")
 async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(default=None)):
     user_id, person_label, person_key = resolve_person(request, user)
-    print("TURN V2 FASTAPI ROUTE HIT", user)
+    logger.warning("[turn_v2] entry start user=%s person_id=%s label=%s", user, user_id, person_label)
     logger.info("ACTIVE_DEV_PERSON", extra={"person_id": user_id, "person_label": person_label, "person_key": person_key})
 
     if not body.text.strip():
@@ -264,6 +264,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         os.getenv("SAKHI_TURN_MINIMAL_WRITE"),
         os.getenv("SAKHI_UNIFIED_INGEST"),
     )
+    logger.warning("[turn_v2] minimal_mode=%s user_id=%s text_len=%s", minimal_mode, user_id, len(body.text or ""))
 
     fast_ingest = {}  # Build 50: avoid ingest work in route; delegate to workers
     turn_context = await orchestrate_turn(

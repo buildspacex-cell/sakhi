@@ -49,9 +49,9 @@ async def observe_entry(
             entry_id,
         )
         if row:
-            LOGGER.info("[observe_entry] inserted entry id=%s person_id=%s layer=%s", entry_id, person_id, row.get("layer"))
+            LOGGER.error("[observe_entry] inserted entry id=%s person_id=%s layer=%s", entry_id, person_id, row.get("layer"))
             return dict(row)
-        LOGGER.warning("[observe_entry] insert returned no row id=%s person_id=%s", entry_id, person_id)
+        LOGGER.error("[observe_entry] insert returned no row id=%s person_id=%s", entry_id, person_id)
         return {"id": entry_id}
     except Exception as exc:
         LOGGER.exception("[observe_entry] failed insert person_id=%s error=%s", person_id, exc)
