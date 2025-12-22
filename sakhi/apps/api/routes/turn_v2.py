@@ -67,7 +67,7 @@ logger.info("[turn_v2] Build32 mode=%s", BUILD32_MODE)
 _UNIFIED_INGEST_SCHEMA_OK: bool | None = None
 
 
-@router.post("/turn")
+@router.get("/turn/probe")
 async def __turn_v2_probe(request: Request):
     print("🔥 TURN V2 PROBE HIT", request.url)
     return JSONResponse({"probe": "ok"})
