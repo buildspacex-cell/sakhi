@@ -20,6 +20,8 @@ RUN python -m pip install --no-cache-dir "poetry==1.8.3" \
 # Copy full code (monorepo)
 COPY . .
 
+ENV PYTHONPATH=/app
+
 # Expose API port
 EXPOSE 8080
 
