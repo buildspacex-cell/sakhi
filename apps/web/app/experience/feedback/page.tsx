@@ -115,7 +115,7 @@ function ExperienceFeedbackContent() {
   };
 
   const questionStyle: React.CSSProperties = {
-    fontSize: "20px",
+    fontSize: "15px",
     lineHeight: 1.6,
     color: palette.accent,
   };
@@ -174,7 +174,7 @@ function ExperienceFeedbackContent() {
         <div style={headerStyle}>A quick check-in</div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={questionStyle}>After saying this out loud, do you feel any different?</div>
+          <div style={questionStyle}>After saying things out here, do you feel any different?</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {primaryOptions.map((opt) => (
               <button
@@ -224,7 +224,7 @@ function ExperienceFeedbackContent() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div style={questionStyle}>Is there anything you’d want Sakhi to understand or remember from this?</div>
+          <div style={questionStyle}>Is there anything you’d want Sakhi to understand or remember ?</div>
           <textarea
             style={textareaStyle}
             value={memorySignal}
