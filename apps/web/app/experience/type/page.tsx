@@ -234,6 +234,7 @@ function ExperienceTypePageContent() {
   const [error, setError] = useState<string | null>(null);
   const [weekly, setWeekly] = useState<WeeklyItem | null>(null);
   const [weeklyLoading, setWeeklyLoading] = useState(false);
+  const [entryId, setEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
