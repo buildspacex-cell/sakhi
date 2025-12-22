@@ -381,8 +381,6 @@ function ListeningPageContent() {
       const entryId = data.entry_id || data.turn_id || data.sessionId || data.session_id || data.person_id;
       if (entryId) {
         setEntryId(entryId);
-        const next = `/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route;
-        router.replace(next);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
