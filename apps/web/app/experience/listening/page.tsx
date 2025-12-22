@@ -21,6 +21,7 @@ type Ack = {
   entry_id?: string;
   turn_id?: string;
   sessionId?: string;
+  session_id?: string;
   person_id?: string;
   created_at?: string;
   normalized?: string;
@@ -377,7 +378,7 @@ function ListeningPageContent() {
       setTranscript(text);
       setDebugData(data.debug ?? null);
       fetchWeekly();
-      const entryId = data.entry_id || data.turn_id || data.sessionId || data.person_id;
+      const entryId = data.entry_id || data.turn_id || data.sessionId || data.session_id || data.person_id;
       if (entryId) {
         setEntryId(entryId);
       }
