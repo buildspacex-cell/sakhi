@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type React from "react";
@@ -531,7 +532,22 @@ function ExperienceWeeklyPageContent() {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
-        <div style={brandStyle}>Sakhi</div>
+        <div style={brandStyle}>
+          Sakhi{" "}
+          <Link
+            href="/experience/feedback"
+            style={{
+              marginLeft: "12px",
+              fontSize: "11px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: palette.muted,
+              textDecoration: "underline",
+            }}
+          >
+            Feedback
+          </Link>
+        </div>
 
         <div style={headerRowStyle}>
           <div>
