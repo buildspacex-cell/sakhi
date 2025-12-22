@@ -358,7 +358,7 @@ function ListeningPageContent() {
       const res = await fetch(`${turnApiPath}?user=${encodeURIComponent(devUser)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, capture_only: true }),
+        body: JSON.stringify({ text }),
       });
       if (!res.ok) {
         const message = await res.text();

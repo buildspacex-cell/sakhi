@@ -285,7 +285,7 @@ function ExperienceTypePageContent() {
       const res = await fetch(`${turnApiPath}?user=${encodeURIComponent(devUser)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: bodyText, capture_only: true }),
+        body: JSON.stringify({ text: bodyText }),
       });
       if (!res.ok) {
         const message = await res.text();
