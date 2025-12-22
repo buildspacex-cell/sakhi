@@ -290,6 +290,7 @@ function ListeningPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [weekly, setWeekly] = useState<WeeklyItem | null>(null);
   const [weeklyLoading, setWeeklyLoading] = useState(false);
+  const [entryId, setEntryId] = useState<string | null>(null);
 
   const DEV_USERS = useMemo(
     () => ({
@@ -378,6 +379,9 @@ function ListeningPageContent() {
       fetchWeekly();
       const entryId = data.entry_id || data.turn_id || data.sessionId || data.person_id;
       if (entryId) {
+        setEntryId(entryId);
+      }
+      if (entryId) {
         const next = `/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route;
         router.replace(next);
       }
@@ -448,17 +452,15 @@ function ListeningPageContent() {
               <div style={navRowStyle}>
                 <Link
                   href={
-                    ack?.entry_id || ack?.turn_id || ack?.sessionId || ack?.person_id
-                      ? (`/experience/feedback?entry_id=${encodeURIComponent(
-                          ack.entry_id || ack.turn_id || ack.sessionId || ack.person_id || ""
-                        )}&user=${encodeURIComponent(devUser)}` as Route)
+                    entryId
+                      ? (`/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route)
                       : "#"
                   }
                   style={{
                     ...actionButtonStyle,
                     textDecoration: "none",
-                    pointerEvents: ack?.entry_id || ack?.turn_id || ack?.sessionId || ack?.person_id ? "auto" : "none",
-                    opacity: ack?.entry_id || ack?.turn_id || ack?.sessionId || ack?.person_id ? 1 : 0.5,
+                    pointerEvents: entryId ? "auto" : "none",
+                    opacity: entryId ? 1 : 0.5,
                   }}
                 >
                   Feedback

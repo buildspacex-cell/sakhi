@@ -403,17 +403,15 @@ function ExperienceTypePageContent() {
                     </button>
                     <Link
                       href={
-                        ack?.entry_id || ack?.turn_id || ack?.sessionId || ack?.person_id
-                          ? (`/experience/feedback?entry_id=${encodeURIComponent(
-                              ack.entry_id || ack.turn_id || ack.sessionId || ack.person_id || ""
-                            )}&user=${encodeURIComponent(devUser)}` as Route)
+                        entryId
+                          ? (`/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route)
                           : "#"
                       }
                       style={{
                         ...actionButtonStyle,
                         textDecoration: "none",
-                        pointerEvents: ack?.entry_id || ack?.turn_id || ack?.sessionId || ack?.person_id ? "auto" : "none",
-                        opacity: ack?.entry_id || ack?.turn_id || ack?.sessionId || ack?.person_id ? 1 : 0.5,
+                        pointerEvents: entryId ? "auto" : "none",
+                        opacity: entryId ? 1 : 0.5,
                       }}
                     >
                       Feedback

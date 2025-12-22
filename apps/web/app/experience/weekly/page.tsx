@@ -532,22 +532,7 @@ function ExperienceWeeklyPageContent() {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
-        <div style={brandStyle}>
-          Sakhi{" "}
-          <Link
-            href="/experience/feedback"
-            style={{
-              marginLeft: "12px",
-              fontSize: "11px",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: palette.muted,
-              textDecoration: "underline",
-            }}
-          >
-            Feedback
-          </Link>
-        </div>
+        <div style={brandStyle}>Sakhi</div>
 
         <div style={headerRowStyle}>
           <div>
@@ -673,6 +658,21 @@ function ExperienceWeeklyPageContent() {
               </div>
             );
           })()}
+        </div>
+
+        <div style={{ marginTop: "32px", textAlign: "center" }}>
+          <Link
+            href="/experience/feedback"
+            style={{
+              fontSize: "13px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: palette.muted,
+              textDecoration: "underline",
+            }}
+          >
+            Feedback
+          </Link>
         </div>
       </div>
     </div>
