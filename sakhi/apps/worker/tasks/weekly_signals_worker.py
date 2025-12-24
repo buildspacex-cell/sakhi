@@ -4,6 +4,7 @@ import logging
 import os
 from collections import Counter, defaultdict
 import json
+import re
 from datetime import datetime, timedelta, timezone, date
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -143,6 +144,49 @@ def _analyze_journals(journal_rows: List[Dict[str, Any]]) -> Tuple[Dict[str, Any
     weekly_body_notes = {"discomfort_hints": [], "count": 0}
     dimension_states: Dict[str, str] = {dim: "flat" for dim in ("body", "mind", "emotion", "energy", "work")}
 
+    # Anchor eligibility (for weekly reflections) is scoped to these journal rows:
+    # - Anchors must come from journal_entries.content that triggered:
+    #   * body discomfort detection
+    #   * work overload / overextension salience
+    #   * emotional salience (guilt, pride, happiness)
+    # - Only rows contributing to weekly_salience, weekly_contrast, or weekly_body_notes are candidates.
+    # - Do NOT fetch anchors from memory_episodic; journals are the source of truth here.
+    anchor_candidates: Dict[str, List[Dict[str, Any]]] = {
+        "body_discomfort": [],
+        "work_overload": [],
+        "positive_emotion": [],
+        "negative_emotion": [],
+    }
+
+    def _append_anchor(key: str, row: Dict[str, Any]) -> None:
+        entry = {
+            "content": row.get("content") or "",
+            "created_at": None,
+        }
+        ts = row.get("created_at")
+        if hasattr(ts, "isoformat"):
+            entry["created_at"] = ts.isoformat()
+        elif isinstance(ts, str):
+            entry["created_at"] = ts
+        anchor_candidates.setdefault(key, []).append(entry)
+
+    def build_moment_hint(text: str, signal_type: str) -> str:
+        """Deterministic, time-neutral moment hint (8-20 words, no advice/causes)."""
+        base_map = {
+            "body_discomfort": "a moment when your body felt off",
+            "work_overload": "a time when work felt heavy",
+            "positive_emotion": "a time that felt uplifting",
+            "negative_emotion": "a moment when emotions felt heavier",
+        }
+        base = base_map.get(signal_type, "a moment in the week")
+        cleaned = re.sub(r"[^A-Za-z0-9\\s]", " ", text or "").strip()
+        words = [w.lower() for w in cleaned.split() if w.strip()]
+        tail = words[:12]  # limit tail to keep under 20 words overall
+        combined = (base.split() + tail)[:20]
+        if len(combined) < 8:
+            combined += ["in", "the", "week"]
+        return " ".join(combined[:20]).strip()
+
     def _snippet_hint(raw_text: str, keyword: str, max_words: int = 5) -> str:
         words = raw_text.split()
         lower_words = [w.lower() for w in words]
@@ -251,6 +295,9 @@ def _analyze_journals(journal_rows: List[Dict[str, Any]]) -> Tuple[Dict[str, Any
         has_exhaustion = any(term in text for term in exhaustion_terms)
         has_energizing = any(term in text for term in energizing_terms)
 
+        if has_work_pressure or has_overextension:
+            _append_anchor("work_overload", row)
+
         if has_positive_body:
             matched = next((term for term in positive_body_terms if term in text), "")
             hint = _snippet_hint(raw_text, matched)
@@ -263,13 +310,16 @@ def _analyze_journals(journal_rows: List[Dict[str, Any]]) -> Tuple[Dict[str, Any
             weekly_contrast["positive_glimpses"].append({"type": "positive_emotion", "hint": hint})
             weekly_contrast["count"] += 1
             positive_emotion_seen = True
+            _append_anchor("positive_emotion", row)
         if has_negative_emotion:
             negative_emotion_seen = True
+            _append_anchor("negative_emotion", row)
         if has_discomfort:
             matched = next((term for term in discomfort_terms if term in text), "")
             hint = _snippet_hint(raw_text, matched, max_words=3) if matched else " ".join(raw_text.split()[:3])
             weekly_body_notes["discomfort_hints"].append({"type": "physical_discomfort", "hint": hint})
             discomfort_seen = True
+            _append_anchor("body_discomfort", row)
         if has_exhaustion:
             exhaustion_seen = True
         if has_energizing:
@@ -295,6 +345,37 @@ def _analyze_journals(journal_rows: List[Dict[str, Any]]) -> Tuple[Dict[str, Any
 
     if weekly_body_notes["discomfort_hints"]:
         weekly_body_notes["count"] = len(weekly_body_notes["discomfort_hints"])
+
+    # Select up to one anchor per signal type from candidates (journal-based only).
+    moment_anchors: List[Dict[str, Any]] = []
+    for key in ("body_discomfort", "work_overload", "positive_emotion", "negative_emotion"):
+        candidates = anchor_candidates.get(key) or []
+        if not candidates:
+            continue
+        chosen = candidates[0]  # deterministic: first contributing row
+        hint = build_moment_hint(chosen.get("content") or "", key)
+        moment_anchors.append(
+            {
+                "type": key,
+                "hint": hint,
+            }
+        )
+    if moment_anchors:
+        weekly_contrast["moment_anchors"] = moment_anchors
+
+    # Per-dimension anchors (journal only, no ids/dates, max 1)
+    for anchor in moment_anchors:
+        if anchor["type"] == "body_discomfort":
+            weekly_body_notes.setdefault("anchors", [])
+            if not weekly_body_notes["anchors"]:
+                weekly_body_notes["anchors"].append({"source": "journal", "moment_hint": anchor["hint"]})
+        if anchor["type"] == "work_overload":
+            weekly_salience.setdefault("anchors", [])
+            if not weekly_salience["anchors"]:
+                weekly_salience["anchors"].append({"source": "journal", "moment_hint": anchor["hint"]})
+
+    # Surface anchor candidates alongside signals (journal-based only).
+    weekly_contrast["_anchor_candidates"] = anchor_candidates
 
     return weekly_salience, weekly_contrast, dimension_states, weekly_body_notes
 

@@ -61,6 +61,13 @@ SYSTEM_PROMPT = (
     "- Do not refer to metrics, scores, or dimensions explicitly.\n\n"
     "If a dimension must be reflected but no specific hints exist, use one brief, neutral phrase "
     "such as “felt mixed”, “had ups and downs”, or “carried some pressure”, without adding causes, advice, or examples.\n\n"
+    "When anchors are present:\n"
+    "- Describe the overall pattern first\n"
+    "- Then weave the anchor naturally as an example\n"
+    "- Do not quote, list, or reference journals\n"
+    "- Do not mention dates or “you wrote”\n"
+    "- Keep it flowing as one human reflection\n"
+    "- Use at most one anchor per dimension\n\n"
     "Write as one human reflecting to another — grounded, observational, and calm. Avoid analytical framing or statistical language.\n\n"
     "The goal is for the reader to feel:\n"
     "“Yes — that sounds like my week.”"
@@ -286,6 +293,49 @@ def _lint_reflection(
     if str((dimension_states or {}).get("mind") or "").lower() != "flat":
         if not (reflection.get("mind") or "").strip():
             violations.append("mind reflection missing per coverage contract")
+
+    # Anchor lint: if anchors exist, the corresponding dimension must paraphrase the anchor
+    # without quoting journals, mentioning dates, or entry mechanics.
+    anchor_map: Dict[str, List[Dict[str, Any]]] = {}
+    if isinstance(weekly_contrast.get("moment_anchors"), list):
+        for anchor in weekly_contrast.get("moment_anchors") or []:
+            if isinstance(anchor, dict):
+                typ = anchor.get("type")
+                if typ:
+                    anchor_map.setdefault(str(typ), []).append(anchor)
+    if isinstance(weekly_salience.get("anchors"), list):
+        if weekly_salience.get("anchors"):
+            anchor_map.setdefault("work_overload", []).extend(
+                [a for a in weekly_salience.get("anchors") if isinstance(a, dict)]
+            )
+    if isinstance(weekly_body_notes.get("anchors"), list):
+        if weekly_body_notes.get("anchors"):
+            anchor_map.setdefault("body_discomfort", []).extend(
+                [a for a in weekly_body_notes.get("anchors") if isinstance(a, dict)]
+            )
+
+    def _has_forbidden_anchor_refs(text: str) -> bool:
+        lower = text.lower()
+        return any(token in lower for token in ["you wrote", "journal", "entry", "on ", "dated ", "@", "#"])
+
+    def _check_anchor(dim: str, text: str, anchors: List[Dict[str, Any]]) -> None:
+        if not anchors:
+            return
+        if not text.strip():
+            violations.append(f"{dim} reflection missing despite anchor present")
+            return
+        if _has_forbidden_anchor_refs(text):
+            violations.append(f"{dim} reflection references journal mechanics/quotes while anchors present")
+
+    # Body anchor
+    if anchor_map.get("body_discomfort"):
+        _check_anchor("body", reflection.get("body") or "", anchor_map["body_discomfort"])
+    # Work anchor
+    if anchor_map.get("work_overload"):
+        _check_anchor("work", reflection.get("work") or "", anchor_map["work_overload"])
+    # Emotion anchors
+    if anchor_map.get("positive_emotion") or anchor_map.get("negative_emotion"):
+        _check_anchor("emotion", reflection.get("emotion") or "", (anchor_map.get("positive_emotion") or []) + (anchor_map.get("negative_emotion") or []))
 
     if violations:
         raise ValueError("Reflection lint failed: " + "; ".join(violations))
@@ -552,12 +602,20 @@ async def generate_weekly_reflection(
     weekly_body_notes = signals.get("weekly_body_notes") or {}
     _sanitize_mixed_reflection(llm_result, dimension_states)
     try:
+        anchors = []
+        salience = signals.get("weekly_salience") or {}
+        body_notes = signals.get("weekly_body_notes") or {}
+        if isinstance(salience.get("anchors"), list):
+            anchors.extend([("work", a.get("moment_hint")) for a in salience.get("anchors") or []])
+        if isinstance(body_notes.get("anchors"), list):
+            anchors.extend([("body", a.get("moment_hint")) for a in body_notes.get("anchors") or []])
         logger.error(
             "WEEKLY_REFLECTION_INPUT_DEBUG",
             extra={
                 "person_id": person_id,
                 "weekly_contrast_count": (signals.get("weekly_contrast") or {}).get("count"),
                 "dimension_state_body": (signals.get("dimension_states") or {}).get("body"),
+                "anchors": anchors,
             },
         )
     except Exception:
