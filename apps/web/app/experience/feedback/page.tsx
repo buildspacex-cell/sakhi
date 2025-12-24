@@ -86,7 +86,7 @@ function ExperienceFeedbackContent() {
       const next = (user ? `/experience?user=${encodeURIComponent(user)}` : "/experience") as Route;
       router.replace(next);
     }
-  }, [canSubmit, details, emotionalShift, journalId, returnIntent, router, submitting, user]);
+  }, [canSubmit, details, emotionalShift, journalId, memorySignal, returnIntent, router, submitting, user]);
 
   const containerStyle: React.CSSProperties = {
     minHeight: "100vh",

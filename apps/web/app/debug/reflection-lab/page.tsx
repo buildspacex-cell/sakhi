@@ -477,14 +477,16 @@ export default function ReflectionLabPage() {
                                   type="radio"
                                   name={`${scenario.id}-${dim}`}
                                   checked={scenario.manual_checklist?.[dim as keyof ManualChecklist] === status}
-                                  onChange={() =>
+                                  onChange={() => {
+                                    const base: ManualChecklist =
+                                      (scenario.manual_checklist || defaultScenario.manual_checklist) as ManualChecklist;
                                     updateScenario(scenario.id, {
                                       manual_checklist: {
-                                        ...(scenario.manual_checklist || defaultScenario.manual_checklist),
+                                        ...base,
                                         [dim]: status as ManualChecklist[keyof ManualChecklist],
-                                      },
-                                    })
-                                  }
+                                      } as ManualChecklist,
+                                    });
+                                  }}
                                 />
                                 <span>{status}</span>
                               </label>
