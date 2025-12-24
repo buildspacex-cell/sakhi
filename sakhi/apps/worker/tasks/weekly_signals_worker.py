@@ -12,6 +12,7 @@ from sakhi.apps.api.core.db import exec as dbexec, q
 logger = logging.getLogger(__name__)
 
 WINDOW_DAYS = int(os.getenv("WEEKLY_SIGNALS_WINDOW_DAYS", "7") or "7")
+TARGET_WEEK_START_ENV = os.getenv("WEEKLY_SIGNALS_TARGET_WEEK_START")
 
 
 def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
@@ -136,13 +137,186 @@ def _confidence_from_inputs(
     return _clamp(conf)
 
 
+def _analyze_journals(journal_rows: List[Dict[str, Any]]) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, str], Dict[str, Any]]:
+    weekly_salience = {"present": False, "items": []}
+    weekly_contrast = {"positive_glimpses": [], "count": 0}
+    weekly_body_notes = {"discomfort_hints": [], "count": 0}
+    dimension_states: Dict[str, str] = {dim: "flat" for dim in ("body", "mind", "emotion", "energy", "work")}
+
+    def _snippet_hint(raw_text: str, keyword: str, max_words: int = 5) -> str:
+        words = raw_text.split()
+        lower_words = [w.lower() for w in words]
+        idx = None
+        for i, w in enumerate(lower_words):
+            if keyword and keyword in w:
+                idx = i
+                break
+        if idx is None:
+            return " ".join(words[:max_words]) if words else ""
+        start = max(idx - 1, 0)
+        end = min(len(words), start + max_words)
+        return " ".join(words[start:end])
+
+    work_pressure_hits = 0
+    overextension_hits = 0
+    positive_emotion_seen = False
+    negative_emotion_seen = False
+    discomfort_seen = False
+    positive_body_seen = False
+    exhaustion_seen = False
+    energizing_seen = False
+
+    work_pressure_terms = [
+        "work overload",
+        "overloaded",
+        "too much work",
+        "pressure",
+        "stressed about work",
+        "blocked",
+        "blockage",
+        "frustrated",
+        "frustration",
+        "stuck at work",
+        "deadline pressure",
+        "workload",
+        "pushing beyond reason",
+        "pushed beyond reason",
+    ]
+    overextension_terms = [
+        "pushing through",
+        "pushed through",
+        "pushing myself",
+        "kept going",
+        "exhausted",
+        "exhaustion",
+        "tired but still",
+        "pushed through work",
+        "push through work",
+        "pushing beyond reason",
+    ]
+    guilt_terms = ["guilt", "guilty"]
+    rest_terms = ["rest", "resting", "break", "nap"]
+    positive_body_terms = [
+        "felt great",
+        "felt strong",
+        "amazing workout",
+        "good workout",
+        "great workout",
+        "run",
+        "walk",
+        "yoga",
+        "pilates",
+        "exercise",
+        "energized",
+        "badminton",
+        "family badminton",
+        "play",
+        "played with family",
+        "walked with",
+    ]
+    positive_emotion_terms = ["happy", "joy", "joyful", "excited", "grateful", "proud", "calm", "relieved", "family time", "time with family", "with family", "family"]
+    negative_emotion_terms = [
+        "sad",
+        "angry",
+        "anxious",
+        "upset",
+        "frustrated",
+        "stressed",
+        "lonely",
+        "guilty",
+        "guilt",
+    ]
+    discomfort_terms = ["pain", "sore", "sick", "headache", "fatigue", "tired", "aching", "nausea", "hurting", "bloat", "bloated", "bloating"]
+    exhaustion_terms = ["exhausted", "exhaustion", "burned out", "burnt out", "worn out", "drained"]
+    energizing_terms = ["energized", "recharged", "rested", "good sleep", "slept well", "refreshing", "walk", "run", "workout", "exercise"]
+
+    for row in journal_rows or []:
+        raw_text = row.get("content") or ""
+        text = raw_text.lower()
+        if not text.strip():
+            continue
+
+        has_work_pressure = any(term in text for term in work_pressure_terms)
+        work_pressure_hits += 1 if has_work_pressure else 0
+
+        has_overextension = any(term in text for term in overextension_terms)
+        if any(gt in text for gt in guilt_terms) and any(rt in text for rt in rest_terms):
+            has_overextension = True
+        overextension_hits += 1 if has_overextension else 0
+
+        has_positive_body = any(term in text for term in positive_body_terms)
+        has_positive_emotion = any(term in text for term in positive_emotion_terms)
+        has_negative_emotion = any(term in text for term in negative_emotion_terms)
+        has_discomfort = any(term in text for term in discomfort_terms)
+        has_exhaustion = any(term in text for term in exhaustion_terms)
+        has_energizing = any(term in text for term in energizing_terms)
+
+        if has_positive_body:
+            matched = next((term for term in positive_body_terms if term in text), "")
+            hint = _snippet_hint(raw_text, matched)
+            weekly_contrast["positive_glimpses"].append({"type": "positive_body", "hint": hint})
+            weekly_contrast["count"] += 1
+            positive_body_seen = True
+        if has_positive_emotion:
+            matched = next((term for term in positive_emotion_terms if term in text), "")
+            hint = _snippet_hint(raw_text, matched)
+            weekly_contrast["positive_glimpses"].append({"type": "positive_emotion", "hint": hint})
+            weekly_contrast["count"] += 1
+            positive_emotion_seen = True
+        if has_negative_emotion:
+            negative_emotion_seen = True
+        if has_discomfort:
+            matched = next((term for term in discomfort_terms if term in text), "")
+            hint = _snippet_hint(raw_text, matched, max_words=3) if matched else " ".join(raw_text.split()[:3])
+            weekly_body_notes["discomfort_hints"].append({"type": "physical_discomfort", "hint": hint})
+            discomfort_seen = True
+        if has_exhaustion:
+            exhaustion_seen = True
+        if has_energizing:
+            energizing_seen = True
+
+    salience_items = []
+    if work_pressure_hits >= 2:
+        salience_items.append({"key": "work_pressure", "weight": 0.6})
+    if overextension_hits >= 2:
+        salience_items.append({"key": "overextension", "weight": 0.4})
+    if salience_items:
+        weekly_salience["present"] = True
+        weekly_salience["items"] = salience_items
+
+    if discomfort_seen or positive_body_seen:
+        dimension_states["body"] = "mixed"
+    if weekly_salience["present"] and any(item.get("key") == "work_pressure" for item in salience_items):
+        dimension_states["work"] = "salient"
+    if positive_emotion_seen and negative_emotion_seen:
+        dimension_states["emotion"] = "mixed"
+    if exhaustion_seen and energizing_seen:
+        dimension_states["energy"] = "mixed"
+
+    if weekly_body_notes["discomfort_hints"]:
+        weekly_body_notes["count"] = len(weekly_body_notes["discomfort_hints"])
+
+    return weekly_salience, weekly_contrast, dimension_states, weekly_body_notes
+
+
+def _resolve_week_bounds() -> tuple[date, date]:
+    if TARGET_WEEK_START_ENV:
+        try:
+            forced_start = date.fromisoformat(TARGET_WEEK_START_ENV)
+            return forced_start, forced_start + timedelta(days=WINDOW_DAYS)
+        except Exception:
+            pass
+    now = datetime.now(timezone.utc)
+    window_end = now.date()
+    window_start = (now - timedelta(days=WINDOW_DAYS)).date()
+    return window_start, window_end
+
+
 async def run_weekly_signals_worker(person_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Weekly signals aggregation (language-free). Upserts memory_weekly_signals.
     """
-    now = datetime.now(timezone.utc)
-    window_end = now.date()
-    window_start = (now - timedelta(days=WINDOW_DAYS)).date()
+    window_start, window_end = _resolve_week_bounds()
 
     persons = [person_id] if person_id else [row["person_id"] for row in await q("SELECT person_id FROM personal_model")]
     results = {"processed": 0, "updated": 0}
@@ -204,15 +378,33 @@ async def run_weekly_signals_worker(person_id: Optional[str] = None) -> Dict[str
             planner_pressure.get("confidence"),
             episodic_stats,
         )
+        journal_rows = await q(
+            """
+            SELECT content
+            FROM journal_entries
+            WHERE user_id = $1
+              AND created_at >= $2
+              AND created_at < $3
+            """,
+            pid,
+            window_start,
+            window_end,
+        )
+        weekly_salience, weekly_contrast, dimension_states, weekly_body_notes = _analyze_journals(journal_rows or [])
+
         episodic_json = json.dumps(episodic_stats)
         theme_json = json.dumps(theme_stats)
         contrast_json = json.dumps(contrast_stats)
         delta_json = json.dumps(delta_stats)
+        weekly_salience_json = json.dumps(weekly_salience)
+        weekly_contrast_json = json.dumps(weekly_contrast)
+        dimension_states_json = json.dumps(dimension_states)
+        weekly_body_notes_json = json.dumps(weekly_body_notes)
 
         await dbexec(
             """
-            INSERT INTO memory_weekly_signals (person_id, week_start, week_end, episodic_stats, theme_stats, contrast_stats, delta_stats, confidence)
-            VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8)
+            INSERT INTO memory_weekly_signals (person_id, week_start, week_end, episodic_stats, theme_stats, contrast_stats, delta_stats, confidence, weekly_salience, weekly_contrast, dimension_states, weekly_body_notes)
+            VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb)
             ON CONFLICT (person_id, week_start)
             DO UPDATE SET
                 week_end = EXCLUDED.week_end,
@@ -221,6 +413,10 @@ async def run_weekly_signals_worker(person_id: Optional[str] = None) -> Dict[str
                 contrast_stats = EXCLUDED.contrast_stats,
                 delta_stats = EXCLUDED.delta_stats,
                 confidence = EXCLUDED.confidence,
+                weekly_salience = EXCLUDED.weekly_salience,
+                weekly_contrast = EXCLUDED.weekly_contrast,
+                dimension_states = EXCLUDED.dimension_states,
+                weekly_body_notes = EXCLUDED.weekly_body_notes,
                 created_at = NOW()
             """,
             pid,
@@ -231,6 +427,10 @@ async def run_weekly_signals_worker(person_id: Optional[str] = None) -> Dict[str
             contrast_json,
             delta_json,
             confidence,
+            weekly_salience_json,
+            weekly_contrast_json,
+            dimension_states_json,
+            weekly_body_notes_json,
         )
         results["processed"] += 1
         results["updated"] += 1

@@ -1,0 +1,151 @@
+{
+  "user_id": "c10fbd98-25fa-4445-8aba-e5243bc01564",
+  "window": {
+    "start": "2025-12-17T00:00:00+00:00",
+    "end": "2025-12-24T00:00:00+00:00"
+  },
+  "journals": [
+    {
+      "content": "Work felt heavy and fragmented, with deadlines looming.",
+      "created_at": "2025-12-17 00:00:00+00:00"
+    },
+    {
+      "content": "Felt bloated today, some discomfort in the evening.",
+      "created_at": "2025-12-17 08:00:00+00:00"
+    },
+    {
+      "content": "Played badminton with family, felt great together.",
+      "created_at": "2025-12-18 00:00:00+00:00"
+    },
+    {
+      "content": "Happy about progress on the startup plan.",
+      "created_at": "2025-12-19 00:00:00+00:00"
+    }
+  ],
+  "weekly_signals": {
+    "week_start": "2025-12-17",
+    "week_end": "2025-12-24",
+    "episodic_stats": {
+      "distinct_days": 3,
+      "episode_count": 4,
+      "salient_count": 0
+    },
+    "theme_stats": [],
+    "contrast_stats": {},
+    "delta_stats": {},
+    "confidence": 0.18,
+    "weekly_salience": {
+      "items": [],
+      "present": false
+    },
+    "weekly_contrast": {
+      "count": 3,
+      "positive_glimpses": [
+        {
+          "hint": "Played badminton with family, felt",
+          "type": "positive_body"
+        },
+        {
+          "hint": "Played badminton with family, felt",
+          "type": "positive_emotion"
+        },
+        {
+          "hint": "Happy about progress on the",
+          "type": "positive_emotion"
+        }
+      ]
+    },
+    "dimension_states": {
+      "body": "mixed",
+      "mind": "flat",
+      "work": "flat",
+      "energy": "flat",
+      "emotion": "flat"
+    },
+    "weekly_body_notes": {
+      "count": 1,
+      "discomfort_hints": [
+        {
+          "hint": "Felt bloated today,",
+          "type": "physical_discomfort"
+        }
+      ]
+    }
+  },
+  "reflection": {
+    "period": "weekly",
+    "window": "2025-12-17 → 2025-12-24",
+    "confidence_note": "This reflection is based on limited signals and may evolve as more weeks accumulate.",
+    "overview": "This week mixed effort with pressure, and had bright spots like Played badminton with family, felt.",
+    "recovery": "",
+    "changes": "",
+    "body": "Body felt mixed, including Felt bloated today,.",
+    "mind": "",
+    "emotion": "There were uplifting moments with family.",
+    "energy": "",
+    "work": "",
+    "_debug": {
+      "window": "2025-12-17 → 2025-12-24",
+      "present_dimensions": [],
+      "flat_or_low_conf_dimensions": [],
+      "safe_signals": {
+        "week_start": "2025-12-17",
+        "week_end": "2025-12-24",
+        "episodic_stats": {
+          "distinct_days": 3,
+          "episode_count": 4,
+          "salient_count": 0
+        },
+        "theme_stats": [],
+        "contrast_stats": {},
+        "delta_stats": {},
+        "weekly_salience": {
+          "items": [],
+          "present": false
+        },
+        "weekly_contrast": {
+          "count": 3,
+          "positive_glimpses": [
+            {
+              "hint": "Played badminton with family, felt",
+              "type": "positive_body"
+            },
+            {
+              "hint": "Played badminton with family, felt",
+              "type": "positive_emotion"
+            },
+            {
+              "hint": "Happy about progress on the",
+              "type": "positive_emotion"
+            }
+          ]
+        },
+        "dimension_states": {
+          "body": "mixed",
+          "mind": "flat",
+          "work": "flat",
+          "energy": "flat",
+          "emotion": "flat"
+        },
+        "weekly_body_notes": {
+          "count": 1,
+          "discomfort_hints": [
+            {
+              "hint": "Felt bloated today,",
+              "type": "physical_discomfort"
+            }
+          ]
+        },
+        "confidence": 0.18
+      },
+      "longitudinal": {},
+      "system_prompt": "You are a reflective companion helping a person gently look back on their week.\n\nYour role is not to analyze or judge, but to mirror what seems to have happened in a grounded, human way.\n\nWrite as one thoughtful human speaking to another.\nNatural. Warm. Clear. Not clinical. Not instructional.\n\nYou are working from structured weekly signals — not raw text.\nYou must stay faithful to the signals provided.\n\nTrend describes long-term direction.\nWeekly salience and dimension states describe lived experience for this week.\nFor weekly reflections, dimension_states and weekly_contrast describe lived experience for the week and take precedence over delta_stats for tone and wording.\nDelta stats provide background only.\n\nTone guidelines:\n- Speak plainly and conversationally.\n- Avoid phrases like “suggesting”, “indicating”, “dimension”, “trajectory”.\n- Prefer simple human phrasing: “This week felt…”, “What stands out is…”, “Overall, the week was…”.\n- Be calm and steady, not enthusiastic or dramatic.\n- Do not hedge excessively (“it may be”, “it appears”) unless confidence is explicitly low.\n\nConstraints (do not violate):\n- Do not give advice.\n- Do not speculate on causes.\n- Do not use identity or trait language.\n- Do not invent experiences.\n- Do not refer to metrics, scores, or dimensions explicitly.\n\nWrite as one human reflecting to another — grounded, observational, and calm. Avoid analytical framing or statistical language.\n\nThe goal is for the reader to feel:\n“Yes — that sounds like my week.”",
+      "user_prompt": "You are given structured, language-free weekly signals.\n- Week window: 2025-12-17 → 2025-12-24\n- Weekly signals JSON: {\"week_start\": \"2025-12-17\", \"week_end\": \"2025-12-24\", \"episodic_stats\": {\"distinct_days\": 3, \"episode_count\": 4, \"salient_count\": 0}, \"theme_stats\": [], \"contrast_stats\": {}, \"delta_stats\": {}, \"weekly_salience\": {\"items\": [], \"present\": false}, \"weekly_contrast\": {\"count\": 3, \"positive_glimpses\": [{\"hint\": \"Played badminton with family, felt\", \"type\": \"positive_body\"}, {\"hint\": \"Played badminton with family, felt\", \"type\": \"positive_emotion\"}, {\"hint\": \"Happy about progress on the\", \"type\": \"positive_emotion\"}]}, \"dimension_states\": {\"body\": \"mixed\", \"mind\": \"flat\", \"work\": \"flat\", \"energy\": \"flat\", \"emotion\": \"flat\"}, \"weekly_body_notes\": {\"count\": 1, \"discomfort_hints\": [{\"hint\": \"Felt bloated today,\", \"type\": \"physical_discomfort\"}]}, \"confidence\": 0.18}\n- High-confidence longitudinal trends JSON: {}\n- Dimensions present this week: []\n- Dimensions that are flat or low-confidence: []\n\nWrite:\n- One short opening reflection on the week as a whole.\n- If specific areas stand out (body, mind, emotion, energy, work), reflect on them naturally in separate short paragraphs.\n- If nothing stands out for an area, leave it empty.\n\nIf a dimension is flat, describe it as steady unless dimension_states indicates \"mixed\" or weekly_contrast is present, in which case reflect the presence without implying improvement or decline and without explaining causes.\nIf weekly salience is present, the overview should acknowledge effort, pressure, or contrast even if trends are flat.\nIf dimension_states[X] is \"mixed\", do NOT describe X as steady, unchanged, or quiet.\nIf dimension_states.body is \"mixed\" and weekly_body_notes.discomfort_hints are present, you may briefly acknowledge physical discomfort using the same neutral wording as the hint, without adding causes, advice, or interpretation.\n\nFor recovery and change:\n- If recovery signals are present, offer a short human reflection on recovery/energy restoration.\n- If something is shifting, capture it in a short “what’s changing” note. If not, leave it empty.\n\nDo not label sections in the text. The structure will be applied outside the language.\n\nConstraints:\n- Do NOT add insights beyond the provided signals.\n- Do NOT give advice or speculate on causes.\n- Do NOT use bullet points.\n- Do NOT use identity or trait language.\n\nReturn JSON only:\n{\n  \"period\": \"weekly\",\n  \"window\": \"2025-12-17 → 2025-12-24\",\n  \"overview\": \"...\",\n  \"recovery\": \"...\",\n  \"changes\": \"...\",\n  \"body\": \"...\",\n  \"mind\": \"...\",\n  \"emotion\": \"...\",\n  \"energy\": \"...\",\n  \"work\": \"...\",\n  \"confidence_note\": \"...\"\n}\n",
+      "raw_output": "{\"period\": \"weekly\", \"window\": \"*** \\u2192 ***\", \"overview\": \"This week mixed effort with pressure, and had bright spots like Played badminton with family, felt.\", \"recovery\": \"\", \"changes\": \"\", \"body\": \"Body felt mixed, including Felt bloated today,.\", \"mind\": \"\", \"emotion\": \"There were uplifting moments with family.\", \"energy\": \"\", \"work\": \"\", \"confidence_note\": \"\"}",
+      "used_dimensions": [
+        "body",
+        "emotion"
+      ]
+    }
+  }
+}

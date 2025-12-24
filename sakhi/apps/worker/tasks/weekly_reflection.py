@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import logging
 import re
 from datetime import date, datetime
@@ -33,6 +34,7 @@ FORBIDDEN_PATTERNS = [
 ]
 logger = logging.getLogger(__name__)
 settings = get_settings()
+TARGET_WEEK_START_ENV = os.getenv("WEEKLY_REFLECTION_TARGET_WEEK_START")
 
 SYSTEM_PROMPT = (
     "You are a reflective companion helping a person gently look back on their week.\n\n"
@@ -41,6 +43,10 @@ SYSTEM_PROMPT = (
     "Natural. Warm. Clear. Not clinical. Not instructional.\n\n"
     "You are working from structured weekly signals — not raw text.\n"
     "You must stay faithful to the signals provided.\n\n"
+    "Trend describes long-term direction.\n"
+    "Weekly salience and dimension states describe lived experience for this week.\n"
+    "For weekly reflections, dimension_states and weekly_contrast describe lived experience for the week and take precedence over delta_stats for tone and wording.\n"
+    "Delta stats provide background only.\n\n"
     "Tone guidelines:\n"
     "- Speak plainly and conversationally.\n"
     "- Avoid phrases like “suggesting”, “indicating”, “dimension”, “trajectory”.\n"
@@ -53,6 +59,8 @@ SYSTEM_PROMPT = (
     "- Do not use identity or trait language.\n"
     "- Do not invent experiences.\n"
     "- Do not refer to metrics, scores, or dimensions explicitly.\n\n"
+    "If a dimension must be reflected but no specific hints exist, use one brief, neutral phrase "
+    "such as “felt mixed”, “had ups and downs”, or “carried some pressure”, without adding causes, advice, or examples.\n\n"
     "Write as one human reflecting to another — grounded, observational, and calm. Avoid analytical framing or statistical language.\n\n"
     "The goal is for the reader to feel:\n"
     "“Yes — that sounds like my week.”"
@@ -70,7 +78,10 @@ Write:
 - If specific areas stand out (body, mind, emotion, energy, work), reflect on them naturally in separate short paragraphs.
 - If nothing stands out for an area, leave it empty.
 
-If a dimension is flat or low-confidence, describe it as steady/quiet/unchanged without implying improvement or decline and without explaining causes.
+If a dimension is flat, describe it as steady unless dimension_states indicates "mixed" or weekly_contrast is present, in which case reflect the presence without implying improvement or decline and without explaining causes.
+If weekly salience is present, the overview should acknowledge effort, pressure, or contrast even if trends are flat.
+If dimension_states[X] is "mixed", do NOT describe X as steady, unchanged, or quiet.
+If dimension_states.body is "mixed" and weekly_body_notes.discomfort_hints are present, you may briefly acknowledge physical discomfort using the same neutral wording as the hint, without adding causes, advice, or interpretation.
 
 For recovery and change:
 - If recovery signals are present, offer a short human reflection on recovery/energy restoration.
@@ -102,22 +113,31 @@ Return JSON only:
 
 
 async def _fetch_weekly_signals(person_id: str) -> Dict[str, Any]:
-    row = await q(
-        """
-        SELECT week_start, week_end, episodic_stats, theme_stats, contrast_stats, delta_stats, confidence
+    target_clause = ""
+    params: list[Any] = [person_id]
+    if TARGET_WEEK_START_ENV:
+        try:
+            target_date = dt.date.fromisoformat(TARGET_WEEK_START_ENV)
+            target_clause = "AND week_start = $2"
+            params.append(target_date)
+        except Exception:
+            target_clause = ""
+            params = [person_id]
+
+    sql = f"""
+        SELECT week_start, week_end, episodic_stats, theme_stats, contrast_stats, delta_stats, confidence, weekly_salience, weekly_contrast, dimension_states, weekly_body_notes
         FROM memory_weekly_signals
         WHERE person_id = $1
+        {target_clause}
         ORDER BY week_start DESC
         LIMIT 1
-        """,
-        person_id,
-        one=True,
-    )
+    """
+    row = await q(sql, *params, one=True)
     if not row:
         return {}
 
     parsed = dict(row)
-    for key in ("episodic_stats", "theme_stats", "contrast_stats", "delta_stats"):
+    for key in ("episodic_stats", "theme_stats", "contrast_stats", "delta_stats", "weekly_salience", "weekly_contrast", "dimension_states", "weekly_body_notes"):
         val = parsed.get(key)
         if isinstance(val, str):
             try:
@@ -173,6 +193,123 @@ def _contains_forbidden(text: str) -> bool:
     return any(re.search(pattern, lowered) for pattern in FORBIDDEN_PATTERNS)
 
 
+def _lint_reflection(
+    reflection: Dict[str, Any],
+    weekly_salience: Dict[str, Any],
+    dimension_states: Dict[str, Any],
+    weekly_contrast: Dict[str, Any],
+    weekly_body_notes: Dict[str, Any],
+) -> None:
+    # Dimension coverage contract (presence only, not wording):
+    # - If body is non-flat OR weekly_body_notes.count > 0 -> body section must exist.
+    # - If emotion is non-flat OR weekly_contrast.count > 0 -> emotion section must exist.
+    # - If energy is non-flat -> energy section must exist.
+    # - If work is non-flat OR weekly_salience has work-related items -> work section must exist.
+    # - If mind is non-flat -> mind section must exist.
+    # Mentioning a dimension in overview does NOT satisfy coverage.
+    violations: list[str] = []
+    overview = (reflection.get("overview") or "").lower()
+    emotion_reflection = (reflection.get("emotion") or "").strip()
+    salience_present = bool(weekly_salience.get("present"))
+    contrast_count = 0
+    try:
+        contrast_count = int(weekly_contrast.get("count") or 0)
+    except Exception:
+        contrast_count = 0
+
+    if salience_present:
+        if any(phrase in overview for phrase in ["nothing stood out", "nothing really stood out", "not much happened"]):
+            violations.append("overview cannot say nothing stood out when weekly_salience is present")
+
+    for dim, state in (dimension_states or {}).items():
+        if state == "mixed":
+            dim_text = (reflection.get(dim) or "").lower()
+            if "unchanged" in dim_text or "flat" in dim_text or "steady" in dim_text or "quiet" in dim_text:
+                violations.append(f"{dim} reflection cannot say steady/unchanged/flat/quiet when state is mixed")
+        if state and str(state).lower() != "flat":
+            dim_text_present = bool((reflection.get(dim) or "").strip())
+            if not dim_text_present:
+                violations.append(f"{dim} reflection missing despite non-flat state")
+
+    if contrast_count > 0 and not emotion_reflection:
+        violations.append("emotion reflection must not be empty when weekly_contrast.count > 0")
+
+    body_notes = weekly_body_notes or {}
+    try:
+        body_notes_count = int(body_notes.get("count") or 0)
+    except Exception:
+        body_notes_count = 0
+    if body_notes_count > 0:
+        body_text = (reflection.get("body") or "").strip()
+        if not body_text:
+            violations.append("body reflection missing despite body notes")
+        lower_body = body_text.lower()
+        if any(term in lower_body for term in ["steady", "unchanged", "quiet"]):
+            violations.append("body reflection cannot say steady/unchanged/quiet when weekly_body_notes.count > 0")
+        hints = []
+        hints_raw = body_notes.get("discomfort_hints") if isinstance(body_notes, dict) else None
+        if isinstance(hints_raw, list):
+            for item in hints_raw:
+                if isinstance(item, dict) and isinstance(item.get("hint"), str):
+                    hints.append(item["hint"].lower())
+        ack_keywords = ["discomfort", "unease", "physical discomfort", "physical unease"]
+        has_ack = any(k in lower_body for k in ack_keywords) or any(h in lower_body for h in hints)
+        if not has_ack:
+            violations.append("body reflection must acknowledge discomfort when weekly_body_notes are present")
+
+    salience_items = weekly_salience.get("items") if isinstance(weekly_salience, dict) else []
+    if isinstance(salience_items, list):
+        for item in salience_items:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("key") or "").lower()
+            if key in {"work_pressure", "overextension"} and not (reflection.get("work") or "").strip():
+                violations.append("work reflection missing despite salience signals")
+
+    # Explicit dimension coverage checks beyond state-based rules.
+    if str((dimension_states or {}).get("body") or "").lower() != "flat" or body_notes_count > 0:
+        if not (reflection.get("body") or "").strip():
+            violations.append("body reflection missing per coverage contract")
+    if str((dimension_states or {}).get("emotion") or "").lower() != "flat" or contrast_count > 0:
+        if not (reflection.get("emotion") or "").strip():
+            violations.append("emotion reflection missing per coverage contract")
+    if str((dimension_states or {}).get("energy") or "").lower() != "flat":
+        if not (reflection.get("energy") or "").strip():
+            violations.append("energy reflection missing per coverage contract")
+    work_state = str((dimension_states or {}).get("work") or "").lower()
+    work_salient = False
+    if isinstance(salience_items, list):
+        work_salient = any(str((item or {}).get("key") or "").lower() in {"work_pressure", "overextension"} for item in salience_items if isinstance(item, dict))
+    if work_state != "flat" or work_salient:
+        if not (reflection.get("work") or "").strip():
+            violations.append("work reflection missing per coverage contract")
+    if str((dimension_states or {}).get("mind") or "").lower() != "flat":
+        if not (reflection.get("mind") or "").strip():
+            violations.append("mind reflection missing per coverage contract")
+
+    if violations:
+        raise ValueError("Reflection lint failed: " + "; ".join(violations))
+
+
+def _sanitize_mixed_reflection(reflection: Dict[str, Any], dimension_states: Dict[str, Any]) -> None:
+    banned = ("steady", "unchanged", "flat", "quiet")
+    for dim, state in (dimension_states or {}).items():
+        if state != "mixed":
+            continue
+        text = reflection.get(dim)
+        if not isinstance(text, str):
+            continue
+        cleaned = text
+        for word in banned:
+            cleaned = re.sub(rf"\\b{word}\\b", "mixed", cleaned, flags=re.IGNORECASE)
+        reflection[dim] = cleaned
+    if isinstance(reflection.get("overview"), str) and (dimension_states or {}):
+        # Avoid calling the week “quiet/unchanged” when mixed signals exist anywhere.
+        cleaned = reflection["overview"]
+        for word in banned:
+            cleaned = re.sub(rf"\\b{word}\\b", "mixed", cleaned, flags=re.IGNORECASE)
+        reflection["overview"] = cleaned
+
 async def _llm_render(
     window_str: str,
     signals: Dict[str, Any],
@@ -180,7 +317,7 @@ async def _llm_render(
     *,
     system_prompt_override: Optional[str] = None,
     user_prompt_override: Optional[str] = None,
-) -> Tuple[Dict[str, Any], List[str]]:
+) -> Tuple[Dict[str, Any], List[str], Dict[str, Any]]:
     def _json_safe(value: Any) -> Any:
         if isinstance(value, datetime):
             return value.isoformat()
@@ -207,6 +344,10 @@ async def _llm_render(
             "theme_stats": signals.get("theme_stats"),
             "contrast_stats": signals.get("contrast_stats"),
             "delta_stats": signals.get("delta_stats"),
+            "weekly_salience": signals.get("weekly_salience"),
+            "weekly_contrast": signals.get("weekly_contrast"),
+            "dimension_states": signals.get("dimension_states"),
+            "weekly_body_notes": signals.get("weekly_body_notes"),
             "confidence": signals.get("confidence"),
         }
     )
@@ -244,11 +385,13 @@ async def _llm_render(
 
     def _flat_or_low_conf() -> List[str]:
         dims: set[str] = set()
+        dimension_states = signals.get("dimension_states") if isinstance(signals, dict) else {}
         delta_stats = signals.get("delta_stats")
         if isinstance(delta_stats, dict):
             for key, value in delta_stats.items():
                 if isinstance(key, str) and key in ALLOWED_DIMENSIONS and str(value).lower() == "flat":
-                    dims.add(key)
+                    if not (isinstance(dimension_states, dict) and str(dimension_states.get(key)).lower() == "mixed"):
+                        dims.add(key)
         for dim, payload in (longitudinal_state or {}).items():
             if not isinstance(payload, dict):
                 continue
@@ -265,6 +408,13 @@ async def _llm_render(
         "longitudinal_json": json.dumps(filtered_longitudinal, ensure_ascii=False),
         "present_dimensions": json.dumps(_present_dimensions(), ensure_ascii=False),
         "flat_or_low_conf_dimensions": json.dumps(_flat_or_low_conf(), ensure_ascii=False),
+    }
+    debug_info: Dict[str, Any] = {
+        "window": window_str,
+        "present_dimensions": json.loads(payload["present_dimensions"]),
+        "flat_or_low_conf_dimensions": json.loads(payload["flat_or_low_conf_dimensions"]),
+        "safe_signals": safe_signals,
+        "longitudinal": filtered_longitudinal,
     }
 
     class _SafeDict(dict):
@@ -297,6 +447,9 @@ async def _llm_render(
         temperature=0.7,
     )
     raw = (raw or "").strip()
+    debug_info["system_prompt"] = system_prompt_override or SYSTEM_PROMPT
+    debug_info["user_prompt"] = prompt
+    debug_info["raw_output"] = raw
 
     if raw.startswith("You are given structured"):
         raise RuntimeError("LLM echoed prompt instead of generating output.")
@@ -350,7 +503,9 @@ async def _llm_render(
         key for key in ("body", "mind", "emotion", "energy", "work") if flat.get(key, "").strip()
     ]
 
-    return flat, used_dimensions
+    debug_info["used_dimensions"] = used_dimensions
+
+    return flat, used_dimensions, debug_info
 
 
 async def generate_weekly_reflection(
@@ -359,6 +514,7 @@ async def generate_weekly_reflection(
     *,
     system_prompt_override: Optional[str] = None,
     user_prompt_override: Optional[str] = None,
+    include_debug: bool = False,
 ) -> Dict[str, Any]:
     """
     Produce an ephemeral weekly reflection.
@@ -383,13 +539,39 @@ async def generate_weekly_reflection(
         except Exception:
             longitudinal_state = {}
 
-    llm_result, used_dimensions = await _llm_render(
+    llm_result, used_dimensions, debug_info = await _llm_render(
         window_str,
         signals,
         longitudinal_state,
         system_prompt_override=system_prompt_override,
         user_prompt_override=user_prompt_override,
     )
+    weekly_salience = signals.get("weekly_salience") or {}
+    weekly_contrast = signals.get("weekly_contrast") or {}
+    dimension_states = signals.get("dimension_states") or {}
+    weekly_body_notes = signals.get("weekly_body_notes") or {}
+    _sanitize_mixed_reflection(llm_result, dimension_states)
+    try:
+        logger.error(
+            "WEEKLY_REFLECTION_INPUT_DEBUG",
+            extra={
+                "person_id": person_id,
+                "weekly_contrast_count": (signals.get("weekly_contrast") or {}).get("count"),
+                "dimension_state_body": (signals.get("dimension_states") or {}).get("body"),
+            },
+        )
+    except Exception:
+        pass
+    try:
+        _lint_reflection(llm_result, weekly_salience, dimension_states, weekly_contrast, weekly_body_notes)
+    except Exception as exc:
+        logger.error(
+            "WEEKLY_REFLECTION_LINT_FAILED",
+            extra={"person_id": person_id, "reason": str(exc)},
+        )
+        raise
+    if include_debug:
+        llm_result["_debug"] = debug_info
 
     if not llm_result.get("confidence_note"):
         llm_result["confidence_note"] = (

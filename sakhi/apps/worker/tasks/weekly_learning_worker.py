@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 # Configurable windows
 LEARNING_WINDOW_DAYS = int(os.getenv("LEARNING_WINDOW_DAYS", "28") or "28")
 DECAY_DAYS = int(os.getenv("DECAY_DAYS", "21") or "21")
+TARGET_LEARNING_START_ENV = os.getenv("WEEKLY_LEARNING_TARGET_START")
 
 ALLOWED_DIMENSIONS = {"body", "mind", "emotion", "energy", "work"}
 INTENSITY_LEVELS = {"low": 0, "medium": 1, "high": 2}
@@ -157,8 +159,17 @@ async def run_weekly_learning(person_id: str | None = None) -> Dict[str, Any]:
     Deterministic weekly learning worker.
     Reads episodic memory → updates personal_model.longitudinal_state.
     """
-    now = datetime.now(timezone.utc)
-    window_start = now - timedelta(days=LEARNING_WINDOW_DAYS)
+    if TARGET_LEARNING_START_ENV:
+        try:
+            target_date = datetime.fromisoformat(TARGET_LEARNING_START_ENV).date()
+            window_start = datetime.combine(target_date, datetime.min.time(), tzinfo=timezone.utc)
+            now = window_start + timedelta(days=LEARNING_WINDOW_DAYS)
+        except Exception:
+            now = datetime.now(timezone.utc)
+            window_start = now - timedelta(days=LEARNING_WINDOW_DAYS)
+    else:
+        now = datetime.now(timezone.utc)
+        window_start = now - timedelta(days=LEARNING_WINDOW_DAYS)
 
     if person_id:
         persons = [{"person_id": person_id}]
@@ -194,7 +205,7 @@ async def run_weekly_learning(person_id: str | None = None) -> Dict[str, Any]:
             WHERE person_id = $1
             """,
             pid,
-            new_state,
+            json.dumps(new_state),
         )
         results["processed"] += 1
         results["updated"] += 1

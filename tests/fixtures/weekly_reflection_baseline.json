@@ -1,0 +1,873 @@
+{
+  "person_id": "565bdb63-124b-4692-a039-846fddceff90",
+  "generated_at": "2025-12-24T17:49:57.580881Z",
+  "weeks": [
+    {
+      "week_start": "2025-12-17",
+      "week_end": "2025-12-24",
+      "weekly_signals": {
+        "week_start": "2025-12-17",
+        "week_end": "2025-12-24",
+        "episodic_stats": {
+          "distinct_days": 3,
+          "episode_count": 10,
+          "salient_count": 0
+        },
+        "theme_stats": [],
+        "contrast_stats": {
+          "work_overload": true,
+          "work_fragmentation": 0.812,
+          "lowest_energy_dimension": "body",
+          "highest_energy_dimension": "emotion"
+        },
+        "delta_stats": {
+          "body": "flat",
+          "mind": "flat",
+          "work": "flat",
+          "energy": "flat",
+          "emotion": "flat"
+        },
+        "confidence": 0.43333333333333335
+      },
+      "journals": [
+        {
+          "id": "62d868eb-955d-4752-9576-cdd38d3eddbb",
+          "content": "got a lot of things done today, feeling happy\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T14:23:25.952853+00:00"
+        },
+        {
+          "id": "463d1f00-1544-42c7-af8d-4da8f144e19c",
+          "content": "ok almost pulled off today too, just missed one thing which i need to add to tomorrow..need to send out a communication ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T15:01:26.897957+00:00"
+        },
+        {
+          "id": "7f92f78f-e8f8-4aa4-ad6c-63d76493218d",
+          "content": "didnt do half of even what i planned, was mentally off fr no reason\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:42:14.625645+00:00"
+        },
+        {
+          "id": "95117e74-6843-411c-80c0-2b96defe84c9",
+          "content": "ok better day today looks like i am getting back in the groove but why did i even lose it for no reason..almost looks like starting up again\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:52:07.738055+00:00"
+        },
+        {
+          "id": "4dcd80d6-d3b7-4932-a73d-2222b7b41675",
+          "content": "ok back to full form, did close everythign i planned\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:58:56.846959+00:00"
+        },
+        {
+          "id": "cf965149-bb4a-4b4e-8699-a65557fbb444",
+          "content": "testing again..the times are testing...i dont know ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:02:26.655600+00:00"
+        },
+        {
+          "id": "935f7529-e975-492e-addc-ec1faafbb4d9",
+          "content": "oh god, cant times be easy",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:03:23.735356+00:00"
+        },
+        {
+          "id": "38c4ce8d-ac90-4cef-a37f-90e4e2be2754",
+          "content": "will this work now?",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:08:45.439285+00:00"
+        },
+        {
+          "id": "d8d6b299-0898-48e1-b0af-60125bcb9eac",
+          "content": "felt numb..just numb..couldnt logically reason out",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T06:45:32.632615+00:00"
+        },
+        {
+          "id": "f70e6762-3f5f-45bd-895d-7a222e5260be",
+          "content": "i am so confused if i need to moonlight or quit and start the company i want to",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T14:07:16.021237+00:00"
+        },
+        {
+          "id": "68b1523e-1dd3-4937-bbd8-1c8ea0fbbfdf",
+          "content": "being so clear in the mind is not enough looks like, sometimes the nervous system takes over and i feel violated and not in control",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T14:33:27.548571+00:00"
+        },
+        {
+          "id": "6cc307e2-6e79-46e0-911a-0fa76b40b871",
+          "content": "life is unfair\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T21:41:43.518133+00:00"
+        },
+        {
+          "id": "e5ec7400-e284-413a-a44d-010a96668d21",
+          "content": "how do things suddenly appear and suddenly vanish..i just had that feeling",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T04:50:11.006853+00:00"
+        },
+        {
+          "id": "7763853c-3544-49aa-9cc3-6d4656ab5d04",
+          "content": "getting to a stable place, looking back not sure what changed but feeling energetic",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T07:32:32.711802+00:00"
+        },
+        {
+          "id": "331e301c-547c-42cb-ae20-69c29529a4fc",
+          "content": "went out with family for christmas fair..had a nice time, refreshing ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T09:37:13.370152+00:00"
+        },
+        {
+          "id": "ec06953c-20b9-49f3-8026-4ebecc2c1e3e",
+          "content": "happy with progress on start up plan today",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-22T21:40:27.289011+00:00"
+        },
+        {
+          "id": "834fee2a-0938-4d00-823d-d0e45bfda747",
+          "content": "It is D's BDay... was hoping it would be a quiet day at work and I can things in order for the Wed-Sun downtime at work... instead couldnt move out of the seat... Ankur keeps pushing beyond reason... not sure if I am going to be able to hold on working till March end..",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-23T05:51:58.387729+00:00"
+        },
+        {
+          "id": "ee8df00b-9712-4dc5-a0c6-7f66b73ae80a",
+          "content": "Wanted to surprise D for his birthday with a dance on a recent viral song.. The work day didnt let me do it..  Still made most of the day by going out to play badminton with the family... was an amazing workout and we all felt great and ate at Blue Mango - a favorite Thai dinner place.. And reverse the heavy day and annoying work experience... Seeing avatar now.. one movie a day with the family until the new yearss\n\nWith holidays around the corner,... want to start thinking thro everyday routine goals for next year.. ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-23T06:41:18.502410+00:00"
+        },
+        {
+          "id": "eb193da0-ae40-401d-ba9e-c4126ef35484",
+          "content": "Today I pushed through work even though I was exhausted, and I felt guilty when I considered resting.",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-24T06:17:19.927246+00:00"
+        },
+        {
+          "id": "78c56eca-8ac9-44e3-ae88-3a8b2ee4d392",
+          "content": "Feeling bloated today... ate poorly .. mixed cuisines.. shndt do it again ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-24T06:37:39.765576+00:00"
+        }
+      ],
+      "reflection": {
+        "period": "weekly",
+        "window": "2025-12-17 → 2025-12-24",
+        "confidence_note": "",
+        "overview": "This week felt steady overall, with a sense of quiet in various areas of life.",
+        "recovery": "",
+        "changes": "",
+        "body": "The body remained steady, without noticeable changes.",
+        "mind": "The mind experienced a quiet week, showing no significant shifts.",
+        "emotion": "Emotionally, things felt unchanged and calm throughout the week.",
+        "energy": "Energy levels were steady, not fluctuating much.",
+        "work": "Work felt overloaded, but the overall experience remained steady."
+      },
+      "used_dimensions": [
+        "body",
+        "mind",
+        "emotion",
+        "energy",
+        "work"
+      ],
+      "llm_debug": {
+        "window": "2025-12-17 → 2025-12-24",
+        "present_dimensions": [
+          "body",
+          "emotion",
+          "energy",
+          "mind",
+          "work"
+        ],
+        "flat_or_low_conf_dimensions": [
+          "body",
+          "emotion",
+          "energy",
+          "mind",
+          "work"
+        ],
+        "safe_signals": {
+          "week_start": "2025-12-17",
+          "week_end": "2025-12-24",
+          "episodic_stats": {
+            "distinct_days": 3,
+            "episode_count": 10,
+            "salient_count": 0
+          },
+          "theme_stats": [],
+          "contrast_stats": {
+            "work_overload": true,
+            "work_fragmentation": 0.812,
+            "lowest_energy_dimension": "body",
+            "highest_energy_dimension": "emotion"
+          },
+          "delta_stats": {
+            "body": "flat",
+            "mind": "flat",
+            "work": "flat",
+            "energy": "flat",
+            "emotion": "flat"
+          },
+          "confidence": 0.43333333333333335
+        },
+        "longitudinal": {
+          "body": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "mind": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "work": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.5,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "energy": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "emotion": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          }
+        },
+        "system_prompt": "You are a reflective companion helping a person gently look back on their week.\n\nYour role is not to analyze or judge, but to mirror what seems to have happened in a grounded, human way.\n\nWrite as one thoughtful human speaking to another.\nNatural. Warm. Clear. Not clinical. Not instructional.\n\nYou are working from structured weekly signals — not raw text.\nYou must stay faithful to the signals provided.\n\nTone guidelines:\n- Speak plainly and conversationally.\n- Avoid phrases like “suggesting”, “indicating”, “dimension”, “trajectory”.\n- Prefer simple human phrasing: “This week felt…”, “What stands out is…”, “Overall, the week was…”.\n- Be calm and steady, not enthusiastic or dramatic.\n- Do not hedge excessively (“it may be”, “it appears”) unless confidence is explicitly low.\n\nConstraints (do not violate):\n- Do not give advice.\n- Do not speculate on causes.\n- Do not use identity or trait language.\n- Do not invent experiences.\n- Do not refer to metrics, scores, or dimensions explicitly.\n\nWrite as one human reflecting to another — grounded, observational, and calm. Avoid analytical framing or statistical language.\n\nThe goal is for the reader to feel:\n“Yes — that sounds like my week.”",
+        "user_prompt": "You are given structured, language-free weekly signals.\n- Week window: 2025-12-17 → 2025-12-24\n- Weekly signals JSON: {\"week_start\": \"2025-12-17\", \"week_end\": \"2025-12-24\", \"episodic_stats\": {\"distinct_days\": 3, \"episode_count\": 10, \"salient_count\": 0}, \"theme_stats\": [], \"contrast_stats\": {\"work_overload\": true, \"work_fragmentation\": 0.812, \"lowest_energy_dimension\": \"body\", \"highest_energy_dimension\": \"emotion\"}, \"delta_stats\": {\"body\": \"flat\", \"mind\": \"flat\", \"work\": \"flat\", \"energy\": \"flat\", \"emotion\": \"flat\"}, \"confidence\": 0.43333333333333335}\n- High-confidence longitudinal trends JSON: {\"body\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"mind\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"work\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.5, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"energy\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"emotion\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}}\n- Dimensions present this week: [\"body\", \"emotion\", \"energy\", \"mind\", \"work\"]\n- Dimensions that are flat or low-confidence: [\"body\", \"emotion\", \"energy\", \"mind\", \"work\"]\n\nWrite:\n- One short opening reflection on the week as a whole.\n- If specific areas stand out (body, mind, emotion, energy, work), reflect on them naturally in separate short paragraphs.\n- If nothing stands out for an area, leave it empty.\n\nIf a dimension is flat or low-confidence, describe it as steady/quiet/unchanged without implying improvement or decline and without explaining causes.\n\nFor recovery and change:\n- If recovery signals are present, offer a short human reflection on recovery/energy restoration.\n- If something is shifting, capture it in a short “what’s changing” note. If not, leave it empty.\n\nDo not label sections in the text. The structure will be applied outside the language.\n\nConstraints:\n- Do NOT add insights beyond the provided signals.\n- Do NOT give advice or speculate on causes.\n- Do NOT use bullet points.\n- Do NOT use identity or trait language.\n\nReturn JSON only:\n{\n  \"period\": \"weekly\",\n  \"window\": \"2025-12-17 → 2025-12-24\",\n  \"overview\": \"...\",\n  \"recovery\": \"...\",\n  \"changes\": \"...\",\n  \"body\": \"...\",\n  \"mind\": \"...\",\n  \"emotion\": \"...\",\n  \"energy\": \"...\",\n  \"work\": \"...\",\n  \"confidence_note\": \"...\"\n}\n",
+        "raw_output": "{\n  \"period\": \"weekly\",\n  \"window\": \"*** → ***\",\n  \"overview\": \"This week felt steady overall, with a sense of quiet in various areas of life.\",\n  \"recovery\": \"\",\n  \"changes\": \"\",\n  \"body\": \"The body remained steady, without noticeable changes.\",\n  \"mind\": \"The mind experienced a quiet week, showing no significant shifts.\",\n  \"emotion\": \"Emotionally, things felt unchanged and calm throughout the week.\",\n  \"energy\": \"Energy levels were steady, not fluctuating much.\",\n  \"work\": \"Work felt overloaded, but the overall experience remained steady.\",\n  \"confidence_note\": \"\"\n}",
+        "used_dimensions": [
+          "body",
+          "mind",
+          "emotion",
+          "energy",
+          "work"
+        ]
+      }
+    },
+    {
+      "week_start": "2025-12-16",
+      "week_end": "2025-12-23",
+      "weekly_signals": {
+        "week_start": "2025-12-16",
+        "week_end": "2025-12-23",
+        "episodic_stats": {
+          "distinct_days": 3,
+          "episode_count": 10,
+          "salient_count": 0
+        },
+        "theme_stats": [],
+        "contrast_stats": {
+          "work_overload": true,
+          "work_fragmentation": 0.812,
+          "lowest_energy_dimension": "body",
+          "highest_energy_dimension": "emotion"
+        },
+        "delta_stats": {
+          "body": "flat",
+          "mind": "flat",
+          "work": "flat",
+          "energy": "flat",
+          "emotion": "flat"
+        },
+        "confidence": 0.43333333333333335
+      },
+      "journals": [
+        {
+          "id": "62d868eb-955d-4752-9576-cdd38d3eddbb",
+          "content": "got a lot of things done today, feeling happy\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T14:23:25.952853+00:00"
+        },
+        {
+          "id": "463d1f00-1544-42c7-af8d-4da8f144e19c",
+          "content": "ok almost pulled off today too, just missed one thing which i need to add to tomorrow..need to send out a communication ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T15:01:26.897957+00:00"
+        },
+        {
+          "id": "7f92f78f-e8f8-4aa4-ad6c-63d76493218d",
+          "content": "didnt do half of even what i planned, was mentally off fr no reason\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:42:14.625645+00:00"
+        },
+        {
+          "id": "95117e74-6843-411c-80c0-2b96defe84c9",
+          "content": "ok better day today looks like i am getting back in the groove but why did i even lose it for no reason..almost looks like starting up again\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:52:07.738055+00:00"
+        },
+        {
+          "id": "4dcd80d6-d3b7-4932-a73d-2222b7b41675",
+          "content": "ok back to full form, did close everythign i planned\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:58:56.846959+00:00"
+        },
+        {
+          "id": "cf965149-bb4a-4b4e-8699-a65557fbb444",
+          "content": "testing again..the times are testing...i dont know ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:02:26.655600+00:00"
+        },
+        {
+          "id": "935f7529-e975-492e-addc-ec1faafbb4d9",
+          "content": "oh god, cant times be easy",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:03:23.735356+00:00"
+        },
+        {
+          "id": "38c4ce8d-ac90-4cef-a37f-90e4e2be2754",
+          "content": "will this work now?",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:08:45.439285+00:00"
+        },
+        {
+          "id": "d8d6b299-0898-48e1-b0af-60125bcb9eac",
+          "content": "felt numb..just numb..couldnt logically reason out",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T06:45:32.632615+00:00"
+        },
+        {
+          "id": "f70e6762-3f5f-45bd-895d-7a222e5260be",
+          "content": "i am so confused if i need to moonlight or quit and start the company i want to",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T14:07:16.021237+00:00"
+        },
+        {
+          "id": "68b1523e-1dd3-4937-bbd8-1c8ea0fbbfdf",
+          "content": "being so clear in the mind is not enough looks like, sometimes the nervous system takes over and i feel violated and not in control",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T14:33:27.548571+00:00"
+        },
+        {
+          "id": "6cc307e2-6e79-46e0-911a-0fa76b40b871",
+          "content": "life is unfair\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T21:41:43.518133+00:00"
+        },
+        {
+          "id": "e5ec7400-e284-413a-a44d-010a96668d21",
+          "content": "how do things suddenly appear and suddenly vanish..i just had that feeling",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T04:50:11.006853+00:00"
+        },
+        {
+          "id": "7763853c-3544-49aa-9cc3-6d4656ab5d04",
+          "content": "getting to a stable place, looking back not sure what changed but feeling energetic",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T07:32:32.711802+00:00"
+        },
+        {
+          "id": "331e301c-547c-42cb-ae20-69c29529a4fc",
+          "content": "went out with family for christmas fair..had a nice time, refreshing ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T09:37:13.370152+00:00"
+        },
+        {
+          "id": "ec06953c-20b9-49f3-8026-4ebecc2c1e3e",
+          "content": "happy with progress on start up plan today",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-22T21:40:27.289011+00:00"
+        },
+        {
+          "id": "834fee2a-0938-4d00-823d-d0e45bfda747",
+          "content": "It is D's BDay... was hoping it would be a quiet day at work and I can things in order for the Wed-Sun downtime at work... instead couldnt move out of the seat... Ankur keeps pushing beyond reason... not sure if I am going to be able to hold on working till March end..",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-23T05:51:58.387729+00:00"
+        },
+        {
+          "id": "ee8df00b-9712-4dc5-a0c6-7f66b73ae80a",
+          "content": "Wanted to surprise D for his birthday with a dance on a recent viral song.. The work day didnt let me do it..  Still made most of the day by going out to play badminton with the family... was an amazing workout and we all felt great and ate at Blue Mango - a favorite Thai dinner place.. And reverse the heavy day and annoying work experience... Seeing avatar now.. one movie a day with the family until the new yearss\n\nWith holidays around the corner,... want to start thinking thro everyday routine goals for next year.. ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-23T06:41:18.502410+00:00"
+        }
+      ],
+      "reflection": {
+        "period": "weekly",
+        "window": "2025-12-16 → 2025-12-23",
+        "confidence_note": "",
+        "overview": "This week felt steady and quiet, with not much change across different areas.",
+        "recovery": "",
+        "changes": "",
+        "body": "The body felt unchanged throughout the week, maintaining a steady state.",
+        "mind": "The mind also experienced a quiet week, with no notable shifts.",
+        "emotion": "Emotionally, things remained stable and consistent.",
+        "energy": "Energy levels felt steady, without any significant highs or lows.",
+        "work": "Work was marked by a sense of overload, yet the overall pace felt unchanged."
+      },
+      "used_dimensions": [
+        "body",
+        "mind",
+        "emotion",
+        "energy",
+        "work"
+      ],
+      "llm_debug": {
+        "window": "2025-12-16 → 2025-12-23",
+        "present_dimensions": [
+          "body",
+          "emotion",
+          "energy",
+          "mind",
+          "work"
+        ],
+        "flat_or_low_conf_dimensions": [
+          "body",
+          "emotion",
+          "energy",
+          "mind",
+          "work"
+        ],
+        "safe_signals": {
+          "week_start": "2025-12-16",
+          "week_end": "2025-12-23",
+          "episodic_stats": {
+            "distinct_days": 3,
+            "episode_count": 10,
+            "salient_count": 0
+          },
+          "theme_stats": [],
+          "contrast_stats": {
+            "work_overload": true,
+            "work_fragmentation": 0.812,
+            "lowest_energy_dimension": "body",
+            "highest_energy_dimension": "emotion"
+          },
+          "delta_stats": {
+            "body": "flat",
+            "mind": "flat",
+            "work": "flat",
+            "energy": "flat",
+            "emotion": "flat"
+          },
+          "confidence": 0.43333333333333335
+        },
+        "longitudinal": {
+          "body": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "mind": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "work": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.5,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "energy": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "emotion": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          }
+        },
+        "system_prompt": "You are a reflective companion helping a person gently look back on their week.\n\nYour role is not to analyze or judge, but to mirror what seems to have happened in a grounded, human way.\n\nWrite as one thoughtful human speaking to another.\nNatural. Warm. Clear. Not clinical. Not instructional.\n\nYou are working from structured weekly signals — not raw text.\nYou must stay faithful to the signals provided.\n\nTone guidelines:\n- Speak plainly and conversationally.\n- Avoid phrases like “suggesting”, “indicating”, “dimension”, “trajectory”.\n- Prefer simple human phrasing: “This week felt…”, “What stands out is…”, “Overall, the week was…”.\n- Be calm and steady, not enthusiastic or dramatic.\n- Do not hedge excessively (“it may be”, “it appears”) unless confidence is explicitly low.\n\nConstraints (do not violate):\n- Do not give advice.\n- Do not speculate on causes.\n- Do not use identity or trait language.\n- Do not invent experiences.\n- Do not refer to metrics, scores, or dimensions explicitly.\n\nWrite as one human reflecting to another — grounded, observational, and calm. Avoid analytical framing or statistical language.\n\nThe goal is for the reader to feel:\n“Yes — that sounds like my week.”",
+        "user_prompt": "You are given structured, language-free weekly signals.\n- Week window: 2025-12-16 → 2025-12-23\n- Weekly signals JSON: {\"week_start\": \"2025-12-16\", \"week_end\": \"2025-12-23\", \"episodic_stats\": {\"distinct_days\": 3, \"episode_count\": 10, \"salient_count\": 0}, \"theme_stats\": [], \"contrast_stats\": {\"work_overload\": true, \"work_fragmentation\": 0.812, \"lowest_energy_dimension\": \"body\", \"highest_energy_dimension\": \"emotion\"}, \"delta_stats\": {\"body\": \"flat\", \"mind\": \"flat\", \"work\": \"flat\", \"energy\": \"flat\", \"emotion\": \"flat\"}, \"confidence\": 0.43333333333333335}\n- High-confidence longitudinal trends JSON: {\"body\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"mind\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"work\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.5, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"energy\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"emotion\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}}\n- Dimensions present this week: [\"body\", \"emotion\", \"energy\", \"mind\", \"work\"]\n- Dimensions that are flat or low-confidence: [\"body\", \"emotion\", \"energy\", \"mind\", \"work\"]\n\nWrite:\n- One short opening reflection on the week as a whole.\n- If specific areas stand out (body, mind, emotion, energy, work), reflect on them naturally in separate short paragraphs.\n- If nothing stands out for an area, leave it empty.\n\nIf a dimension is flat or low-confidence, describe it as steady/quiet/unchanged without implying improvement or decline and without explaining causes.\n\nFor recovery and change:\n- If recovery signals are present, offer a short human reflection on recovery/energy restoration.\n- If something is shifting, capture it in a short “what’s changing” note. If not, leave it empty.\n\nDo not label sections in the text. The structure will be applied outside the language.\n\nConstraints:\n- Do NOT add insights beyond the provided signals.\n- Do NOT give advice or speculate on causes.\n- Do NOT use bullet points.\n- Do NOT use identity or trait language.\n\nReturn JSON only:\n{\n  \"period\": \"weekly\",\n  \"window\": \"2025-12-16 → 2025-12-23\",\n  \"overview\": \"...\",\n  \"recovery\": \"...\",\n  \"changes\": \"...\",\n  \"body\": \"...\",\n  \"mind\": \"...\",\n  \"emotion\": \"...\",\n  \"energy\": \"...\",\n  \"work\": \"...\",\n  \"confidence_note\": \"...\"\n}\n",
+        "raw_output": "{\n  \"period\": \"weekly\",\n  \"window\": \"*** → ***\",\n  \"overview\": \"This week felt steady and quiet, with not much change across different areas.\",\n  \"recovery\": \"\",\n  \"changes\": \"\",\n  \"body\": \"The body felt unchanged throughout the week, maintaining a steady state.\",\n  \"mind\": \"The mind also experienced a quiet week, with no notable shifts.\",\n  \"emotion\": \"Emotionally, things remained stable and consistent.\",\n  \"energy\": \"Energy levels felt steady, without any significant highs or lows.\",\n  \"work\": \"Work was marked by a sense of overload, yet the overall pace felt unchanged.\",\n  \"confidence_note\": \"\"\n}",
+        "used_dimensions": [
+          "body",
+          "mind",
+          "emotion",
+          "energy",
+          "work"
+        ]
+      }
+    },
+    {
+      "week_start": "2025-12-15",
+      "week_end": "2025-12-22",
+      "weekly_signals": {
+        "week_start": "2025-12-15",
+        "week_end": "2025-12-22",
+        "episodic_stats": {
+          "distinct_days": 2,
+          "episode_count": 9,
+          "salient_count": 0
+        },
+        "theme_stats": [],
+        "contrast_stats": {
+          "work_overload": true,
+          "work_fragmentation": 0.812,
+          "lowest_energy_dimension": "body",
+          "highest_energy_dimension": "emotion"
+        },
+        "delta_stats": {
+          "body": "flat",
+          "mind": "flat",
+          "work": "flat",
+          "energy": "flat",
+          "emotion": "flat"
+        },
+        "confidence": 0.4266666666666667
+      },
+      "journals": [
+        {
+          "id": "62d868eb-955d-4752-9576-cdd38d3eddbb",
+          "content": "got a lot of things done today, feeling happy\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T14:23:25.952853+00:00"
+        },
+        {
+          "id": "463d1f00-1544-42c7-af8d-4da8f144e19c",
+          "content": "ok almost pulled off today too, just missed one thing which i need to add to tomorrow..need to send out a communication ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T15:01:26.897957+00:00"
+        },
+        {
+          "id": "7f92f78f-e8f8-4aa4-ad6c-63d76493218d",
+          "content": "didnt do half of even what i planned, was mentally off fr no reason\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:42:14.625645+00:00"
+        },
+        {
+          "id": "95117e74-6843-411c-80c0-2b96defe84c9",
+          "content": "ok better day today looks like i am getting back in the groove but why did i even lose it for no reason..almost looks like starting up again\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:52:07.738055+00:00"
+        },
+        {
+          "id": "4dcd80d6-d3b7-4932-a73d-2222b7b41675",
+          "content": "ok back to full form, did close everythign i planned\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T20:58:56.846959+00:00"
+        },
+        {
+          "id": "cf965149-bb4a-4b4e-8699-a65557fbb444",
+          "content": "testing again..the times are testing...i dont know ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:02:26.655600+00:00"
+        },
+        {
+          "id": "935f7529-e975-492e-addc-ec1faafbb4d9",
+          "content": "oh god, cant times be easy",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:03:23.735356+00:00"
+        },
+        {
+          "id": "38c4ce8d-ac90-4cef-a37f-90e4e2be2754",
+          "content": "will this work now?",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-19T21:08:45.439285+00:00"
+        },
+        {
+          "id": "d8d6b299-0898-48e1-b0af-60125bcb9eac",
+          "content": "felt numb..just numb..couldnt logically reason out",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T06:45:32.632615+00:00"
+        },
+        {
+          "id": "f70e6762-3f5f-45bd-895d-7a222e5260be",
+          "content": "i am so confused if i need to moonlight or quit and start the company i want to",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T14:07:16.021237+00:00"
+        },
+        {
+          "id": "68b1523e-1dd3-4937-bbd8-1c8ea0fbbfdf",
+          "content": "being so clear in the mind is not enough looks like, sometimes the nervous system takes over and i feel violated and not in control",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T14:33:27.548571+00:00"
+        },
+        {
+          "id": "6cc307e2-6e79-46e0-911a-0fa76b40b871",
+          "content": "life is unfair\n",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-20T21:41:43.518133+00:00"
+        },
+        {
+          "id": "e5ec7400-e284-413a-a44d-010a96668d21",
+          "content": "how do things suddenly appear and suddenly vanish..i just had that feeling",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T04:50:11.006853+00:00"
+        },
+        {
+          "id": "7763853c-3544-49aa-9cc3-6d4656ab5d04",
+          "content": "getting to a stable place, looking back not sure what changed but feeling energetic",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T07:32:32.711802+00:00"
+        },
+        {
+          "id": "331e301c-547c-42cb-ae20-69c29529a4fc",
+          "content": "went out with family for christmas fair..had a nice time, refreshing ",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-21T09:37:13.370152+00:00"
+        },
+        {
+          "id": "ec06953c-20b9-49f3-8026-4ebecc2c1e3e",
+          "content": "happy with progress on start up plan today",
+          "mood": null,
+          "tags": [],
+          "created_at": "2025-12-22T21:40:27.289011+00:00"
+        }
+      ],
+      "reflection": {
+        "period": "weekly",
+        "window": "2025-12-15 → 2025-12-22",
+        "confidence_note": "",
+        "overview": "This week felt steady and quiet overall, with not much shifting in any area.",
+        "recovery": "",
+        "changes": "",
+        "body": "The body felt unchanged, with a steady sense of physical presence throughout the week.",
+        "mind": "The mind was also steady, maintaining a consistent state without notable fluctuations.",
+        "emotion": "Emotionally, things felt quiet and stable, with no significant highs or lows.",
+        "energy": "Energy levels remained steady, reflecting a consistent experience without peaks or valleys.",
+        "work": "Work felt overloaded at times, yet it also maintained a steady rhythm throughout the week."
+      },
+      "used_dimensions": [
+        "body",
+        "mind",
+        "emotion",
+        "energy",
+        "work"
+      ],
+      "llm_debug": {
+        "window": "2025-12-15 → 2025-12-22",
+        "present_dimensions": [
+          "body",
+          "emotion",
+          "energy",
+          "mind",
+          "work"
+        ],
+        "flat_or_low_conf_dimensions": [
+          "body",
+          "emotion",
+          "energy",
+          "mind",
+          "work"
+        ],
+        "safe_signals": {
+          "week_start": "2025-12-15",
+          "week_end": "2025-12-22",
+          "episodic_stats": {
+            "distinct_days": 2,
+            "episode_count": 9,
+            "salient_count": 0
+          },
+          "theme_stats": [],
+          "contrast_stats": {
+            "work_overload": true,
+            "work_fragmentation": 0.812,
+            "lowest_energy_dimension": "body",
+            "highest_energy_dimension": "emotion"
+          },
+          "delta_stats": {
+            "body": "flat",
+            "mind": "flat",
+            "work": "flat",
+            "energy": "flat",
+            "emotion": "flat"
+          },
+          "confidence": 0.4266666666666667
+        },
+        "longitudinal": {
+          "body": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "mind": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "work": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.5,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "energy": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          },
+          "emotion": {
+            "window": {
+              "end": "2025-12-24T17:04:09.485197+00:00",
+              "start": "2025-12-17T17:04:09.485197+00:00"
+            },
+            "direction": "flat",
+            "lifecycle": "emerging",
+            "magnitude": 0.0,
+            "confidence": 0.05000000000000001,
+            "volatility": 0.0,
+            "last_updated_at": "2025-12-24T17:04:09.485197+00:00"
+          }
+        },
+        "system_prompt": "You are a reflective companion helping a person gently look back on their week.\n\nYour role is not to analyze or judge, but to mirror what seems to have happened in a grounded, human way.\n\nWrite as one thoughtful human speaking to another.\nNatural. Warm. Clear. Not clinical. Not instructional.\n\nYou are working from structured weekly signals — not raw text.\nYou must stay faithful to the signals provided.\n\nTone guidelines:\n- Speak plainly and conversationally.\n- Avoid phrases like “suggesting”, “indicating”, “dimension”, “trajectory”.\n- Prefer simple human phrasing: “This week felt…”, “What stands out is…”, “Overall, the week was…”.\n- Be calm and steady, not enthusiastic or dramatic.\n- Do not hedge excessively (“it may be”, “it appears”) unless confidence is explicitly low.\n\nConstraints (do not violate):\n- Do not give advice.\n- Do not speculate on causes.\n- Do not use identity or trait language.\n- Do not invent experiences.\n- Do not refer to metrics, scores, or dimensions explicitly.\n\nWrite as one human reflecting to another — grounded, observational, and calm. Avoid analytical framing or statistical language.\n\nThe goal is for the reader to feel:\n“Yes — that sounds like my week.”",
+        "user_prompt": "You are given structured, language-free weekly signals.\n- Week window: 2025-12-15 → 2025-12-22\n- Weekly signals JSON: {\"week_start\": \"2025-12-15\", \"week_end\": \"2025-12-22\", \"episodic_stats\": {\"distinct_days\": 2, \"episode_count\": 9, \"salient_count\": 0}, \"theme_stats\": [], \"contrast_stats\": {\"work_overload\": true, \"work_fragmentation\": 0.812, \"lowest_energy_dimension\": \"body\", \"highest_energy_dimension\": \"emotion\"}, \"delta_stats\": {\"body\": \"flat\", \"mind\": \"flat\", \"work\": \"flat\", \"energy\": \"flat\", \"emotion\": \"flat\"}, \"confidence\": 0.4266666666666667}\n- High-confidence longitudinal trends JSON: {\"body\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"mind\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"work\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.5, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"energy\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}, \"emotion\": {\"window\": {\"end\": \"2025-12-24T17:04:09.485197+00:00\", \"start\": \"2025-12-17T17:04:09.485197+00:00\"}, \"direction\": \"flat\", \"lifecycle\": \"emerging\", \"magnitude\": 0.0, \"confidence\": 0.05000000000000001, \"volatility\": 0.0, \"last_updated_at\": \"2025-12-24T17:04:09.485197+00:00\"}}\n- Dimensions present this week: [\"body\", \"emotion\", \"energy\", \"mind\", \"work\"]\n- Dimensions that are flat or low-confidence: [\"body\", \"emotion\", \"energy\", \"mind\", \"work\"]\n\nWrite:\n- One short opening reflection on the week as a whole.\n- If specific areas stand out (body, mind, emotion, energy, work), reflect on them naturally in separate short paragraphs.\n- If nothing stands out for an area, leave it empty.\n\nIf a dimension is flat or low-confidence, describe it as steady/quiet/unchanged without implying improvement or decline and without explaining causes.\n\nFor recovery and change:\n- If recovery signals are present, offer a short human reflection on recovery/energy restoration.\n- If something is shifting, capture it in a short “what’s changing” note. If not, leave it empty.\n\nDo not label sections in the text. The structure will be applied outside the language.\n\nConstraints:\n- Do NOT add insights beyond the provided signals.\n- Do NOT give advice or speculate on causes.\n- Do NOT use bullet points.\n- Do NOT use identity or trait language.\n\nReturn JSON only:\n{\n  \"period\": \"weekly\",\n  \"window\": \"2025-12-15 → 2025-12-22\",\n  \"overview\": \"...\",\n  \"recovery\": \"...\",\n  \"changes\": \"...\",\n  \"body\": \"...\",\n  \"mind\": \"...\",\n  \"emotion\": \"...\",\n  \"energy\": \"...\",\n  \"work\": \"...\",\n  \"confidence_note\": \"...\"\n}\n",
+        "raw_output": "{\n  \"period\": \"weekly\",\n  \"window\": \"*** → ***\",\n  \"overview\": \"This week felt steady and quiet overall, with not much shifting in any area.\",\n  \"recovery\": \"\",\n  \"changes\": \"\",\n  \"body\": \"The body felt unchanged, with a steady sense of physical presence throughout the week.\",\n  \"mind\": \"The mind was also steady, maintaining a consistent state without notable fluctuations.\",\n  \"emotion\": \"Emotionally, things felt quiet and stable, with no significant highs or lows.\",\n  \"energy\": \"Energy levels remained steady, reflecting a consistent experience without peaks or valleys.\",\n  \"work\": \"Work felt overloaded at times, yet it also maintained a steady rhythm throughout the week.\",\n  \"confidence_note\": \"\"\n}",
+        "used_dimensions": [
+          "body",
+          "mind",
+          "emotion",
+          "energy",
+          "work"
+        ]
+      }
+    }
+  ]
+}

@@ -16,7 +16,7 @@ from sakhi.apps.worker.tasks.weekly_rhythm_rollup_worker import run_weekly_rhyth
 from sakhi.apps.worker.tasks.weekly_planner_pressure_worker import run_weekly_planner_pressure
 from sakhi.apps.worker.tasks.weekly_signals_worker import run_weekly_signals_worker
 from sakhi.apps.worker.tasks.turn_personal_model_update import run_turn_personal_model_update
-from sakhi.apps.worker.tasks.weekly_reflection import generate_weekly_reflection
+from sakhi.apps.worker.tasks.weekly_reflection import generate_weekly_reflection, _fetch_weekly_signals
 from sakhi.libs.schemas.settings import get_settings
 from sakhi.apps.api.core.db import q
 from sakhi.apps.api.utils.person_resolver import resolve_person
@@ -127,12 +127,44 @@ async def get_weekly_summaries(
             longitudinal_state or {},
             system_prompt_override=system_prompt_final,
             user_prompt_override=user_prompt_final,
+            include_debug=True,
         )
+        llm_debug = reflection.pop("_debug", None)
+        weekly_signals = await _fetch_weekly_signals(resolved_id)
+        journal_rows = await q(
+            """
+            SELECT id, content, mood, tags, created_at
+            FROM journal_entries
+            WHERE user_id = $1 AND created_at >= $2 AND created_at < $3
+            ORDER BY created_at DESC
+            LIMIT 50
+            """,
+            resolved_id,
+            start_ts,
+            end_ts,
+        )
+        journals = []
+        for row in journal_rows:
+            journals.append(
+                {
+                    "id": str(row.get("id")),
+                    "content": row.get("content") or "",
+                    "created_at": row.get("created_at"),
+                    "mood": row.get("mood"),
+                    "tags": row.get("tags") or [],
+                }
+            )
         response = {
             "status": "ok",
             "week_start": week_start.isoformat(),
             "week_end": week_end.isoformat(),
             "reflection": reflection,
+            "debug": {
+                "llm": llm_debug,
+                "journals": journals,
+                "weekly_signals": weekly_signals,
+                "longitudinal_state": longitudinal_state,
+            },
         }
         logger.error(
             "WEEKLY_BACKEND_RESPONSE",

@@ -37,6 +37,22 @@ type WeeklyItem = {
   confidence?: number;
   delta_stats?: Record<string, any>;
   contrast_stats?: Record<string, any>;
+  debug?: WeeklyDebug;
+};
+
+type WeeklyDebug = {
+  journals?: JournalEntry[];
+  weekly_signals?: Record<string, any>;
+  longitudinal_state?: Record<string, any>;
+  llm?: Record<string, any>;
+};
+
+type JournalEntry = {
+  id?: string;
+  content?: string;
+  created_at?: string;
+  mood?: string | null;
+  tags?: string[];
 };
 
 const DEFAULT_SYSTEM_PROMPT = `You are a reflective companion helping a person gently look back on their week.
@@ -291,6 +307,43 @@ const lowEvidenceBannerStyle: React.CSSProperties = {
   fontFamily: baseFont,
 };
 
+const debugContainerStyle: React.CSSProperties = {
+  marginTop: "22px",
+  padding: "18px",
+  borderRadius: "14px",
+  border: `1px solid ${palette.divider}`,
+  background: palette.cardSoft,
+  color: palette.accent,
+};
+
+const debugGridStyle: React.CSSProperties = {
+  display: "grid",
+  gap: "14px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+  marginTop: "12px",
+};
+
+const debugCardStyle: React.CSSProperties = {
+  border: `1px solid ${palette.divider}`,
+  borderRadius: "12px",
+  padding: "14px",
+  background: palette.card,
+  color: palette.accent,
+  fontSize: "13px",
+  lineHeight: 1.5,
+};
+
+const codeBlockStyle: React.CSSProperties = {
+  background: "#0b0c0f",
+  border: `1px solid ${palette.divider}`,
+  borderRadius: "10px",
+  padding: "10px",
+  fontSize: "12px",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  fontFamily: "ui-monospace, SFMono-Regular, SFMono-Mono, Menlo, Monaco, Consolas, monospace",
+};
+
 export default function ExperienceWeeklyPage() {
   return (
     <Suspense fallback={null}>
@@ -308,9 +361,6 @@ function ExperienceWeeklyPageContent() {
   const [userPrompt, setUserPrompt] = useState<string>(DEFAULT_USER_PROMPT);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const isDevEnv = process.env.NODE_ENV !== "production";
-  const [showDebugPanel, setShowDebugPanel] = useState<boolean>(
-    isDevEnv && (searchParams.get("debug") === "true" || isDevEnv)
-  );
   const DEV_USERS = useMemo(
     () => ({
       a: { label: "Vidhya" },
@@ -344,6 +394,57 @@ function ExperienceWeeklyPageContent() {
     return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 
+  const formatDateTime = (value?: string) => {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  };
+
+  const pretty = (value: any) => {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch (err) {
+      return String(value ?? "");
+    }
+  };
+
+  const buildWeeklyFromResponse = (data: any): WeeklyItem | null => {
+    const attachDebug = (target: WeeklyItem | null) => {
+      if (!target || !data?.debug || typeof data.debug !== "object") return target;
+      target.debug = {
+        journals: Array.isArray(data.debug.journals) ? (data.debug.journals as JournalEntry[]) : [],
+        weekly_signals: data.debug.weekly_signals,
+        longitudinal_state: data.debug.longitudinal_state,
+        llm: data.debug.llm,
+      };
+      return target;
+    };
+    let item: WeeklyItem | null = null;
+    if (Array.isArray(data?.items) && data.items.length) {
+      item = data.items[0] as WeeklyItem;
+      return attachDebug(item);
+    }
+    if (data?.reflection && typeof data.reflection === "object") {
+      const windowStr = typeof data?.window === "string" ? data.window : "";
+      const windowParts = windowStr.includes("→") ? windowStr.split("→").map((p: string) => p.trim()) : [];
+      item = {
+        week_start: data.week_start || windowParts[0],
+        week_end: data.week_end || windowParts[1],
+        highlights: data.reflection.overview || "",
+        recovery: data.reflection.recovery,
+        changes: data.reflection.changes,
+        drift_score: undefined,
+        top_themes: data.theme_stats,
+        notes_count: undefined,
+        dominant_mood: undefined,
+        reflection: data.reflection,
+      };
+      return attachDebug(item);
+    }
+    return attachDebug(item);
+  };
+
   const fetchWeekly = async () => {
     setError(null);
     setLoading(true);
@@ -359,25 +460,7 @@ function ExperienceWeeklyPageContent() {
       if (typeof window !== "undefined") {
         console.log("WEEKLY_UI_DEBUG: weeklyResponse", data);
       }
-      let item: WeeklyItem | null = null;
-      if (Array.isArray(data?.items) && data.items.length) {
-        item = data.items[0] as WeeklyItem;
-      } else if (data?.reflection && typeof data.reflection === "object") {
-        const windowStr = typeof data?.window === "string" ? data.window : "";
-        const windowParts = windowStr.includes("→") ? windowStr.split("→").map((p: string) => p.trim()) : [];
-        item = {
-          week_start: data.week_start || windowParts[0],
-          week_end: data.week_end || windowParts[1],
-          highlights: data.reflection.overview || "",
-          recovery: data.reflection.recovery,
-          changes: data.reflection.changes,
-          drift_score: undefined,
-          top_themes: data.theme_stats,
-          notes_count: undefined,
-          dominant_mood: undefined,
-          reflection: data.reflection,
-        };
-      }
+      const item = buildWeeklyFromResponse(data);
       setWeekly(item || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load weekly reflection");
@@ -405,25 +488,7 @@ function ExperienceWeeklyPageContent() {
       if (typeof window !== "undefined") {
         console.log("WEEKLY_UI_DEBUG: synthesisResponse", data);
       }
-      let next: WeeklyItem | null = null;
-      if (data?.reflection && typeof data.reflection === "object") {
-        const windowStr = typeof data?.window === "string" ? data.window : "";
-        const windowParts = windowStr.includes("→") ? windowStr.split("→").map((p: string) => p.trim()) : [];
-        next = {
-          week_start: data.week_start || windowParts[0],
-          week_end: data.week_end || windowParts[1],
-          highlights: data.reflection.overview || "",
-          recovery: data.reflection.recovery,
-          changes: data.reflection.changes,
-          drift_score: undefined,
-          top_themes: data.theme_stats,
-          notes_count: undefined,
-          dominant_mood: undefined,
-          reflection: data.reflection,
-        };
-      } else if (Array.isArray(data?.items) && data.items.length) {
-        next = data.items[0] as WeeklyItem;
-      }
+      const next = buildWeeklyFromResponse(data);
       setWeekly(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate weekly reflection");
@@ -518,6 +583,10 @@ function ExperienceWeeklyPageContent() {
     [reflection]
   );
 
+  const debugJournals = useMemo(() => weekly?.debug?.journals || [], [weekly]);
+  const debugSignals = weekly?.debug?.weekly_signals;
+  const debugLLM = weekly?.debug?.llm;
+
   useEffect(() => {
     if (!activeTab || !tabs.some((t) => t.key === activeTab)) {
       setActiveTab(tabs[0].key);
@@ -562,42 +631,29 @@ function ExperienceWeeklyPageContent() {
         </div>
 
         {debugEnabled && (
-          <>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
-              <button
-                type="button"
-                style={voiceButtonSecondaryStyle}
-                onClick={() => setShowDebugPanel((prev) => !prev)}
-              >
-                {showDebugPanel ? "Hide debug prompts" : "Show debug prompts"}
-              </button>
-            </div>
-            {showDebugPanel && (
-              <div style={promptContainerStyle}>
-                <div style={promptLabelStyle}>Debug / Testing (prompts are not saved)</div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-                  <div style={{ flex: "1 1 280px" }}>
-                    <div style={promptLabelStyle}>LLM System Prompt (editable)</div>
-                    <textarea
-                      style={promptTextareaStyle}
-                      value={systemPrompt}
-                      onChange={(e) => setSystemPrompt(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ flex: "1 1 280px" }}>
-                    <div style={promptLabelStyle}>
-                      User Prompt Template (supports {"{week_window}, {signals_json}, {longitudinal_json}"})
-                    </div>
-                    <textarea
-                      style={promptTextareaStyle}
-                      value={userPrompt}
-                      onChange={(e) => setUserPrompt(e.target.value)}
-                    />
-                  </div>
-                </div>
+          <div style={promptContainerStyle}>
+            <div style={promptLabelStyle}>Debug / Testing (prompts are not saved)</div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 280px" }}>
+                <div style={promptLabelStyle}>LLM System Prompt (editable)</div>
+                <textarea
+                  style={promptTextareaStyle}
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                />
               </div>
-            )}
-          </>
+              <div style={{ flex: "1 1 280px" }}>
+                <div style={promptLabelStyle}>
+                  User Prompt Template (supports {"{week_window}, {signals_json}, {longitudinal_json}"})
+                </div>
+                <textarea
+                  style={promptTextareaStyle}
+                  value={userPrompt}
+                  onChange={(e) => setUserPrompt(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {lowEvidence && (
@@ -656,6 +712,59 @@ function ExperienceWeeklyPageContent() {
             );
           })()}
         </div>
+
+        {debugEnabled && (
+          <div style={debugContainerStyle}>
+            <div style={{ ...promptLabelStyle, marginBottom: "8px" }}>
+              Debug — journals and derivation (auto-loaded in dev)
+            </div>
+            <div style={debugGridStyle}>
+              <div style={debugCardStyle}>
+                <div style={{ ...promptLabelStyle, marginBottom: "6px" }}>Journals included this week</div>
+                {debugJournals.length ? (
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    {debugJournals.map((entry, idx) => (
+                      <div key={entry.id || entry.created_at || idx} style={{ borderBottom: `1px solid ${palette.divider}`, paddingBottom: "8px" }}>
+                        <div style={{ fontSize: "12px", color: palette.muted, marginBottom: "4px" }}>
+                          {formatDateTime(entry.created_at)} {entry.mood ? `• Mood ${entry.mood}` : ""}
+                        </div>
+                        <div>{(entry.content || "").slice(0, 240) || "Empty entry"}</div>
+                        {entry.tags?.length ? (
+                          <div style={{ marginTop: "4px", fontSize: "12px", color: palette.muted }}>
+                            Tags: {entry.tags.join(", ")}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: palette.muted }}>No journals captured in this window yet.</div>
+                )}
+              </div>
+
+              <div style={debugCardStyle}>
+                <div style={{ ...promptLabelStyle, marginBottom: "6px" }}>Weekly signals</div>
+                <pre style={codeBlockStyle}>{pretty(debugSignals || {})}</pre>
+              </div>
+
+              <div style={debugCardStyle}>
+                <div style={{ ...promptLabelStyle, marginBottom: "6px" }}>LLM derivation</div>
+                <div style={{ marginBottom: "8px" }}>
+                  <div style={{ fontSize: "12px", color: palette.muted, marginBottom: "4px" }}>System prompt</div>
+                  <pre style={codeBlockStyle}>{debugLLM?.system_prompt || systemPrompt}</pre>
+                </div>
+                <div style={{ marginBottom: "8px" }}>
+                  <div style={{ fontSize: "12px", color: palette.muted, marginBottom: "4px" }}>User prompt</div>
+                  <pre style={codeBlockStyle}>{debugLLM?.user_prompt || userPrompt}</pre>
+                </div>
+                <div>
+                  <div style={{ fontSize: "12px", color: palette.muted, marginBottom: "4px" }}>Raw output</div>
+                  <pre style={codeBlockStyle}>{debugLLM?.raw_output || pretty(reflection)}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div style={{ marginTop: "32px", textAlign: "center" }}>
           <Link

@@ -9,9 +9,12 @@ export async function GET(req: NextRequest) {
   const limit = currentParams.get("limit") || "1";
   url.searchParams.set("limit", limit);
   url.searchParams.set("user", user);
-  if (currentParams.get("debug") === "true") {
-    url.searchParams.set("debug", "true");
+  const weekStart = currentParams.get("week_start");
+  if (weekStart) {
+    url.searchParams.set("week_start", weekStart);
   }
+  const debugFlag = currentParams.get("debug") ?? "true";
+  url.searchParams.set("debug", debugFlag);
   const sysOverride = currentParams.get("system_prompt_override");
   const userOverride = currentParams.get("user_prompt_override");
   if (sysOverride) url.searchParams.set("system_prompt_override", sysOverride);
