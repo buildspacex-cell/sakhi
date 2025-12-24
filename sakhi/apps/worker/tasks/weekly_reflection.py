@@ -316,7 +316,13 @@ def _lint_reflection(
 
     def _has_forbidden_anchor_refs(text: str) -> bool:
         lower = text.lower()
-        return any(token in lower for token in ["you wrote", "journal", "entry", "on ", "dated ", "@", "#"])
+        if any(token in lower for token in ["you wrote", "journal", "entry", "dated"]):
+            return True
+        if re.search(r"\\b\\d{4}-\\d{2}-\\d{2}\\b", text):
+            return True
+        if re.search(r"[\"“”]", text):
+            return True
+        return False
 
     def _check_anchor(dim: str, text: str, anchors: List[Dict[str, Any]]) -> None:
         if not anchors:
