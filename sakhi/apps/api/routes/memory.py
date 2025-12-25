@@ -72,7 +72,7 @@ async def get_weekly_summaries(
             extra={"person_id": resolved_id, "person_label": person_label, "person_key": person_key},
         )
         today = dt.datetime.utcnow().date()
-        week_start = today - dt.timedelta(days=today.weekday())
+        week_start = target_week_start or (today - dt.timedelta(days=today.weekday()))
         week_end = week_start + dt.timedelta(days=6)
         start_ts = dt.datetime.combine(week_start, dt.time.min)
         end_ts = start_ts + dt.timedelta(days=7)
@@ -138,7 +138,7 @@ async def get_weekly_summaries(
             target_week_start=target_week_start,
         )
         llm_debug = reflection.pop("_debug", None)
-        weekly_signals = await _fetch_weekly_signals(resolved_id)
+        weekly_signals = await _fetch_weekly_signals(resolved_id, target_week_start)
         journal_rows = await q(
             """
             SELECT id, content, mood, tags, created_at
