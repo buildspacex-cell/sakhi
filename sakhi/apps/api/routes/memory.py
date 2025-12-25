@@ -268,6 +268,100 @@ async def run_weekly_flow_dev(request: Request):
     }
 
 
+@router.post("/memory/dev/reset")
+async def reset_weekly_flow_dev(request: Request):
+    """
+    Dev-only helper to wipe weekly reflection artifacts for a user within a date window.
+    Deletes journals in the window and downstream artifacts derived from that window.
+    Payload (JSON):
+    {
+      "user": "c10fbd98-25fa-4445-8aba-e5243bc01564",
+      "start_date": "2024-03-18",
+      "end_date": "2024-03-24" // optional; defaults to start_date
+    }
+    """
+    payload = await request.json()
+    user = payload.get("user") or "a"
+    resolved_id, _, _ = resolve_person(request)
+    target_person = user or resolved_id
+
+    start_str = payload.get("start_date")
+    end_str = payload.get("end_date") or start_str
+    if not start_str:
+        return {"error": "start_date is required"}, 400
+    try:
+        start_date = dt.datetime.fromisoformat(start_str).date()
+        end_date = dt.datetime.fromisoformat(end_str).date() if end_str else start_date
+    except Exception:
+        return {"error": "start_date/end_date must be ISO dates (YYYY-MM-DD)"}, 400
+
+    window_start = dt.datetime.combine(start_date, dt.time.min, tzinfo=dt.timezone.utc)
+    window_end = dt.datetime.combine(end_date + dt.timedelta(days=1), dt.time.min, tzinfo=dt.timezone.utc)
+
+    journal_rows = await q(
+        """
+        SELECT id FROM journal_entries
+        WHERE user_id = $1 AND created_at >= $2 AND created_at < $3
+        """,
+        target_person,
+        window_start,
+        window_end,
+    )
+    entry_ids = [row["id"] for row in journal_rows or []]
+
+    if entry_ids:
+        await dbexec("DELETE FROM journal_embeddings WHERE entry_id = ANY($1::uuid[])", entry_ids)
+        await dbexec("DELETE FROM memory_episodic WHERE entry_id = ANY($1::uuid[])", entry_ids)
+        await dbexec("DELETE FROM memory_short_term WHERE entry_id = ANY($1::uuid[])", entry_ids)
+
+    await dbexec(
+        "DELETE FROM memory_short_term WHERE user_id = $1 AND created_at >= $2 AND created_at < $3",
+        target_person,
+        window_start,
+        window_end,
+    )
+    await dbexec(
+        "DELETE FROM memory_episodic WHERE user_id = $1 AND created_at >= $2 AND created_at < $3",
+        target_person,
+        window_start,
+        window_end,
+    )
+    await dbexec(
+        "DELETE FROM journal_entries WHERE user_id = $1 AND created_at >= $2 AND created_at < $3",
+        target_person,
+        window_start,
+        window_end,
+    )
+
+    # Weekly artifacts keyed by week_start; wipe any weeks overlapping the window.
+    week_start_floor = start_date - dt.timedelta(days=start_date.weekday())
+    week_end_floor = end_date - dt.timedelta(days=end_date.weekday())
+    weekly_tables = [
+        "memory_weekly_signals",
+        "memory_weekly_summaries",
+        "rhythm_weekly_rollups",
+        "planner_weekly_pressure",
+        "meta_reflections",
+    ]
+    for table in weekly_tables:
+        await dbexec(
+            f"DELETE FROM {table} WHERE person_id = $1 AND week_start >= $2 AND week_start <= $3",
+            target_person,
+            week_start_floor,
+            week_end_floor,
+        )
+
+    await dbexec("UPDATE personal_model SET longitudinal_state = '{}'::jsonb WHERE person_id = $1", target_person)
+
+    return {
+        "status": "ok",
+        "user": target_person,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "deleted_entry_ids": [str(eid) for eid in entry_ids],
+    }
+
+
 @router.get("/memory/dev/weekly")
 async def get_weekly_summaries_dev(
     request: Request,

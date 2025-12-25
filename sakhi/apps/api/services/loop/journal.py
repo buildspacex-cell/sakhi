@@ -30,7 +30,7 @@ async def write_journal_entry(user_id: str, text: str, reply: str | None) -> str
             """,
             user_uuid,
             (text or "Turn")[:80],
-            (reply or "")[:400],
+            text or "",
         )
 
     entry_id = str(row["id"]) if row else None
@@ -39,8 +39,8 @@ async def write_journal_entry(user_id: str, text: str, reply: str | None) -> str
             {
                 "id": entry_id,
                 "user_id": user_id,
-                "content": (reply or "")[:400],
-                "cleaned": reply,
+                "content": text or "",
+                "cleaned": text,
                 "layer": "loop",
                 "ts": dt.datetime.utcnow().isoformat(),
             }

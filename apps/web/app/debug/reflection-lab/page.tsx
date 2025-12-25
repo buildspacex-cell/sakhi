@@ -252,6 +252,9 @@ function manualStatus(scenario: Scenario): "PASS" | "FAIL" | null {
 export default function ReflectionLabPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([defaultScenario]);
   const [runAllLoading, setRunAllLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const updateScenario = (id: string, updates: Partial<Scenario>) => {
     setScenarios((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
@@ -346,6 +349,66 @@ export default function ReflectionLabPage() {
     setRunAllLoading(false);
   };
 
+  const resetData = async () => {
+    const targetUser = scenarios[0]?.user || "a";
+    const targetWeek = scenarios[0]?.weekStart;
+    let startDate = targetWeek;
+    let endDate = targetWeek;
+
+    // Derive a week window from pasted journals if weekStart is empty.
+    if (!startDate && scenarios[0]?.parsed_journals?.length) {
+      const minDate = scenarios[0].parsed_journals
+        .map((p) => new Date(p.created_at))
+        .reduce((a, b) => (a.getTime() <= b.getTime() ? a : b));
+      startDate = minDate.toISOString().slice(0, 10);
+      const end = new Date(minDate);
+      end.setUTCDate(minDate.getUTCDate() + 6);
+      endDate = end.toISOString().slice(0, 10);
+    }
+
+    if (!startDate) {
+      setResetError("Set Week start or paste journals so we can derive a window before resetting.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Reset data for user "${targetUser}" between ${startDate} and ${endDate || startDate}? This deletes journals and weekly artifacts for that window.`,
+    );
+    if (!confirmed) return;
+    setResetting(true);
+    setResetError(null);
+    setResetMessage(null);
+    try {
+      const res = await fetch("/api/memory/dev/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: targetUser, start_date: startDate, end_date: endDate }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || res.statusText || "Reset failed");
+      }
+      setResetMessage(`Reset complete for user ${targetUser} (${startDate} → ${endDate || startDate}).`);
+      // Clear any cached results in the UI.
+      setScenarios((prev) =>
+        prev.map((s) => ({
+          ...s,
+          result: undefined,
+          checklist: [],
+          last_run_at: null,
+          last_result: null,
+          parsed_journals: null,
+          error: null,
+          parse_error: null,
+        })),
+      );
+    } catch (err: any) {
+      setResetError(err?.message || "Reset failed");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const warningBanner = (
     <div
       style={{
@@ -384,6 +447,18 @@ export default function ReflectionLabPage() {
           <button style={secondaryButtonStyle} onClick={addScenario}>
             Add scenario
           </button>
+          <button
+            style={{ ...secondaryButtonStyle, borderColor: "#b91c1c", color: "#fca5a5" }}
+            onClick={resetData}
+            disabled={resetting}
+          >
+            {resetting ? "Resetting..." : "Reset user data"}
+          </button>
+          {(resetMessage || resetError) && (
+            <span style={{ color: resetError ? "#f87171" : "#4ade80", fontSize: 13 }}>
+              {resetError || resetMessage}
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
