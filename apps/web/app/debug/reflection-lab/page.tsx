@@ -288,7 +288,17 @@ export default function ReflectionLabPage() {
       params.set("user", scenario.user || "a");
       params.set("limit", "1");
       params.set("debug", "true");
-      if (scenario.weekStart) params.set("week_start", scenario.weekStart);
+      // Prefer explicit weekStart; otherwise derive from earliest parsed journal date.
+      let weekToUse = scenario.weekStart;
+      if (!weekToUse && parsed.length) {
+        const minDate = parsed
+          .map((p) => new Date(p.created_at))
+          .reduce((a, b) => (a.getTime() <= b.getTime() ? a : b));
+        const monday = new Date(minDate);
+        monday.setUTCDate(minDate.getUTCDate() - minDate.getUTCDay());
+        weekToUse = monday.toISOString().slice(0, 10);
+      }
+      if (weekToUse) params.set("week_start", weekToUse);
       const res = await fetch(`/api/memory/weekly?${params.toString()}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
