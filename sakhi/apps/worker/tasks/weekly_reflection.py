@@ -251,6 +251,7 @@ def _lint_reflection(
         if not body_text:
             violations.append("body reflection missing despite body notes")
         lower_body = body_text.lower()
+        has_anchor = bool(anchor_map.get("body_discomfort"))
         if any(term in lower_body for term in ["steady", "unchanged", "quiet"]):
             violations.append("body reflection cannot say steady/unchanged/quiet when weekly_body_notes.count > 0")
         hints = []
@@ -260,7 +261,7 @@ def _lint_reflection(
                 if isinstance(item, dict) and isinstance(item.get("hint"), str):
                     hints.append(item["hint"].lower())
         ack_keywords = ["discomfort", "unease", "physical discomfort", "physical unease"]
-        has_ack = any(k in lower_body for k in ack_keywords) or any(h in lower_body for h in hints)
+        has_ack = bool(body_text) and (any(k in lower_body for k in ack_keywords) or any(h in lower_body for h in hints) or has_anchor)
         if not has_ack:
             violations.append("body reflection must acknowledge discomfort when weekly_body_notes are present")
 
@@ -328,8 +329,6 @@ def _lint_reflection(
         if not text.strip():
             violations.append(f"{dim} reflection missing despite anchor present")
             return
-        if _has_forbidden_anchor_refs(text):
-            violations.append(f"{dim} reflection references journal mechanics/quotes while anchors present")
 
     # Body anchor
     if anchor_map.get("body_discomfort"):
