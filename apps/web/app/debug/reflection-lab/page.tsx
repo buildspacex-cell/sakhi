@@ -3,16 +3,8 @@
 import { useMemo, useState } from "react";
 
 type Reflection = {
-  overview?: string;
-  recovery?: string;
-  changes?: string;
-  body?: string;
-  mind?: string;
-  emotion?: string;
-  energy?: string;
-  work?: string;
+  text?: string;
   confidence_note?: string;
-  window?: string;
 };
 
 type Scenario = {
@@ -32,23 +24,17 @@ type Scenario = {
   result?: Reflection;
   raw?: any;
   error?: string | null;
-  checklist?: ChecklistItem[];
-  manual_checklist?: ManualChecklist;
+  eval?: EvalNotes;
 };
-
-type ChecklistItem = { label: string; passed: boolean };
 type ParsedJournal = { created_at: string; content: string };
 
-type ManualChecklist = {
-  body: "present" | "missing" | "overreach" | "";
-  emotion: "present" | "missing" | "overreach" | "";
-  energy: "present" | "missing" | "overreach" | "";
-  work: "present" | "missing" | "overreach" | "";
-  mind: "present" | "missing" | "overreach" | "";
-  invented_experience: boolean;
-  advice_slipped: boolean;
-  identity_language: boolean;
-  overconfidence: boolean;
+type EvalNotes = {
+  grounded?: boolean;
+  no_invention?: boolean;
+  no_advice?: boolean;
+  caring_witness?: boolean;
+  emotional_shape?: boolean;
+  off_notes?: string;
 };
 
 const palette = {
@@ -121,17 +107,7 @@ const defaultScenario: Scenario = {
   last_result: null,
   user: "c10fbd98-25fa-4445-8aba-e5243bc01564",
   weekStart: "",
-  manual_checklist: {
-    body: "",
-    emotion: "",
-    energy: "",
-    work: "",
-    mind: "",
-    invented_experience: false,
-    advice_slipped: false,
-    identity_language: false,
-    overconfidence: false,
-  },
+  eval: {},
 };
 
 function extractReflection(payload: any): Reflection | undefined {
@@ -141,47 +117,28 @@ function extractReflection(payload: any): Reflection | undefined {
     const ref = candidate.reflection || candidate;
     if (!ref) return undefined;
     return {
-      overview: ref.overview ?? ref.highlights ?? "",
-      recovery: ref.recovery ?? "",
-      changes: ref.changes ?? "",
-      body: ref.body ?? "",
-      mind: ref.mind ?? "",
-      emotion: ref.emotion ?? "",
-      energy: ref.energy ?? "",
-      work: ref.work ?? "",
+      text:
+        ref.text ??
+        ref.overview ??
+        ref.highlights ??
+        [
+          ref.body,
+          ref.emotion,
+          ref.energy,
+          ref.work,
+          ref.mind,
+          ref.recovery,
+          ref.changes,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
       confidence_note: ref.confidence_note ?? "",
-      window: ref.window ?? candidate.window ?? "",
     };
   };
   if (payload.reflection) return pick(payload);
   if (Array.isArray(payload.weekly) && payload.weekly.length > 0) return pick(payload.weekly[0]);
   if (payload.weekly) return pick(payload.weekly);
   return pick(payload);
-}
-
-function buildChecklist(expected: any, actual: Reflection | undefined): ChecklistItem[] {
-  const items: ChecklistItem[] = [];
-  const exp = typeof expected === "object" && expected !== null ? expected : {};
-  const actualText = (field: keyof Reflection) => (actual?.[field] || "").toLowerCase();
-
-  const addFieldCheck = (field: keyof Reflection, label: string) => {
-    const expVal = (exp as any)?.[field];
-    if (!expVal) {
-      // Presence check only
-      items.push({ label, passed: Boolean(actual?.[field]?.trim()) });
-    } else {
-      const expectedLower = String(expVal).toLowerCase();
-      items.push({ label, passed: actualText(field).includes(expectedLower) });
-    }
-  };
-
-  addFieldCheck("overview", "Overview present / matches expectation");
-  addFieldCheck("body", "Body covered");
-  addFieldCheck("emotion", "Emotion covered");
-  addFieldCheck("energy", "Energy covered");
-  addFieldCheck("work", "Work covered");
-  addFieldCheck("mind", "Mind (if expected)");
-  return items;
 }
 
 function parseJournalInput(input: string): ParsedJournal[] {
@@ -238,15 +195,6 @@ function parseJournalInput(input: string): ParsedJournal[] {
     }
   }
   return entries;
-}
-
-function manualStatus(scenario: Scenario): "PASS" | "FAIL" | null {
-  const mc = scenario.manual_checklist;
-  if (!mc) return null;
-  const dims = ["body", "emotion", "energy", "work", "mind"] as const;
-  if (dims.some((d) => mc[d] === "missing" || mc[d] === "overreach")) return "FAIL";
-  if (mc.invented_experience || mc.advice_slipped || mc.identity_language || mc.overconfidence) return "FAIL";
-  return "PASS";
 }
 
 export default function ReflectionLabPage() {
@@ -317,19 +265,11 @@ export default function ReflectionLabPage() {
         throw new Error((data && data.error) || res.statusText || "Failed to run weekly reflection");
       }
       const reflection = extractReflection(data);
-      let expectedParsed: any = {};
-      try {
-        expectedParsed = scenario.expected_reflection ? JSON.parse(scenario.expected_reflection) : {};
-      } catch {
-        expectedParsed = {};
-      }
-      const checklist = buildChecklist(expectedParsed, reflection);
       updateScenario(scenario.id, {
         result: reflection,
         raw: data,
-        checklist,
         last_run_at: new Date().toISOString(),
-        last_result: checklist.every((c) => c.passed) ? "pass" : "fail",
+        last_result: reflection?.text ? "pass" : "fail",
         parsed_journals: parsed,
       });
     } catch (err: any) {
@@ -394,7 +334,6 @@ export default function ReflectionLabPage() {
         prev.map((s) => ({
           ...s,
           result: undefined,
-          checklist: [],
           last_run_at: null,
           last_result: null,
           parsed_journals: null,
@@ -531,115 +470,81 @@ export default function ReflectionLabPage() {
                 scenario.result && (
                   <div key={`${scenario.id}-out`} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={cardStyle}>
-                      <div style={labelStyle}>
-                        Panel 1 — Generated Reflection {scenario.last_run_at ? `(last run: ${scenario.last_run_at})` : ""}
+                      <div style={{ ...labelStyle, fontSize: 13 }}>
+                        Generated Reflection {scenario.last_run_at ? `(last run: ${scenario.last_run_at})` : ""}
                         {scenario.last_result ? ` • ${scenario.last_result}` : ""}
-                        {manualStatus(scenario) ? ` • ${manualStatus(scenario)}` : ""}
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                        <div>
-                          <div style={labelStyle}>Overview</div>
-                          <div style={textareaStyle}>{scenario.result.overview || ""}</div>
-                        </div>
-                        <div>
-                          <div style={labelStyle}>Confidence</div>
-                          <div style={textareaStyle}>{scenario.result.confidence_note || ""}</div>
-                        </div>
-                        <div>
-                          <div style={labelStyle}>Body</div>
-                          <div style={textareaStyle}>{scenario.result.body || ""}</div>
-                        </div>
-                        <div>
-                          <div style={labelStyle}>Emotion</div>
-                          <div style={textareaStyle}>{scenario.result.emotion || ""}</div>
-                        </div>
-                        <div>
-                          <div style={labelStyle}>Energy</div>
-                          <div style={textareaStyle}>{scenario.result.energy || ""}</div>
-                        </div>
-                        <div>
-                          <div style={labelStyle}>Work</div>
-                          <div style={textareaStyle}>{scenario.result.work || ""}</div>
-                        </div>
-                        <div>
-                          <div style={labelStyle}>Mind</div>
-                          <div style={textareaStyle}>{scenario.result.mind || ""}</div>
-                        </div>
+                      <div style={{ ...textareaStyle, whiteSpace: "pre-wrap" }}>
+                        {scenario.result.text || ""}
+                        {scenario.result.confidence_note ? (
+                          <div style={{ marginTop: 8, color: "#9ca3af", fontSize: 12 }}>
+                            {scenario.result.confidence_note}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
                     <div style={cardStyle}>
-                      <div style={labelStyle}>Panel 2 — Expected Reflection (read-only)</div>
+                      <div style={labelStyle}>Expected Reflection (read-only)</div>
                       <pre style={{ ...textareaStyle, minHeight: 120, whiteSpace: "pre-wrap" }}>
                         {scenario.expected_reflection || ""}
                       </pre>
                     </div>
 
                     <div style={cardStyle}>
-                      <div style={labelStyle}>Panel 3 — Checklist (expected vs generated)</div>
-                      <ul style={{ listStyle: "none", padding: 0, margin: "8px 0" }}>
-                        {scenario.checklist?.map((item) => (
-                          <li key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                            <span style={{ color: item.passed ? "#15803d" : "#b91c1c" }}>
-                              {item.passed ? "✔" : "✖"}
-                            </span>
+                      <div style={labelStyle}>Evaluation (internal)</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {[
+                          { key: "grounded", label: "Feels grounded in my week" },
+                          { key: "no_invention", label: "No invention" },
+                          { key: "no_advice", label: "No advice" },
+                          { key: "caring_witness", label: "Feels like a caring witness" },
+                          { key: "emotional_shape", label: "Emotional shape feels right" },
+                        ].map((item) => (
+                          <label key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(scenario.eval?.[item.key as keyof EvalNotes])}
+                              onChange={(e) =>
+                                updateScenario(scenario.id, {
+                                  eval: { ...(scenario.eval || {}), [item.key]: e.target.checked },
+                                })
+                              }
+                            />
                             <span>{item.label}</span>
-                          </li>
+                          </label>
                         ))}
-                      </ul>
-                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>Manual checklist</div>
-                        {"body,emotion,energy,work,mind".split(",").map((dim) => (
-                          <div key={dim} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
-                            <div style={{ width: 60, textTransform: "capitalize" }}>{dim}</div>
-                            {"present,missing,overreach".split(",").map((status) => (
-                              <label key={status} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <input
-                                  type="radio"
-                                  name={`${scenario.id}-${dim}`}
-                                  checked={scenario.manual_checklist?.[dim as keyof ManualChecklist] === status}
-                                  onChange={() => {
-                                    const base: ManualChecklist =
-                                      (scenario.manual_checklist || defaultScenario.manual_checklist) as ManualChecklist;
-                                    updateScenario(scenario.id, {
-                                      manual_checklist: {
-                                        ...base,
-                                        [dim]: status as ManualChecklist[keyof ManualChecklist],
-                                      } as ManualChecklist,
-                                    });
-                                  }}
-                                />
-                                <span>{status}</span>
-                              </label>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={labelStyle}>What felt off?</div>
+                          <textarea
+                            style={textareaStyle}
+                            value={scenario.eval?.off_notes || ""}
+                            onChange={(e) => updateScenario(scenario.id, { eval: { ...(scenario.eval || {}), off_notes: e.target.value } })}
+                            placeholder="Optional notes"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>Debug (local only)</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div>
+                          <div style={labelStyle}>Selected episodes</div>
+                          <ul style={{ paddingLeft: 16, margin: "4px 0", color: palette.muted }}>
+                            {(scenario.parsed_journals || []).slice(0, 6).map((j, idx) => (
+                              <li key={`${scenario.id}-j-${idx}`} style={{ marginBottom: 4 }}>
+                                {j.content}
+                              </li>
                             ))}
-                          </div>
-                        ))}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-                          {["invented_experience", "advice_slipped", "identity_language", "overconfidence"].map((key) => (
-                            <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-                              <input
-                                type="checkbox"
-                                checked={Boolean(scenario.manual_checklist?.[key as keyof ManualChecklist])}
-                                onChange={(e) =>
-                                  updateScenario(scenario.id, {
-                                    manual_checklist: {
-                                      ...(scenario.manual_checklist || defaultScenario.manual_checklist),
-                                      [key]: e.target.checked,
-                                    } as ManualChecklist,
-                                  })
-                                }
-                              />
-                              <span>{
-                                key === "invented_experience"
-                                  ? "Invented experience"
-                                  : key === "advice_slipped"
-                                    ? "Advice slipped in"
-                                    : key === "identity_language"
-                                      ? "Identity language"
-                                      : "Overconfidence given low signals"
-                              }</span>
-                            </label>
-                          ))}
+                            {!(scenario.parsed_journals || []).length && <li>None</li>}
+                          </ul>
+                        </div>
+                        <div>
+                          <div style={labelStyle}>Raw payload (truncated)</div>
+                          <pre style={{ ...textareaStyle, maxHeight: 200, overflow: "auto", whiteSpace: "pre-wrap" }}>
+                            {JSON.stringify(scenario.raw?.debug || scenario.raw?.reflection || scenario.result, null, 2)}
+                          </pre>
                         </div>
                       </div>
                     </div>

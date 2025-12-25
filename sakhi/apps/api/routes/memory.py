@@ -255,7 +255,7 @@ async def run_weekly_flow_dev(request: Request):
         include_debug=True,
         target_week_start=target_week_start,
     )
-    llm_debug = reflection.pop("_debug", None)
+    llm_debug = reflection.pop("input", None)
     weekly_signals = await _fetch_weekly_signals(target_person, target_week_start)
     return {
         "status": "ok",
@@ -312,7 +312,6 @@ async def reset_weekly_flow_dev(request: Request):
     if entry_ids:
         await dbexec("DELETE FROM journal_embeddings WHERE entry_id = ANY($1::uuid[])", entry_ids)
         await dbexec("DELETE FROM memory_episodic WHERE entry_id = ANY($1::uuid[])", entry_ids)
-        await dbexec("DELETE FROM memory_short_term WHERE entry_id = ANY($1::uuid[])", entry_ids)
 
     await dbexec(
         "DELETE FROM memory_short_term WHERE user_id = $1 AND created_at >= $2 AND created_at < $3",
@@ -341,7 +340,6 @@ async def reset_weekly_flow_dev(request: Request):
         "memory_weekly_summaries",
         "rhythm_weekly_rollups",
         "planner_weekly_pressure",
-        "meta_reflections",
     ]
     for table in weekly_tables:
         await dbexec(

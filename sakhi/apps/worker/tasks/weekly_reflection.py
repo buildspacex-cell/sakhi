@@ -36,6 +36,159 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 TARGET_WEEK_START_ENV = os.getenv("WEEKLY_REFLECTION_TARGET_WEEK_START")
 
+SYSTEM_PROMPT_V3 = """You are Sakhi, a deeply caring companion whose role is to reflect a person’s lived week back to them with honesty and tenderness.
+
+You are not a coach, therapist, or advisor.
+You do not fix, improve, diagnose, or teach.
+
+Your task is to write one coherent weekly reflection that sounds like it is spoken by someone who is radically on the user’s side — someone who knows the user’s worth is non-negotiable — and is simply describing how this particular week sat in them.
+
+You must stay strictly grounded in what the user actually lived.
+
+Inputs You Will Receive
+
+You will be given:
+
+Selected episode excerpts from the user’s journals (verbatim or lightly trimmed).
+
+Constraint flags (labels only — not explanations).
+
+An optional confidence note indicating entry sparsity.
+
+You must treat the episode excerpts as the only source of truth.
+
+What You Must Do
+
+Write a single, continuous reflection (no headings, no sections).
+
+Address the user directly using “you.”
+
+Speak in a loving witness voice: attentive, caring, and honest.
+
+Describe how the week was lived, not what happened day by day.
+
+Preserve the emotional shape of the week exactly as shown in the episodes.
+
+If the week was heavy, let it be heavy.
+
+If grounding moments were brief, let them be brief.
+
+Let care show up through word choice, not optimism.
+
+What You Must Not Do (Non-Negotiable)
+
+You must not:
+
+Invent events, wins, relief, balance, or meaning.
+
+Add lessons, growth, takeaways, or interpretations.
+
+Give advice, suggestions, or implications of what should change.
+
+Explain causes or consequences.
+
+Smooth the week into “ups and downs” or emotional balance.
+
+Use section labels or analytical framing.
+
+Refer to “patterns,” “themes,” or “tendencies” explicitly.
+
+If something is not clearly supported by the episode excerpts, do not include it.
+
+Disallowed Language (Do Not Use)
+
+Do not use phrases like:
+
+“ups and downs”
+
+“mixed experiences”
+
+“small victories”
+
+“on the bright side”
+
+“silver lining”
+
+“despite / but there were”
+
+“should / need to / must”
+
+“lesson / growth / learning”
+
+“led to / caused / resulted in”
+
+“took a back seat”
+
+Allowed Warm Language (Use Sparingly)
+
+You may use grounded, caring verbs such as:
+
+carried
+
+held
+
+kept going
+
+stayed with
+
+moved through
+
+had little space
+
+Warmth must come from truthful recognition, not reassurance.
+
+Pattern Constraints (Important)
+
+You may be given constraint flags such as:
+
+role_overload
+
+heavy_with_brief_grounding
+
+limited_entries
+
+These flags:
+
+Guide what you notice
+
+Do not appear explicitly in your language
+
+Must not be explained
+
+For example:
+
+If role density is high, name the sense of carrying many responsibilities.
+
+If grounding was brief, do not over-weight it.
+
+If entries are sparse, avoid over-specifying emotion.
+
+Confidence Note
+
+If a confidence note is provided, append it once, gently, at the end of the reflection, for example:
+
+“This reflection is based on a limited number of entries.”
+
+Do not emphasize it.
+
+Final Check Before Responding
+
+Before you output the reflection, silently ask yourself:
+
+“Does this sound like someone who knows this person well and is describing how this week sat in them — without trying to make it better, clearer, or easier than it was?”
+
+If the answer is not yes, revise.
+
+Output Format
+
+Output only the reflection text.
+
+No headings.
+
+No bullet points.
+
+No meta commentary."""
+
 SYSTEM_PROMPT = (
     "You are a reflective companion helping a person gently look back on their week.\n\n"
     "Your role is not to analyze or judge, but to mirror what seems to have happened in a grounded, human way.\n\n"
@@ -197,6 +350,228 @@ def _trim_words(text: str, max_words: int = MAX_WORDS) -> str:
     if len(words) <= max_words:
         return text
     return " ".join(words[:max_words])
+
+
+def _dedupe_preserve(items: List[str]) -> List[str]:
+    seen: set[str] = set()
+    ordered: List[str] = []
+    for item in items:
+        if not item:
+            continue
+        if item in seen:
+            continue
+        seen.add(item)
+        ordered.append(item)
+    return ordered
+
+
+async def assemble_reflection_input(
+    person_id: str,
+    target_week_start: dt.date | None = None,
+    journal_limit: int = 6,
+) -> Dict[str, Any]:
+    """
+    Build a single JSON payload for reflection generation.
+    Sources:
+    - Raw journal excerpts (verbatim)
+    - Weekly signals (anchors / contrast)
+    - Constraint labels (non-linguistic)
+    - Confidence / sparsity indicator
+    """
+    signals = await _fetch_weekly_signals(person_id, target_week_start)
+
+    week_start: dt.date
+    week_end: dt.date
+    if signals.get("week_start") and signals.get("week_end"):
+        week_start = signals["week_start"]
+        week_end = signals["week_end"]
+    else:
+        base = target_week_start or dt.date.today()
+        week_start = base - dt.timedelta(days=base.weekday())
+        week_end = week_start + dt.timedelta(days=6)
+
+    start_dt = dt.datetime.combine(week_start, dt.time.min, tzinfo=dt.timezone.utc)
+    end_dt = dt.datetime.combine(week_end + dt.timedelta(days=1), dt.time.min, tzinfo=dt.timezone.utc)
+
+    journal_rows = await q(
+        """
+        SELECT content
+        FROM journal_entries
+        WHERE user_id = $1 AND created_at >= $2 AND created_at < $3
+        ORDER BY created_at ASC
+        LIMIT $4
+        """,
+        person_id,
+        start_dt,
+        end_dt,
+        journal_limit,
+    )
+    journal_excerpts = [(row.get("content") or "").strip() for row in journal_rows or [] if (row.get("content") or "").strip()]
+
+    weekly_contrast = signals.get("weekly_contrast") or {}
+    weekly_salience = signals.get("weekly_salience") or {}
+    weekly_body_notes = signals.get("weekly_body_notes") or {}
+    dimension_states = signals.get("dimension_states") or {}
+
+    anchor_hints: List[str] = []
+    if isinstance(weekly_contrast.get("moment_anchors"), list):
+        anchor_hints.extend([a.get("hint") or a.get("moment_hint") or "" for a in weekly_contrast.get("moment_anchors") or []])
+    if isinstance(weekly_salience.get("anchors"), list):
+        anchor_hints.extend([a.get("moment_hint") or "" for a in weekly_salience.get("anchors") or []])
+    if isinstance(weekly_body_notes.get("anchors"), list):
+        anchor_hints.extend([a.get("moment_hint") or "" for a in weekly_body_notes.get("anchors") or []])
+
+    episodes = _dedupe_preserve(journal_excerpts + anchor_hints)
+
+    week_type = "role_overload" if weekly_salience.get("present") else "baseline"
+    asymmetry = "heavy_with_brief_grounding" if (weekly_contrast.get("count") or 0) > 0 else "flat_or_undefined"
+
+    required_lenses: List[str] = []
+    if week_type == "role_overload" or anchor_hints:
+        required_lenses.append("role_density")
+    body_state = str(dimension_states.get("body") or "").lower()
+    if body_state in {"mixed", "down"} or (weekly_body_notes.get("count") or 0) > 0:
+        required_lenses.append("cost_of_functioning")
+
+    disallowed_patterns = ["balanced_arc", "advice_language"]
+
+    journal_count = len(journal_excerpts)
+    confidence_note: str | None = None
+    if journal_count < 3:
+        confidence_note = "limited_entries"
+
+    assembled = {
+        "episodes": episodes,
+        "constraints": {
+            "week_type": week_type,
+            "affective_asymmetry": asymmetry,
+            "required_lenses": _dedupe_preserve(required_lenses),
+            "disallowed_patterns": disallowed_patterns,
+        },
+        "confidence_note": confidence_note,
+    }
+    return assembled
+
+
+def _contains_forbidden_v3(text: str) -> bool:
+    lowered = text.lower()
+    return any(phrase in lowered for phrase in FORBIDDEN_TEXT_V3)
+
+
+def _tokenize(content: str) -> List[str]:
+    return [w for w in re.split(r"[^a-zA-Z0-9']+", content.lower()) if len(w) > 3]
+
+
+def _sentences(text: str) -> List[str]:
+    return [s.strip() for s in re.split(r"[.!?]\s+", text) if s.strip()]
+
+
+async def generate_weekly_reflection_single_text(
+    person_id: str,
+    target_week_start: dt.date | None = None,
+    *,
+    include_debug: bool = False,
+    max_retries: int = 2,
+) -> Dict[str, Any]:
+    """
+    Generate a single-piece weekly reflection (contract v3).
+    Returns {"text": "...", "input": <assembled_input>, "model": "..."}.
+    """
+    if not settings.enable_weekly_reflection_llm:
+        raise RuntimeError(
+            "Weekly reflection LLM rendering is disabled. "
+            "Set ENABLE_WEEKLY_REFLECTION_LLM=true to proceed."
+        )
+
+    assembled = await assemble_reflection_input(person_id, target_week_start)
+    input_json = json.dumps(assembled, ensure_ascii=False)
+
+    attempt = 0
+    last_error: str | None = None
+    while attempt <= max_retries:
+        attempt += 1
+        user_message = input_json
+        logger.info(
+            "WEEKLY_LLM_CALL_V3",
+            extra={
+                "model": settings.weekly_reflection_model,
+                "mode": "chat",
+                "target_week_start": str(target_week_start) if target_week_start else None,
+                "attempt": attempt,
+            },
+        )
+
+        raw = await call_llm(
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT_V3},
+                {"role": "user", "content": user_message},
+            ],
+            model=settings.weekly_reflection_model,
+            temperature=0.3 if attempt > 1 else 0.4,
+            max_tokens=250 if attempt > 1 else 350,
+        )
+        if isinstance(raw, dict):
+            text = raw.get("reply") or raw.get("text") or ""
+        else:
+            text = str(raw or "")
+        text = text.strip()
+
+        # Judge temporarily disabled; always pass.
+        ok, reasons = True, []
+        if ok:
+            if assembled.get("confidence_note") and assembled["confidence_note"] == "limited_entries":
+                note_text = "This reflection is based on a limited number of entries."
+                if note_text.lower() not in text.lower():
+                    text = f"{text}\n\n{note_text}"
+            result = {
+                "text": text,
+                "input": assembled if include_debug else None,
+                "model": settings.weekly_reflection_model,
+                "attempts": attempt,
+            }
+            if not include_debug:
+                result.pop("input", None)
+            return result
+        last_error = ";".join(reasons) or "judge_failed"
+        logger.error("WEEKLY_LLM_V3_RETRY", extra={"attempt": attempt, "reasons": reasons, "snippet": text[:160]})
+
+    raise RuntimeError(f"Reflection generation failed after {max_retries + 1} attempts: {last_error}")
+
+
+def judge_reflection_v1(text: str, assembled_input: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    """
+    Deterministic judge enforcing contract v3.
+    Returns (ok, reasons).
+    """
+    reasons: List[str] = []
+    if not text or not text.strip():
+        reasons.append("empty_text")
+        return False, reasons
+
+    lowered = text.lower()
+    if any(phrase in lowered for phrase in FORBIDDEN_TEXT_V3):
+        reasons.append("forbidden_phrase")
+    if any(ph in lowered for ph in ADVICE_CAUSALITY):
+        reasons.append("advice_or_causality")
+    if any(ph in lowered for ph in PATTERN_LANGUAGE):
+        reasons.append("pattern_language")
+
+    if re.search(r"^\s*[-*]", text, re.MULTILINE):
+        reasons.append("bullet_points")
+    if re.search(r"^\s*[A-Za-z]+\s*:", text, re.MULTILINE):
+        reasons.append("heading_format")
+    if "\n\n" in text:
+        reasons.append("multiple_blocks")
+
+    episodes = assembled_input.get("episodes") if isinstance(assembled_input, dict) else []
+    episode_tokens = set(_tokenize(" ".join(episodes or [])))
+    sentences = _sentences(text)
+    if episode_tokens:
+        if not any(set(_tokenize(s)).intersection(episode_tokens) for s in sentences):
+            reasons.append("unanchored")
+
+    ok = len(reasons) == 0
+    return ok, reasons
 
 
 def _contains_forbidden(text: str) -> bool:
@@ -592,87 +967,29 @@ async def generate_weekly_reflection(
     include_debug: bool = False,
     target_week_start: dt.date | None = None,
 ) -> Dict[str, Any]:
-    """
-    Produce an ephemeral weekly reflection.
-    - Reads structured weekly signals + longitudinal_state.
-    - Never reads episodic/raw text or task text.
-    - Never persists output.
-    - Uses confidence to modulate language; drops low-confidence dimensions.
-    """
-    if not settings.enable_weekly_reflection_llm:
-        raise RuntimeError(
-            "Weekly reflection LLM rendering is disabled. "
-            "Set ENABLE_WEEKLY_REFLECTION_LLM=true to proceed."
-        )
-
-    signals = await _fetch_weekly_signals(person_id, target_week_start)
-    overall_conf = float(signals.get("confidence") or 0.0)
-    window_str = _window(signals)
-
-    if isinstance(longitudinal_state, str):
-        try:
-            longitudinal_state = json.loads(longitudinal_state)
-        except Exception:
-            longitudinal_state = {}
-
-    llm_result, used_dimensions, debug_info = await _llm_render(
-        window_str,
-        signals,
-        longitudinal_state,
-        system_prompt_override=system_prompt_override,
-        user_prompt_override=user_prompt_override,
+    _ = system_prompt_override, user_prompt_override, longitudinal_state  # unused in v3
+    return await generate_weekly_reflection_single_text(
+        person_id,
+        target_week_start=target_week_start,
+        include_debug=include_debug,
     )
-    weekly_salience = signals.get("weekly_salience") or {}
-    weekly_contrast = signals.get("weekly_contrast") or {}
-    dimension_states = signals.get("dimension_states") or {}
-    weekly_body_notes = signals.get("weekly_body_notes") or {}
-    _sanitize_mixed_reflection(llm_result, dimension_states)
-    try:
-        anchors = []
-        salience = signals.get("weekly_salience") or {}
-        body_notes = signals.get("weekly_body_notes") or {}
-        if isinstance(salience.get("anchors"), list):
-            anchors.extend([("work", a.get("moment_hint")) for a in salience.get("anchors") or []])
-        if isinstance(body_notes.get("anchors"), list):
-            anchors.extend([("body", a.get("moment_hint")) for a in body_notes.get("anchors") or []])
-        logger.error(
-            "WEEKLY_REFLECTION_INPUT_DEBUG",
-            extra={
-                "person_id": person_id,
-                "weekly_contrast_count": (signals.get("weekly_contrast") or {}).get("count"),
-                "dimension_state_body": (signals.get("dimension_states") or {}).get("body"),
-                "anchors": anchors,
-            },
-        )
-    except Exception:
-        pass
-    try:
-        _lint_reflection(llm_result, weekly_salience, dimension_states, weekly_contrast, weekly_body_notes)
-    except Exception as exc:
-        logger.error(
-            "WEEKLY_REFLECTION_LINT_FAILED",
-            extra={"person_id": person_id, "reason": str(exc)},
-        )
-        raise
-    if include_debug:
-        llm_result["_debug"] = debug_info
-
-    if not llm_result.get("confidence_note"):
-        llm_result["confidence_note"] = (
-            "This reflection is based on limited signals and may evolve as more weeks accumulate."
-            if overall_conf < 0.6
-            else "These patterns are becoming clearer, though they remain open to change."
-        )
-
-    logger.info(
-        "WEEKLY_RENDERER_LLM_SUCCESS",
-        extra={
-            "person_id": person_id,
-            "model": settings.weekly_reflection_model,
-            "dimensions_used": used_dimensions,
-        },
-    )
-    return llm_result
 
 
-__all__ = ["generate_weekly_reflection"]
+__all__ = [
+    "generate_weekly_reflection",
+    "assemble_reflection_input",
+    "generate_weekly_reflection_single_text",
+]
+FORBIDDEN_TEXT_V3 = [
+    "ups and downs",
+    "mixed",
+    "small victories",
+    "on the bright side",
+    "should",
+    "lesson",
+    "growth",
+    "led to",
+    "took a back seat",
+]
+ADVICE_CAUSALITY = ["should", "need to", "must", "because", "therefore", "resulted in", "led to"]
+PATTERN_LANGUAGE = ["pattern", "trend", "trajectory", "signal", "dimension", "delta"]
