@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import uuid
 
 from fastapi import APIRouter, Query, Request
 
@@ -18,7 +19,7 @@ from sakhi.apps.worker.tasks.weekly_signals_worker import run_weekly_signals_wor
 from sakhi.apps.worker.tasks.turn_personal_model_update import run_turn_personal_model_update
 from sakhi.apps.worker.tasks.weekly_reflection import generate_weekly_reflection, _fetch_weekly_signals
 from sakhi.libs.schemas.settings import get_settings
-from sakhi.apps.api.core.db import q
+from sakhi.apps.api.core.db import q, exec as dbexec
 from sakhi.apps.api.utils.person_resolver import resolve_person
 
 router = APIRouter(tags=["memory"])
@@ -189,6 +190,81 @@ async def get_weekly_summaries(
         extra={"person_id": resolved_id, "person_label": person_label, "person_key": person_key},
     )
     return await fetch_weekly_summaries(resolved_id, limit=limit)
+
+
+@router.post("/memory/dev/weekly/run")
+async def run_weekly_flow_dev(request: Request):
+    """
+    Dev-only helper to run the full weekly flow synchronously with optional journal injection.
+    Payload (JSON):
+    {
+      "user": "a",
+      "week_start": "2023-05-01",
+      "journals": [
+        {"content": "...", "created_at": "2023-05-01T08:00:00Z"},
+        ...
+      ]
+    }
+    """
+    payload = await request.json()
+    user = payload.get("user") or "a"
+    week_start_param = payload.get("week_start")
+    journals = payload.get("journals") or []
+    resolved_id, _, _ = resolve_person(request)
+    target_week_start = None
+    if week_start_param:
+        try:
+            target_week_start = dt.datetime.fromisoformat(week_start_param).date()
+        except Exception:
+            target_week_start = None
+
+    # Insert journals if provided
+    for j in journals:
+        content = (j or {}).get("content") or ""
+        created_raw = (j or {}).get("created_at")
+        if not content.strip() or not created_raw:
+            continue
+        try:
+            created_at = dt.datetime.fromisoformat(created_raw)
+        except Exception:
+            continue
+        await dbexec(
+            """
+            INSERT INTO journal_entries (id, user_id, content, layer, created_at, updated_at)
+            VALUES ($1, $2, $3, 'journal', $4, $4)
+            ON CONFLICT (id) DO NOTHING
+            """,
+            uuid.uuid4(),
+            resolved_id,
+            content,
+            created_at,
+        )
+
+    # Run weekly pipeline for the requested week
+    await run_weekly_rhythm_rollup(resolved_id)
+    await run_weekly_planner_pressure(resolved_id)
+    await run_weekly_signals_worker(resolved_id, target_week_start=target_week_start)
+    await run_turn_personal_model_update(resolved_id)
+
+    row = await q("SELECT longitudinal_state FROM personal_model WHERE person_id = $1", resolved_id, one=True)
+    longitudinal_state = row.get("longitudinal_state") if row else {}
+    reflection = await generate_weekly_reflection(
+        resolved_id,
+        longitudinal_state or {},
+        include_debug=True,
+        target_week_start=target_week_start,
+    )
+    llm_debug = reflection.pop("_debug", None)
+    weekly_signals = await _fetch_weekly_signals(resolved_id, target_week_start)
+    return {
+        "status": "ok",
+        "week_start": target_week_start.isoformat() if target_week_start else None,
+        "reflection": reflection,
+        "debug": {
+            "llm": llm_debug,
+            "weekly_signals": weekly_signals,
+        },
+    }
 
 
 @router.get("/memory/dev/weekly")
