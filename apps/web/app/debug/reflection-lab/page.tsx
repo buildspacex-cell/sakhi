@@ -284,10 +284,6 @@ export default function ReflectionLabPage() {
 
     updateScenario(scenario.id, { running: true, error: null });
     try {
-      const params = new URLSearchParams();
-      params.set("user", scenario.user || "a");
-      params.set("limit", "1");
-      params.set("debug", "true");
       // Prefer explicit weekStart; otherwise derive from earliest parsed journal date.
       let weekToUse = scenario.weekStart;
       if (!weekToUse && parsed.length) {
@@ -295,11 +291,23 @@ export default function ReflectionLabPage() {
           .map((p) => new Date(p.created_at))
           .reduce((a, b) => (a.getTime() <= b.getTime() ? a : b));
         const monday = new Date(minDate);
-        monday.setUTCDate(minDate.getUTCDate() - minDate.getUTCDay());
+        monday.setUTCDate(minDate.getUTCDay() === 0 ? minDate.getUTCDate() - 6 : minDate.getUTCDate() - (minDate.getUTCDay() - 1));
         weekToUse = monday.toISOString().slice(0, 10);
       }
-      if (weekToUse) params.set("week_start", weekToUse);
-      const res = await fetch(`/api/memory/weekly?${params.toString()}`);
+
+      const payload = {
+        user: scenario.user || "a",
+        week_start: weekToUse,
+        journals: parsed.map((p) => ({
+          content: p.content,
+          created_at: p.created_at,
+        })),
+      };
+      const res = await fetch("/api/memory/dev/weekly/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) {
