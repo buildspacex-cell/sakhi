@@ -211,6 +211,7 @@ async def run_weekly_flow_dev(request: Request):
     week_start_param = payload.get("week_start")
     journals = payload.get("journals") or []
     resolved_id, _, _ = resolve_person(request)
+    target_person = user or resolved_id
     target_week_start = None
     if week_start_param:
         try:
@@ -235,27 +236,27 @@ async def run_weekly_flow_dev(request: Request):
             ON CONFLICT (id) DO NOTHING
             """,
             uuid.uuid4(),
-            resolved_id,
+            target_person,
             content,
             created_at,
         )
 
     # Run weekly pipeline for the requested week
-    await run_weekly_rhythm_rollup(resolved_id)
-    await run_weekly_planner_pressure(resolved_id)
-    await run_weekly_signals_worker(resolved_id, target_week_start=target_week_start)
-    await run_turn_personal_model_update(resolved_id)
+    await run_weekly_rhythm_rollup(target_person)
+    await run_weekly_planner_pressure(target_person)
+    await run_weekly_signals_worker(target_person, target_week_start=target_week_start)
+    await run_turn_personal_model_update(target_person)
 
-    row = await q("SELECT longitudinal_state FROM personal_model WHERE person_id = $1", resolved_id, one=True)
+    row = await q("SELECT longitudinal_state FROM personal_model WHERE person_id = $1", target_person, one=True)
     longitudinal_state = row.get("longitudinal_state") if row else {}
     reflection = await generate_weekly_reflection(
-        resolved_id,
+        target_person,
         longitudinal_state or {},
         include_debug=True,
         target_week_start=target_week_start,
     )
     llm_debug = reflection.pop("_debug", None)
-    weekly_signals = await _fetch_weekly_signals(resolved_id, target_week_start)
+    weekly_signals = await _fetch_weekly_signals(target_person, target_week_start)
     return {
         "status": "ok",
         "week_start": target_week_start.isoformat() if target_week_start else None,

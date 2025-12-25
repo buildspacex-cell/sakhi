@@ -119,7 +119,7 @@ const defaultScenario: Scenario = {
     "{\n  \"overview\": \"Work pressure with light family moments\",\n  \"body\": \"Some discomfort showed up\",\n  \"emotion\": \"Family time lifted the mood\",\n  \"energy\": \"Energy mixed / up and down\",\n  \"work\": \"Pressure and fragmentation\"\n}",
   last_run_at: null,
   last_result: null,
-  user: "a",
+  user: "c10fbd98-25fa-4445-8aba-e5243bc01564",
   weekStart: "",
   manual_checklist: {
     body: "",
