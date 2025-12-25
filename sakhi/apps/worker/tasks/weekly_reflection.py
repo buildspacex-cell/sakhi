@@ -119,12 +119,16 @@ Return JSON only:
 """
 
 
-async def _fetch_weekly_signals(person_id: str) -> Dict[str, Any]:
+async def _fetch_weekly_signals(person_id: str, target_week_start: dt.date | None = None) -> Dict[str, Any]:
     target_clause = ""
     params: list[Any] = [person_id]
-    if TARGET_WEEK_START_ENV:
+    env_target = os.getenv("WEEKLY_REFLECTION_TARGET_WEEK_START")
+    if target_week_start:
+        target_clause = "AND week_start = $2"
+        params.append(target_week_start)
+    elif env_target:
         try:
-            target_date = dt.date.fromisoformat(TARGET_WEEK_START_ENV)
+            target_date = dt.date.fromisoformat(env_target)
             target_clause = "AND week_start = $2"
             params.append(target_date)
         except Exception:
@@ -240,6 +244,24 @@ def _lint_reflection(
 
     if contrast_count > 0 and not emotion_reflection:
         violations.append("emotion reflection must not be empty when weekly_contrast.count > 0")
+
+    anchor_map: Dict[str, List[Dict[str, Any]]] = {}
+    if isinstance(weekly_contrast.get("moment_anchors"), list):
+        for anchor in weekly_contrast.get("moment_anchors") or []:
+            if isinstance(anchor, dict):
+                typ = anchor.get("type")
+                if typ:
+                    anchor_map.setdefault(str(typ), []).append(anchor)
+    if isinstance(weekly_salience.get("anchors"), list):
+        if weekly_salience.get("anchors"):
+            anchor_map.setdefault("work_overload", []).extend(
+                [a for a in weekly_salience.get("anchors") if isinstance(a, dict)]
+            )
+    if isinstance(weekly_body_notes.get("anchors"), list):
+        if weekly_body_notes.get("anchors"):
+            anchor_map.setdefault("body_discomfort", []).extend(
+                [a for a in weekly_body_notes.get("anchors") if isinstance(a, dict)]
+            )
 
     body_notes = weekly_body_notes or {}
     try:
@@ -568,6 +590,7 @@ async def generate_weekly_reflection(
     system_prompt_override: Optional[str] = None,
     user_prompt_override: Optional[str] = None,
     include_debug: bool = False,
+    target_week_start: dt.date | None = None,
 ) -> Dict[str, Any]:
     """
     Produce an ephemeral weekly reflection.
@@ -582,7 +605,7 @@ async def generate_weekly_reflection(
             "Set ENABLE_WEEKLY_REFLECTION_LLM=true to proceed."
         )
 
-    signals = await _fetch_weekly_signals(person_id)
+    signals = await _fetch_weekly_signals(person_id, target_week_start)
     overall_conf = float(signals.get("confidence") or 0.0)
     window_str = _window(signals)
 

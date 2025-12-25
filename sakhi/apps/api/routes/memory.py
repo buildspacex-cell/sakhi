@@ -59,6 +59,13 @@ async def get_weekly_summaries(
     settings = get_settings()
     system_prompt_final = system_prompt_override or system_prompt
     user_prompt_final = user_prompt_override or user_prompt
+    week_start_param = request.query_params.get("week_start")
+    target_week_start = None
+    if week_start_param:
+        try:
+            target_week_start = dt.datetime.fromisoformat(week_start_param).date()
+        except Exception:
+            target_week_start = None
     if settings.debug_weekly_pipeline or debug:
         logger.error(
             "WEEKLY_DEBUG: /memory/{id}/weekly orchestration start",
@@ -88,7 +95,7 @@ async def get_weekly_summaries(
             logger.error("WEEKLY_DEBUG: episodic build stats", extra={"person_id": person_id, **build_stats})
         await run_weekly_rhythm_rollup(resolved_id)
         await run_weekly_planner_pressure(resolved_id)
-        await run_weekly_signals_worker(resolved_id)
+        await run_weekly_signals_worker(resolved_id, target_week_start=target_week_start)
         await run_turn_personal_model_update(resolved_id)
         episodic_count = await q(
             "SELECT COUNT(*) FROM memory_episodic WHERE user_id = $1",
@@ -128,6 +135,7 @@ async def get_weekly_summaries(
             system_prompt_override=system_prompt_final,
             user_prompt_override=user_prompt_final,
             include_debug=True,
+            target_week_start=target_week_start,
         )
         llm_debug = reflection.pop("_debug", None)
         weekly_signals = await _fetch_weekly_signals(resolved_id)

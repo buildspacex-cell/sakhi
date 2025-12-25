@@ -13,7 +13,6 @@ from sakhi.apps.api.core.db import exec as dbexec, q
 logger = logging.getLogger(__name__)
 
 WINDOW_DAYS = int(os.getenv("WEEKLY_SIGNALS_WINDOW_DAYS", "7") or "7")
-TARGET_WEEK_START_ENV = os.getenv("WEEKLY_SIGNALS_TARGET_WEEK_START")
 
 
 def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
@@ -380,10 +379,13 @@ def _analyze_journals(journal_rows: List[Dict[str, Any]]) -> Tuple[Dict[str, Any
     return weekly_salience, weekly_contrast, dimension_states, weekly_body_notes
 
 
-def _resolve_week_bounds() -> tuple[date, date]:
-    if TARGET_WEEK_START_ENV:
+def _resolve_week_bounds(target_week_start: date | None = None) -> tuple[date, date]:
+    forced_env = os.getenv("WEEKLY_SIGNALS_TARGET_WEEK_START")
+    if target_week_start:
+        return target_week_start, target_week_start + timedelta(days=WINDOW_DAYS)
+    if forced_env:
         try:
-            forced_start = date.fromisoformat(TARGET_WEEK_START_ENV)
+            forced_start = date.fromisoformat(forced_env)
             return forced_start, forced_start + timedelta(days=WINDOW_DAYS)
         except Exception:
             pass
@@ -393,11 +395,11 @@ def _resolve_week_bounds() -> tuple[date, date]:
     return window_start, window_end
 
 
-async def run_weekly_signals_worker(person_id: Optional[str] = None) -> Dict[str, Any]:
+async def run_weekly_signals_worker(person_id: Optional[str] = None, target_week_start: date | None = None) -> Dict[str, Any]:
     """
     Weekly signals aggregation (language-free). Upserts memory_weekly_signals.
     """
-    window_start, window_end = _resolve_week_bounds()
+    window_start, window_end = _resolve_week_bounds(target_week_start)
 
     persons = [person_id] if person_id else [row["person_id"] for row in await q("SELECT person_id FROM personal_model")]
     results = {"processed": 0, "updated": 0}
