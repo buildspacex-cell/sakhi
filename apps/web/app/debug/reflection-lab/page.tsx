@@ -185,21 +185,49 @@ function buildChecklist(expected: any, actual: Reflection | undefined): Checklis
 }
 
 function parseJournalInput(input: string): ParsedJournal[] {
-  const lines = input.split("\n").map((l) => l.trim()).filter(Boolean);
+  const rawLines = input.split("\n").map((l) => l.trim());
   const entries: ParsedJournal[] = [];
-  const dateRegex = /^(\d{4}-\d{2}-\d{2})\s*[:|]\s*(.+)$/; // accept "YYYY-MM-DD: text" or "YYYY-MM-DD | text"
-  for (const line of lines) {
+  const dateRegex = /^(\d{4}-\d{2}-\d{2})(?:\s*[:|]\s*(.*))?$/; // accept "YYYY-MM-DD: text", "YYYY-MM-DD | text", or multiline starting with date
+
+  let currentDate: string | null = null;
+  let buffer: string[] = [];
+
+  const flush = () => {
+    if (!currentDate) return;
+    const content = buffer.join(" ").trim();
+    entries.push({ created_at: new Date(currentDate).toISOString(), content });
+    currentDate = null;
+    buffer = [];
+  };
+
+  for (const line of rawLines) {
+    if (!line) {
+      // blank line: end current entry
+      flush();
+      continue;
+    }
     const match = dateRegex.exec(line);
-    if (!match) {
-      throw new Error(`Invalid line (expected YYYY-MM-DD: text or YYYY-MM-DD | text): "${line}"`);
+    if (match) {
+      // starting a new entry; flush previous if any
+      flush();
+      const [, dateStr, firstContent] = match;
+      const dateObj = new Date(dateStr);
+      if (Number.isNaN(dateObj.getTime())) {
+        throw new Error(`Invalid date: "${dateStr}"`);
+      }
+      currentDate = dateStr;
+      if (firstContent && firstContent.trim()) {
+        buffer.push(firstContent.trim());
+      }
+      continue;
     }
-    const [, dateStr, content] = match;
-    const dateObj = new Date(dateStr);
-    if (Number.isNaN(dateObj.getTime())) {
-      throw new Error(`Invalid date: "${dateStr}"`);
+    if (!currentDate) {
+      throw new Error(`Invalid line (expected YYYY-MM-DD start): "${line}"`);
     }
-    entries.push({ created_at: new Date(dateObj).toISOString(), content: content.trim() });
+    buffer.push(line);
   }
+  flush();
+
   if (entries.length > 0) {
     const timestamps = entries.map((e) => new Date(e.created_at).getTime());
     const minTs = Math.min(...timestamps);
