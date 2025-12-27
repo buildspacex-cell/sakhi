@@ -16,7 +16,7 @@ from typing import Any, Dict, List
 import asyncpg
 import httpx
 
-PERSON_ID = os.getenv("PERSON_ID", "565bdb63-124b-4692-a039-846fddceff90")
+PERSON_ID = os.getenv("PERSON_ID", os.getenv("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90"))
 API_BASE = os.getenv("API_BASE", "http://localhost:8000")
 DB_URL = os.getenv("DATABASE_URL")
 TURN_TEXT = os.getenv(

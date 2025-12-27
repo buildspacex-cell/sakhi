@@ -20,7 +20,7 @@ from typing import Any, Dict
 import httpx
 
 API_BASE = os.environ.get("API_BASE", "http://localhost:8000")
-PERSON_ID = os.environ.get("PERSON_ID", "565bdb63-124b-4692-a039-846fddceff90")
+PERSON_ID = os.environ.get("PERSON_ID", os.environ.get("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90"))
 TURN_TIMEOUT = float(os.environ.get("TURN_TIMEOUT", "90"))
 
 

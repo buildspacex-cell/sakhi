@@ -26,7 +26,7 @@ import asyncpg
 import httpx
 
 API_BASE = os.getenv("API_BASE", "http://localhost:8000").rstrip("/")
-PERSON_ID = os.getenv("PERSON_ID", "565bdb63-124b-4692-a039-846fddceff90")
+PERSON_ID = os.getenv("PERSON_ID", os.getenv("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90"))
 DB_URL = os.getenv("DATABASE_URL")
 TURN_TIMEOUT = float(os.getenv("TURN_TIMEOUT", "90"))
 REL_WAIT_SECONDS = int(os.getenv("REL_WAIT_SECONDS", "15"))

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 DB_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost:6543/sakhi")
 
-PERSON_ID = "565bdb63-124b-4692-a039-846fddceff90"
+PERSON_ID = os.getenv("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90")
 LOOKBACK_MIN = 5  # check last 5 minutes
 
 

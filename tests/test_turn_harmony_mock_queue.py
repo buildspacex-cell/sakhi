@@ -23,13 +23,13 @@ def patch_auth(monkeypatch):
     monkeypatch.setattr("sakhi.apps.api.routes.turn_v2.get_current_user_id", DummyAuth())
     if use_real:
         async def real_resolve(pid):
-            return "565bdb63-124b-4692-a039-846fddceff90"
+            return os.getenv("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90")
         monkeypatch.setattr("sakhi.apps.api.core.person_utils.resolve_person_id", real_resolve)
         monkeypatch.setattr("sakhi.apps.api.routes.turn_v2.resolve_person_id", real_resolve)
         monkeypatch.setattr("sakhi.apps.api.routes.turn_v2.BUILD32_MODE", False)
     else:
         async def fake_resolve(pid):
-            return "565bdb63-124b-4692-a039-846fddceff90"
+            return os.getenv("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90")
 
         monkeypatch.setattr("sakhi.apps.api.core.person_utils.resolve_person_id", fake_resolve)
         monkeypatch.setattr("sakhi.apps.api.routes.turn_v2.resolve_person_id", fake_resolve)

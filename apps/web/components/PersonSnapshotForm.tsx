@@ -40,7 +40,7 @@ export function PersonSnapshotForm({ initialPersonId }: Props) {
           border: '1px solid rgba(120,107,96,0.4)',
           fontSize: '0.95rem',
         }}
-        placeholder="565bdb63-124b-4692-a039-846fddceff90"
+        placeholder={process.env.DEMO_USER_ID || "565bdb63-124b-4692-a039-846fddceff90"}
       />
       <button
         type="submit"

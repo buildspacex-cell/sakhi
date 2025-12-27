@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { getApiBase } from "@/lib/api-base";
 
 type Reflection = {
   text?: string;
@@ -25,6 +26,7 @@ type Scenario = {
   raw?: any;
   error?: string | null;
   eval?: EvalNotes;
+  snapshot?: Snapshot | null;
 };
 type ParsedJournal = { created_at: string; content: string };
 
@@ -35,6 +37,19 @@ type EvalNotes = {
   caring_witness?: boolean;
   emotional_shape?: boolean;
   off_notes?: string;
+};
+
+type Snapshot = {
+  journals: Array<{ id: string; text: string; full_text: string; layer?: string; mood?: string; tags?: any[]; created_at?: string }>;
+  short_term_memory: Array<{ id: string; text?: string; tags?: any[]; created_at?: string }>;
+  episodic_memory: Array<{ id: string; text?: string; tags?: any[]; layer?: string; created_at?: string }>;
+  personal_model: { updated_at?: string; long_term?: any } | any;
+  planner_summary?: any;
+  rhythm_state?: any;
+  rhythm_curve?: any;
+  soul_summary?: any;
+  memory_weekly?: any;
+  memory_monthly?: any;
 };
 
 const palette = {
@@ -62,6 +77,26 @@ const labelStyle: React.CSSProperties = {
   color: palette.muted,
   letterSpacing: "0.02em",
 };
+
+const API_BASE = getApiBase();
+
+function formatTimestamp(value?: string) {
+  if (!value) return "Unknown";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function toDisplay(value: any): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map((item) => toDisplay(item)).filter(Boolean).join(", ");
+  if (typeof value === "object") {
+    if ("text" in value && typeof (value as any).text === "string") return (value as any).text;
+    return JSON.stringify(value);
+  }
+  return "";
+}
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -203,6 +238,8 @@ export default function ReflectionLabPage() {
   const [resetting, setResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
 
   const updateScenario = (id: string, updates: Partial<Scenario>) => {
     setScenarios((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
@@ -287,6 +324,24 @@ export default function ReflectionLabPage() {
       await runScenario(scenario);
     }
     setRunAllLoading(false);
+  };
+
+  const loadSnapshot = async () => {
+    const targetUser = scenarios[0]?.user || "a";
+    setSnapshotLoading(true);
+    setSnapshotError(null);
+    try {
+      const res = await fetch(`/api/debug/full_snapshot?person_id=${encodeURIComponent(targetUser)}&prime=true`);
+      const data = await res.json();
+      if (!res.ok || data?.error) {
+        throw new Error(data?.error || res.statusText || "Failed to load snapshot");
+      }
+      setScenarios((prev) => prev.map((s, idx) => (idx === 0 ? { ...s, snapshot: data } : s)));
+    } catch (err: any) {
+      setSnapshotError(err?.message || "Failed to load snapshot");
+    } finally {
+      setSnapshotLoading(false);
+    }
   };
 
   const resetData = async () => {
@@ -393,11 +448,19 @@ export default function ReflectionLabPage() {
           >
             {resetting ? "Resetting..." : "Reset user data"}
           </button>
+          <button
+            style={{ ...secondaryButtonStyle, borderColor: "#10b981", color: "#34d399" }}
+            onClick={loadSnapshot}
+            disabled={snapshotLoading}
+          >
+            {snapshotLoading ? "Loading snapshot..." : "Load snapshot"}
+          </button>
           {(resetMessage || resetError) && (
             <span style={{ color: resetError ? "#f87171" : "#4ade80", fontSize: 13 }}>
               {resetError || resetMessage}
             </span>
           )}
+          {snapshotError && <span style={{ color: "#f87171", fontSize: 13 }}>{snapshotError}</span>}
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -465,92 +528,206 @@ export default function ReflectionLabPage() {
             ))}
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-            {scenarios.map(
-              (scenario) =>
-                scenario.result && (
-                  <div key={`${scenario.id}-out`} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {scenarios.map((scenario) => {
+              if (!scenario.result && !scenario.snapshot) return null;
+              return (
+                <div key={`${scenario.id}-out`} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {scenario.result && (
+                    <>
+                      <div style={cardStyle}>
+                        <div style={{ ...labelStyle, fontSize: 13 }}>
+                          Generated Reflection {scenario.last_run_at ? `(last run: ${scenario.last_run_at})` : ""}
+                          {scenario.last_result ? ` • ${scenario.last_result}` : ""}
+                        </div>
+                        <div style={{ ...textareaStyle, whiteSpace: "pre-wrap" }}>
+                          {scenario.result.text || ""}
+                          {scenario.result.confidence_note ? (
+                            <div style={{ marginTop: 8, color: "#9ca3af", fontSize: 12 }}>
+                              {scenario.result.confidence_note}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div style={cardStyle}>
+                        <div style={labelStyle}>Expected Reflection (read-only)</div>
+                        <pre style={{ ...textareaStyle, minHeight: 120, whiteSpace: "pre-wrap" }}>
+                          {scenario.expected_reflection || ""}
+                        </pre>
+                      </div>
+
+                      <div style={cardStyle}>
+                        <div style={labelStyle}>Evaluation (internal)</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {[
+                            { key: "grounded", label: "Feels grounded in my week" },
+                            { key: "no_invention", label: "No invention" },
+                            { key: "no_advice", label: "No advice" },
+                            { key: "caring_witness", label: "Feels like a caring witness" },
+                            { key: "emotional_shape", label: "Emotional shape feels right" },
+                          ].map((item) => (
+                            <label key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(scenario.eval?.[item.key as keyof EvalNotes])}
+                                onChange={(e) =>
+                                  updateScenario(scenario.id, {
+                                    eval: { ...(scenario.eval || {}), [item.key]: e.target.checked },
+                                  })
+                                }
+                              />
+                              <span>{item.label}</span>
+                            </label>
+                          ))}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            <div style={labelStyle}>What felt off?</div>
+                            <textarea
+                              style={textareaStyle}
+                              value={scenario.eval?.off_notes || ""}
+                              onChange={(e) => updateScenario(scenario.id, { eval: { ...(scenario.eval || {}), off_notes: e.target.value } })}
+                              placeholder="Optional notes"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={cardStyle}>
+                        <div style={labelStyle}>Debug (local only)</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <div>
+                            <div style={labelStyle}>Selected episodes</div>
+                            <ul style={{ paddingLeft: 16, margin: "4px 0", color: palette.muted }}>
+                              {(scenario.parsed_journals || []).slice(0, 6).map((j, idx) => (
+                                <li key={`${scenario.id}-j-${idx}`} style={{ marginBottom: 4 }}>
+                                  {j.content}
+                                </li>
+                              ))}
+                              {!(scenario.parsed_journals || []).length && <li>None</li>}
+                            </ul>
+                          </div>
+                          <div>
+                            <div style={labelStyle}>Raw payload (truncated)</div>
+                            <pre style={{ ...textareaStyle, maxHeight: 200, overflow: "auto", whiteSpace: "pre-wrap" }}>
+                              {JSON.stringify(scenario.raw?.debug || scenario.raw?.reflection || scenario.result, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {scenario.snapshot && (
                     <div style={cardStyle}>
                       <div style={{ ...labelStyle, fontSize: 13 }}>
-                        Generated Reflection {scenario.last_run_at ? `(last run: ${scenario.last_run_at})` : ""}
-                        {scenario.last_result ? ` • ${scenario.last_result}` : ""}
+                        Person Snapshot (debug/person_snapshot) {scenario.snapshot.warnings?.length ? `• warnings: ${scenario.snapshot.warnings.join(", ")}` : ""}
                       </div>
-                      <div style={{ ...textareaStyle, whiteSpace: "pre-wrap" }}>
-                        {scenario.result.text || ""}
-                        {scenario.result.confidence_note ? (
-                          <div style={{ marginTop: 8, color: "#9ca3af", fontSize: 12 }}>
-                            {scenario.result.confidence_note}
+                      {snapshotLoading && <div style={{ color: palette.muted }}>Loading snapshot…</div>}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <div>
+                          <div style={labelStyle}>Planner summary</div>
+                          <pre style={{ ...textareaStyle, maxHeight: 180, overflow: "auto", whiteSpace: "pre-wrap" }}>
+                            {JSON.stringify(scenario.snapshot.planner_summary || {}, null, 2)}
+                          </pre>
+                        </div>
+                        <div>
+                          <div style={labelStyle}>Rhythm state / curve</div>
+                          <pre style={{ ...textareaStyle, maxHeight: 180, overflow: "auto", whiteSpace: "pre-wrap" }}>
+                            {JSON.stringify({ state: scenario.snapshot.rhythm_state, curve: scenario.snapshot.rhythm_curve }, null, 2)}
+                          </pre>
+                        </div>
+                        <div>
+                          <div style={labelStyle}>Soul summary</div>
+                          <pre style={{ ...textareaStyle, maxHeight: 180, overflow: "auto", whiteSpace: "pre-wrap" }}>
+                            {JSON.stringify(scenario.snapshot.soul_summary || {}, null, 2)}
+                          </pre>
+                        </div>
+                        <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))" }}>
+                          <div>
+                            <div style={labelStyle}>Weekly memory</div>
+                            <pre style={{ ...textareaStyle, maxHeight: 180, overflow: "auto", whiteSpace: "pre-wrap" }}>
+                              {JSON.stringify(scenario.snapshot.memory_weekly || {}, null, 2)}
+                            </pre>
                           </div>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div style={cardStyle}>
-                      <div style={labelStyle}>Expected Reflection (read-only)</div>
-                      <pre style={{ ...textareaStyle, minHeight: 120, whiteSpace: "pre-wrap" }}>
-                        {scenario.expected_reflection || ""}
-                      </pre>
-                    </div>
-
-                    <div style={cardStyle}>
-                      <div style={labelStyle}>Evaluation (internal)</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {[
-                          { key: "grounded", label: "Feels grounded in my week" },
-                          { key: "no_invention", label: "No invention" },
-                          { key: "no_advice", label: "No advice" },
-                          { key: "caring_witness", label: "Feels like a caring witness" },
-                          { key: "emotional_shape", label: "Emotional shape feels right" },
-                        ].map((item) => (
-                          <label key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                            <input
-                              type="checkbox"
-                              checked={Boolean(scenario.eval?.[item.key as keyof EvalNotes])}
-                              onChange={(e) =>
-                                updateScenario(scenario.id, {
-                                  eval: { ...(scenario.eval || {}), [item.key]: e.target.checked },
-                                })
-                              }
-                            />
-                            <span>{item.label}</span>
-                          </label>
-                        ))}
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          <div style={labelStyle}>What felt off?</div>
-                          <textarea
-                            style={textareaStyle}
-                            value={scenario.eval?.off_notes || ""}
-                            onChange={(e) => updateScenario(scenario.id, { eval: { ...(scenario.eval || {}), off_notes: e.target.value } })}
-                            placeholder="Optional notes"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={cardStyle}>
-                      <div style={labelStyle}>Debug (local only)</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div>
-                          <div style={labelStyle}>Selected episodes</div>
-                          <ul style={{ paddingLeft: 16, margin: "4px 0", color: palette.muted }}>
-                            {(scenario.parsed_journals || []).slice(0, 6).map((j, idx) => (
-                              <li key={`${scenario.id}-j-${idx}`} style={{ marginBottom: 4 }}>
-                                {j.content}
-                              </li>
-                            ))}
-                            {!(scenario.parsed_journals || []).length && <li>None</li>}
-                          </ul>
+                          <div>
+                            <div style={labelStyle}>Monthly memory</div>
+                            <pre style={{ ...textareaStyle, maxHeight: 180, overflow: "auto", whiteSpace: "pre-wrap" }}>
+                              {JSON.stringify(scenario.snapshot.memory_monthly || {}, null, 2)}
+                            </pre>
+                          </div>
                         </div>
                         <div>
-                          <div style={labelStyle}>Raw payload (truncated)</div>
+                          <div style={labelStyle}>Recent journals</div>
+                          {scenario.snapshot.journals?.length ? (
+                            <ul style={{ display: "grid", gap: 6, paddingLeft: 0, listStyle: "none" }}>
+                              {scenario.snapshot.journals.map((j) => (
+                                <li key={j.id} style={{ padding: 8, border: `1px solid ${palette.border}`, borderRadius: 8 }}>
+                                  <div style={{ fontSize: 12, color: palette.muted }}>
+                                    {formatTimestamp(j.created_at)} • {toDisplay(j.layer || "journal")}
+                                  </div>
+                                  <div style={{ marginTop: 4 }}>{toDisplay(j.text)}</div>
+                                  <div style={{ fontSize: 12, color: palette.muted }}>
+                                    {j.mood ? `Mood: ${toDisplay(j.mood)}` : null}
+                                    {j.tags?.length ? ` • Tags: ${j.tags.map(toDisplay).join(", ")}` : ""}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div style={{ color: palette.muted }}>None</div>
+                          )}
+                        </div>
+
+                        <div>
+                          <div style={labelStyle}>Short-term memory</div>
+                          {scenario.snapshot.short_term_memory?.length ? (
+                            <ul style={{ display: "grid", gap: 6, paddingLeft: 0, listStyle: "none" }}>
+                              {scenario.snapshot.short_term_memory.map((m) => (
+                                <li key={m.id} style={{ padding: 8, border: `1px solid ${palette.border}`, borderRadius: 8 }}>
+                                  <div style={{ fontSize: 12, color: palette.muted }}>{formatTimestamp(m.created_at)}</div>
+                                  <div>{toDisplay(m.text)}</div>
+                                  {m.tags?.length ? <div style={{ fontSize: 12, color: palette.muted }}>Tags: {m.tags.map(toDisplay).join(", ")}</div> : null}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div style={{ color: palette.muted }}>None</div>
+                          )}
+                        </div>
+
+                        <div>
+                          <div style={labelStyle}>Episodic memory</div>
+                          {scenario.snapshot.episodic_memory?.length ? (
+                            <ul style={{ display: "grid", gap: 6, paddingLeft: 0, listStyle: "none" }}>
+                              {scenario.snapshot.episodic_memory.map((e) => (
+                                <li key={e.id} style={{ padding: 8, border: `1px solid ${palette.border}`, borderRadius: 8 }}>
+                                  <div style={{ fontSize: 12, color: palette.muted }}>
+                                    {formatTimestamp(e.created_at)} • {toDisplay(e.layer || "episode")}
+                                  </div>
+                                  <div>{toDisplay(e.text)}</div>
+                                  {e.tags?.length ? <div style={{ fontSize: 12, color: palette.muted }}>Tags: {e.tags.map(toDisplay).join(", ")}</div> : null}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div style={{ color: palette.muted }}>None</div>
+                          )}
+                        </div>
+
+                        <div>
+                          <div style={labelStyle}>Personal model</div>
+                          <div style={{ fontSize: 12, color: palette.muted }}>
+                            Updated {formatTimestamp(scenario.snapshot.personal_model?.updated_at)}
+                          </div>
                           <pre style={{ ...textareaStyle, maxHeight: 200, overflow: "auto", whiteSpace: "pre-wrap" }}>
-                            {JSON.stringify(scenario.raw?.debug || scenario.raw?.reflection || scenario.result, null, 2)}
+                            {JSON.stringify(scenario.snapshot.personal_model?.long_term || {}, null, 2)}
                           </pre>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ),
-            )}
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

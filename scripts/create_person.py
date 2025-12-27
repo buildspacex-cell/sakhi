@@ -3,7 +3,7 @@ import uuid
 import os
 import asyncpg
 
-PERSON_ID = os.environ.get("PERSON_ID", "565bdb63-124b-4692-a039-846fddceff90")
+PERSON_ID = os.environ.get("PERSON_ID", os.environ.get("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90"))
 
 async def main():
     dsn = os.environ["DATABASE_URL"]

@@ -25,14 +25,14 @@ def patch_auth(monkeypatch):
     if use_real:
         # Real run: only ensure user_id is resolved to our seeded person_id
         async def real_resolve(pid):
-            return "565bdb63-124b-4692-a039-846fddceff90"
+            return os.getenv("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90")
         monkeypatch.setattr("sakhi.apps.api.core.person_utils.resolve_person_id", real_resolve)
         monkeypatch.setattr("sakhi.apps.api.routes.turn_v2.resolve_person_id", real_resolve)
         # Ensure we hit full Build-50 path
         monkeypatch.setattr("sakhi.apps.api.routes.turn_v2.BUILD32_MODE", False)
     else:
         async def fake_resolve(pid):
-            return "565bdb63-124b-4692-a039-846fddceff90"
+            return os.getenv("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90")
 
         monkeypatch.setattr("sakhi.apps.api.core.person_utils.resolve_person_id", fake_resolve)
         monkeypatch.setattr("sakhi.apps.api.routes.turn_v2.resolve_person_id", fake_resolve)
