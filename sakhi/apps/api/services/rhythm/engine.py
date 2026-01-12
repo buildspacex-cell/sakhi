@@ -107,6 +107,8 @@ async def run_rhythm_engine(person_id: str, text: str | None = None) -> Dict[str
     if not person_id:
         raise ValueError("person_id required")
 
+    LOGGER.info("[RhythmEngine] start", extra={"person_id": person_id})
+
     breath_rows = await q(
         """
         SELECT calm_score, avg_breath_rate, created_at
@@ -170,6 +172,15 @@ async def run_rhythm_engine(person_id: str, text: str | None = None) -> Dict[str
             "input_text": text or "",
         },
     }
+    LOGGER.info(
+        "[RhythmEngine] computed state",
+        extra={
+            "person_id": person_id,
+            "body_energy": body_energy,
+            "fatigue_level": fatigue,
+            "stress_level": stress,
+        },
+    )
     await _upsert_rhythm_state(person_id, state_payload)
 
     alignment = _build_planner_alignment(slots, stress, fatigue)
@@ -350,6 +361,15 @@ async def _store_daily_curve(person_id: str, slots: List[Dict[str, Any]]) -> Non
 
 
 async def _upsert_rhythm_state(person_id: str, payload: Dict[str, Any]) -> None:
+    LOGGER.info(
+        "[RhythmEngine] upsert rhythm_state",
+        extra={
+            "person_id": person_id,
+            "body_energy": payload.get("body_energy"),
+            "fatigue_level": payload.get("fatigue_level"),
+            "stress_level": payload.get("stress_level"),
+        },
+    )
     await dbexec(
         """
         INSERT INTO rhythm_state (

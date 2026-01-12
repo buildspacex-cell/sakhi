@@ -14,7 +14,14 @@ from .conversation_reasoner import build_prompt
 from .conversation_tone import decide_tone
 
 
-async def generate_reply(person_id: str, user_text: str, metadata: Dict[str, Any] | None = None, behavior_profile: Dict[str, Any] | None = None) -> Dict[str, Any]:
+async def generate_reply(
+    person_id: str,
+    user_text: str,
+    metadata: Dict[str, Any] | None = None,
+    behavior_profile: Dict[str, Any] | None = None,
+    *,
+    return_debug: bool = False,
+) -> Dict[str, Any]:
     """
     Main entry point for the conversation-v2 engine.
     """
@@ -121,12 +128,24 @@ async def generate_reply(person_id: str, user_text: str, metadata: Dict[str, Any
             reply,
         )
 
-    return {
+    response_payload: Dict[str, Any] = {
         "reply": reply,
         "tone_blueprint": tone,
         "journaling_ai": journaling_ai,
         "behavior_profile": behavior_profile,
     }
+    if return_debug:
+        response_payload["debug"] = {
+            "prompt": prompt,
+            "system_context": system_ctx,
+            "messages": messages,
+            "metadata": metadata_payload,
+            "context_snapshot": context,
+            "recall_context": recall_ctx,
+            "pattern_context": pattern_ctx,
+            "tone_blueprint": tone,
+        }
+    return response_payload
 
 
 __all__ = ["generate_reply"]

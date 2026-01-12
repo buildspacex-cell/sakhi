@@ -50,7 +50,8 @@ class JsonFormatter(logging.Formatter):
             payload[key] = value
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
-        return json.dumps(payload, ensure_ascii=False)
+        # Use default=str so UUID/Decimal/datetime-like extras don't break logging.
+        return json.dumps(payload, ensure_ascii=False, default=str)
 
 
 class ColorTextFormatter(logging.Formatter):

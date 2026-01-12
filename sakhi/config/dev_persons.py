@@ -1,3 +1,5 @@
+import os
+
 DEV_PERSONS = {
     "a": {
         "id": os.getenv("DEMO_USER_ID", "565bdb63-124b-4692-a039-846fddceff90"),

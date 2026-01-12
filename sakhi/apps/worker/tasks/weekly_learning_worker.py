@@ -12,7 +12,8 @@ from sakhi.apps.api.core.db import q, exec as dbexec
 logger = logging.getLogger(__name__)
 
 # Configurable windows
-LEARNING_WINDOW_DAYS = int(os.getenv("LEARNING_WINDOW_DAYS", "28") or "28")
+# TODO(prod): revert LEARNING_WINDOW_DAYS to 28 once lab backfill is complete.
+LEARNING_WINDOW_DAYS = int(os.getenv("LEARNING_WINDOW_DAYS", "1500") or "1500")
 DECAY_DAYS = int(os.getenv("DECAY_DAYS", "21") or "21")
 TARGET_LEARNING_START_ENV = os.getenv("WEEKLY_LEARNING_TARGET_START")
 
@@ -113,13 +114,34 @@ def update_longitudinal_state(
 
     grouped: Dict[Tuple[str, str], List[Tuple[str, str, datetime]]] = defaultdict(list)
     for ep in episodes:
-        tags = ep.get("context_tags") or []
+        tags_raw = ep.get("context_tags") or []
+        tags: List[Any]
+        if isinstance(tags_raw, str):
+            try:
+                tags = json.loads(tags_raw)
+            except Exception:
+                tags = []
+        else:
+            tags = tags_raw if isinstance(tags_raw, list) else []
+
+        # If tags are strings inside the list, try to parse them once.
+        parsed_tags: List[Any] = []
+        for tag in tags:
+            if isinstance(tag, str):
+                try:
+                    parsed_tags.append(json.loads(tag))
+                    continue
+                except Exception:
+                    continue
+            parsed_tags.append(tag)
+        tags = parsed_tags
+
         ts_raw = ep.get("created_at") or ep.get("episode_ts")
         try:
             ts = ts_raw if isinstance(ts_raw, datetime) else datetime.fromisoformat(ts_raw)
         except Exception:
             continue
-        for tag in tags if isinstance(tags, list) else []:
+        for tag in tags:
             normalized = _normalize_signal(tag)
             if not normalized:
                 continue
@@ -159,6 +181,10 @@ async def run_weekly_learning(person_id: str | None = None) -> Dict[str, Any]:
     Deterministic weekly learning worker.
     Reads episodic memory → updates personal_model.longitudinal_state.
     """
+    logger.info(
+        "[weekly_learning] start",
+        extra={"person_id": person_id, "window_days": LEARNING_WINDOW_DAYS},
+    )
     if TARGET_LEARNING_START_ENV:
         try:
             target_date = datetime.fromisoformat(TARGET_LEARNING_START_ENV).date()
@@ -185,7 +211,7 @@ async def run_weekly_learning(person_id: str | None = None) -> Dict[str, Any]:
 
         episodes = await q(
             """
-            SELECT entry_id, created_at, context_tags
+            SELECT entry_id, created_at, context_tags::jsonb AS context_tags
             FROM memory_episodic
             WHERE person_id = $1
               AND created_at >= $2
@@ -195,8 +221,23 @@ async def run_weekly_learning(person_id: str | None = None) -> Dict[str, Any]:
             window_start,
         )
 
+        logger.info(
+            "[weekly_learning] fetched episodes",
+            extra={"person_id": pid, "count": len(episodes), "window_start": window_start.isoformat()},
+        )
+
         current_state = row.get("longitudinal_state") if row else {}
         new_state = update_longitudinal_state(current_state or {}, episodes or [], now)
+
+        logger.info(
+            "[weekly_learning] state prepared",
+            extra={
+                "person_id": pid,
+                "dimensions": list(new_state.keys()),
+                "entries": len(episodes),
+                "window_days": LEARNING_WINDOW_DAYS,
+            },
+        )
 
         await dbexec(
             """
@@ -209,6 +250,10 @@ async def run_weekly_learning(person_id: str | None = None) -> Dict[str, Any]:
         )
         results["processed"] += 1
         results["updated"] += 1
+        logger.info(
+            "[weekly_learning] updated longitudinal_state",
+            extra={"person_id": pid, "entries": len(episodes), "window_days": LEARNING_WINDOW_DAYS},
+        )
 
     return results
 

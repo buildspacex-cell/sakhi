@@ -42,12 +42,19 @@ async def load_memory_context(person_id: str, *, limit: int = 8) -> Dict[str, An
         cache_rows = []
     if cache_rows:
         row = cache_rows[0]
+        entries = row.get("entries") or []
+        if isinstance(entries, str):
+            try:
+                parsed = json.loads(entries)
+                entries = parsed if isinstance(parsed, list) else []
+            except Exception:
+                entries = []
         return {
-            "entries": row.get("entries") or [],
+            "entries": entries,
             "rhythm": row.get("rhythm_state") or {},
             "persona": row.get("persona_snapshot") or {},
             "tasks": row.get("task_window") or [],
-            "memory_context": " ".join(entry.get("summary", "") for entry in (row.get("entries") or [])[:limit]),
+            "memory_context": " ".join(entry.get("summary", "") for entry in (entries or [])[:limit]),
             "cache_timestamp": row.get("updated_at"),
             "cache_hit": True,
         }

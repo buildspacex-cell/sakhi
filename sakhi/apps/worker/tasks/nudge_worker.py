@@ -10,6 +10,10 @@ import redis
 from sakhi.apps.api.core.db import q, exec as dbexec
 from sakhi.apps.engine.nudge import compute_nudge
 from sakhi.apps.api.core.person_utils import resolve_person_id
+from sakhi.libs.scaffolding import (
+    require_suppression_check,
+    SuppressionSensitivity,
+)
 
 
 async def _send_nudge_message(person_id: str, message: str) -> None:
@@ -28,7 +32,23 @@ async def _send_nudge_message(person_id: str, message: str) -> None:
         return
 
 
+@require_suppression_check(
+    scaffold_type="nudge",
+    sensitivity=SuppressionSensitivity.HIGH  # Nudges are high sensitivity - be conservative
+)
 async def run_nudge_check(person_id: str) -> Dict[str, Any]:
+    """
+    Check and send nudge if needed
+
+    **Suppression**: Protected by @require_suppression_check
+    - Will not run if user is in vulnerable state
+    - Returns None if suppressed
+    - HIGH sensitivity - only runs when user is stable
+
+    **Design Principle**: "Suppression First"
+    - Nudges require very stable user state
+    - User agency > system initiative
+    """
     person_id = await resolve_person_id(person_id) or person_id
     forecast_row = await q(
         "SELECT forecast_state FROM forecast_cache WHERE person_id = $1",

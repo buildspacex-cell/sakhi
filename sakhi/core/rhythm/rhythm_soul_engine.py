@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Sequence
+import datetime as dt
+import json
 
 def compute_fast_rhythm_soul_frame(st: Sequence[Dict[str, Any]] | None, rhythm: Dict[str, Any] | None, soul: Dict[str, Any] | None) -> Dict[str, Any]:
     """Deterministic, turn-time computation (<3ms, no LLM)."""
@@ -60,32 +62,83 @@ def compute_fast_rhythm_soul_frame(st: Sequence[Dict[str, Any]] | None, rhythm: 
     }
 
 
-async def compute_deep_rhythm_soul(person_id: str, episodic: Sequence[Dict[str, Any]], rhythm_state: Dict[str, Any], soul_state: Dict[str, Any]) -> Dict[str, Any]:
+def compute_deep_rhythm_soul(person_id: str, episodic: Sequence[Dict[str, Any]], rhythm_state: Dict[str, Any], soul_state: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Worker-time, can use LLM router if available.
-    Output keys:
-      - value_energy_map
-      - weekly_coherence_summary
-      - life_phase_interaction
-      - shadow_cycle_effects
-      - recommended_pacing_style
+    Deterministic sensemaking over rhythm_state and soul_state.
+    Detects alignment/tension; no narrative, no advice, no LLM.
     """
-    from sakhi.apps.api.core.llm import call_llm
+    def _clamp(val: float) -> float:
+        return max(0.0, min(1.0, val))
 
-    payload = {
-        "person_id": person_id,
-        "rhythm_state": rhythm_state or {},
-        "soul_state": soul_state or {},
-        "episodic": episodic or [],
+    rhythm = rhythm_state or {}
+    soul = soul_state or {}
+    if isinstance(rhythm, str):
+        try:
+            rhythm = json.loads(rhythm)
+        except Exception:
+            rhythm = {}
+    if isinstance(soul, str):
+        try:
+            soul = json.loads(soul)
+        except Exception:
+            soul = {}
+    if not isinstance(rhythm, dict):
+        rhythm = {}
+    if not isinstance(soul, dict):
+        soul = {}
+
+    overall = rhythm.get("overall") or {}
+    energy = float(overall.get("energy_level") or 0.5)
+    load = float(overall.get("load_level") or 0.0)
+    recovery = float(overall.get("recovery_level") or 0.0)
+    strain = float(overall.get("strain_level") or 0.0)
+    window_days = int(rhythm.get("window_days") or overall.get("window_days") or 0)
+
+    slots = rhythm.get("slots") or {}
+    tension_zones = []
+    coherence_zones = []
+    soul_values = soul.get("core_values") or []
+    for slot, metrics in slots.items():
+        e = float(metrics.get("energy_level") or 0.5)
+        l = float(metrics.get("load_level") or 0.0)
+        s = float(metrics.get("strain_level") or 0.0)
+        r = float(metrics.get("recovery_level") or 0.0)
+        for value in soul_values:
+            if not value:
+                continue
+            if l > e + 0.1 or s > e:
+                tension_zones.append(
+                    {
+                        "value": value,
+                        "time_slot": slot,
+                        "signal": "high_load_conflicting_with_value",
+                    }
+                )
+            elif e > l + s + 0.1:
+                coherence_zones.append(
+                    {
+                        "value": value,
+                        "time_slot": slot,
+                        "signal": "sufficient_energy_for_value",
+                    }
+                )
+            elif e < 0.4:
+                tension_zones.append(
+                    {
+                        "value": value,
+                        "time_slot": slot,
+                        "signal": "low_energy_against_value",
+                    }
+                )
+
+    alignment_level = _clamp(0.5 + (energy - load) * 0.25 + (recovery - strain) * 0.25)
+    dominant_tension = tension_zones[0]["signal"] if tension_zones else None
+
+    return {
+        "alignment_level": alignment_level,
+        "dominant_tension": dominant_tension,
+        "tension_zones": tension_zones,
+        "coherence_zones": coherence_zones,
+        "window_days": window_days,
+        "updated_at": dt.datetime.utcnow().isoformat(),
     }
-    prompt = (
-        "You are Sakhi's Rhythm×Soul deep analyzer. "
-        "Given rhythm_state, soul_state, and episodic signals, return JSON with keys: "
-        "value_energy_map (map), weekly_coherence_summary (string), life_phase_interaction (string), "
-        "shadow_cycle_effects (string), recommended_pacing_style (string). "
-        "Be concise, JSON only."
-    )
-    result = await call_llm(messages=[{"role": "user", "content": f"{prompt}\n\nPAYLOAD:\n{payload}"}])
-    if isinstance(result, dict):
-        return result
-    return {"weekly_coherence_summary": str(result)}

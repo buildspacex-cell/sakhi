@@ -10,6 +10,7 @@ async def build_turn_reply(
     person_id: str,
     user_text: str,
     context_snapshot: Dict[str, Any],
+    return_debug: bool = False,
 ) -> Dict[str, Any]:
     """Execute a single conversational LLM call using prepared context."""
 
@@ -23,13 +24,17 @@ async def build_turn_reply(
         person_id=person_id,
         user_text=user_text,
         metadata=metadata,
+        return_debug=return_debug,
     )
-    return {
+    response = {
         "reply": reply_bundle.get("reply", ""),
         "metadata": metadata,
         "tone": reply_bundle.get("tone_blueprint"),
         "journaling_ai": reply_bundle.get("journaling_ai"),
     }
+    if return_debug:
+        response["debug"] = reply_bundle.get("debug") or {}
+    return response
 
 
 __all__ = ["build_turn_reply"]

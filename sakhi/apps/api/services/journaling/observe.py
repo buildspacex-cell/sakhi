@@ -14,6 +14,7 @@ async def observe_entry(
     text: str,
     source: str = "conversation",
     clarity_hint: str | None = None,
+    created_at: Any = None,
 ) -> Dict[str, Any]:
     """
     Minimal journaling observe helper.
@@ -23,10 +24,16 @@ async def observe_entry(
     entry_id = str(uuid.uuid4())
     db = await get_db()
     LOGGER.error("[observe_entry] start person_id=%s layer=journal", person_id)
+    experience_ts = created_at or None
+    lifecycle_ts = None
     try:
         await db.execute(
             """
-            INSERT INTO journal_entries (id, user_id, content, raw, source_ref, layer)
+            -- IMPORTANT:
+            -- ts = when the experience happened (lived time)
+            -- created_at / updated_at = database lifecycle only
+            -- Episodic memory and all downstream reasoning depend on ts.
+            INSERT INTO journal_entries (id, user_id, content, raw, source_ref, layer, ts, created_at, updated_at)
             VALUES (
                 $1,
                 $2,
@@ -36,7 +43,10 @@ async def observe_entry(
                     'source', $4::text,
                     'clarity', $5::text
                 ),
-                'journal'
+                'journal',
+                COALESCE($6, NOW()),
+                NOW(),
+                NOW()
             )
             """,
             entry_id,
@@ -44,6 +54,7 @@ async def observe_entry(
             text,
             source,
             clarity_hint,
+            experience_ts,
         )
         row = await db.fetchrow(
             "SELECT * FROM journal_entries WHERE id = $1",

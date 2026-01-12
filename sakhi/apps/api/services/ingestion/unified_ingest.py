@@ -31,10 +31,11 @@ SOUL_KEYWORDS = (
 )
 from sakhi.apps.api.core.db import q, exec as dbexec
 from sakhi.apps.api.services.memory.personal_model import update_personal_model
-from sakhi.libs.embeddings import embed_normalized
+from sakhi.libs.embeddings import embed_normalized, to_pgvector
 from sakhi.apps.api.core.person_utils import resolve_person_id
 from sakhi.apps.api.services.memory.stm_config import compute_expires_at
 from sakhi.apps.api.services.memory.memory_short_term import cleanup_expired_short_term
+import os
 from datetime import datetime, timezone
 
 # simple in-process latching to avoid duplicate ingestion on same entry_id
@@ -138,10 +139,12 @@ async def ingest_heavy(
     entry_id = entry_id or str(uuid.uuid4())
 
     # Best-effort eviction before inserting new STM rows.
-    try:
-        await cleanup_expired_short_term()
-    except Exception:
-        pass
+    disable_eviction = os.getenv("LAB_DISABLE_STM_EVICT", "0") == "1"
+    if not disable_eviction:
+        try:
+            await cleanup_expired_short_term()
+        except Exception:
+            pass
 
     person_id = await resolve_person_id(person_id) or person_id
     if text is None:
@@ -214,10 +217,20 @@ async def ingest_heavy(
         one=True,
     )
     if not existing_st:
+        record_payload = {
+            "entry_id": str(entry_id),
+            "text": text or "",
+            "layer": layer,
+            "source_type": layer,
+            "tags": [],
+            "user_tags": [],
+            "content_hash": content_hash,
+        }
+        vector_literal = to_pgvector(vec) if vec else None
         await dbexec(
             """
-            INSERT INTO memory_short_term (id, user_id, entry_id, text, layer, expires_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            INSERT INTO memory_short_term (id, user_id, entry_id, text, layer, expires_at, created_at, record, vector_vec, content_hash)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10)
             """,
             str(uuid.uuid4()),
             person_id,
@@ -225,6 +238,10 @@ async def ingest_heavy(
             text or "",
             layer,
             expires_at,
+            ts,
+            json.dumps(record_payload, ensure_ascii=False),
+            vector_literal,
+            content_hash,
         )
 
     # Episodic rows are now created only via explicit promotion, not ingest-time dual writes.
@@ -284,7 +301,7 @@ async def ingest_heavy(
         )
 
     try:
-        asyncio.create_task(refresh_context(person_id))
+        asyncio.create_task(refresh_context(person_id, ts))
     except Exception:
         pass
 
@@ -309,16 +326,20 @@ async def ingest_heavy(
     # Arc detection and cache update (deterministic, non-LLM)
     try:
         # fetch recent episodic entries for simple clustering
-        recent_ep = await q(
-            """
-            SELECT id, text, time_scope, context_tags, triage, updated_at
-            FROM memory_episodic
-            WHERE user_id = $1
-            ORDER BY updated_at DESC
-            LIMIT 200
-            """,
-            person_id,
-        )
+        try:
+            recent_ep = await q(
+                """
+                SELECT id, text, time_scope, context_tags, triage, updated_at
+                FROM memory_episodic
+                WHERE user_id = $1
+                ORDER BY updated_at DESC
+                LIMIT 200
+                """,
+                person_id,
+            )
+        except Exception:
+            recent_ep = []
+
         themes: Dict[str, List[Dict[str, Any]]] = {}
         words = [w for w in normalized.split() if len(w) > 4]
         now_ts = dt.datetime.utcnow()

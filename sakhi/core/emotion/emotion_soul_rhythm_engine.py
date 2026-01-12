@@ -1,131 +1,157 @@
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, Sequence
+import datetime as dt
+from typing import Any, Dict, List
 
-from sakhi.apps.api.core.llm import call_llm
-
-
-def compute_fast_esr_frame(emotion_state: Dict[str, Any] | None, soul_state: Dict[str, Any] | None, rhythm_state: Dict[str, Any] | None) -> Dict[str, Any]:
-    """
-    Deterministic tri-layer coherence (no LLM).
-    Outputs:
-      - coherence_score (0-1)
-      - emotion_vs_soul (-1..1)
-      - emotion_vs_rhythm (-1..1)
-      - soul_vs_rhythm (-1..1)
-      - dominant_friction_zone (str)
-    """
-    emotion = emotion_state or {}
-    soul = soul_state or {}
-    rhythm = rhythm_state or {}
-
-    if isinstance(emotion, str):
-        try:
-            emotion = json.loads(emotion)
-        except Exception:
-            emotion = {}
-    if not isinstance(emotion, dict):
-        emotion = {}
-
-    if isinstance(soul, str):
-        try:
-            soul = json.loads(soul)
-        except Exception:
-            soul = {}
-    if not isinstance(soul, dict):
-        soul = {}
-
-    if isinstance(rhythm, str):
-        try:
-            rhythm = json.loads(rhythm)
-        except Exception:
-            rhythm = {}
-    if not isinstance(rhythm, dict):
-        rhythm = {}
-
-    # basic signals
-    mood = (emotion.get("dominant") or emotion.get("summary") or "neutral").lower()
-    values = soul.get("core_values") or []
-    shadow = soul.get("shadow") or []
-    friction = soul.get("friction") or soul.get("conflicts") or []
-    energy = float(rhythm.get("body_energy") or rhythm.get("energy") or 0.5)
-    mind_focus = float(rhythm.get("mind_focus") or 0.5)
-
-    # map mood to polarity
-    positive = {"joy", "calm", "optimistic", "positive", "uplifted"}
-    negative = {"sad", "tired", "stressed", "anxious", "angry", "negative"}
-    if mood in positive:
-        mood_score = 1.0
-    elif mood in negative:
-        mood_score = -1.0
-    else:
-        mood_score = 0.0
-
-    # emotion vs soul: positive if mood aligns with light/values
-    soul_light = soul.get("light") or []
-    soul_pressure = len(shadow) + len(friction)
-    soul_support = len(values) + len(soul_light)
-    emotion_vs_soul = max(-1.0, min(1.0, mood_score * 0.6 + (soul_support - soul_pressure) * 0.05))
-
-    # emotion vs rhythm: higher if energy/focus match mood sign
-    rhythm_balance = (energy + mind_focus) / 2
-    emotion_vs_rhythm = max(-1.0, min(1.0, rhythm_balance * (1 if mood_score >= 0 else -1)))
-
-    # soul vs rhythm: are values/light supported by energy/focus?
-    soul_vs_rhythm = max(-1.0, min(1.0, rhythm_balance - (soul_pressure * 0.05)))
-
-    # coherence: blend of above
-    coherence_score = max(0.0, min(1.0, (emotion_vs_soul + emotion_vs_rhythm + soul_vs_rhythm + 3) / 6))
-
-    dominant_friction_zone = None
-    if friction:
-        dominant_friction_zone = str(friction[0])
-    elif shadow:
-        dominant_friction_zone = str(shadow[0])
-
-    return {
-        "coherence_score": coherence_score,
-        "emotion_vs_soul": emotion_vs_soul,
-        "emotion_vs_rhythm": emotion_vs_rhythm,
-        "soul_vs_rhythm": soul_vs_rhythm,
-        "dominant_friction_zone": dominant_friction_zone,
-    }
+# Rhythm thresholds (descriptive, not prescriptive)
+LOW_ENERGY_THRESHOLD = 0.4
+HIGH_LOAD_THRESHOLD = 0.6
+HIGH_STRAIN_THRESHOLD = 0.6
+SUFFICIENT_ENERGY_THRESHOLD = 0.5
+LOW_LOAD_THRESHOLD = 0.4
+LOW_STRAIN_THRESHOLD = 0.4
+MAX_ZONES_PER_VALUE = 1
+CONDITION_PRIORITY = ["persistent_negative", "high_volatility", "high_activation"]
 
 
-async def compute_deep_esr(
-    person_id: str,
-    episodic: Sequence[Dict[str, Any]],
+def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    return max(low, min(high, value))
+
+
+def compute_emotion_soul_rhythm_state(
     emotion_state: Dict[str, Any],
     soul_state: Dict[str, Any],
     rhythm_state: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Worker-time coherence (LLM allowed).
-    Outputs include:
-      - emotional_arc
-      - value_emotion_alignment
-      - rhythm_emotion_interactions
-      - shadow_emotion_interplay
-      - weekly_coherence_map
-      - friction_clusters
-      - recommended_pacing
+    Sensemaking join of emotion, soul, and rhythm signals.
+    No advice, no narrative, deterministic only.
     """
-    prompt = (
-        "You are Sakhi's ESR (Emotion × Soul × Rhythm) analyzer. "
-        "Given emotion_state, soul_state, rhythm_state, and episodic snippets, return JSON with keys: "
-        "emotional_arc, value_emotion_alignment, rhythm_emotion_interactions, shadow_emotion_interplay, "
-        "weekly_coherence_map, friction_clusters, recommended_pacing. "
-        "Keep it concise and deterministic JSON."
+    window_days = min(
+        emotion_state.get("window_days", 0) or 0,
+        rhythm_state.get("window_days", 0) or 0,
     )
-    payload = {
-        "person_id": person_id,
-        "emotion_state": emotion_state or {},
-        "soul_state": soul_state or {},
-        "rhythm_state": rhythm_state or {},
-        "episodic": episodic or [],
+    now = dt.datetime.utcnow().isoformat()
+
+    conditions: Dict[str, bool] = emotion_state.get("conditions") or {}
+    soul_values: List[str] = [v for v in (soul_state.get("core_values") or []) if v]
+    if not soul_values:
+        fallback = soul_state.get("identity_themes") or []
+        soul_values = [v for v in fallback[:2] if v]
+
+    overall = rhythm_state.get("overall") or rhythm_state
+    energy_level = float(overall.get("energy_level", 0) or 0.0)
+    load_level = float(overall.get("load_level", 0) or 0.0)
+    strain_level = float(overall.get("strain_level", 0) or 0.0)
+
+    rhythm_constraints: List[str] = []
+    rhythm_supports: List[str] = []
+    if energy_level < LOW_ENERGY_THRESHOLD:
+        rhythm_constraints.append("low_energy")
+    if load_level > HIGH_LOAD_THRESHOLD:
+        rhythm_constraints.append("high_load")
+    if strain_level > HIGH_STRAIN_THRESHOLD:
+        rhythm_constraints.append("high_strain")
+    if energy_level >= SUFFICIENT_ENERGY_THRESHOLD:
+        rhythm_supports.append("sufficient_energy")
+    if load_level <= LOW_LOAD_THRESHOLD:
+        rhythm_supports.append("low_load")
+    if strain_level <= LOW_STRAIN_THRESHOLD:
+        rhythm_supports.append("low_strain")
+
+    tension_zones: List[Dict[str, Any]] = []
+    coherence_zones: List[Dict[str, Any]] = []
+
+    # Salience gating: one zone per value, with deterministic priority
+    for value in soul_values:
+        chosen_zone: Dict[str, Any] | None = None
+        for cond_name in CONDITION_PRIORITY:
+            cond_active = conditions.get(cond_name)
+            if not cond_active:
+                continue
+            if rhythm_constraints:
+                constraint = rhythm_constraints[0]
+                chosen_zone = {
+                    "value": value,
+                    "emotion_condition": cond_name,
+                    "rhythm_constraint": constraint,
+                    "signal": f"{cond_name}_with_{constraint}",
+                }
+                break
+            if rhythm_supports:
+                support = rhythm_supports[0]
+                chosen_zone = {
+                    "value": value,
+                    "emotion_condition": cond_name,
+                    "rhythm_support": support,
+                    "signal": f"{cond_name}_with_{support}",
+                }
+                break
+        if chosen_zone:
+            # enforce single zone per value
+            if chosen_zone.get("rhythm_constraint"):
+                tension_zones.append(chosen_zone)
+            else:
+                coherence_zones.append(chosen_zone)
+            continue
+        # If nothing matched the priority list, allow a single coherence from any active condition + support
+        if rhythm_supports:
+            for cond_name, cond_active in conditions.items():
+                if cond_active:
+                    support = rhythm_supports[0]
+                    coherence_zones.append(
+                        {
+                            "value": value,
+                            "emotion_condition": cond_name,
+                            "rhythm_support": support,
+                            "signal": f"{cond_name}_with_{support}",
+                        }
+                    )
+                    break
+        if len(tension_zones) + len(coherence_zones) >= MAX_ZONES_PER_VALUE:
+            continue
+
+    # Deduplicate globally by (value, signal)
+    seen_signals = set()
+    final_tension: List[Dict[str, Any]] = []
+    final_coherence: List[Dict[str, Any]] = []
+    for zone in tension_zones:
+        key = (zone.get("value"), zone.get("signal"))
+        if key in seen_signals:
+            continue
+        seen_signals.add(key)
+        final_tension.append(zone)
+    for zone in coherence_zones:
+        key = (zone.get("value"), zone.get("signal"))
+        if key in seen_signals:
+            continue
+        seen_signals.add(key)
+        final_coherence.append(zone)
+
+    alignment_level = 1.0 - (len(final_tension) / max(1, len(soul_values)))
+    alignment_level = _clamp(alignment_level)
+
+    state: Dict[str, Any] = {
+        "alignment_level": alignment_level,
+        "tension_zones": final_tension,
+        "coherence_zones": final_coherence,
+        "dominant_tension": None,
+        "window_days": window_days,
+        "updated_at": now,
     }
-    result = await call_llm(messages=[{"role": "user", "content": f"{prompt}\n\nPAYLOAD:\n{payload}"}])
-    if isinstance(result, dict):
-        return result
-    return {"weekly_coherence_map": str(result)}
+
+    if final_tension:
+        first = final_tension[0]
+        state["dominant_tension"] = f"{first['value']}_{first['emotion_condition']}_{first.get('rhythm_constraint')}"
+
+    return state
+
+
+def compute_fast_esr_frame(*args: Any, **kwargs: Any) -> Dict[str, Any]:
+    """
+    Legacy shim: turn_v2 imports this symbol. The deep join is
+    handled by compute_emotion_soul_rhythm_state above. This shim
+    returns an empty frame to satisfy the interface without adding
+    new behavior.
+    """
+    return {}

@@ -1090,12 +1090,18 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     turn_id = str(entry_id) if entry_id else str(uuid4())
     queued_jobs = [
         "turn_memory_update",
+        "neutral_signal_extraction",
         "turn_planner_update",
         "turn_rhythm_update",
         "turn_persona_update",
         "turn_insight_update",
         "brain_refresh",
+        "ayurvedic_pipeline",
     ]
+    # Enqueue episodic v2.1 consolidation as a separate async job (no change to turn latency).
+    episodic_job = "episodic_consolidation_v21"
+    if entry_id:
+        queued_jobs.append("journal_enrich")
     inferred_intent = stored_intents[0] if stored_intents else (topics_for_signals[0] if topics_for_signals else None)
     facets_for_worker = {
         "emotion": emotion,
@@ -1106,24 +1112,36 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "triage": turn_context.get("triage"),
     }
     disable_queue = os.getenv("SAKHI_DISABLE_QUEUE") == "1"
+    payload = {
+        "text": body.text,
+        "ts": datetime.datetime.utcnow().isoformat(),
+        "entry_id": str(entry_id) if entry_id else None,
+        "facets": facets_for_worker,
+        "thread_id": user_id,
+        "behavior_profile": behavior_profile,
+        "mode": "today",
+        "emotion_update": emotion_update,
+        "persona_update": persona_update,
+    }
+    jobs = queued_jobs + [episodic_job]
+    logger.error(
+        "[turn_v2] dispatch mode=%s SAKHI_DISABLE_QUEUE=%s turn_id=%s jobs=%s",
+        "inline" if disable_queue else "queue",
+        "1" if disable_queue else "0",
+        turn_id,
+        jobs,
+    )
     if disable_queue:
-        logger.error("[turn_v2] queue disabled via SAKHI_DISABLE_QUEUE, skipping enqueue turn_id=%s", turn_id)
+        logger.error("[turn_v2] queue disabled via SAKHI_DISABLE_QUEUE, running inline turn_id=%s", turn_id)
+        from sakhi.apps.worker.pipelines.turn_updates.runner import process_turn_job
+
+        for job_type in jobs:
+            try:
+                process_turn_job(job_type=job_type, turn_id=turn_id, person_id=user_id, payload=payload)
+            except Exception as exc:
+                logger.warning("[turn_v2] inline job failed type=%s turn_id=%s err=%s", job_type, turn_id, exc)
     else:
-        enqueue_turn_jobs(
-            turn_id,
-            user_id,
-            queued_jobs,
-            {
-                "text": body.text,
-                "ts": datetime.datetime.utcnow().isoformat(),
-                "facets": facets_for_worker,
-                "thread_id": user_id,
-                "behavior_profile": behavior_profile,
-                "mode": "today",
-                "emotion_update": emotion_update,
-                "persona_update": persona_update,
-            },
-        )
+        enqueue_turn_jobs(turn_id, user_id, jobs, payload)
 
     logger.error(
         "[turn_v2] response snapshot entry_id=%s session_id=%s minimal_mode=%s queued_jobs=%s",

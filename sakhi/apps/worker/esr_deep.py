@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from typing import Any, Dict
+import logging
 
 from sakhi.apps.api.core.db import q, exec as dbexec
 from sakhi.core.emotion.emotion_soul_rhythm_engine import compute_deep_esr
 
+LOGGER = logging.getLogger(__name__)
+
 
 async def run_esr_deep(person_id: str) -> Dict[str, Any]:
+    LOGGER.info("[esr_deep] start person_id=%s", person_id)
     episodic = await q(
         """
         SELECT soul, soul_shadow, soul_light, rhythm_state, emotional_state, ts
@@ -28,5 +32,9 @@ async def run_esr_deep(person_id: str) -> Dict[str, Any]:
 
     deep = await compute_deep_esr(person_id, episodic or [], emotion_state, soul_state, rhythm_state)
     await dbexec("UPDATE personal_model SET emotion_soul_rhythm_state = $2 WHERE person_id = $1", person_id, deep)
+    LOGGER.info(
+        "[esr_deep] updated emotion_soul_rhythm_state person_id=%s episodic_count=%s",
+        person_id,
+        len(episodic or []),
+    )
     return deep
-

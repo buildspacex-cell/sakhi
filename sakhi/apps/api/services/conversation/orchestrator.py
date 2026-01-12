@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import datetime as dt
 from typing import Any, Dict, List
 
 from sakhi.apps.api.services.journaling.observe import observe_entry
@@ -39,6 +40,7 @@ async def orchestrate_turn(
     clarity_hint: str | None = None,
     *,
     capture_only: bool = False,
+    ts: dt.datetime | str | None = None,
 ) -> Dict[str, Any]:
     """
     Run the journaling + intent/memory pipeline for a single turn.
@@ -57,6 +59,15 @@ async def orchestrate_turn(
     }
 
     minimal_write = capture_only or os.getenv("SAKHI_TURN_MINIMAL_WRITE") == "1" or os.getenv("SAKHI_UNIFIED_INGEST") != "1"
+    turn_ts: dt.datetime | None = None
+    if isinstance(ts, dt.datetime):
+        turn_ts = ts
+    elif isinstance(ts, str):
+        try:
+            turn_ts = dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        except Exception:
+            turn_ts = None
+    turn_ts = turn_ts or dt.datetime.utcnow()
     LOGGER.error(
         "[orchestrate_turn] start person_id=%s capture_only=%s minimal_write=%s text_len=%s",
         person_id,
@@ -72,6 +83,7 @@ async def orchestrate_turn(
             text=text,
             source="conversation",
             clarity_hint=clarity_hint,
+            created_at=turn_ts,
         )
         LOGGER.error("[orchestrate_turn] observe_entry done person_id=%s entry_id=%s", person_id, entry.get("id"))
     except Exception as exc:  # pragma: no cover - defensive
@@ -97,13 +109,16 @@ async def orchestrate_turn(
         )
         return result
 
-    if not minimal_write:
+    sync_enrich = os.getenv("SAKHI_SYNC_ENRICH", "0") == "1"
+    if not minimal_write and sync_enrich:
         enrichment = await enrich_journal_entry(text, person_id=person_id)
         result["enrichment"] = enrichment
+    else:
+        result["enrichment"] = {}
 
     embedding: List[float] = []
     if entry_id:
-        embedding = await generate_journal_embedding(entry_id, text) or []
+        embedding = await generate_journal_embedding(entry_id, text, created_at=turn_ts) or []
     result["embedding"] = embedding
 
     topics = await extract_topics_for_entry(entry_id, text)

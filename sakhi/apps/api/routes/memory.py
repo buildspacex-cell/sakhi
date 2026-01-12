@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Query, Request
 
 from sakhi.apps.api.services.memory.recall import recall_advanced
+from sakhi.apps.api.services.memory.memory_ingest import ingest_journal_entry
 from sakhi.apps.api.services.memory.memory_episodic import build_episodic_from_journals_v2
 from sakhi.apps.api.services.memory.synthesis import (
     fetch_monthly_recaps,
@@ -226,19 +227,36 @@ async def run_weekly_flow_dev(request: Request):
         if not content.strip() or not created_raw:
             continue
         try:
-            created_at = dt.datetime.fromisoformat(created_raw)
+            experience_ts = dt.datetime.fromisoformat(created_raw)
         except Exception:
             continue
+        lifecycle_ts = dt.datetime.utcnow()
+        entry_id = uuid.uuid4()
         await dbexec(
             """
-            INSERT INTO journal_entries (id, user_id, content, layer, created_at, updated_at)
-            VALUES ($1, $2, $3, 'journal', $4, $4)
+            -- IMPORTANT:
+            -- ts = when the experience happened (lived time)
+            -- created_at / updated_at = database lifecycle only
+            INSERT INTO journal_entries (id, user_id, content, layer, ts, created_at, updated_at)
+            VALUES ($1, $2, $3, 'journal', $4, $5, $5)
             ON CONFLICT (id) DO NOTHING
             """,
-            uuid.uuid4(),
+            entry_id,
             target_person,
             content,
-            created_at,
+            experience_ts,
+            lifecycle_ts,
+        )
+        # Run ingest to populate STM/deep recall similar to journal_v2 flow.
+        await ingest_journal_entry(
+            {
+                "id": str(entry_id),
+                "user_id": target_person,
+                "content": content,
+                "cleaned": content,
+                "layer": "journal",
+                "ts": experience_ts.isoformat() if isinstance(experience_ts, dt.datetime) else None,
+            }
         )
 
     # Run weekly pipeline for the requested week

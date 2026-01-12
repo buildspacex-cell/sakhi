@@ -27,7 +27,12 @@ async def ingest_entry(
 ) -> IngestedEntry:
     """Insert minimal journal entry and return its metadata."""
 
-    created_at = ts or dt.datetime.utcnow()
+    experience_ts = ts or dt.datetime.utcnow()
+    lifecycle_ts = dt.datetime.utcnow()
+    # IMPORTANT:
+    # ts = when the experience happened (lived time)
+    # created_at / updated_at = database lifecycle only
+    # Episodic memory and all downstream reasoning depend on ts.
     safe_tags = list(tags or [])
     safe_user_tags = list(user_tags or safe_tags)
     safe_context = client_context or {}
@@ -38,10 +43,10 @@ async def ingest_entry(
             INSERT INTO journal_entries (
                 user_id, content, layer, tags, mood,
                 input_type, client_context, language, timezone, user_tags,
-                created_at, updated_at,
+                ts, created_at, updated_at,
                 processing_state, processing_attempts, ack_text
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $11, 'queued', 0, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $12, 'queued', 0, $13)
             RETURNING id
             """,
             person_id,
@@ -54,7 +59,8 @@ async def ingest_entry(
             language,
             timezone,
             safe_user_tags,
-            created_at,
+            experience_ts,
+            lifecycle_ts,
             ack_text,
             one=True,
         )
@@ -64,9 +70,9 @@ async def ingest_entry(
             INSERT INTO journal_entries (
                 user_id, content, layer, tags, mood,
                 input_type, client_context, language, timezone, user_tags,
-                created_at, updated_at
+                ts, created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $11)
+            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $12)
             RETURNING id
             """,
             person_id,
@@ -79,7 +85,8 @@ async def ingest_entry(
             language,
             timezone,
             safe_user_tags,
-            created_at,
+            experience_ts,
+            lifecycle_ts,
             one=True,
         )
 
@@ -88,7 +95,7 @@ async def ingest_entry(
         entry_id=entry_id,
         person_id=person_id,
         status="queued",
-        created_at=created_at,
+        created_at=lifecycle_ts,
         tags=safe_tags,
     )
 

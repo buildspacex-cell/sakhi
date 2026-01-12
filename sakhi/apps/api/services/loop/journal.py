@@ -24,8 +24,11 @@ async def write_journal_entry(user_id: str, text: str, reply: str | None) -> str
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO journal_entries (id, user_id, title, content, layer)
-            VALUES (gen_random_uuid(), $1, $2, $3, 'journal')
+            -- IMPORTANT:
+            -- ts = when the experience happened (lived time)
+            -- created_at / updated_at = database lifecycle only
+            INSERT INTO journal_entries (id, user_id, title, content, layer, ts, created_at, updated_at)
+            VALUES (gen_random_uuid(), $1, $2, $3, 'journal', NOW(), NOW(), NOW())
             RETURNING id
             """,
             user_uuid,

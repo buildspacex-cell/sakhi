@@ -199,7 +199,10 @@ def compute_direction_vector(vectors: Sequence[Sequence[float]] | None) -> List[
     """
     Compute normalized mean vector for identity direction.
     """
-    vecs = vectors or []
+    raw_vecs = vectors or []
+    # Coerce any string/bytes/pgvector literals into numeric lists and drop empties.
+    vecs = [parse_pgvector(v) for v in raw_vecs]
+    vecs = [v for v in vecs if v]
     if not vecs:
         return []
     length = min(len(v) for v in vecs if v) or 0
@@ -208,7 +211,11 @@ def compute_direction_vector(vectors: Sequence[Sequence[float]] | None) -> List[
     acc = [0.0] * length
     for v in vecs:
         for i in range(length):
-            acc[i] += float(v[i])
+            try:
+                acc[i] += float(v[i])
+            except Exception:
+                # Skip malformed entries instead of failing the whole computation.
+                pass
     mean = [v / len(vecs) for v in acc]
     norm = sum(x * x for x in mean) ** 0.5
     if norm == 0:

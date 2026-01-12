@@ -69,6 +69,7 @@ async def _observe_lightweight(body: ObserveIn) -> Dict[str, Any]:
     )
     ack = build_acknowledgement(body.text)
     ts = body.ts or dt.datetime.utcnow()
+    lifecycle_ts = dt.datetime.utcnow()
     safe_layer = body.layer or "journal"
     if safe_layer not in ALLOWED_LAYERS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid layer")
@@ -132,18 +133,23 @@ def _should_web_search(text: str) -> bool:
 
 async def _persist_web_snippet(person_id: str, query: str, snippet: str, ts: dt.datetime) -> str | None:
     source = {"kind": "web_snippet", "query": query}
+    lifecycle_ts = dt.datetime.utcnow()
     try:
         source_json = json.dumps(source, ensure_ascii=False)
         row = await q(
             """
-            INSERT INTO journal_entries (user_id, content, layer, tags, source_ref, created_at, updated_at)
-            VALUES ($1, $2, 'external', ARRAY['web'], $3::jsonb, $4, $4)
+            -- IMPORTANT:
+            -- ts = when the experience happened (lived time)
+            -- created_at / updated_at = database lifecycle only
+            INSERT INTO journal_entries (user_id, content, layer, tags, source_ref, ts, created_at, updated_at)
+            VALUES ($1, $2, 'external', ARRAY['web'], $3::jsonb, $4, $5, $5)
             RETURNING id
             """,
             person_id,
             snippet,
             source_json,
             ts,
+            lifecycle_ts,
             one=True,
         )
         return str(row["id"])
@@ -236,24 +242,29 @@ async def observe(body: ObserveIn) -> Dict[str, Any]:
     source_ref_json = json.dumps(source_ref, ensure_ascii=False)
 
     row = await q(
-        """
-        INSERT INTO journal_entries (
-            user_id, content, layer, tags, mood, mood_score, source_ref,
-            created_at, updated_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $8)
-        RETURNING id
-        """,
-        person_id,
-        body.text,
-        safe_layer,
+            """
+            INSERT INTO journal_entries (
+                user_id, content, layer, tags, mood, mood_score, source_ref,
+                ts, created_at, updated_at
+            )
+            -- IMPORTANT:
+            -- ts = when the experience happened (lived time)
+            -- created_at / updated_at = database lifecycle only
+            -- Episodic memory and downstream reasoning depend on ts.
+            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $9)
+            RETURNING id
+            """,
+            person_id,
+            body.text,
+            safe_layer,
         body.tags,
-        body.mood,
-        mood_affect.get("score"),
-        source_ref_json,
-        ts,
-        one=True,
-    )
+            body.mood,
+            mood_affect.get("score"),
+            source_ref_json,
+            ts,
+            lifecycle_ts,
+            one=True,
+        )
     entry_id = str(row["id"])
 
     await publish(

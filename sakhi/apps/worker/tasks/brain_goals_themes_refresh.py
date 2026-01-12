@@ -50,17 +50,35 @@ def _cluster_entries(entries: List[Dict[str, Any]], threshold: float = 0.18) -> 
     return clusters
 
 
+def _normalize_episodic_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    for row in rows or []:
+        normalized.append(
+            {
+                **row,
+                "soul_conflict": row.get("soul_conflict") or {},
+                "soul_friction": row.get("soul_friction") or {},
+                "emotion_loop": row.get("emotion_loop") or {},
+                "emotional_state": row.get("emotional_state") or {},
+                "rhythm_state": row.get("rhythm_state") or {},
+            }
+        )
+    return normalized
+
+
 async def _prepare_entries(person_id: str) -> List[Dict[str, Any]]:
     cutoff = dt.datetime.utcnow() - dt.timedelta(days=90)
     rows = await q(
         """
-        SELECT id, text, vector_vec, triage
+        SELECT id, text, vector_vec, triage, soul_conflict, soul_friction, emotion_loop, emotional_state, rhythm_state, updated_at
         FROM memory_episodic
         WHERE person_id = $1 AND updated_at >= $2
+        ORDER BY updated_at DESC
         """,
         person_id,
         cutoff,
     )
+    rows = _normalize_episodic_rows(rows or [])
     entries: List[Dict[str, Any]] = []
     for row in rows or []:
         text = row.get("text") or ""
@@ -73,6 +91,11 @@ async def _prepare_entries(person_id: str) -> List[Dict[str, Any]]:
                 "text": text,
                 "vector": vec,
                 "triage": row.get("triage") or {},
+                "soul_conflict": row.get("soul_conflict") or {},
+                "soul_friction": row.get("soul_friction") or {},
+                "emotion_loop": row.get("emotion_loop") or {},
+                "emotional_state": row.get("emotional_state") or {},
+                "rhythm_state": row.get("rhythm_state") or {},
             }
         )
     return entries
@@ -86,12 +109,42 @@ def _title_for_cluster(cluster: Dict[str, Any]) -> str:
 async def run_brain_goals_themes_refresh(person_id: str) -> Dict[str, Any]:
     person_id = await resolve_person_id(person_id) or person_id
     try:
-        entries = await _prepare_entries(person_id)
+        entries_all = await _prepare_entries(person_id)
     except Exception as exc:
         logger.warning("goals_themes_refresh load failed person=%s err=%s", person_id, exc)
         return {"error": str(exc)}
 
-    clusters = _cluster_entries(entries)
+    # Signal-first selection, then fallback to recency
+    signal_entries = [
+        e
+        for e in entries_all
+        if (e.get("soul_conflict") or e.get("soul_friction") or e.get("emotion_loop"))
+    ]
+    signal_entries = signal_entries[:20]
+    selected_ids = {e.get("id") for e in signal_entries if e.get("id")}
+    fallback_entries: List[Dict[str, Any]] = []
+    if len(signal_entries) < 5:
+        for e in entries_all:
+            eid = e.get("id")
+            if eid in selected_ids:
+                continue
+            fallback_entries.append(e)
+            selected_ids.add(eid)
+            if len(signal_entries) + len(fallback_entries) >= 20:
+                break
+    selected_entries = signal_entries + fallback_entries
+
+    logger.info(
+        "[brain_goals_themes] episodic_evidence",
+        extra={
+            "person_id": person_id,
+            "total_episodes_considered": len(selected_entries),
+            "signal_episodes_count": len(signal_entries),
+            "fallback_used": bool(fallback_entries),
+        },
+    )
+
+    clusters = _cluster_entries(selected_entries)
     summaries: List[Tuple[str, Dict[str, Any]]] = []
     for cluster in clusters:
         title = _title_for_cluster(cluster)

@@ -17,10 +17,14 @@ logger = logging.getLogger(__name__)
 
 
 async def _insert_journal_entry(person_id: str, text: str, layer: str, ts: dt.datetime, entry_id: str) -> None:
+    # IMPORTANT:
+    # ts = when the experience happened (lived time)
+    # created_at / updated_at = database lifecycle only
+    # Episodic memory and downstream reasoning depend on ts.
     await dbexec(
         """
-        INSERT INTO journal_entries (id, user_id, content, layer, created_at)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO journal_entries (id, user_id, content, layer, ts, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
         ON CONFLICT (id) DO NOTHING
         """,
         entry_id,

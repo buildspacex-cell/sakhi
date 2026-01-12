@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sakhi – What We Have Built (Full Deck)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --panel: #121622;
+      --text: #e6e9f2;
+      --muted: #9aa3b2;
+      --accent: #7aa2ff;
+      --accent2: #7af0c3;
+      --border: #1f2538;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    section {
+      min-height: 100vh;
+      padding: 72px 10vw;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: radial-gradient(1200px 600px at 20% 10%, #16204a 0%, transparent 60%), var(--bg);
+    }
+
+    h1, h2, h3 {
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    h1 { font-size: 48px; }
+    h2 { font-size: 36px; margin-bottom: 12px; }
+    h3 { font-size: 22px; margin-bottom: 8px; color: var(--accent); }
+
+    p {
+      max-width: 900px;
+      font-size: 18px;
+      color: var(--muted);
+    }
+
+    .hero {
+      /* Hero now matches all slides; class kept for semantic clarity */
+    }
+
+    .diagram {
+      margin-top: 40px;
+      padding: 24px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      max-width: 1100px;
+    }
+
+    .diagram-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .box {
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0f1320;
+      font-size: 14px;
+      color: var(--text);
+      min-width: 160px;
+      text-align: center;
+    }
+
+    .accent { border-color: var(--accent); color: var(--accent); }
+    .accent2 { border-color: var(--accent2); color: var(--accent2); }
+    .dim { opacity: 0.35; }
+
+    .flow {
+      margin-top: 32px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #0f1320;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      color: var(--muted);
+      max-width: 900px;
+      white-space: pre-wrap;
+    }
+
+    /* Controls */
+    .nav {
+      position: fixed;
+      bottom: 24px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 32px;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .nav button {
+      pointer-events: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      width: 48px;
+      height: 48px;
+      font-size: 22px;
+      cursor: pointer;
+      transition: transform 120ms ease, opacity 120ms ease;
+    }
+
+    .nav button:active { transform: scale(0.96); }
+
+    .fullscreen-btn {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      width: 44px;
+      height: 44px;
+      font-size: 18px;
+      cursor: pointer;
+      z-index: 60;
+      transition: transform 120ms ease;
+    }
+
+    .fullscreen-btn:active { transform: scale(0.96); }
+
+    /* Fallback “fullscreen” when the browser blocks the Fullscreen API (permissions policy) */
+    body.pseudo-fullscreen {
+      position: fixed;
+      inset: 0;
+      overflow-y: auto;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Improve readability on narrow screens */
+    @media (max-width: 860px) {
+      section { padding: 64px 6vw; }
+      h1 { font-size: 38px; }
+      h2 { font-size: 28px; }
+      p { font-size: 16px; }
+      .box { min-width: 140px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <button id="prevBtn">◀</button>
+  <button id="nextBtn">▶</button>
+</div>
+<button class="fullscreen-btn" id="fsBtn">⤢</button>
+
+
+
+
+<!-- SLIDE 4 -->
+<section>
+  <h2>Journal</h2>
+  <p>We start with evidence, not interpretation.</p>
+  <p>Every journal entry is stored verbatim, once, and never rewritten. It is treated as a historical record of the user’s inner world at that moment — not a working note, not a draft, not a hypothesis.</p>
+  <p>Think of a trusted human companion listening to you. On day one, they may form a tentative opinion about what you’re going through. Weeks later, after hearing more context, they might realize they misunderstood parts of it — but they would never rewrite what you originally said. They refine their understanding, not your words.</p>
+  <p>Freezing interpretation too early destroys future insight and erodes trust. Sakhi allows understanding to evolve over time without ever altering what the user originally expressed.</p>
+  <p>All intelligence layers build on top of journals, but none overwrite them.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box accent">User Journal (Evidence)</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 6 -->
+<section>
+  <h2>Recall</h2>
+  <p>Human memory doesn’t work by replaying everything in order. It works by association.</p>
+  <p>Think of a friend saying, “This situation feels familiar,” and suddenly recalling a moment from years ago — not because they searched chronologically, but because something about the feeling, theme, or meaning matched.</p>
+  <p>Sakhi does the same. Each journal entry is transformed into a semantic representation that captures meaning rather than wording. This allows past moments to be recalled later when new situations resemble them — even if the words are completely different.</p>
+  <p>The original journal text is never altered. The embedding is simply a way for memory to recognize similarity, so context can be stitched together when it matters.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Journal</div>
+      <div class="box accent">Embedding</div>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+<!-- SLIDE 3 -->
+<section>
+  <h2>Short-Term Memory</h2>
+  <p>When you’re talking to someone you trust, they don’t bring up your entire history every time you speak. They stay with what’s recent — what you just said, how you sounded, what seemed to matter a moment ago.</p>
+  <p>Short-term memory exists to hold the present moment together. It keeps Sakhi attuned to the emotional and conversational now, without overwhelming the interaction with everything from the past.</p>
+  <p>Think of it as the mental space a human uses to stay in a conversation: remembering the last few exchanges, the tone, the unresolved threads — not forever, just long enough to remain coherent and responsive.</p>
+  <p>This layer is intentionally small and temporary. It supports flow and presence now, while leaving deeper understanding to be formed later, more carefully.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Journal</div>
+      <div class="box">Embedding</div>
+      <div class="box accent">Short-Term Memory (Evolving State)</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 9 -->
+<section>
+  <h2>What Is Held in the Present</h2>
+  <p>These three layers work together to keep Sakhi grounded, responsive, and trustworthy. Each layer stores a different kind of data, with different guarantees.</p>
+
+  <h3>Journal (Evidence)</h3>
+  <p><strong>Storage:</strong> <code>journal_entries</code></p>
+  <div class="flow">id (UUID)
+person_id
+content (verbatim text)
+layer = "journal"
+created_at</div>
+  <p>The journal stores exactly what the user said. This row is immutable and treated as historical evidence. It is never rewritten, summarized, or corrected.</p>
+
+  <h3>Recall (Semantic Meaning)</h3>
+  <p><strong>Storage:</strong> <code>journal_embeddings</code></p>
+  <div class="flow">entry_id (FK → journal_entries)
+embedding (vector[1536])
+created_at</div>
+  <p>Recall stores semantic meaning as an embedding vector. It enables similarity search and context resurfacing without altering the original journal text.</p>
+
+  <h3>Short-Term Memory (Evolving State)</h3>
+  <p><strong>Storage:</strong> <code>memory_short_term</code> / cached state</p>
+  <div class="flow">entry_id
+source_type = "journal"
+text (verbatim snapshot)
+emotion / mood
+topics[]
+expires_at</div>
+  <p>Short-term memory holds a small, time-bounded slice of recent experience so the system can stay coherent in the present. It is intentionally ephemeral and continuously refreshed.</p>
+
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Journal<br/><span class="muted">Immutable evidence</span></div>
+      <div class="box">Recall<br/><span class="muted">Semantic meaning</span></div>
+      <div class="box accent">Short-Term Memory<br/><span class="muted">Evolving present state</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 10 -->
+<section>
+  <h2>Deep Recall</h2>
+  <p>As time passes, short-term memory fades — but important moments shouldn’t disappear.</p>
+  <p>Think of how a person can no longer recall the details of every conversation, yet still remembers the moments that shaped them: turning points, recurring struggles, meaningful realizations.</p>
+  <p>Deep recall exists to preserve those moments in a durable, searchable form — not as raw transcripts, but as compact memory traces that can be revisited and reinterpreted later.</p>
+  <p>This layer does not replace short-term memory. It quietly accumulates beneath it, allowing long-term understanding to emerge without intruding on the present.</p>
+
+  <h3>What gets stored</h3>
+  <p><strong>Storage:</strong> <code>context_recalls</code> and related tables</p>
+  <div class="flow">id (UUID)
+person_id
+entry_id (FK → journal_entries)
+compact_text (summary)
+embedding (vector[1536])
+sentiment
+tags[]
+facets{}
+created_at</div>
+
+  <p>Additional continuity and structure are stored alongside:</p>
+  <div class="flow">life_event_links
+thread_continuity_markers
+context_compact_summaries</div>
+
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Journal</div>
+      <div class="box">Recall</div>
+      <div class="box">Short-Term Memory</div>
+      <div class="box accent">Deep Recall (Durable Memory)</div>
+    </div>
+  </div>
+</section>
+
+
+
+<!-- SLIDE 13 -->
+<section>
+  <h2>Conversation</h2>
+  <p>When someone speaks, they are asking to be heard — not to be analyzed, categorized, or updated.</p>
+  <p>Sakhi treats each live turn as a moment of presence. The goal is to respond appropriately now, not to finalize understanding.</p>
+  <p> Think of a trusted friend in conversation. As you speak, they notice how you sound, what themes are emerging, and what you might be reaching toward — but they don’t stop you mid‑sentence to update their opinion of who you are. They stay with you.</p>
+  <p>During a turn, Sakhi notices lightweight signals that help it stay grounded in the moment, without committing to conclusions.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box accent">Turn Signals</div>
+      <div class="box">Emotion</div>
+      <div class="box">Topics</div>
+      <div class="box">Intents</div>
+    </div>
+  </div>
+  <p>These signals shape tone, framing, and direction in the reply — while deeper learning is intentionally deferred.</p>
+</section>
+
+<!-- SLIDE 15 -->
+<section>
+  <h2>Conversation — Behavior Profile</h2>
+  <p>Even with the same words, how someone responds matters.</p>
+  <p>Think of a close friend versus a colleague hearing the same concern. One might respond gently and quietly, the other more directly — not because the situation changed, but because the relationship and moment are different.</p>
+  <p>Sakhi forms a <em>behavior profile</em> for each turn to decide <strong>how</strong> to respond — not what to conclude.</p>
+  <p>This profile is built primarily from the <strong>current journal and turn signals</strong> (emotion, topics, intent), and is softly shaped by what Sakhi already knows: relationship state, persona traits, and past interaction style. Nothing new is learned or committed here.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Turn Signals</div>
+      <div class="box">Relationship State</div>
+      <div class="box">Persona Traits</div>
+      <div class="box accent">Behavior Profile</div>
+    </div>
+  </div>
+  <p>The behavior profile guides tone, depth, pacing, and assertiveness in the reply — ensuring the response feels attuned to the moment, not mechanically correct.</p>
+</section>
+
+<!-- SLIDE 16 -->
+<section>
+  <h2>Conversation — Brain Snapshot</h2>
+  <p>When you speak with someone who knows you well, they don’t have to consciously recall everything about you. They already carry a sense of where you are in life, what you care about, and what you’re dealing with right now.</p>
+  <p>Sakhi does something similar. It keeps a <em>brain snapshot</em> — a unified, read‑only picture of the user’s current state — so it can respond with context without re‑figuring everything from scratch.</p>
+  <p>This snapshot is <strong>not built during the conversation</strong>. It is assembled quietly in the background from memory, rhythm, identity, relationship, and goals, and then reused during live turns.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Memory</div>
+      <div class="box">Rhythm</div>
+      <div class="box">Identity</div>
+      <div class="box">Relationship</div>
+      <div class="box accent">Brain Snapshot</div>
+    </div>
+  </div>
+  <p>During a conversation, Sakhi only <em>reads</em> this snapshot. It grounds the reply in who the user is and where they are — without learning, updating, or locking anything in prematurely.</p>
+</section>
+
+<!-- SLIDE 17 -->
+<section>
+  <h2>Conversation — Day Matters</h2>
+  <p>When you talk to someone at the end of a long day, you instinctively respond differently than you would in the morning. The words might be the same — but timing, energy, and capacity change everything.</p>
+  <p>Sakhi accounts for this by carrying a sense of <em>where the day is</em> for the user — not just who they are.</p>
+  <p>This context is prepared <strong>before the conversation</strong>. Daily and micro cues are computed ahead of time so the live turn can stay fast, grounded, and emotionally appropriate.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Brain Snapshot</div>
+      <div class="box accent">Daily & Micro Context</div>
+    </div>
+  </div>
+  <p>Morning previews, focus paths, recovery cues, and evening closures are read during conversation — never generated on the fly. This allows Sakhi to respect timing without slowing presence or forcing advice.</p>
+</section>
+
+<!-- SLIDE 18 -->
+<section>
+  <h2>Conversation — Response Assembly</h2>
+  <p>When a thoughtful person responds, they aren’t pulling a sentence out of thin air. They’re quietly holding together everything they know about you, how you feel right now, and what this moment seems to call for.</p>
+  <p>Sakhi assembles its response in much the same way — by bringing together the signals from the current turn, the behavior profile, the brain snapshot, and the day’s context.</p>
+  <p>Nothing new is learned here. This is a moment of synthesis, not interpretation.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Behavior Profile</div>
+      <div class="box">Brain Snapshot</div>
+      <div class="box">Daily & Micro Context</div>
+      <div class="box accent">Generate Response</div>
+    </div>
+  </div>
+  <p>The result is a reply that feels grounded, timely, and human — shaped by context, without freezing understanding or rushing conclusions.</p>
+</section>
+
+<!-- SLIDE 19 -->
+<section>
+  <h2>Personal Intelligence — Learning</h2>
+  <p>Only after the response is delivered does Sakhi begin to learn.</p>
+  <p>Think of a human conversation: you don’t interrupt yourself mid‑sentence to revise your understanding of someone. Reflection comes afterward — when there’s space, distance, and perspective.</p>
+  <p>Sakhi follows the same rule. Once the reply is complete, the system shifts from presence into learning. The journal entry becomes shared evidence, and deeper understanding is allowed to form slowly and safely.</p>
+  <p>This separation is deliberate. It protects the conversation from latency, premature interpretation, and over‑confidence.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Conversation Complete</div>
+      <div class="box accent">Learning Begins</div>
+      <div class="box dim">Background Understanding</div>
+    </div>
+  </div>
+  <p>From this point on, learning happens asynchronously — through memory updates, planning, rhythm adjustment, reflection, and identity evolution — without ever interrupting presence.</p>
+</section>
+
+<!-- SLIDE 19A -->
+<section>
+  <h2>Personal Intelligence — One Write, Many Observers</h2>
+  <p>After a conversation ends, a single experience can shape many parts of understanding.</p>
+  <p>Think of a meaningful moment in your life. The same experience might later influence how you feel emotionally, how you plan your next steps, how you manage your energy, how you relate to others, and how you understand who you are — without the memory itself ever changing.</p>
+  <p>Sakhi works the same way. Each journal entry is written once as shared evidence, and then observed by every intelligence layer that needs it.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box accent">Journal (Evidence)</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Short‑Term Memory</div>
+      <div class="box">Deep Recall</div>
+      <div class="box">Memory Graph</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Planning</div>
+      <div class="box">Rhythm</div>
+      <div class="box">Reflection / Insight</div>
+      <div class="box">Daily / Micro Flows</div>
+      <div class="box">Presence / Follow-Ups</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Identity / Soul</div>
+      <div class="box">Persona</div>
+      <div class="box">Relationship State</div>
+      <div class="box">Brain Snapshot</div>
+      <div class="box">Task Weaver</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Growth / Habits</div>
+      <div class="box">Consolidation</div>
+      <div class="box">Analytics / Calibration</div>
+      <div class="box">Planner / Rhythm Alignment</div>
+      <div class="box">Insights Queue</div>
+    </div>
+  </div>
+  <p>Each layer draws its own meaning at its own pace. No copies are made, no truths are rewritten, and no single interpretation dominates. This shared‑evidence model is what allows Sakhi to grow in depth without fragmenting reality.</p>
+</section>
+
+<!-- Ordered slides after One Write -->
+<section>
+  <h2>Personal Intelligence — Rhythm</h2>
+  <p>Humans are not consistent machines. Energy, focus, and emotional capacity rise and fall — across a day, across a week, and across longer biological cycles.</p>
+  <p>Think of how the same task can feel effortless one day and overwhelming another. A thoughtful companion doesn’t assume motivation has changed — they recognize rhythm.</p>
+  <p>Sakhi maintains a living rhythm model to stay attuned to <em>when</em> support is helpful, not just <em>what</em> to say or do.</p>
+  <p>This rhythm understanding is built gradually in the background, from repeated signals over time. During conversation, it is only read — never inferred on the spot.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Daily Signals</div>
+      <div class="box">Weekly Patterns</div>
+      <div class="box accent">Rhythm State</div>
+    </div>
+  </div>
+  <p>Rhythm informs timing, pacing, and gentleness. It does not prescribe action. Its role is to prevent Sakhi from pushing when the body or mind is already stretched.</p>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Identity</h2>
+  <p>Sakhi keeps an identity layer that grows slowly from lived evidence: values, life arcs, purpose themes, and the tensions between them. It is rebuilt in the background from accumulated journals, reflections, themes, and feedback, so identity stays flexible and grounded without locking the person into static labels.</p>
+  <p style="max-width: 980px;">Think of a close friend who gradually learns what really matters to you — not from one conversation, but from many. Over time they notice your values, the chapters you’ve moved through, where your purpose feels strongest, the conflicts you’re navigating, and how your mode shifts (Builder vs. Caregiver energy). Sakhi mirrors that slow, evidence-first understanding.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Values</div>
+      <div class="box">Purpose Themes</div>
+      <div class="box">Life Arcs</div>
+      <div class="box">Conflicts / Tensions</div>
+      <div class="box">Persona Evolution</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Persona</h2>
+  <p>Sakhi’s persona is the style it uses to meet you: tone bias, warmth, expressiveness, humor, and reflectiveness. It’s blended gradually from your conversational patterns, so it feels like a friend who adjusts their tone as they get to know you — without sudden shifts that break trust.</p>
+  <p style="max-width: 980px;">Technical: these persona traits are inferred from conversation and blended over time (tone bias, warmth, expressiveness, humor, reflectiveness), stored in persona_traits and refreshed by session tuning and persona_updater workers.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Tone Bias</div>
+      <div class="box">Warmth</div>
+      <div class="box">Expressiveness</div>
+      <div class="box">Humor</div>
+      <div class="box">Reflectiveness</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Relationship</h2>
+  <p>Sakhi carries a relationship state so guidance lands with the right touch. It tracks trust, attunement, and emotional safety, and it nudges these slowly based on tone, sentiment, and pushback signals — like a friend noticing when to lean in or give space.</p>
+  <p style="max-width: 980px;">Technical: relationship_state stores trust, attunement, emotional_safety, closeness_stage, and preferences; it is updated from turn sentiment/pushback (relationship_engine) and mirrored into personal_model for continuity.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Trust</div>
+      <div class="box">Attunement</div>
+      <div class="box">Emotional Safety</div>
+      <div class="box">Closeness Stage</div>
+      <div class="box">Preferences</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Action Planning</h2>
+  <p>In human conversation, unsolicited plans can feel intrusive.</p>
+  <p>If someone immediately turns your reflection into a to‑do list, it can feel like they’ve taken control away — even if their intentions are good. Thoughtful humans sense when it’s time to suggest, and when it’s time to wait.</p>
+  <p>Sakhi follows this same principle. During conversation, it may recognize potential actions and gently surface them as possibilities — not commitments.</p>
+  <p>Actual planning happens later, in the background, once there is enough clarity, repetition, and user intent to justify structure.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Conversation Intents</div>
+      <div class="box">Suggested Actions</div>
+      <div class="box accent">Background Planner Commit</div>
+    </div>
+  </div>
+  <p>This separation preserves agency. The user remains in control of what becomes a task, while Sakhi remains helpful without becoming prescriptive.</p>
+  <p style="max-width: 980px;">Technical: turn_v2 only suggests; the planner worker later runs planner_suggest and, if tasks exist, planner_commit persists goals, milestones, and planned_items, refreshes planner_context_cache, syncs growth, and updates rhythm_planner_alignment. No tasks are committed inline with the turn.</p>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Meta-Reflection</h2>
+  <p>Sometimes understanding doesn’t come from a single moment, but from stepping back and looking at a stretch of experience as a whole.</p>
+  <p>Think of a thoughtful human who, days or weeks after an event, says something like: “I’ve been thinking about what you shared earlier — there’s a pattern here.” That reflection wouldn’t have felt right in the moment. It needed distance.</p>
+  <p>Meta-reflection is Sakhi’s way of creating that distance-aware understanding.</p>
+  <p>After conversations and reflections accumulate, Sakhi quietly gathers higher-order signals in the background:</p>
+  <ul style="max-width:900px;color:var(--muted);font-size:17px;">
+    <li>Recurring themes across journals and reflections</li>
+    <li>Shifts in emotional tone over time</li>
+    <li>Patterns in energy, rhythm, and stress</li>
+    <li>Alignment or tension between stated values and lived behavior</li>
+    <li>Changes in how reflections land with the user (feedback signals)</li>
+  </ul>
+  <p>These signals are never pushed immediately. They are queued, synthesized, and only surfaced when timing and readiness are appropriate.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Reflections</div>
+      <div class="box">Feedback Signals</div>
+      <div class="box">Themes & Rhythm</div>
+      <div class="box">Value Alignment</div>
+      <div class="box">Landing Quality</div>
+      <div class="box accent">Meta-Reflection Insight</div>
+    </div>
+  </div>
+  <p>Meta-reflection allows Sakhi to offer deeper insight without interrupting presence, preserving trust while enabling genuine perspective over time.</p>
+  <p style="max-width: 980px;">Technical: meta-reflection intents enqueue insights_queue and set reflection_pending in session_continuity; meta_reflection_scores are bumped. Nightly learning and the scheduler synthesize and deliver meta insights through the presence queue, using reflections, feedback, rhythm/themes, value alignment, and landing feedback as inputs.</p>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Insight</h2>
+  <p>Insights are the moments a thoughtful friend connects the dots for you — not by repeating data, but by naming what all the signals add up to. Sakhi does this quietly, then offers concise, grounded reflections when the timing is right.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Brain Snapshot</div>
+      <div class="box">Journey (Day/Week/Month)</div>
+      <div class="box">Narrative</div>
+      <div class="box">Planner State</div>
+      <div class="box">Rhythm & Emotion</div>
+    </div>
+  </div>
+  <p style="max-width: 980px;">Technical: the insight engine reads brain_state (goals/rhythm/emotion/identity/relationship/environment/habits/focus), journey scopes (today/week/month), and narrative to produce an insight bundle (vision_insights, pattern_insights, value_alignment, action_recommendations, confidence, summary). Generated in the background; not computed inline with the turn.</p>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Memory Graph</h2>
+  <p>The memory graph is how Sakhi sketches relationships between your themes, rhythm hints, reflections, and tones — like mapping the threads in a conversation over time. It’s inferred in the background so relationships emerge gradually, not forced in the moment.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Themes</div>
+      <div class="box">Reflections</div>
+      <div class="box">Rhythm Signals</div>
+      <div class="box">Tone Signals</div>
+      <div class="box accent">Nodes & Edges</div>
+    </div>
+  </div>
+  <p style="max-width: 980px;">Technical: the memory_graph_builder worker reads recent themes, rhythm_insights, reflections, and emotional tones; an LLM proposes nodes and edges, which are stored in memory_nodes and memory_edges. Reflective feedback later adjusts edge relevance; no graph inference runs inline with the turn.</p>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Presence Follow-Ups</h2>
+  <p>Like a friend who remembers what mattered last week, Sakhi schedules gentle follow-ups between conversations. They’re tone-matched to past reflections, so continuity feels natural instead of reactive.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Past Reflections</div>
+      <div class="box">Tone Signals</div>
+      <div class="box">Scheduled Prompts</div>
+      <div class="box accent">Presence Prompts</div>
+    </div>
+  </div>
+  <p style="max-width: 980px;">Technical: the presence_reflector worker looks at older reflections plus emotional_tones, asks an LLM for tone-matched follow-ups, and writes them into presence_prompts with scheduled delivery; they’re surfaced later via the presence queue.</p>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Learning From Feedback</h2>
+  <p>Sakhi treats reflections like drafts: it watches how you respond and quietly adjusts. Positive, neutral, or pushback signals shape how reflective or gentle it is next time.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Reflections</div>
+      <div class="box">User Responses</div>
+      <div class="box">Tone Shift</div>
+      <div class="box accent">Recalibration</div>
+    </div>
+  </div>
+  <p style="max-width: 980px;">Technical: reflective_loop classifies feedback (reflection_feedback) and tweaks memory_edges; reinforcement_calibration combines feedback + tone shift to write reflection_scores and update calibration_profile (depth, warmth, conciseness, adaptability, confidence), which guide future reflections.</p>
+</section>
+
+<!-- SLIDE 32 -->
+<section>
+  <h2>Personal Intelligence — Consolidation</h2>
+  <p>Consolidation is Sakhi tidying up the recent past: turning repeated signals into structure so important things don’t get lost.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Recent Tags</div>
+      <div class="box">Repeated Goals</div>
+      <div class="box">7-Day Signals</div>
+      <div class="box accent">Themes + Short Horizon</div>
+    </div>
+  </div>
+  <p style="max-width: 980px;">Technical: the consolidation job promotes frequent tags into themes, flips proposed goals to active when journals mention them often, and updates the short_horizon snapshot (recent layers/tags, avg mood_7d). Runs on a schedule, not inline with turns.</p>
+</section>
+
+<!-- SLIDE 33 -->
+<section>
+  <h2>Personal Intelligence — Maintenance</h2>
+  <p>Maintenance is the quiet upkeep that keeps Sakhi coherent over time: refreshing caches, analytics, tempo, and derived state so guidance stays fast and trustworthy. Without it, the system drifts, recommendations misalign, and trust erodes.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Planner Cache</div>
+      <div class="box">Analytics Cache</div>
+      <div class="box">Task Weaver</div>
+      <div class="box">Growth Sync</div>
+      <div class="box">System Tempo</div>
+    </div>
+  </div>
+  <p style="max-width: 980px;">Technical: scheduled workers refresh planner_context_cache, analytics summaries, task_weaver state, growth sync from planner, and system tempo metrics. All run in the background, never on the live turn path.</p>
+</section>
+
+<!-- SLIDE 34 -->
+<section>
+  <h2>Personal Intelligence — Architecture Reveal</h2>
+  <p>Sakhi lives on two planes. The live turn stays fast and present; the worker plane does the heavy learning, planning, rhythm, reflection, and upkeep so presence never waits on depth.</p>
+
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box accent">User</div>
+      <div class="box accent">Journal (Evidence)</div>
+      <div class="box accent">Live Turn Plane</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Signals</div>
+      <div class="box">Behavior Profile</div>
+      <div class="box">Brain Snapshot</div>
+      <div class="box">Daily / Micro Context</div>
+      <div class="box">Presence Cues</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box accent">Generate Reply</div>
+    </div>
+    <hr style="border:none;border-top:1px dashed var(--border);margin:20px 0;" />
+    <div class="diagram-row">
+      <div class="box accent2">Queue Jobs</div>
+      <div class="box accent2">Worker Plane</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Memory Spine</div>
+      <div class="box">Planner + Alignment</div>
+      <div class="box">Rhythm & Forecast</div>
+      <div class="box">Identity / Soul</div>
+      <div class="box">Persona / Relationship</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Reflection & Meta</div>
+      <div class="box">Insight Engine</div>
+      <div class="box">Daily / Micro Flows</div>
+      <div class="box">Presence / Follow-Ups</div>
+      <div class="box">Insights Queue</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Memory Graph</div>
+      <div class="box">Task Weaver</div>
+      <div class="box">Consolidation</div>
+      <div class="box">Analytics / Calibration</div>
+      <div class="box">Maintenance / Tempo</div>
+    </div>
+  </div>
+  <p style="max-width: 980px;">Technical: Live turn builds signals, behavior profile, brain snapshot, and pulls cached daily/micro context and presence cues, then generates the reply. Workers handle everything else: memory spine (journal → STM/deep recall), planner and rhythm alignment, rhythm/forecast, identity/soul/persona/relationship updates, reflection/meta, insight bundles, daily/micro caches, presence prompts, insights_queue delivery, memory graph, task weaver, consolidation (themes/goals/short_horizon), analytics/calibration, and system tempo—never on the live path.</p>
+</section>
+
+<section>
+  <h2>Personal Intelligence — The Memory Spine</h2>
+  <p>Human understanding doesn’t grow as a pile of separate memories. It grows as a spine — a structure that holds experiences together, lets meaning accumulate, and allows reinterpretation without contradiction.</p>
+  <p>Think of how your sense of a person or a phase of life evolves. New experiences don’t erase old ones; they settle into place, reshaping how earlier moments are understood while leaving the moments themselves intact.</p>
+  <p>Sakhi’s memory spine serves the same role. It is the organizing structure that keeps all intelligence layers coherent over time, even as they learn at different speeds.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box accent">Journal (Evidence)</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Short‑Term Memory</div>
+      <div class="box">Deep Recall</div>
+      <div class="box">Memory Graph</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Planning</div>
+      <div class="box">Rhythm</div>
+      <div class="box">Reflection / Insight</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Identity / Soul</div>
+      <div class="box">Persona</div>
+      <div class="box">Relationship State</div>
+    </div>
+    <div class="diagram-row">
+      <div class="box">Growth / Habits</div>
+      <div class="box">Consolidation</div>
+      <div class="box accent2">Spine Coherence</div>
+    </div>
+  </div>
+  <p>The memory spine ensures that learning never fragments reality. Evidence stays immutable, interpretations remain revisable, and every layer stays anchored to the same lived history.</p>
+</section>
+
+<section>
+  <h2>Personal Intelligence — Async by Design</h2>
+  <p>Human understanding doesn’t happen all at once.</p>
+  <p>After an important conversation, if someone pauses too long to respond — visibly sorting, categorizing, or rethinking everything you said — it feels unsettling. Humans expect presence first. Deeper processing happens later, quietly, while life continues.</p>
+  <p>Sakhi is built the same way. Conversation stays fast and present. Learning happens later, when there is time, distance, and enough evidence to be careful.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box accent">Conversation</div>
+      <div class="box">Queued Observations</div>
+      <div class="box">Background Learning</div>
+    </div>
+  </div>
+  <p>This separation ensures that presence is never slowed by learning, and learning is never rushed by conversation. It is what allows Sakhi to be both responsive now and wiser over time.</p>
+</section>
+
+<!-- SLIDE 36 -->
+<section>
+  <h2>Why This Architecture Ages Well</h2>
+  <p><strong>Sakhi meets you where you are — and understands you better over time.</strong></p>
+  <p>Not by reacting faster. Not by assuming sooner. But by listening carefully, remembering faithfully, and learning at the right pace.</p>
+  <p>Systems age poorly when they harden early guesses. This architecture keeps evidence immutable, lets interpretations stay revisable, and separates presence from learning so Sakhi can get wiser without getting brittle.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Immutable Evidence</div>
+      <div class="box">Revisable Interpretations</div>
+      <div class="box">Decoupled Learning</div>
+      <div class="box accent">Trust Over Time</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 39 -->
+<section>
+  <h2>Original Vision vs What Exists</h2>
+  <p><strong>Purpose:</strong> Validate alignment with the original Sakhi V1 technical design and make gaps explicit.</p>
+  <p><strong>Overall Completion:</strong> ~85% of original vision implemented (architecture-first).</p>
+  <p><strong>Modes Covered:</strong> Evidence ingest, memory, planning, rhythm, identity, reflection, consolidation.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box accent">Original Vision (100%)</div>
+      <div class="box accent">Built Today (~85%)</div>
+      <div class="box accent2">Roadmap (~15%)</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 41 -->
+<section>
+  <h2>Foundation & Evidence Layer — 100%</h2>
+  <p><strong>Vision:</strong> Immutable journaling, async-safe ingestion, evidence as ground truth.</p>
+  <p><strong>Status:</strong> Fully built and exceeded.</p>
+  <p><strong>Modes:</strong> Live Turn (write), Worker Plane (fan-out).</p>
+  <p><strong>Notes:</strong> Evidence-first + memory fan-out are stronger than original V1 spec.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Journal</div>
+      <div class="box">Embeddings</div>
+      <div class="box accent">Memory Fan-Out</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 42 -->
+<section>
+  <h2>Memory, Recall & Awareness — 100%</h2>
+  <p><strong>Vision:</strong> Short-term, deep recall, themes, continuity.</p>
+  <p><strong>Status:</strong> Fully built.</p>
+  <p><strong>Modes:</strong> Live Turn (read), Worker Plane (write/consolidate).</p>
+  <p><strong>Gap:</strong> None at architectural level.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">STM</div>
+      <div class="box">Deep Recall</div>
+      <div class="box">Memory Graph</div>
+      <div class="box accent">Consolidation</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 43 -->
+<section>
+  <h2>Planning & Action — ~90%</h2>
+  <p><strong>Vision:</strong> Gentle, agency-preserving planning.</p>
+  <p><strong>Status:</strong> Planner engine, commit flow, rhythm alignment built.</p>
+  <p><strong>Modes:</strong> Live Turn (suggest), Worker Plane (commit).</p>
+  <p><strong>Gap:</strong> Explicit user-facing explanation of why plans appear.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Intent</div>
+      <div class="box">Planner Suggest</div>
+      <div class="box accent">Planner Commit</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 44 -->
+<section>
+  <h2>Rhythm & Body Intelligence — ~85%</h2>
+  <p><strong>Vision:</strong> Energy-aware, time-sensitive guidance.</p>
+  <p><strong>Status:</strong> Daily rhythm, weekly forecast, alignment built.</p>
+  <p><strong>Modes:</strong> Live Turn (read), Worker Plane (forecast/refresh).</p>
+  <p><strong>Gap:</strong> Rhythm insights not yet embodied or clearly surfaced in UI.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Daily Rhythm</div>
+      <div class="box">Weekly Forecast</div>
+      <div class="box accent2">Surfacing Needed</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 45 -->
+<section>
+  <h2>Identity, Values & Alignment — ~80%</h2>
+  <p><strong>Vision:</strong> Slow identity emergence and drift detection.</p>
+  <p><strong>Status:</strong> Soul engine, values, arcs, persona evolution built.</p>
+  <p><strong>Modes:</strong> Worker Plane (rebuild), Live Turn (read).</p>
+  <p><strong>Gap:</strong> Explicit alignment / drift mirror for the user.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Values</div>
+      <div class="box">Life Arcs</div>
+      <div class="box accent2">Alignment Mirror</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 46 -->
+<section>
+  <h2>Reflection & Insight Loops — ~75%</h2>
+  <p><strong>Vision:</strong> Weekly and monthly reflection cycles.</p>
+  <p><strong>Status:</strong> Insight engines, meta-reflection queue, delivery pipeline built.</p>
+  <p><strong>Modes:</strong> Worker Plane (generate), Presence (deliver).</p>
+  <p><strong>Gap:</strong> Canonical “My Week” reflection artifact.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box">Insights</div>
+      <div class="box">Meta Reflection</div>
+      <div class="box accent2">Weekly Artifact</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 47 -->
+<section>
+  <h2>What Goes on the Roadmap</h2>
+  <p><strong>Architecture Gap:</strong> ~15% (surfacing + embodiment, not core systems).</p>
+  <p><strong>Immediate:</strong> Weekly reflection artifact, alignment mirror, rhythm surfacing.</p>
+  <p><strong>Next:</strong> Beta metrics, feedback dashboards, clarity outcomes.</p>
+  <p><strong>Later:</strong> Ayurveda layer, deep embodiment, constitutional modeling.</p>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box accent">Original Vision (100%)</div>
+      <div class="box accent">Built Today (~85%)</div>
+      <div class="box accent2">Roadmap (~15%)</div>
+    </div>
+  </div>
+  <div class="diagram" style="margin-top:12px;">
+    <div class="diagram-row">
+      <div class="box accent2">Productization</div>
+      <div class="box accent2">Surfacing</div>
+      <div class="box accent2">Embodiment</div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    const sections = Array.from(document.querySelectorAll("section"));
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const fsBtn = document.getElementById("fsBtn");
+    let current = 0;
+    let ticking = false;
+
+    function clamp(i) {
+      return Math.min(Math.max(i, 0), sections.length - 1);
+    }
+
+    function scrollToIndex(i) {
+      current = clamp(i);
+      const target = sections[current];
+      if (target && typeof target.scrollIntoView === "function") {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    function updateCurrent() {
+      const mid = window.scrollY + window.innerHeight / 2;
+      sections.forEach((sec, idx) => {
+        const top = sec.offsetTop;
+        const bottom = top + sec.offsetHeight;
+        if (mid >= top && mid < bottom) {
+          current = idx;
+        }
+      });
+    }
+
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!ticking) {
+          window.requestAnimationFrame(() => {
+            updateCurrent();
+            ticking = false;
+          });
+          ticking = true;
+        }
+      },
+      { passive: true }
+    );
+
+    if (prevBtn) prevBtn.addEventListener("click", () => scrollToIndex(current - 1));
+    if (nextBtn) nextBtn.addEventListener("click", () => scrollToIndex(current + 1));
+
+    if (fsBtn) {
+      fsBtn.addEventListener("click", async () => {
+        try {
+          if (document.fullscreenElement) {
+            await document.exitFullscreen?.();
+            document.body.classList.remove("pseudo-fullscreen");
+          } else {
+            if (document.documentElement.requestFullscreen) {
+              await document.documentElement.requestFullscreen();
+            } else {
+              document.body.classList.toggle("pseudo-fullscreen");
+            }
+          }
+        } catch (_e) {
+          document.body.classList.toggle("pseudo-fullscreen");
+        }
+      });
+    }
+
+    window.addEventListener("keydown", (evt) => {
+      if (evt.key === "ArrowRight") {
+        evt.preventDefault();
+        scrollToIndex(current + 1);
+      } else if (evt.key === "ArrowLeft") {
+        evt.preventDefault();
+        scrollToIndex(current - 1);
+      }
+    });
+
+    updateCurrent();
+  })();
+</script>
+</body>
+</html>

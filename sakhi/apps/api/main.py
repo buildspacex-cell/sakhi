@@ -86,6 +86,7 @@ from sakhi.apps.api.routes.planner import router as planner_router
 from sakhi.apps.api.routes.rhythm import router as rhythm_router
 from sakhi.apps.api.routes.breath import router as breath_router
 from sakhi.apps.api.routes.events import router as events_router
+from sakhi.apps.api.routes.lab import router as lab_router
 from sakhi.apps.api.routes.memory_graph import router as memory_graph_router
 from sakhi.apps.api.routes.memory import router as memory_recall_router
 from sakhi.apps.api.routes.feedback import router as feedback_router
@@ -1400,6 +1401,7 @@ app.include_router(planner_router)
 app.include_router(rhythm_router)
 app.include_router(breath_router)
 app.include_router(events_router)
+app.include_router(lab_router)
 app.include_router(memory_graph_router)
 app.include_router(memory_recall_router)
 app.include_router(feedback_router)
@@ -1466,11 +1468,11 @@ app.include_router(person_router.router)
 app.include_router(person_edit_router.router)
 app.include_router(person_router.router)
 
-LOGGER.info("Printing registered routes (startup debug)")
-for r in app.routes:
-    LOGGER.info("route %s %s", r.methods, r.path)
-    # Also print directly to stdout so Railway captures it even if logger config filters JSON logs
-    print(f"{r.methods} {r.path}")
+# Startup route dump was for debugging; disable to reduce noise in logs.
+# LOGGER.info("Printing registered routes (startup debug)")
+# for r in app.routes:
+#     LOGGER.info("route %s %s", r.methods, r.path)
+#     print(f"{r.methods} {r.path}")
 
 
 @app.get("/beats", tags=["rhythm"])

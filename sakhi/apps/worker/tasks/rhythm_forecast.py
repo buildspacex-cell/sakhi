@@ -1,348 +1,293 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import logging
-import os
 from typing import Any, Dict, List
-import re
-import numpy as np
 
 from sakhi.apps.api.core.db import get_db
-from sakhi.apps.api.core.llm import call_llm
-from sakhi.apps.api.core.event_logger import log_event
-from sakhi.libs.llm_router.context_builder import build_calibration_context
-from sakhi.libs.json_utils import extract_json_block
-from sakhi.libs.embeddings import embed_text, parse_pgvector, to_pgvector
 from sakhi.libs.schemas.settings import get_settings
 
-# IMPORTANT: All embeddings now flow through sakhi.libs.embeddings.embed_text, which
-# guarantees deterministic 1536-d vectors. No stub providers or ad-hoc fallbacks remain.
-
 LOGGER = logging.getLogger(__name__)
-THEME_BIAS_WEIGHT = float(os.getenv("THEME_BIAS_WEIGHT", "0.2"))
+# TODO(prod): reduce this window back to a bounded horizon (e.g., 14–30 days) once lab validation is done.
+RHYTHM_WINDOW_DAYS = 1500
+MIN_SIGNALS = 3
+MIN_SAMPLES_PER_SLOT = 2
+RHYTHM_SLOTS = {
+    "early_morning": (5, 8),
+    "morning": (8, 12),
+    "afternoon": (12, 17),
+    "evening": (17, 21),
+    "night": (21, 24),
+}
+
+# Rhythm slots represent temporal capacity windows, not preferences or recommendations.
+
+# Rhythm Worker Non-Goals:
+# - Does not infer identity
+# - Does not infer emotion meaning
+# - Does not provide advice or recommendations
+# - Does not generate narrative or forecasts
+# - Does not call LLMs
+# - Does not write vectors
+
+# Rhythm Phase-2 Non-Goals:
+# - Does not recommend actions
+# - Does not decide “best time”
+# - Does not infer identity or values
+# - Does not use LLMs
+# - Does not speak to the user
+
+# Rhythm worker must be deterministic.
+# Rhythm computation must be replay-stable.
+# Identical inputs must produce identical outputs.
+
+# Reflections are treated as weak temporal signals,
+# not as semantic or narrative content.
 
 
 async def run_rhythm_forecast(person_id: str) -> Dict[str, Any] | None:
     """
-    Analyze recent reflections and rhythm state to produce a weekly forecast.
+    Phase-1 deterministic rhythm lens over recent reflections.
     """
-
     settings = get_settings()
     if not settings.enable_rhythm_forecast_writes:
-        LOGGER.info("Rhythm forecast writes disabled by safety gate")
+        LOGGER.info(
+            "Rhythm forecast writes disabled by safety gate",
+            extra={"person_id": person_id},
+        )
         return None
 
-    await log_event(person_id, "rhythm", "Rhythm forecast started", {})
     db = await get_db()
     try:
+        LOGGER.info(
+            "[Rhythm] start deterministic rhythm_state",
+            extra={
+                "person_id": person_id,
+                "window_days": RHYTHM_WINDOW_DAYS,
+                "min_signals": MIN_SIGNALS,
+            },
+        )
+
         # ================================
-        # 1. Strict reflection fetch
+        # 1. Strict signal fetch (bounded window)
         # ================================
+        # Rhythm signals are derived from raw, time-stamped evidence (journals), not from LLM-generated reflections.
         reflections = await db.fetch(
             """
-        SELECT id, content, theme, created_at
-        FROM reflections
-        WHERE user_id = $1
-        ORDER BY created_at DESC
-        LIMIT 14
-        """,
-        person_id,
-    )
-        # ================================
-        # 2. Personal model load (safe)
-        # ================================
-        pm_row = await db.fetchrow(
-            "SELECT rhythm_state FROM personal_model WHERE person_id = $1",
+            SELECT
+              id,
+              content,
+              created_at
+            FROM journal_entries
+            WHERE user_id = $1
+              AND created_at >= NOW() - ($2::int || ' days')::interval
+            ORDER BY created_at DESC
+            LIMIT 100
+            """,
             person_id,
+            RHYTHM_WINDOW_DAYS,
         )
-        personal_model = pm_row or {}
-        existing_state = personal_model.get("rhythm_state") if personal_model else {}
-
-        reflection_snippets = "\n".join(
-            f"- ({row.get('theme') or 'general'}) {(row.get('content') or '').strip()}"
-            for row in reflections
-            if row.get("content")
-        ) or "No reflections available."
-
-        context_blob = await build_calibration_context(person_id)
-        prompt = (
-            "Analyze the user's recent reflections and rhythm_state. "
-            "Estimate next-week mood and energy trends. "
-            "Return ONLY valid JSON with keys: "
-            "energy_score (0-1), focus_score (0-1), emotion_score (0-1), "
-            "mood_pattern (string), recommendation (string or list), "
-            "forecast_text (string), forecast_vector (array of floats, e.g. [0.12, -0.34, ...]).\n\n"
-            f"Existing rhythm_state: {existing_state or {}}\n"
-            f"Reflections:\n{reflection_snippets}"
+        LOGGER.info(
+            "[Rhythm] fetched rhythm signals",
+            extra={
+                "person_id": person_id,
+                "count": len(reflections),
+                "window_days": RHYTHM_WINDOW_DAYS,
+            },
         )
 
-        messages = []
-        if context_blob:
-            messages.append({"role": "system", "content": context_blob})
-        messages.append({"role": "user", "content": prompt})
-
-        llm_model = os.getenv("MODEL_RHYTHM_FORECAST") or "gpt-4o-mini"
-        LOGGER.info("[Rhythm Forecast] calling LLM model=%s for %s", llm_model, person_id)
-
-        response = await call_llm(
-            messages=messages,
-            person_id=person_id,
-            model=llm_model,
-        )
-        payload = response if isinstance(response, str) else json.dumps(response, ensure_ascii=False)
-        payload = extract_json_block(payload)
-        try:
-            result = json.loads(payload)
-        except json.JSONDecodeError as exc:
-            preview = payload[:400] + "…" if len(payload) > 400 else payload
-            LOGGER.warning(
-                "[Rhythm Forecast] LLM payload parse failed for %s (error=%s). Raw: %s",
-                person_id,
-                exc,
-                preview,
+        # ================================
+        # 2. Guards for insufficient data
+        # ================================
+        if not reflections or len(reflections) < MIN_SIGNALS:
+            LOGGER.info(
+                "[Rhythm] skipped: insufficient signals",
+                extra={
+                    "person_id": person_id,
+                    "signals": len(reflections or []),
+                    "window_days": RHYTHM_WINDOW_DAYS,
+                },
             )
             return None
 
-        energy_score = _coerce_score(result.get("energy_score"))
-        focus_score = _coerce_score(result.get("focus_score"))
-        mood_pattern = (result.get("mood_pattern") or "").strip() or None
-
-        # --- Normalize forecast_text & recommendation safely ---
-        raw_summary = result.get("summary")
-        raw_text = result.get("forecast_text")
-        raw_mood = result.get("mood_pattern")
-
-        candidate = raw_summary or raw_text or raw_mood or ""
-        if isinstance(candidate, list):
-            candidate = " ".join(str(x) for x in candidate)
-        forecast_text = str(candidate).strip() or "Weekly rhythm outlook pending."
-
-        raw_reco = result.get("recommendation")
-        if isinstance(raw_reco, list):
-            raw_reco = " ".join(str(x) for x in raw_reco)
-        recommendation_value_str = (raw_reco or "").strip()
-        recommendation = recommendation_value_str or None
-        emotion_score = _coerce_score(result.get("emotion_score"))
         # ================================
-        # 3. Vector handling (strict)
+        # 3. Deterministic scoring (keyword heuristics + slots)
         # ================================
-        forecast_vector_raw = result.get("forecast_vector")
+        def _score_reflections(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+            energy_hits = 0.0
+            load_hits = 0.0
+            recovery_hits = 0.0
+            strain_hits = 0.0
+            terms_energy_up = ("energized", "focused", "good sleep", "rested")
+            terms_energy_down = ("tired", "fatigue", "exhausted", "sleepy", "drained")
+            terms_recovery = ("rest", "sleep", "nap", "recovery", "break", "walk", "stretch")
+            terms_load = ("meeting", "back-to-back", "deadline", "overloaded", "packed")
+            terms_strain = ("stress", "stressed", "anxious", "overwhelmed", "strain")
 
-        vector_candidate: List[float] | None = None
-        if forecast_vector_raw is not None:
-            vector_candidate = sanitize_embedding(forecast_vector_raw)
+            for row in rows:
+                text = (row.get("content") or "").lower()
+                for t in terms_energy_up:
+                    if t in text:
+                        energy_hits += 1
+                for t in terms_energy_down:
+                    if t in text:
+                        energy_hits -= 1
+                        strain_hits += 0.5
+                for t in terms_recovery:
+                    if t in text:
+                        recovery_hits += 1
+                for t in terms_load:
+                    if t in text:
+                        load_hits += 1
+                for t in terms_strain:
+                    if t in text:
+                        strain_hits += 1
 
-        if not vector_candidate or len(vector_candidate) != 1536:
-            vector_candidate = await embed_text(forecast_text)
+            def _clamp(val: float, lo: float = 0.0, hi: float = 1.0) -> float:
+                return max(lo, min(hi, val))
 
-        vector_clean = _validate_vector(vector_candidate, person_id)
-        if len(vector_clean) != 1536:
-            LOGGER.error(
-                "[Rhythm Forecast] Invalid forecast_vector for %s: repairing to zeros",
-                person_id,
-            )
-            vector_clean = [0.0] * 1536
-        coherence = await compute_coherence(db, person_id, vector_clean)
+            n = max(1, len(rows))
+            energy_level = _clamp(0.5 + energy_hits / (2 * n))
+            load_level = _clamp(load_hits / (2 * n))
+            recovery_level = _clamp(recovery_hits / (2 * n))
+            strain_level = _clamp(strain_hits / (2 * n))
+            volatility = _clamp(abs(energy_hits) / (3 * n))
 
-        # ================================
-        # 4. Theme rhythm correlation bias
-        # ================================
-        corr_rows = await db.fetch(
-            "SELECT correlation FROM theme_rhythm_links WHERE person_id = $1",
-            person_id,
+            return {
+                "energy_level": energy_level,
+                "load_level": load_level,
+                "recovery_level": recovery_level,
+                "strain_level": strain_level,
+                "volatility": volatility,
+            }
+
+        def slot_for_hour(hour: int) -> str:
+            for slot, (start, end) in RHYTHM_SLOTS.items():
+                if start <= hour < end:
+                    return slot
+            return "unknown"
+
+        def _score_slots(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+            slot_metrics = {
+                slot: {
+                    "energy_level": 0.0,
+                    "load_level": 0.0,
+                    "recovery_level": 0.0,
+                    "strain_level": 0.0,
+                    "volatility": 0.0,
+                    "samples": 0,
+                    "confidence": 0.0,
+                }
+                for slot in RHYTHM_SLOTS.keys()
+            }
+            # Collect per-slot hits
+            hits = {slot: {"energy": 0.0, "load": 0.0, "recovery": 0.0, "strain": 0.0} for slot in RHYTHM_SLOTS.keys()}
+
+            terms_energy_up = ("energized", "focused", "good sleep", "rested")
+            terms_energy_down = ("tired", "fatigue", "exhausted", "sleepy", "drained")
+            terms_recovery = ("rest", "sleep", "nap", "recovery", "break", "walk", "stretch")
+            terms_load = ("meeting", "back-to-back", "deadline", "overloaded", "packed")
+            terms_strain = ("stress", "stressed", "anxious", "overwhelmed", "strain")
+
+            for row in rows:
+                created_at = row.get("created_at")
+                try:
+                    hour = int(created_at.hour) if created_at else None
+                except Exception:
+                    hour = None
+                slot = slot_for_hour(hour) if hour is not None else "unknown"
+                if slot not in slot_metrics:
+                    continue
+                text = (row.get("content") or "").lower()
+                metrics = hits[slot]
+                for t in terms_energy_up:
+                    if t in text:
+                        metrics["energy"] += 1
+                for t in terms_energy_down:
+                    if t in text:
+                        metrics["energy"] -= 1
+                        metrics["strain"] += 0.5
+                for t in terms_recovery:
+                    if t in text:
+                        metrics["recovery"] += 1
+                for t in terms_load:
+                    if t in text:
+                        metrics["load"] += 1
+                for t in terms_strain:
+                    if t in text:
+                        metrics["strain"] += 1
+                slot_metrics[slot]["samples"] += 1
+
+            def _clamp(val: float, lo: float = 0.0, hi: float = 1.0) -> float:
+                return max(lo, min(hi, val))
+
+            for slot, m in slot_metrics.items():
+                n = max(1, m["samples"])
+                h = hits[slot]
+                m["energy_level"] = _clamp(0.5 + h["energy"] / (2 * n))
+                m["load_level"] = _clamp(h["load"] / (2 * n))
+                m["recovery_level"] = _clamp(h["recovery"] / (2 * n))
+                m["strain_level"] = _clamp(h["strain"] / (2 * n))
+                m["volatility"] = _clamp(abs(h["energy"]) / (3 * n))
+                if m["samples"] < MIN_SAMPLES_PER_SLOT:
+                    m["confidence"] = 0.0
+                else:
+                    m["confidence"] = _clamp(m["samples"] / (MIN_SAMPLES_PER_SLOT * 3))
+
+            return slot_metrics
+
+        overall = _score_reflections(reflections)
+        slots = _score_slots(reflections)
+
+        # rhythm_state is descriptive, not interpretive.
+        # No advice, no forecasts, no identity meaning.
+        rhythm_state = {
+            "overall": {
+                **overall,
+                "window_days": RHYTHM_WINDOW_DAYS,
+            },
+            "slots": slots,
+            "window_days": RHYTHM_WINDOW_DAYS,
+            "updated_at": dt.datetime.utcnow().isoformat(),
+        }
+        LOGGER.info(
+            "[Rhythm] rhythm_state prepared",
+            extra={
+                "person_id": person_id,
+                "overall": overall,
+                "slot_samples": {k: v["samples"] for k, v in slots.items()},
+            },
         )
-        theme_bias = (
-            float(sum(row.get("correlation") or 0.0 for row in corr_rows)) / len(corr_rows)
-            if corr_rows
-            else 0.0
-        )
-        energy_score = _apply_bias(energy_score, theme_bias, THEME_BIAS_WEIGHT)
-        focus_score = _apply_bias(focus_score, theme_bias, THEME_BIAS_WEIGHT * 0.5)
-
-        energy_value = energy_score if energy_score is not None else 0.0
-        focus_value = focus_score if focus_score is not None else 0.0
-        emotion_value = emotion_score if emotion_score is not None else 0.0
-        recommendation_list = [recommendation] if recommendation else []
-        recommendation_value = json.dumps(recommendation_list, ensure_ascii=False)
-        coherence_value = coherence if coherence is not None else 0.0
-        stored_vector = to_pgvector(vector_clean)
-        if not forecast_text:
-            forecast_text = ""
-        elif not isinstance(forecast_text, str):
-            forecast_text = str(forecast_text)
 
         # ================================
-        # 5. Write forecast safely
-        # ================================
-        await db.execute(
-            """
-            INSERT INTO rhythm_forecasts (
-                person_id,
-                predicted_energy,
-                predicted_focus,
-                predicted_emotion,
-                forecast_text,
-                forecast_vector,
-                coherence,
-                forecast_window,
-                updated_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6::vector, $7, 'weekly', NOW())
-            ON CONFLICT (person_id)
-            DO UPDATE SET
-                predicted_energy = EXCLUDED.predicted_energy,
-                predicted_focus = EXCLUDED.predicted_focus,
-                predicted_emotion = EXCLUDED.predicted_emotion,
-                forecast_text = EXCLUDED.forecast_text,
-                forecast_vector = EXCLUDED.forecast_vector,
-                coherence = EXCLUDED.coherence,
-                forecast_window = EXCLUDED.forecast_window,
-                updated_at = NOW()
-            """,
-            person_id,
-            energy_value,
-            focus_value,
-            emotion_value,
-            forecast_text,
-            stored_vector,
-            coherence_value,
-        )
-        # ================================
-        # 6. Update personal_model safely
+        # 4. Update personal_model safely
         # ================================
         await db.execute(
             """
             UPDATE personal_model
-            SET rhythm_state = jsonb_build_object(
-                'energy_score', $2,
-                'focus_score', $3,
-                'emotion_score', $4,
-                'forecast_text', $5,
-                'coherence', $6,
-                'recommendation', $7,
-                'context', 'weekly'
-            ),
-            updated_at = NOW()
+            SET rhythm_state = $2::jsonb,
+                updated_at = NOW()
             WHERE person_id = $1
             """,
             person_id,
-            energy_value,
-            focus_value,
-            emotion_value,
-            forecast_text,
-            coherence_value,
-            recommendation_value,
+            json.dumps(rhythm_state, ensure_ascii=False),
         )
 
-        await log_event(
-            person_id,
-            "rhythm",
-            "Updated rhythm_forecast",
-            {
-                "energy_score": energy_score,
-                "focus_score": focus_score,
-                "emotion_score": emotion_score,
-                "coherence": coherence_value,
+        LOGGER.info(
+            "[Rhythm] updated rhythm_state",
+            extra={
+                "person_id": person_id,
+                "reflections": len(reflections),
+                "window_days": RHYTHM_WINDOW_DAYS,
+                "slots": {k: v["samples"] for k, v in slots.items()},
             },
         )
-        LOGGER.info("[Rhythm Forecast] Updated rhythm_state and forecast for %s", person_id)
+
         return {
             "person_id": person_id,
-            "energy_score": energy_score,
-            "focus_score": focus_score,
-            "emotion_score": emotion_score,
-            "forecast_text": forecast_text,
-            "coherence": coherence_value,
-            "recommendations": recommendation,
+            "rhythm_state": rhythm_state,
         }
-    finally:
-        await db.close()
-
-
-def _coerce_score(value: Any) -> float | None:
-    try:
-        if value is None:
-            return None
-        score = float(value)
-        return max(0.0, min(1.0, score))
-    except (TypeError, ValueError):
+    except Exception as exc:
+        LOGGER.error("[Rhythm Forecast] failed for %s: %s", person_id, exc, exc_info=True)
         return None
-
-
-def _apply_bias(base: float | None, bias: float, weight: float) -> float | None:
-    if base is None:
-        return None
-    adjusted = base + (bias * weight)
-    return max(0.0, min(1.0, adjusted))
-
-
-def normalize_recommendation(val: Any) -> str | None:
-    if val is None:
-        return None
-    if isinstance(val, str):
-        val = val.strip()
-        return val or None
-    if isinstance(val, list):
-        cleaned = [str(x).strip() for x in val if str(x).strip()]
-        return "; ".join(cleaned) if cleaned else None
-    val = str(val).strip()
-    return val or None
-
-
-def sanitize_embedding(raw: Any) -> List[float]:
-    import re
-
-    if isinstance(raw, list):
-        return [float(x) for x in raw]
-    if raw is None:
-        return []
-    cleaned = re.sub(r"[^0-9eE\.\-,]+", " ", str(raw))
-    parts = cleaned.replace("\n", " ").split()
-    try:
-        return [float(p) for p in parts]
-    except ValueError:
-        return []
-
-
-def _validate_vector(vec: Any, person_id: str) -> List[float]:
-    if not isinstance(vec, list):
-        LOGGER.error("[Rhythm] Invalid vector type for %s: %s", person_id, type(vec))
-        return [0.0] * 1536
-    if len(vec) != 1536:
-        LOGGER.warning(
-            "[Rhythm] Vector length mismatch for %s: got=%s expected=1536",
-            person_id,
-            len(vec),
-        )
-        return [0.0] * 1536
-    try:
-        return [float(x) for x in vec]
-    except Exception:
-        LOGGER.error("[Rhythm] Non-float entries in vector for %s", person_id)
-        return [0.0] * 1536
-
-
-async def compute_coherence(db: Any, person_id: str, new_vector: List[float]) -> float:
-    if not new_vector or len(new_vector) != 1536:
-        return 0.0
-    rows = await db.fetch(
-        "SELECT forecast_vector FROM rhythm_forecasts WHERE person_id = $1",
-        person_id,
-    )
-    vectors = []
-    for row in rows:
-        parsed = parse_pgvector(row.get("forecast_vector"))
-        if len(parsed) != 1536:
-            continue
-        vectors.append(np.array(parsed, dtype=float))
-    if not vectors:
-        return 1.0
-    prev = np.mean(vectors, axis=0)
-    numerator = float(np.dot(prev, np.array(new_vector, dtype=float)))
-    denom = float(np.linalg.norm(prev) * np.linalg.norm(new_vector))
-    if denom == 0:
-        return 0.0
-    return round(numerator / denom, 4)
-
-
-__all__ = ["run_rhythm_forecast"]

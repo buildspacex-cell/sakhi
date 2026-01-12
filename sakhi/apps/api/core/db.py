@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 from typing import Any, Sequence
+import json
 
 import asyncpg
 
@@ -21,9 +22,60 @@ async def get_pool() -> asyncpg.Pool:
         dsn = os.getenv("DATABASE_URL")
         if not dsn:
             raise RuntimeError("Missing required env var: DATABASE_URL")
+
+        async def _register_codecs(connection: asyncpg.Connection) -> None:
+            # Register pgvector codec only if the type exists in this DB.
+            try:
+                has_vector = await connection.fetchval(
+                    "SELECT 1 FROM pg_type WHERE typname = 'vector' LIMIT 1"
+                )
+            except Exception:
+                has_vector = False
+            if not has_vector:
+                return
+
+            async def _encode_vector(value: Any) -> str:
+                if value is None:
+                    return "[]"
+                try:
+                    return "[" + ",".join(str(float(x)) for x in value) + "]"
+                except Exception:
+                    return "[]"
+
+            async def _decode_vector(value: str) -> list[float]:
+                if not value:
+                    return []
+                try:
+                    parsed = json.loads(value)
+                    if isinstance(parsed, list):
+                        return [float(x) for x in parsed]
+                except Exception:
+                    pass
+                text = value.strip()
+                if text.startswith("[") and text.endswith("]"):
+                    text = text[1:-1]
+                parts = [p.strip() for p in text.split(",") if p.strip()]
+                try:
+                    return [float(p) for p in parts]
+                except Exception:
+                    return []
+
+            try:
+                await connection.set_type_codec(
+                    "vector",
+                    schema="pg_catalog",
+                    encoder=_encode_vector,
+                    decoder=_decode_vector,
+                    format="text",
+                )
+            except Exception:
+                # If the type exists but is not accessible, continue without the codec.
+                pass
+
         POOL = await asyncpg.create_pool(
             dsn,
             statement_cache_size=0,
+            init=_register_codecs,
         )
     return POOL
 
