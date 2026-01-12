@@ -654,7 +654,7 @@ export default function ReflectionLab() {
   };
 
   const workerPanels = useMemo(() => {
-    const orderedKeys = [...new Set([...workerCatalog.map((w) => w.key), ...Object.keys(workerRuns)])];
+    const orderedKeys = Array.from(new Set([...workerCatalog.map((w) => w.key), ...Object.keys(workerRuns)]));
     return orderedKeys.map((key) => {
       const config = workerCatalog.find((w) => w.key === key);
       const state = workerRuns[key] ?? { status: "idle" };
