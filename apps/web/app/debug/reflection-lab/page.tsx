@@ -50,6 +50,7 @@ type Snapshot = {
   soul_summary?: any;
   memory_weekly?: any;
   memory_monthly?: any;
+  warnings?: string[];
 };
 
 const palette = {

@@ -90,7 +90,7 @@ export default function MemoryDetailsPage() {
       }
     }
     return raw;
-  }, [data?.soul]);
+  }, [data]);
 
   const rhythmState = useMemo(() => {
     const raw = data?.rhythm?.rhythm_state;
@@ -103,7 +103,7 @@ export default function MemoryDetailsPage() {
       }
     }
     return raw;
-  }, [data?.rhythm]);
+  }, [data]);
 
   const longitudinalState = useMemo(() => {
     const raw =
@@ -119,7 +119,7 @@ export default function MemoryDetailsPage() {
       }
     }
     return raw;
-  }, [data?.longitudinal]);
+  }, [data]);
 
   const emotionState = useMemo(() => {
     const raw =
@@ -135,7 +135,7 @@ export default function MemoryDetailsPage() {
       }
     }
     return raw;
-  }, [data?.esr, data?.emotion]);
+  }, [data]);
 
   const emotionSoulRhythmState = useMemo(() => {
     const raw = data?.emotion_soul_rhythm?.emotion_soul_rhythm_state || {};
@@ -147,7 +147,7 @@ export default function MemoryDetailsPage() {
       }
     }
     return raw;
-  }, [data?.emotion_soul_rhythm]);
+  }, [data]);
 
   const personId = params.get("person_id") || "";
   const entryId = params.get("entry_id") || "";
