@@ -14,10 +14,13 @@ type MemoryDetails = {
   context_cache: any;
   entry: any;
   narrative?: any;
+  soul?: any;
   identity_momentum?: any;
   rhythm?: any;
   rhythm_soul?: any;
   longitudinal?: any;
+  emotion?: any;
+  emotion_soul_rhythm?: any;
   decision_graph?: any;
   esr?: any;
   goals_themes?: any[];
