@@ -7,6 +7,7 @@ import { getApiBase } from "@/lib/api-base";
 type MemoryDetails = {
   person_id: string;
   entry_id?: string | null;
+  updated_at?: string;
   short_term: any[];
   episodic: any[];
   recalls: any[];
