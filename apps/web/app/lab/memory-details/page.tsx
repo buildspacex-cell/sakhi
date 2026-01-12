@@ -16,6 +16,7 @@ type MemoryDetails = {
   narrative?: any;
   soul?: any;
   identity_momentum?: any;
+  identity_momentum_v2?: any;
   rhythm?: any;
   rhythm_soul?: any;
   longitudinal?: any;
