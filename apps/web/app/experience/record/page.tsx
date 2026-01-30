@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type React from "react";
 
@@ -41,12 +41,6 @@ const statusStyle: React.CSSProperties = {
   fontSize: "15px",
   color: palette.muted,
   marginBottom: "12px",
-};
-
-const weeklyCueStyle: React.CSSProperties = {
-  fontSize: "13px",
-  color: palette.muted,
-  marginBottom: "36px",
 };
 
 const micWrapperStyle: React.CSSProperties = {
@@ -90,17 +84,6 @@ const safetyStyle: React.CSSProperties = {
   marginTop: "8px",
 };
 
-const devSelectStyle: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: "10px",
-  border: `1px solid ${palette.muted}`,
-  background: "transparent",
-  color: palette.accent,
-  fontSize: "13px",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif',
-};
-
 export default function ExperienceRecordPage() {
   return (
     <Suspense fallback={null}>
@@ -111,64 +94,46 @@ export default function ExperienceRecordPage() {
 
 function ExperiencePageContent() {
   const searchParams = useSearchParams();
-  const DEV_USERS = useMemo(
-    () => ({
-      a: { label: "Vidhya" },
-      b: { label: "Ravi" },
-    }),
-    []
-  );
-  const searchUser = searchParams.get("user");
-  const initialDevUser = searchUser === "b" ? ("b" as const) : ("a" as const);
-  const [devUser, setDevUser] = useState<keyof typeof DEV_USERS>(initialDevUser);
+  const fallbackUser = searchParams.get("user");
+  const [authUser, setAuthUser] = useState<{ person_id: string; full_name?: string | null } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem("dev_user");
-      if (!searchUser && stored && stored !== devUser) {
-        setDevUser(stored as keyof typeof DEV_USERS);
-        return;
+    const loadAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) {
+          setError("Unable to load account. Please re-login.");
+          return;
+        }
+        const data = await res.json();
+        setAuthUser({ person_id: data.person_id, full_name: data.full_name });
+      } catch {
+        setError("Unable to load account. Please re-login.");
+      } finally {
+        setAuthLoading(false);
       }
-      window.localStorage.setItem("dev_user", devUser);
-      const url = new URL(window.location.href);
-      url.searchParams.set("user", devUser);
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, [devUser, searchUser, DEV_USERS]);
+    };
+    loadAuth();
+  }, []);
 
-  const devLabel = DEV_USERS[devUser]?.label || devUser;
-  const withUser = (
-    path: "/experience/listening" | "/experience/type"
-  ) => ({
-    pathname: path,
-    query: { user: devUser },
-  });
+  const personId = authUser?.person_id || fallbackUser || "";
+  const displayName = authUser?.full_name || null;
 
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
         <div style={brandStyle}>Sakhi</div>
 
-        <div style={statusStyle}>Listening — {devLabel} (dev slot)</div>
-        <div style={weeklyCueStyle}>This reflection contributes to your week.</div>
-
-        <div style={{ marginBottom: 16 }}>
-          <select
-            value={devUser}
-            onChange={(e) => setDevUser(e.target.value as keyof typeof DEV_USERS)}
-            style={devSelectStyle}
-            aria-label="Select dev user"
-          >
-            {Object.entries(DEV_USERS).map(([key, value]) => (
-              <option value={key} key={key}>
-                {value.label}
-              </option>
-            ))}
-          </select>
+        <div style={statusStyle}>
+          {authLoading ? "Loading account…" : `Listening${displayName ? `, ${displayName}` : ""}`}
         </div>
-
         <div style={micWrapperStyle}>
-          <Link href={withUser("/experience/listening")} style={{ textDecoration: "none" }}>
+          <Link
+            href={`/experience/listening?user=${encodeURIComponent(personId)}`}
+            style={{ textDecoration: "none", pointerEvents: personId ? "auto" : "none", opacity: personId ? 1 : 0.6 }}
+          >
             <button type="button" style={micButtonStyle} aria-label="Start recording">
               <svg
                 viewBox="0 0 24 24"
@@ -193,11 +158,14 @@ function ExperiencePageContent() {
           tell me what’s been on your mind.
         </div>
 
-        <Link href={withUser("/experience/type")} style={{ textDecoration: "none" }}>
+        <Link
+          href={`/experience/type?user=${encodeURIComponent(personId)}`}
+          style={{ textDecoration: "none", pointerEvents: personId ? "auto" : "none", opacity: personId ? 1 : 0.6 }}
+        >
           <div style={altInputStyle}>Type instead</div>
         </Link>
 
-        <div style={safetyStyle}>Only you and Sakhi see this.</div>
+        <div style={safetyStyle}>{error || "Only you and Sakhi see this."}</div>
       </div>
     </div>
   );

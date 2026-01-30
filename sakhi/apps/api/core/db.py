@@ -103,6 +103,11 @@ async def dbfetchrow(sql: str, *args: Any) -> Any:
     return await q(sql, *args, one=True)
 
 
+async def dbfetchall(sql: str, *args: Any) -> list[dict[str, Any]]:
+    """Fetch all rows and return them as a list of dicts."""
+    return await q(sql, *args, one=False)
+
+
 class DBSession:
     def __init__(self, pool: asyncpg.Pool, connection: asyncpg.Connection) -> None:
         self._pool = pool

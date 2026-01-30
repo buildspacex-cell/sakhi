@@ -98,24 +98,6 @@ async def write_deep_context_recall(
         LOGGER.warning("[DeepRecall] failed to insert context_recalls for %s: %s", person_id, exc)
         return
 
-    # Optional life-event link from first entity.
-    if entities:
-        try:
-            await dbexec(
-                """
-                INSERT INTO life_event_links (id, person_id, recall_id, event_label, weight, evidence)
-                VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-                """,
-                str(uuid.uuid4()),
-                person_id,
-                str(recall_id),
-                entities[0],
-                1.0,
-                json.dumps({"entities": entities[:3]}, ensure_ascii=False),
-            )
-        except Exception as exc:  # pragma: no cover
-            LOGGER.warning("[DeepRecall] failed to insert life_event_links for %s: %s", person_id, exc)
-
     # Thread continuity marker (upsert).
     if thread_id:
         try:

@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sakhi - Click Through Prototype</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #0d0d0d;
+      color: #ffffff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Screen Container */
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 60px 24px;
+      max-width: 420px;
+      margin: 0 auto;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Typography */
+    .brand {
+      font-size: 14px;
+      letter-spacing: 4px;
+      color: #666;
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 400;
+      line-height: 1.4;
+      margin-bottom: 16px;
+      color: #fff;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 400;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: #888;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+
+    .small-text {
+      font-size: 13px;
+      color: #555;
+      margin-top: 24px;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      background: transparent;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 14px 32px;
+      font-size: 14px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 8px;
+    }
+
+    .btn-primary:hover {
+      background: #1a1a1a;
+      border-color: #444;
+    }
+
+    .btn-text {
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 12px;
+      transition: color 0.3s ease;
+    }
+
+    .btn-text:hover {
+      color: #888;
+    }
+
+    /* Mic Button */
+    .mic-container {
+      margin: 40px 0;
+    }
+
+    .mic-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .mic-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .mic-btn.recording {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.4);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+      50% { box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
+    }
+
+    .mic-icon {
+      width: 24px;
+      height: 24px;
+      fill: #fff;
+    }
+
+    /* Quiz Options */
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+      margin: 20px 0;
+    }
+
+    .quiz-option {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid #222;
+      padding: 16px 20px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 15px;
+      color: #ccc;
+    }
+
+    .quiz-option:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: #333;
+    }
+
+    .quiz-option.selected {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: #555;
+      color: #fff;
+    }
+
+    /* Progress Indicator */
+    .progress {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 40px;
+    }
+
+    .progress-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #333;
+    }
+
+    .progress-dot.active {
+      background: #666;
+    }
+
+    .progress-dot.completed {
+      background: #888;
+    }
+
+    /* Operating System Card */
+    .os-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+      border: 1px solid #222;
+      border-radius: 16px;
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 320px;
+      margin: 24px 0;
+    }
+
+    .os-type {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    .os-name {
+      font-size: 26px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .os-subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    .os-traits {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .trait-tag {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid #333;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: #888;
+      border-radius: 20px;
+    }
+
+    /* State Card */
+    .state-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+      max-width: 320px;
+      margin: 12px 0;
+      text-align: left;
+    }
+
+    .state-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    .state-value {
+      font-size: 18px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .state-detail {
+      font-size: 13px;
+      color: #666;
+    }
+
+    /* Friction State */
+    .friction-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .friction-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .friction-dot.chaos { background: #e8c547; }
+    .friction-dot.intensity { background: #e85747; }
+    .friction-dot.stagnation { background: #4787e8; }
+    .friction-dot.balanced { background: #47e887; }
+
+    /* Recommendations */
+    .rec-list {
+      width: 100%;
+      max-width: 320px;
+      text-align: left;
+    }
+
+    .rec-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .rec-icon {
+      width: 20px;
+      height: 20px;
+      fill: #666;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .rec-text {
+      font-size: 14px;
+      color: #aaa;
+      line-height: 1.5;
+    }
+
+    .rec-why {
+      font-size: 12px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    /* Timeline */
+    .timeline {
+      width: 100%;
+      max-width: 320px;
+      margin: 20px 0;
+    }
+
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .timeline-time {
+      width: 60px;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .timeline-content {
+      flex: 1;
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .timeline-tag {
+      font-size: 11px;
+      color: #666;
+      background: rgba(255,255,255,0.05);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #0d0d0d;
+      border-top: 1px solid #1a1a1a;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0 24px;
+      z-index: 100;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 8px 16px;
+      opacity: 0.5;
+      transition: opacity 0.3s ease;
+    }
+
+    .nav-item.active {
+      opacity: 1;
+    }
+
+    .nav-item:hover {
+      opacity: 0.8;
+    }
+
+    .nav-icon {
+      width: 24px;
+      height: 24px;
+      fill: #fff;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      color: #888;
+      letter-spacing: 0.5px;
+    }
+
+    /* Transcript */
+    .transcript {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+      max-width: 320px;
+      margin: 20px 0;
+      text-align: left;
+      font-size: 14px;
+      color: #888;
+      line-height: 1.7;
+      font-style: italic;
+    }
+
+    /* Insights */
+    .insight-card {
+      background: linear-gradient(135deg, rgba(232,197,71,0.05) 0%, rgba(232,197,71,0.02) 100%);
+      border: 1px solid rgba(232,197,71,0.2);
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+      max-width: 320px;
+      margin: 12px 0;
+      text-align: left;
+    }
+
+    .insight-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #e8c547;
+      margin-bottom: 8px;
+      opacity: 0.7;
+    }
+
+    .insight-text {
+      font-size: 15px;
+      color: #fff;
+      line-height: 1.6;
+    }
+
+    /* Coherence Meter */
+    .coherence-container {
+      width: 100%;
+      max-width: 320px;
+      margin: 24px 0;
+    }
+
+    .coherence-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .coherence-title {
+      font-size: 12px;
+      color: #666;
+      letter-spacing: 1px;
+    }
+
+    .coherence-value {
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .coherence-bar {
+      height: 4px;
+      background: #222;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .coherence-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #e85747 0%, #e8c547 50%, #47e887 100%);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    /* Week Summary */
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 320px;
+      margin: 20px 0;
+    }
+
+    .day-cell {
+      aspect-ratio: 1;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid #222;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #555;
+    }
+
+    .day-cell.has-data {
+      background: rgba(71, 232, 135, 0.1);
+      border-color: rgba(71, 232, 135, 0.3);
+    }
+
+    .day-label {
+      margin-bottom: 4px;
+    }
+
+    .day-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #333;
+    }
+
+    .day-cell.has-data .day-dot {
+      background: #47e887;
+    }
+
+    /* Spacer for bottom nav */
+    .nav-spacer {
+      height: 80px;
+    }
+
+    /* Loading animation */
+    .loading-dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .loading-dot {
+      width: 8px;
+      height: 8px;
+      background: #444;
+      border-radius: 50%;
+      animation: loadingPulse 1.4s ease-in-out infinite;
+    }
+
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes loadingPulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* Screen indicator */
+    .screen-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255,255,255,0.1);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #666;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="screen-indicator" id="screenIndicator">Screen 1/16</div>
+
+  <!-- SCREEN 1: Welcome -->
+  <div class="screen active" id="screen1">
+    <div class="brand">SAKHI</div>
+    <h1>This is a quiet space to unload your mind.</h1>
+    <p class="subtitle">Say whatever is present — you don't need to sort it.</p>
+    <button class="btn-primary" onclick="goTo(2)">BEGIN</button>
+    <p class="small-text">2 min to discover your Operating System</p>
+  </div>
+
+  <!-- SCREEN 2: Intro to Assessment -->
+  <div class="screen" id="screen2">
+    <div class="brand">SAKHI</div>
+    <h2>Before we begin, let's understand how you naturally operate.</h2>
+    <p class="subtitle">Everyone has a unique internal operating system — patterns of energy, focus, and recovery that are distinctly yours.</p>
+    <button class="btn-primary" onclick="goTo(3)">DISCOVER MINE</button>
+  </div>
+
+  <!-- SCREEN 3: Quiz Q1 -->
+  <div class="screen" id="screen3">
+    <div class="progress">
+      <div class="progress-dot active"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+    </div>
+    <h2>When facing a new challenge, you typically...</h2>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3)">Jump in quickly with ideas and adapt as you go</div>
+      <div class="quiz-option" onclick="selectOption(this, 3)">Analyze thoroughly, then execute with intensity</div>
+      <div class="quiz-option" onclick="selectOption(this, 3)">Take time to process, prefer steady progress</div>
+    </div>
+    <button class="btn-text" onclick="goTo(4)">Next</button>
+  </div>
+
+  <!-- SCREEN 4: Quiz Q2 -->
+  <div class="screen" id="screen4">
+    <div class="progress">
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+    </div>
+    <h2>Your energy throughout the day is usually...</h2>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 4)">Variable — bursts of creativity, then need rest</div>
+      <div class="quiz-option" onclick="selectOption(this, 4)">Intense — strong and focused until I crash</div>
+      <div class="quiz-option" onclick="selectOption(this, 4)">Steady — consistent, takes time to get going</div>
+    </div>
+    <button class="btn-text" onclick="goTo(5)">Next</button>
+  </div>
+
+  <!-- SCREEN 5: Quiz Q3 -->
+  <div class="screen" id="screen5">
+    <div class="progress">
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+    </div>
+    <h2>When stressed, you tend to...</h2>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 5)">Feel scattered, anxious, hard to focus</div>
+      <div class="quiz-option" onclick="selectOption(this, 5)">Become irritable, critical, or impatient</div>
+      <div class="quiz-option" onclick="selectOption(this, 5)">Withdraw, feel heavy, unmotivated</div>
+    </div>
+    <button class="btn-text" onclick="goTo(6)">Next</button>
+  </div>
+
+  <!-- SCREEN 6: Quiz Q4 -->
+  <div class="screen" id="screen6">
+    <div class="progress">
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-dot"></div>
+    </div>
+    <h2>Your ideal work environment is...</h2>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 6)">Dynamic, varied, room for spontaneity</div>
+      <div class="quiz-option" onclick="selectOption(this, 6)">Challenging, goal-oriented, competitive</div>
+      <div class="quiz-option" onclick="selectOption(this, 6)">Calm, predictable, harmonious</div>
+    </div>
+    <button class="btn-text" onclick="goTo(7)">Next</button>
+  </div>
+
+  <!-- SCREEN 7: Quiz Q5 -->
+  <div class="screen" id="screen7">
+    <div class="progress">
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot completed"></div>
+      <div class="progress-dot active"></div>
+    </div>
+    <h2>When it comes to sleep...</h2>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 7)">Light sleeper, irregular patterns, vivid dreams</div>
+      <div class="quiz-option" onclick="selectOption(this, 7)">Moderate, sometimes wake hot or restless</div>
+      <div class="quiz-option" onclick="selectOption(this, 7)">Deep sleeper, hard to wake, need 8+ hours</div>
+    </div>
+    <button class="btn-text" onclick="goTo(8)">See my results</button>
+  </div>
+
+  <!-- SCREEN 8: Calculating -->
+  <div class="screen" id="screen8">
+    <div class="brand">SAKHI</div>
+    <h2>Analyzing your patterns...</h2>
+    <div class="loading-dots">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+    <p class="subtitle">Mapping your unique operating system</p>
+    <script>
+      // Auto-advance after 2 seconds
+      if (document.getElementById('screen8').classList.contains('active')) {
+        setTimeout(() => goTo(9), 2000);
+      }
+    </script>
+  </div>
+
+  <!-- SCREEN 9: OS Reveal -->
+  <div class="screen" id="screen9">
+    <div class="brand">SAKHI</div>
+    <p class="subtitle">Your Operating System</p>
+    <div class="os-card">
+      <div class="os-type">PRIMARY TYPE</div>
+      <div class="os-name">Adaptive-Performance</div>
+      <div class="os-subtitle">Creative intensity with drive</div>
+      <div class="os-traits">
+        <span class="trait-tag">Quick thinking</span>
+        <span class="trait-tag">Innovative</span>
+        <span class="trait-tag">Driven</span>
+        <span class="trait-tag">Variable energy</span>
+      </div>
+    </div>
+    <p class="subtitle" style="font-size: 14px; max-width: 300px;">You blend creativity with execution. Your mind moves fast, you pursue goals intensely, but you need variety and can burn out without recovery.</p>
+    <button class="btn-primary" onclick="goTo(10)">UNDERSTAND MORE</button>
+  </div>
+
+  <!-- SCREEN 10: OS Deep Dive -->
+  <div class="screen" id="screen10">
+    <h2>How your system works</h2>
+
+    <div class="state-card">
+      <div class="state-label">YOUR STRENGTHS</div>
+      <div class="state-detail" style="color: #aaa;">
+        Quick to generate ideas<br>
+        Strong execution when engaged<br>
+        Adaptable to change<br>
+        Natural problem solver
+      </div>
+    </div>
+
+    <div class="state-card">
+      <div class="state-label">YOUR VULNERABILITIES</div>
+      <div class="state-detail" style="color: #aaa;">
+        Prone to scattered energy<br>
+        Risk of burnout from intensity<br>
+        Difficulty with routine<br>
+        Can push past limits
+      </div>
+    </div>
+
+    <p class="subtitle" style="font-size: 13px;">Sakhi will track your daily state against this baseline to help you stay balanced.</p>
+
+    <button class="btn-primary" onclick="goTo(11)">START CONVERSATION</button>
+  </div>
+
+  <!-- SCREEN 11: First Conversation Intro -->
+  <div class="screen" id="screen11">
+    <div class="brand">SAKHI</div>
+    <h2>Let's have your first conversation.</h2>
+    <p class="subtitle">Just speak naturally about whatever's on your mind. Sakhi listens and learns how you're operating today.</p>
+    <div class="mic-container">
+      <div class="mic-btn" onclick="goTo(12)">
+        <svg class="mic-icon" viewBox="0 0 24 24">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5z"/>
+          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+      </div>
+    </div>
+    <p style="color: #888; font-size: 15px;">Tap to begin</p>
+    <button class="btn-text" onclick="goTo(12)">Type instead</button>
+    <p class="small-text">Only you and Sakhi see this.</p>
+  </div>
+
+  <!-- SCREEN 12: Recording -->
+  <div class="screen" id="screen12">
+    <div class="brand">SAKHI</div>
+    <p style="color: #888; margin-bottom: 20px;">Listening...</p>
+    <div class="mic-container">
+      <div class="mic-btn recording" onclick="goTo(13)">
+        <svg class="mic-icon" viewBox="0 0 24 24">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5z"/>
+          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+      </div>
+    </div>
+    <h2 style="font-size: 18px;">Take your time.<br>I'm here.</h2>
+    <p class="small-text">Tap the mic to stop</p>
+  </div>
+
+  <!-- SCREEN 13: Processing Conversation -->
+  <div class="screen" id="screen13">
+    <div class="brand">SAKHI</div>
+    <div class="transcript">
+      "I've been feeling really scattered lately. There's so much going on at work, and I can't seem to focus on one thing. I keep jumping between tasks but nothing feels complete. Didn't sleep well last night either..."
+    </div>
+    <div class="loading-dots">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+    <p class="subtitle">Understanding your state...</p>
+    <button class="btn-text" onclick="goTo(14)">Continue</button>
+  </div>
+
+  <!-- SCREEN 14: Today's State -->
+  <div class="screen" id="screen14">
+    <div class="brand">SAKHI</div>
+    <p style="color: #666; font-size: 12px; letter-spacing: 2px; margin-bottom: 20px;">YOUR STATE TODAY</p>
+
+    <div class="state-card">
+      <div class="state-label">OPERATING MODE</div>
+      <div class="state-value">Activation Mode</div>
+      <div class="state-detail">Running high — energy scattered across many things</div>
+    </div>
+
+    <div class="state-card">
+      <div class="friction-indicator">
+        <div class="friction-dot chaos"></div>
+        <div>
+          <div class="state-value">Chaos Friction</div>
+          <div class="state-detail">Your Adaptive side is amplified</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-card">
+      <div class="state-label">BASELINE DRIFT</div>
+      <div class="state-value">32% elevated</div>
+      <div class="state-detail">Sleep debt + task overload contributing</div>
+    </div>
+
+    <button class="btn-primary" onclick="goTo(15)">WHAT SHOULD I DO?</button>
+    <button class="btn-text" onclick="goTo(16)">See my week</button>
+  </div>
+
+  <!-- SCREEN 15: Recommendations -->
+  <div class="screen" id="screen15">
+    <p style="color: #666; font-size: 12px; letter-spacing: 2px; margin-bottom: 20px;">RIGHT NOW</p>
+    <h2 style="font-size: 20px; margin-bottom: 24px;">To settle your Chaos Friction</h2>
+
+    <div class="rec-list">
+      <div class="rec-item">
+        <svg class="rec-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div>
+          <div class="rec-text">Close 2-3 open loops before anything new</div>
+          <div class="rec-why">Reduces mental scatter immediately</div>
+        </div>
+      </div>
+
+      <div class="rec-item">
+        <svg class="rec-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/></svg>
+        <div>
+          <div class="rec-text">5 minutes of slow, deep breathing</div>
+          <div class="rec-why">Activates your recovery system</div>
+        </div>
+      </div>
+
+      <div class="rec-item">
+        <svg class="rec-icon" viewBox="0 0 24 24"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.92 6-4.72 7.28L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.94 2.55 2 6.81 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5v-5l-2.28 2.28C6.92 18 5 15.21 5 12c0-4.08 3.05-7.44 7-7.93V2.05z" fill="currentColor"/></svg>
+        <div>
+          <div class="rec-text">Warm drink, no caffeine</div>
+          <div class="rec-why">Grounding without more stimulation</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-label">PATTERN NOTICED</div>
+      <div class="insight-text">Sleep debt tends to amplify your scattered energy. Tonight, aim for bed 30 min earlier.</div>
+    </div>
+
+    <button class="btn-text" onclick="goTo(16)">See my week</button>
+    <div class="nav-spacer"></div>
+  </div>
+
+  <!-- SCREEN 16: Weekly View / Home -->
+  <div class="screen" id="screen16">
+    <div class="brand">SAKHI</div>
+    <p style="color: #666; font-size: 12px; letter-spacing: 2px; margin-bottom: 8px;">THIS WEEK</p>
+    <h2 style="font-size: 20px; margin-bottom: 16px;">Your Operating Rhythm</h2>
+
+    <div class="coherence-container">
+      <div class="coherence-label">
+        <span class="coherence-title">COHERENCE</span>
+        <span class="coherence-value">64%</span>
+      </div>
+      <div class="coherence-bar">
+        <div class="coherence-fill" style="width: 64%;"></div>
+      </div>
+    </div>
+
+    <div class="week-grid">
+      <div class="day-cell has-data"><span class="day-label">M</span><span class="day-dot"></span></div>
+      <div class="day-cell has-data"><span class="day-label">T</span><span class="day-dot"></span></div>
+      <div class="day-cell has-data"><span class="day-label">W</span><span class="day-dot"></span></div>
+      <div class="day-cell"><span class="day-label">T</span><span class="day-dot"></span></div>
+      <div class="day-cell"><span class="day-label">F</span><span class="day-dot"></span></div>
+      <div class="day-cell"><span class="day-label">S</span><span class="day-dot"></span></div>
+      <div class="day-cell"><span class="day-label">S</span><span class="day-dot"></span></div>
+    </div>
+
+    <div class="state-card">
+      <div class="state-label">DOMINANT STATE</div>
+      <div class="friction-indicator" style="margin: 8px 0;">
+        <div class="friction-dot chaos"></div>
+        <div class="state-value">Chaos Friction</div>
+      </div>
+      <div class="state-detail">3 of 3 days showing elevated Adaptive energy</div>
+    </div>
+
+    <div class="state-card">
+      <div class="state-label">WEEKLY INSIGHT</div>
+      <div class="state-detail" style="color: #aaa; line-height: 1.6;">Your Adaptive-Performance system is running hot this week. The scattered pattern usually resolves with consistent evening wind-down.</div>
+    </div>
+
+    <button class="btn-primary" onclick="goTo(11)">NEW CONVERSATION</button>
+
+    <div class="nav-spacer"></div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+      <div class="nav-item active" onclick="goTo(16)">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/></svg>
+        <span class="nav-label">Home</span>
+      </div>
+      <div class="nav-item" onclick="goTo(11)">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" fill="currentColor"/></svg>
+        <span class="nav-label">Talk</span>
+      </div>
+      <div class="nav-item" onclick="goTo(9)">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" fill="currentColor"/></svg>
+        <span class="nav-label">Profile</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Track current screen
+    let currentScreen = 1;
+    const totalScreens = 16;
+
+    function goTo(screenNum) {
+      // Hide current screen
+      document.getElementById('screen' + currentScreen).classList.remove('active');
+
+      // Show new screen
+      document.getElementById('screen' + screenNum).classList.add('active');
+      currentScreen = screenNum;
+
+      // Update indicator
+      document.getElementById('screenIndicator').textContent = 'Screen ' + screenNum + '/' + totalScreens;
+
+      // Auto-advance for loading screen
+      if (screenNum === 8) {
+        setTimeout(() => goTo(9), 2500);
+      }
+    }
+
+    function selectOption(element, screenNum) {
+      // Remove selected from siblings
+      const options = element.parentElement.querySelectorAll('.quiz-option');
+      options.forEach(opt => opt.classList.remove('selected'));
+
+      // Add selected to clicked option
+      element.classList.add('selected');
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        if (currentScreen < totalScreens) goTo(currentScreen + 1);
+      } else if (e.key === 'ArrowLeft') {
+        if (currentScreen > 1) goTo(currentScreen - 1);
+      }
+    });
+  </script>
+
+</body>
+</html>

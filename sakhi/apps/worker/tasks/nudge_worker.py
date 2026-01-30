@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import os
 from typing import Any, Dict
 
@@ -14,6 +15,20 @@ from sakhi.libs.scaffolding import (
     require_suppression_check,
     SuppressionSensitivity,
 )
+
+
+def _ensure_dict(val: Any) -> Dict[str, Any]:
+    """Convert value to dict, handling JSON strings."""
+    if isinstance(val, dict):
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+    return {}
 
 
 async def _send_nudge_message(person_id: str, message: str) -> None:
@@ -60,8 +75,8 @@ async def run_nudge_check(person_id: str) -> Dict[str, Any]:
         person_id,
         one=True,
     ) or {}
-    tone_state = pm_row.get("tone_state") or {}
-    forecast_state = forecast_row.get("forecast_state") or {}
+    tone_state = _ensure_dict(pm_row.get("tone_state"))
+    forecast_state = _ensure_dict(forecast_row.get("forecast_state"))
 
     nudge = await compute_nudge(person_id, forecast_state, tone_state)
     if not nudge.get("should_send"):

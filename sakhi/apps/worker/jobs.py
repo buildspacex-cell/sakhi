@@ -104,7 +104,17 @@ def _get_router() -> LLMRouter:
     router = LLMRouter()
     chat_providers: List[str] = []
 
-    provider_pref = (os.getenv("LLM_PROVIDER") or "openrouter").lower()
+    provider_pref = (os.getenv("LLM_PROVIDER") or "").lower()
+    # Auto-detect provider when not explicitly set
+    if not provider_pref:
+        has_openai = bool(os.getenv("OPENAI_API_KEY"))
+        has_openrouter = bool(settings.openrouter_api_key or os.getenv("LLM_API_KEY"))
+        if has_openai and has_openrouter:
+            provider_pref = "both"
+        elif has_openai:
+            provider_pref = "openai"
+        else:
+            provider_pref = "openrouter"
 
     openai_provider = make_openai_provider_from_env()
     if openai_provider and provider_pref in {"openai", "both"}:

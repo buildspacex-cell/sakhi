@@ -13,7 +13,6 @@ from rq import Queue
 
 from sakhi.apps.api.core.db import dbfetchrow, exec as dbexec, q
 from sakhi.apps.api.core.person_utils import resolve_person_id
-from sakhi.apps.logic.relationship_engine import update_from_focus
 from sakhi.apps.api.services.memory.stm_config import compute_expires_at
 
 
@@ -266,10 +265,7 @@ async def end_focus_session(session_id: str, completion_score: Optional[float], 
     )
 
     await _record_summary(person_id=session.get("person_id"), session_id=session_id, task_id=session.get("task_id"), duration_minutes=actual_minutes, completion_score=completion_score)
-    try:
-        await update_from_focus(session.get("person_id"), completion_score)
-    except Exception as exc:  # pragma: no cover - best effort
-        print(f"[Focus] relationship update failed for {session.get('person_id')}: {exc}")
+    # Note: Relationship update now handled by background workers
     return {"status": "ok", "session_id": session_id}
 
 

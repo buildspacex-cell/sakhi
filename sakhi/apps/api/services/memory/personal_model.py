@@ -94,7 +94,8 @@ async def update_personal_model(
 
     raw_text = payload.get("text") or payload.get("user_text") or ""
     layer = payload.get("layer") or "conversation"
-    entry_id = payload.get("entry_id")
+    entry_id_raw = payload.get("entry_id")
+    entry_id = str(entry_id_raw) if entry_id_raw else None  # Ensure UUID is serializable
 
     normalized_text = _normalize_text(raw_text)
     if not normalized_text:
@@ -256,13 +257,16 @@ async def update_personal_model(
         )
         intents_payload = []
         for row in intents_rows or []:
+            last_seen = row.get("last_seen")
+            if hasattr(last_seen, "isoformat"):
+                last_seen = last_seen.isoformat()
             intents_payload.append(
                 {
                     "name": row.get("intent_name"),
                     "strength": float(row.get("strength") or 0),
                     "trend": row.get("trend"),
                     "emotional_alignment": float(row.get("emotional_alignment") or 0),
-                    "last_seen": row.get("last_seen"),
+                    "last_seen": last_seen,
                 }
             )
         long_term["intents"] = intents_payload

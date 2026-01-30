@@ -11,16 +11,15 @@ from sakhi.apps.api.core.db import q
 from sakhi.apps.worker.tasks.weekly_rhythm_rollup_worker import (
     run_weekly_rhythm_rollup,
 )
-from sakhi.apps.worker.tasks.weekly_planner_pressure_worker import (
-    run_weekly_planner_pressure,
-)
 from sakhi.apps.worker.tasks.weekly_signals_worker import (
     run_weekly_signals_worker,
 )
-from sakhi.apps.worker.tasks.turn_personal_model_update import (
+# NOTE: Using stubs for archived workers (v2 refactor)
+from sakhi.apps.worker.tasks._stubs import (
+    run_weekly_planner_pressure,
     run_turn_personal_model_update,
+    generate_weekly_reflection,
 )
-from sakhi.apps.worker.tasks.weekly_reflection import generate_weekly_reflection
 from sakhi.libs.schemas.settings import get_settings
 
 logger = logging.getLogger(__name__)

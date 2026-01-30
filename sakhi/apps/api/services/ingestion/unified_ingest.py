@@ -139,12 +139,10 @@ async def ingest_heavy(
     entry_id = entry_id or str(uuid.uuid4())
 
     # Best-effort eviction before inserting new STM rows.
-    disable_eviction = os.getenv("LAB_DISABLE_STM_EVICT", "0") == "1"
-    if not disable_eviction:
-        try:
-            await cleanup_expired_short_term()
-        except Exception:
-            pass
+    try:
+        await cleanup_expired_short_term()
+    except Exception:
+        pass
 
     person_id = await resolve_person_id(person_id) or person_id
     if text is None:

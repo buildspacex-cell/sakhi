@@ -9,7 +9,6 @@ from sakhi.apps.api.core.db import q
 from sakhi.apps.api.services.memory.context_synthesizer import synthesize_memory_context
 
 _CACHE_TABLE = os.getenv("MEMORY_CONTEXT_CACHE_TABLE", "memory_context_cache")
-_ENABLE_FALLBACK = os.getenv("SAKHI_BUILD32_CONTEXT_FALLBACK", "1") == "1"
 LOGGER = logging.getLogger(__name__)
 
 
@@ -59,16 +58,7 @@ async def load_memory_context(person_id: str, *, limit: int = 8) -> Dict[str, An
             "cache_hit": True,
         }
 
-    if not _ENABLE_FALLBACK:
-        return {
-            "entries": [],
-            "rhythm": {},
-            "persona": {},
-            "tasks": [],
-            "memory_context": "",
-            "cache_hit": False,
-        }
-
+    # Fallback: synthesize memory context on-demand
     memory_context = await synthesize_memory_context(person_id=person_id, user_query="", limit=350)
     return {
         "entries": [],

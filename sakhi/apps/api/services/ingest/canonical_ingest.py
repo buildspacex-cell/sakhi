@@ -37,8 +37,7 @@ async def canonical_ingest(
     meta: Optional[Dict[str, Any]] = None,
     facets: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    if os.getenv("SAKHI_UNIFIED_INGEST") != "1":
-        return {"status": "disabled", "reason": "SAKHI_UNIFIED_INGEST=0"}
+    # Unified ingest is always enabled
 
     if isinstance(ts, str):
         try:

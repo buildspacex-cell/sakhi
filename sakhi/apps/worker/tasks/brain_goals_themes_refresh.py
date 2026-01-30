@@ -13,7 +13,33 @@ from sakhi.apps.api.core.person_utils import resolve_person_id
 logger = logging.getLogger(__name__)
 
 
+def _ensure_float_vector(vec: Any) -> List[float]:
+    """Convert vector from various formats to List[float]."""
+    if not vec:
+        return []
+    if isinstance(vec, str):
+        # Handle pgvector string format like "[0.1,0.2,0.3]"
+        import json
+        try:
+            vec = vec.strip()
+            if vec.startswith("[") and vec.endswith("]"):
+                parsed = json.loads(vec)
+                return [float(x) for x in parsed]
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return []
+    if isinstance(vec, (list, tuple)):
+        try:
+            return [float(x) for x in vec]
+        except (TypeError, ValueError):
+            return []
+    return []
+
+
 def _norm(vec: List[float]) -> List[float]:
+    vec = _ensure_float_vector(vec)
+    if not vec:
+        return []
     mag = math.sqrt(sum(x * x for x in vec)) or 1.0
     return [x / mag for x in vec]
 
@@ -27,7 +53,7 @@ def _cos_sim(a: List[float], b: List[float]) -> float:
 def _cluster_entries(entries: List[Dict[str, Any]], threshold: float = 0.18) -> List[Dict[str, Any]]:
     clusters: List[Dict[str, Any]] = []
     for entry in entries:
-        vec = entry.get("vector") or []
+        vec = _ensure_float_vector(entry.get("vector"))
         if not vec:
             continue
         placed = False

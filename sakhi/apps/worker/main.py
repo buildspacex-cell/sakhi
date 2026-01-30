@@ -1,6 +1,14 @@
 import logging
 import os
+import sys
+from pathlib import Path
 from typing import List
+
+# Ensure project root is on sys.path so `sakhi.*` imports resolve
+# regardless of how this module is launched (dev script, python -m, etc.)
+_PROJECT_ROOT = str(Path(__file__).resolve().parents[3])
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 from redis import Redis
 from rq import Queue, Worker

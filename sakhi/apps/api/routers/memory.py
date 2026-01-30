@@ -36,8 +36,6 @@ from sakhi.apps.api.core.person_utils import resolve_person_id
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/memory", tags=["memory"])
-BUILD32_MODE = os.getenv("SAKHI_BUILD32_MODE", "0") == "1"
-logger.info("[observe] Build32 mode=%s", BUILD32_MODE)
 
 ALLOWED_LAYERS = {"journal", "conversation", "planner", "command"}
 
@@ -158,13 +156,10 @@ async def _persist_web_snippet(person_id: str, query: str, snippet: str, ts: dt.
 
 @router.post("/observe")
 async def observe(body: ObserveIn) -> Dict[str, Any]:
-    UNIFIED = os.getenv("SAKHI_UNIFIED_INGEST") == "1"
     normalized_text = (body.text or "").strip()
     if not normalized_text:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="text cannot be empty")
     body.text = normalized_text
-    if BUILD32_MODE:
-        return await _observe_lightweight(body)
 
     base_ref = body.person_id or os.getenv("DEMO_USER_ID")
     resolved = await resolve_person_id(base_ref)
@@ -563,30 +558,7 @@ async def observe(body: ObserveIn) -> Dict[str, Any]:
     else:
         narrative_debug = None
 
-    unified_narrative = None
-    if os.getenv("SAKHI_DEV_DEBUG") == "1":
-        try:
-            unified_narrative = build_unified_narrative(
-                {
-                    "person_id": person_id,
-                    "input_text": body.text,
-                    "reply_text": None,
-                    "triage": triage,
-                    "intents": intent_labels,
-                    "emotion": mood_affect,
-                    "topics": [theme] if theme else [],
-                    "memory_context": memory_layer_summary,
-                    "reasoning": {"summary": human_narrative},
-                    "personal_model": personal_model_payload.get("data") if personal_model_payload else {},
-                    "planner": {},
-                    "layer": body.layer,
-                }
-            )
-        except Exception as exc:
-            unified_narrative = {"error": str(exc)}
-
-    if unified_narrative:
-        response_payload["narrative"] = unified_narrative
+    # Debug narrative disabled by default
 
     response = JSONResponse(response_payload, headers={"x-trace-id": trace.trace_id})
     trace_id_var.reset(token)

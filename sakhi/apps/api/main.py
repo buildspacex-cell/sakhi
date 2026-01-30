@@ -14,7 +14,7 @@ if os.getenv("ENV", "development") in {"development", "dev", "local"}:
         # In production containers we should never depend on a local .env file.
         pass
 
-REQUIRED_ENV_VARS = ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "OPENAI_API_KEY")
+REQUIRED_ENV_VARS = ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "OPENAI_API_KEY")
 _missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
 if _missing:
     raise RuntimeError(f"Missing required env var(s): {', '.join(_missing)}")
@@ -76,31 +76,33 @@ from sakhi.apps.api.routes.identity_momentum import router as identity_momentum_
 from sakhi.apps.api.routes.decision_graph import router as decision_graph_router
 from sakhi.apps.api.routes.identity_timeline import router as identity_timeline_router
 from sakhi.apps.api.routes.llm import router as llm_router
-from sakhi.apps.api.routes.consolidator import router as consolidator_router
+# from sakhi.apps.api.routes.consolidator import router as consolidator_router  # Disabled: broken import
 from sakhi.apps.api.routes.insights import router as insights_router
 from sakhi.apps.api.routes.soul import router as soul_routes
 from sakhi.apps.api.routes.soul_analytics import router as soul_analytics_router
-from sakhi.apps.api.routes.presence import router as presence_router
+# from sakhi.apps.api.routes.presence import router as presence_router  # Disabled: circular import
 from sakhi.apps.api.routes.persona import router as persona_router
 from sakhi.apps.api.routes.planner import router as planner_router
 from sakhi.apps.api.routes.rhythm import router as rhythm_router
 from sakhi.apps.api.routes.breath import router as breath_router
 from sakhi.apps.api.routes.events import router as events_router
 from sakhi.apps.api.routes.lab import router as lab_router
+from sakhi.apps.api.routes.diagnostics import router as diagnostics_router
 from sakhi.apps.api.routes.memory_graph import router as memory_graph_router
 from sakhi.apps.api.routes.memory import router as memory_recall_router
 from sakhi.apps.api.routes.feedback import router as feedback_router
 from sakhi.apps.api.routes.analytics import router as analytics_router
 from sakhi.apps.api.routes.adjustments import router as adjustments_router
-from sakhi.apps.api.routes.tone import router as tone_router
+# from sakhi.apps.api.routes.tone import router as tone_router  # Disabled: circular import
 from sakhi.apps.api.routes.environment import router as environment_router
 from sakhi.apps.api.routes.system_audit import router as system_audit_router
 from sakhi.apps.api.routes.reflection_daily import router as reflection_daily_router
 from sakhi.apps.api.routes.growth import router as growth_router
 from sakhi.apps.api.routes.focus import router as focus_router
-from sakhi.apps.api.routes.journey import router as journey_router
-from sakhi.apps.api.routes.insight import router as insight_router
-from sakhi.apps.api.routes.brain import router as brain_router
+# Legacy routes removed - now backed up in _legacy_backup/
+# from sakhi.apps.api.routes.journey import router as journey_router
+# from sakhi.apps.api.routes.insight import router as insight_router
+# from sakhi.apps.api.routes.brain import router as brain_router
 from sakhi.apps.api.routers import awareness as awareness_router
 from sakhi.apps.api.routers import hands as hands_router
 from sakhi.apps.api.routers import intel as intel_router
@@ -135,6 +137,12 @@ from sakhi.apps.api.routes.micro_momentum import router as micro_momentum_router
 from sakhi.apps.api.routes.task_routing import router as task_routing_router
 from sakhi.apps.api.routes.experience_journal import router as experience_journal_router
 from sakhi.apps.api.routes.experience_weekly import router as experience_weekly_router
+from sakhi.apps.api.routes.friction_framework import router as friction_framework_router
+from sakhi.apps.api.routes.friction_state import router as friction_state_router
+from sakhi.apps.api.routes.conversation_history import router as conversation_history_router
+from sakhi.apps.api.routes.recommendations import router as recommendations_router
+from sakhi.apps.api.routes.health import router as health_router
+from sakhi.apps.api.routes.dev import router as dev_router
 from sakhi.apps.api.routers import person as person_router
 from sakhi.apps.api.routers import person_edit as person_edit_router
 from sakhi.apps.api.core.llm import set_router as set_llm_router
@@ -1395,29 +1403,31 @@ app.include_router(conversation_router)
 app.include_router(insights_router)
 app.include_router(soul_routes)
 app.include_router(soul_analytics_router)
-app.include_router(presence_router)
+# app.include_router(presence_router)  # Disabled: circular import
 app.include_router(persona_router)
 app.include_router(planner_router)
 app.include_router(rhythm_router)
 app.include_router(breath_router)
 app.include_router(events_router)
 app.include_router(lab_router)
+app.include_router(diagnostics_router)
 app.include_router(memory_graph_router)
 app.include_router(memory_recall_router)
 app.include_router(feedback_router)
 app.include_router(analytics_router)
 app.include_router(adjustments_router)
-app.include_router(tone_router)
+# app.include_router(tone_router)  # Disabled: circular import
 app.include_router(environment_router)
 app.include_router(system_audit_router)
 app.include_router(reflection_daily_router)
 app.include_router(growth_router)
 app.include_router(focus_router)
-app.include_router(journey_router)
-app.include_router(brain_router)
-app.include_router(insight_router)
+# Legacy routers removed - now backed up in _legacy_backup/
+# app.include_router(journey_router)
+# app.include_router(brain_router)
+# app.include_router(insight_router)
 app.include_router(llm_router)
-app.include_router(consolidator_router)
+# app.include_router(consolidator_router)  # Disabled: broken import
 app.include_router(core_router)
 app.include_router(router_diag, tags=["ayurveda"])
 app.include_router(jr, tags=["journal"])
@@ -1467,6 +1477,12 @@ app.include_router(task_routing_router)
 app.include_router(person_router.router)
 app.include_router(person_edit_router.router)
 app.include_router(person_router.router)
+app.include_router(friction_framework_router)
+app.include_router(friction_state_router)
+app.include_router(recommendations_router)
+app.include_router(health_router)
+app.include_router(conversation_history_router)
+app.include_router(dev_router)
 
 # Startup route dump was for debugging; disable to reduce noise in logs.
 # LOGGER.info("Printing registered routes (startup debug)")

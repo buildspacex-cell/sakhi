@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type React from "react";
 import type { Route } from "next";
@@ -177,16 +177,6 @@ const voiceButtonSecondaryStyle: React.CSSProperties = {
   color: palette.muted,
 };
 
-const devSelectStyle: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: "10px",
-  border: `1px solid ${palette.divider}`,
-  background: "#141518",
-  color: palette.accent,
-  fontSize: "13px",
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif',
-};
-
 const navRowStyle: React.CSSProperties = {
   marginTop: "16px",
   display: "flex",
@@ -279,6 +269,8 @@ export default function ListeningPage() {
 function ListeningPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [authUser, setAuthUser] = useState<{ person_id: string; full_name?: string | null } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [captured, setCaptured] = useState(false);
   const [transcript, setTranscript] = useState<string>(
     "Today I pushed through work even though I was exhausted, and I felt guilty when I considered resting."
@@ -293,35 +285,30 @@ function ListeningPageContent() {
   const [weeklyLoading, setWeeklyLoading] = useState(false);
   const [entryId, setEntryId] = useState<string | null>(null);
 
-  const DEV_USERS = useMemo(
-    () => ({
-      a: { label: "Vidhya" },
-      b: { label: "Ravi" },
-    }),
-    []
-  );
-  const searchUser = searchParams.get("user");
-  const initialDevUser = searchUser === "b" ? ("b" as const) : ("a" as const);
-  const [devUser, setDevUser] = useState<keyof typeof DEV_USERS>(initialDevUser);
-
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem("dev_user");
-      if (!searchUser && stored && stored !== devUser) {
-        setDevUser(stored as keyof typeof DEV_USERS);
-        return;
+    const loadAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) {
+          setError("Unable to load account. Please re-login.");
+          return;
+        }
+        const data = await res.json();
+        setAuthUser({ person_id: data.person_id, full_name: data.full_name });
+      } catch {
+        setError("Unable to load account. Please re-login.");
+      } finally {
+        setAuthLoading(false);
       }
-      window.localStorage.setItem("dev_user", devUser);
-      const url = new URL(window.location.href);
-      url.searchParams.set("user", devUser);
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, [devUser, searchUser, DEV_USERS]);
+    };
+    loadAuth();
+  }, []);
 
   const fetchWeekly = useCallback(async () => {
+    if (!authUser?.person_id) return;
     setWeeklyLoading(true);
     try {
-      const res = await fetch(`/api/memory/weekly?user=${encodeURIComponent(devUser)}&limit=1`);
+      const res = await fetch(`/api/memory/weekly?user=${encodeURIComponent(authUser.person_id)}&limit=1`);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       let item: WeeklyItem | null = null;
@@ -344,19 +331,23 @@ function ListeningPageContent() {
     } finally {
       setWeeklyLoading(false);
     }
-  }, [devUser]);
+  }, [authUser?.person_id]);
 
   useEffect(() => {
     fetchWeekly();
-  }, [devUser, fetchWeekly]);
+  }, [authUser?.person_id, fetchWeekly]);
 
   const submitToApi = async (text: string) => {
     if (!text.trim()) return;
+    if (!authUser?.person_id) {
+      setError("No user found. Please sign in again.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setDebugData(null);
     try {
-      const res = await fetch(`${turnApiPath}?user=${encodeURIComponent(devUser)}`, {
+      const res = await fetch(`${turnApiPath}?user=${encodeURIComponent(authUser.person_id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, capture_only: true }),
@@ -394,7 +385,8 @@ function ListeningPageContent() {
   };
 
   const goToWeeklyPage = () => {
-    window.location.href = `/experience/weekly?user=${encodeURIComponent(devUser)}`;
+    if (!authUser?.person_id) return;
+    window.location.href = `/experience/weekly?user=${encodeURIComponent(authUser.person_id)}`;
   };
 
   const startEdit = () => {
@@ -422,22 +414,8 @@ function ListeningPageContent() {
           <div style={brandStyle}>Sakhi</div>
 
           <div style={statusStyle}>
-            {captured ? "Captured" : "Listening…"} — {DEV_USERS[devUser]?.label || devUser} (dev slot)
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <select
-              value={devUser}
-              onChange={(e) => setDevUser(e.target.value as keyof typeof DEV_USERS)}
-              style={devSelectStyle}
-              aria-label="Select dev user"
-            >
-              {Object.entries(DEV_USERS).map(([key, value]) => (
-                <option value={key} key={key}>
-                  {value.label}
-                </option>
-              ))}
-            </select>
+            {captured ? "Captured" : "Listening…"}{" "}
+            {authUser?.full_name ? `— ${authUser.full_name.split(" ")[0]}` : ""}
           </div>
 
           {captured ? (
@@ -450,7 +428,7 @@ function ListeningPageContent() {
                 <Link
                   href={
                     entryId
-                      ? (`/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route)
+                      ? (`/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(authUser?.person_id || "")}` as Route)
                       : "#"
                   }
                   style={{
@@ -494,7 +472,7 @@ function ListeningPageContent() {
               )}
               <div style={navRowStyle}>
                 <Link
-                  href={`/experience?user=${encodeURIComponent(devUser)}`}
+                  href={`/experience?user=${encodeURIComponent(authUser?.person_id || "")}`}
                   style={{ ...actionButtonStyle, textDecoration: "none" }}
                 >
                   <span aria-hidden="true">🏠</span>

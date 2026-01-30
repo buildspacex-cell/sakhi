@@ -43,59 +43,58 @@ from sakhi.apps.worker.tasks.update_prompt_profile import update_prompt_profile
 from sakhi.apps.worker.tasks.synthesize_meta_reflection import synthesize_meta_reflection
 from sakhi.apps.worker.tasks.reinforcement_calibration import run_reinforcement_calibration
 from sakhi.apps.worker.tasks.life_phase_mapper import run_life_phase_mapper
-from sakhi.apps.worker.tasks.meta_audit import run_meta_audit
-from sakhi.apps.worker.tasks.meta_reflection import run_meta_reflection
+# ARCHIVED: meta_audit, meta_reflection - see _archive/weekly_v1/
 from sakhi.apps.worker.tasks import rhythm_inference
 from sakhi.apps.worker.tasks.rhythm_forecast import run_rhythm_forecast
-from sakhi.apps.worker.tasks.rhythm_adjustments import apply_rhythm_adjustments
+# ARCHIVED: rhythm_adjustments, collective_patterns - see _archive/weekly_v1/
 from sakhi.apps.worker.tasks.reflective_loop import run_reflective_loop
 from sakhi.apps.worker.tasks.theme_inference import run_theme_inference
-from sakhi.apps.worker.tasks.collective_patterns import collect_patterns_weekly
 from sakhi.apps.worker.tasks.update_theme_rhythm_links import update_theme_rhythm_links
 from sakhi.apps.worker.tasks.intent_evolution_decay import intent_evolution_decay
 from sakhi.apps.worker.tasks.emotion_loop_refresh import emotion_loop_refresh
-from sakhi.apps.worker.tasks.alignment_refresh import alignment_refresh
-from sakhi.apps.worker.tasks.narrative_arc_refresh import narrative_arc_refresh
-from sakhi.apps.worker.tasks.pattern_sense_refresh import pattern_sense_refresh
-from sakhi.apps.worker.tasks.inner_dialogue_refresh import inner_dialogue_refresh
-from sakhi.apps.worker.tasks.identity_drift_refresh import identity_drift_refresh
-from sakhi.apps.worker.tasks.inner_conflict import run_inner_conflict
-from sakhi.apps.worker.tasks.coherence import run_coherence
 from sakhi.apps.worker.tasks.forecast import run_forecast
 from sakhi.apps.worker.tasks.nudge_worker import run_nudge_check
-from sakhi.apps.worker.tasks.evening_closure_worker import run_evening_closure
-from sakhi.apps.worker.tasks.morning_preview_worker import run_morning_preview
-from sakhi.apps.worker.tasks.morning_ask_worker import run_morning_ask
-from sakhi.apps.worker.tasks.morning_momentum_worker import run_morning_momentum
-from sakhi.apps.worker.tasks.micro_momentum_worker import run_micro_momentum
-from sakhi.apps.worker.tasks.micro_recovery_worker import run_micro_recovery
-from sakhi.apps.worker.tasks.focus_path_worker import run_focus_path
-from sakhi.apps.worker.tasks.mini_flow_worker import run_mini_flow
-from sakhi.apps.worker.tasks.micro_journey_worker import run_micro_journey
+# ARCHIVED: alignment_refresh, narrative_arc_refresh, pattern_sense_refresh,
+# inner_dialogue_refresh, identity_drift_refresh, inner_conflict, coherence,
+# evening_closure_worker, morning_preview_worker, morning_ask_worker,
+# morning_momentum_worker, micro_momentum_worker, micro_recovery_worker,
+# focus_path_worker, mini_flow_worker, micro_journey_worker
+# See: sakhi/apps/worker/tasks/_archive/daily_v1/
 from sakhi.apps.worker.tasks.weekly_learning_worker import run_weekly_learning
 from sakhi.apps.worker.tasks.weekly_rhythm_rollup_worker import run_weekly_rhythm_rollup
-from sakhi.apps.worker.tasks.weekly_planner_pressure_worker import run_weekly_planner_pressure
-from sakhi.apps.worker.tasks.turn_personal_model_update import run_turn_personal_model_update
+# ARCHIVED: weekly_planner_pressure_worker, turn_personal_model_update - see _archive/weekly_v1/
 from sakhi.apps.worker.tasks.weekly_signals_worker import run_weekly_signals_worker
 from sakhi.apps.worker.rhythm_soul_deep import run_rhythm_soul_deep
-from sakhi.apps.worker.esr_deep import run_esr_deep
+from sakhi.apps.worker.tasks.goal_evolver import run_goal_evolver
+# ARCHIVED: planner_auto_summary - see _archive/daily_v1/
+from sakhi.apps.worker.tasks.pattern_crystallization_worker import (
+    run_daily_crystallization,
+    run_weekly_crystallization,
+    run_monthly_crystallization,
+)
+from sakhi.apps.worker.tasks.theme_inference import run_theme_inference_incremental
 from sakhi.apps.worker.identity_momentum_deep import run_identity_momentum_deep
-from sakhi.apps.worker.decision_graph_deep import run_decision_graph_deep
-from sakhi.apps.worker.identity_timeline_deep import run_identity_timeline_deep
-from sakhi.apps.worker.tasks.sync_analytics_cache import sync_analytics_cache
-from sakhi.apps.worker.tasks.update_system_tempo import update_system_tempo
+# Per-turn workers moved to daily schedule (v2 optimization)
+from sakhi.apps.worker.tasks.ayurvedic_pipeline import run_ayurvedic_pipeline
+from sakhi.apps.worker.tasks.emotion_soul_rhythm_deep import run_emotion_soul_rhythm_deep
+from sakhi.apps.worker.tasks.esr_worker import run_emotion_state_refresh
+from sakhi.apps.worker.tasks.soul_refresh_worker import soul_refresh_worker
+# ARCHIVED: esr_deep, decision_graph_deep, identity_timeline_deep - see _archive/weekly_v1/
+# Legacy tasks removed - backed up in _legacy_backup/tasks/
+# from sakhi.apps.worker.tasks.sync_analytics_cache import sync_analytics_cache
+# from sakhi.apps.worker.tasks.update_system_tempo import update_system_tempo
 from sakhi.apps.worker.tasks.memory_fanout import memory_event_fanout
 from sakhi.apps.worker.tasks.task_weaver_refresh import task_weaver_refresh
-from sakhi.apps.worker.tasks.daily_reflection_worker import run_daily_reflection
+# ARCHIVED: daily_reflection_worker - see _archive/daily_v1/
 from sakhi.apps.worker.utils.db import db_find
 
 load_dotenv(".env.worker")
 load_dotenv()
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID") or os.getenv("DEMO_USER_ID")
-if not DEFAULT_USER_ID:
-    raise RuntimeError("Set DEFAULT_USER_ID or DEMO_USER_ID for scheduler.")
+DEMO_USER_ID = os.getenv("DEMO_USER_ID")
+if not DEMO_USER_ID:
+    raise RuntimeError("Set DEMO_USER_ID for scheduler.")
 
 _redis = redis.from_url(REDIS_URL)
 _queue = Queue(os.getenv("REFLECTION_QUEUE", "reflection"), connection=_redis)
@@ -207,52 +206,45 @@ RHYTHM_FORECAST_DAYS = _parse_weekday_config("RHYTHM_FORECAST_WEEKDAYS", (0,))
 RHYTHM_SOUL_WEEKLY_DAYS = _parse_weekday_config("RHYTHM_SOUL_WEEKLY_DAYS", (0,))
 LEARNING_WEEKLY_DAYS = _parse_weekday_config("LEARNING_WEEKLY_DAYS", (0,))
 RHYTHM_ROLLUP_WEEKLY_DAYS = _parse_weekday_config("RHYTHM_ROLLUP_WEEKLY_DAYS", (0,))
-PLANNER_ROLLUP_WEEKLY_DAYS = _parse_weekday_config("PLANNER_ROLLUP_WEEKLY_DAYS", (0,))
-PM_UPDATE_WEEKLY_DAYS = _parse_weekday_config("PM_UPDATE_WEEKLY_DAYS", (0,))
+# ARCHIVED: PLANNER_ROLLUP_WEEKLY_DAYS, PM_UPDATE_WEEKLY_DAYS - see _archive/weekly_v1/
 WEEKLY_SIGNALS_DAYS = _parse_weekday_config("WEEKLY_SIGNALS_DAYS", (0,))
+GOAL_EVOLVER_DAYS = _parse_weekday_config("GOAL_EVOLVER_DAYS", (0,))  # Weekly on Monday
+CRYSTALLIZATION_WEEKLY_DAYS = _parse_weekday_config("CRYSTALLIZATION_WEEKLY_DAYS", (0,))  # Monday
+CRYSTALLIZATION_MONTHLY_DAYS = _parse_weekday_config("CRYSTALLIZATION_MONTHLY_DAYS", ())  # First of month
 
 RHYTHM_SOUL_DAILY_HOUR = _parse_time_config("RHYTHM_SOUL_DAILY_HOUR", 6, minimum=0, maximum=23)
 RHYTHM_SOUL_WEEKLY_HOUR = _parse_time_config("RHYTHM_SOUL_WEEKLY_HOUR", 8, minimum=0, maximum=23)
-ESR_WEEKLY_DAYS = _parse_weekday_config("ESR_WEEKLY_DAYS", (0,))
-ESR_WEEKLY_HOUR = _parse_time_config("ESR_WEEKLY_HOUR", 9, minimum=0, maximum=23)
-IDENTITY_MOMENTUM_DAYS = _parse_weekday_config("IDENTITY_MOMENTUM_DAYS", (2,))  # Wednesday
-IDENTITY_MOMENTUM_HOUR = _parse_time_config("IDENTITY_MOMENTUM_HOUR", 8, minimum=0, maximum=23)
-DECISION_GRAPH_DAYS = _parse_weekday_config("DECISION_GRAPH_DAYS", (1,))  # Tuesday
-DECISION_GRAPH_HOUR = _parse_time_config("DECISION_GRAPH_HOUR", 9, minimum=0, maximum=23)
-IDENTITY_TIMELINE_DAYS = _parse_weekday_config("IDENTITY_TIMELINE_DAYS", (6,))  # Sunday
-IDENTITY_TIMELINE_HOUR = _parse_time_config("IDENTITY_TIMELINE_HOUR", 10, minimum=0, maximum=23)
+# ARCHIVED: ESR_WEEKLY_*, IDENTITY_MOMENTUM_*, DECISION_GRAPH_*, IDENTITY_TIMELINE_* - see _archive/weekly_v1/
 LEARNING_WEEKLY_HOUR = _parse_time_config("LEARNING_WEEKLY_HOUR", 6, minimum=0, maximum=23)
 RHYTHM_ROLLUP_WEEKLY_HOUR = _parse_time_config("RHYTHM_ROLLUP_WEEKLY_HOUR", 5, minimum=0, maximum=23)
-PLANNER_ROLLUP_WEEKLY_HOUR = _parse_time_config("PLANNER_ROLLUP_WEEKLY_HOUR", 4, minimum=0, maximum=23)
-PM_UPDATE_WEEKLY_HOUR = _parse_time_config("PM_UPDATE_WEEKLY_HOUR", 7, minimum=0, maximum=23)
+# ARCHIVED: PLANNER_ROLLUP_WEEKLY_HOUR, PM_UPDATE_WEEKLY_HOUR
 WEEKLY_SIGNALS_HOUR = _parse_time_config("WEEKLY_SIGNALS_HOUR", 3, minimum=0, maximum=23)
 TASK_WEAVER_HOUR = _parse_time_config("TASK_WEAVER_HOUR", 6, minimum=0, maximum=23)
+GOAL_EVOLVER_HOUR = _parse_time_config("GOAL_EVOLVER_HOUR", 8, minimum=0, maximum=23)
+PLANNER_SUMMARY_HOUR = _parse_time_config("PLANNER_SUMMARY_HOUR", 21, minimum=0, maximum=23)
+CRYSTALLIZATION_DAILY_HOUR = _parse_time_config("CRYSTALLIZATION_DAILY_HOUR", 3, minimum=0, maximum=23)
+CRYSTALLIZATION_WEEKLY_HOUR = _parse_time_config("CRYSTALLIZATION_WEEKLY_HOUR", 4, minimum=0, maximum=23)
+CRYSTALLIZATION_MONTHLY_HOUR = _parse_time_config("CRYSTALLIZATION_MONTHLY_HOUR", 5, minimum=0, maximum=23)
+THEME_UPRANK_HOUR = _parse_time_config("THEME_UPRANK_HOUR", 6, minimum=0, maximum=23)
+
+# Per-turn workers moved to daily schedule (v2 optimization)
+AYURVEDIC_PIPELINE_HOUR = _parse_time_config("AYURVEDIC_PIPELINE_HOUR", 6, minimum=0, maximum=23)
+IDENTITY_MOMENTUM_HOUR = _parse_time_config("IDENTITY_MOMENTUM_HOUR", 6, minimum=0, maximum=23)
+EMOTION_SOUL_RHYTHM_HOUR = _parse_time_config("EMOTION_SOUL_RHYTHM_HOUR", 4, minimum=0, maximum=23)
+ESR_DAILY_HOUR = _parse_time_config("ESR_DAILY_HOUR", 4, minimum=0, maximum=23)
+SOUL_REFRESH_HOUR = _parse_time_config("SOUL_REFRESH_HOUR", 6, minimum=0, maximum=23)
 
 SYSTEM_TEMPO_MINUTE = _parse_time_config("SYSTEM_TEMPO_MINUTE", 0, minimum=0, maximum=59)
 ANALYTICS_CACHE_HOUR = _parse_time_config("ANALYTICS_CACHE_HOUR", 2, minimum=0, maximum=23)
 INTENT_DECAY_HOUR = _parse_time_config("INTENT_DECAY_HOUR", 7, minimum=0, maximum=23)
 EMOTION_LOOP_HOUR = _parse_time_config("EMOTION_LOOP_HOUR", 4, minimum=0, maximum=23)
-ALIGNMENT_REFRESH_HOUR = _parse_time_config("ALIGNMENT_REFRESH_HOUR", 5, minimum=0, maximum=23)
-NARRATIVE_ARC_HOUR = _parse_time_config("NARRATIVE_ARC_HOUR", 7, minimum=0, maximum=23)
-PATTERN_SENSE_HOUR = _parse_time_config("PATTERN_SENSE_HOUR", 8, minimum=0, maximum=23)
-INNER_DIALOGUE_HOUR = _parse_time_config("INNER_DIALOGUE_HOUR", 9, minimum=0, maximum=23)
-IDENTITY_DRIFT_HOUR = _parse_time_config("IDENTITY_DRIFT_HOUR", 10, minimum=0, maximum=23)
-INNER_CONFLICT_HOUR = _parse_time_config("INNER_CONFLICT_HOUR", 11, minimum=0, maximum=23)
-COHERENCE_STATE_HOUR = _parse_time_config("COHERENCE_STATE_HOUR", 12, minimum=0, maximum=23)
 FORECAST_HOUR = _parse_time_config("FORECAST_HOUR", 7, minimum=0, maximum=23)
 FORECAST_INTERVAL_HOURS = int(os.getenv("FORECAST_INTERVAL_HOURS", "3") or "3")
 NUDGE_CHECK_MINUTE = _parse_time_config("NUDGE_CHECK_MINUTE", 0, minimum=0, maximum=59)
-MORNING_ASK_MINUTE = _parse_time_config("MORNING_ASK_MINUTE", 10, minimum=0, maximum=59)
-MORNING_MOMENTUM_MINUTE = _parse_time_config("MORNING_MOMENTUM_MINUTE", 15, minimum=0, maximum=59)
-MICRO_MOMENTUM_MINUTE = _parse_time_config("MICRO_MOMENTUM_MINUTE", 0, minimum=0, maximum=59)
-MICRO_RECOVERY_HOUR = _parse_time_config("MICRO_RECOVERY_HOUR", 14, minimum=0, maximum=23)
-MICRO_RECOVERY_MINUTE = _parse_time_config("MICRO_RECOVERY_MINUTE", 0, minimum=0, maximum=59)
-FOCUS_PATH_HOUR = _parse_time_config("FOCUS_PATH_HOUR", 8, minimum=0, maximum=23)
-FOCUS_PATH_MINUTE = _parse_time_config("FOCUS_PATH_MINUTE", 0, minimum=0, maximum=59)
-MINI_FLOW_HOUR = _parse_time_config("MINI_FLOW_HOUR", 8, minimum=0, maximum=23)
-MINI_FLOW_MINUTE = _parse_time_config("MINI_FLOW_MINUTE", 15, minimum=0, maximum=59)
-MICRO_JOURNEY_HOUR = _parse_time_config("MICRO_JOURNEY_HOUR", 6, minimum=0, maximum=23)
-MICRO_JOURNEY_MINUTE = _parse_time_config("MICRO_JOURNEY_MINUTE", 0, minimum=0, maximum=59)
+# ARCHIVED config: ALIGNMENT_REFRESH_HOUR, NARRATIVE_ARC_HOUR, PATTERN_SENSE_HOUR,
+# INNER_DIALOGUE_HOUR, IDENTITY_DRIFT_HOUR, INNER_CONFLICT_HOUR, COHERENCE_STATE_HOUR,
+# MORNING_ASK_MINUTE, MORNING_MOMENTUM_MINUTE, MICRO_MOMENTUM_MINUTE, MICRO_RECOVERY_*,
+# FOCUS_PATH_*, MINI_FLOW_*, MICRO_JOURNEY_*
 
 
 def _enqueue(queue: Queue, func: Any, *args: Any, **kwargs: Any) -> None:
@@ -285,7 +277,7 @@ def schedule_reflection_jobs() -> None:
     Enqueue both immediate and scheduled reflections based on horizon.
     """
 
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_queue, run_daily_reflection, user_id)
     _enqueue(_queue, consolidate_person_models)
     _enqueue(_queue, reflect_person_memory, user_id)
@@ -298,16 +290,11 @@ def schedule_reflection_jobs() -> None:
     _enqueue(_queue, run_tone_continuity, user_id)
     _enqueue(_queue, run_reflective_loop, user_id)
 
-    if _should_run_today(WEEKLY_SUMMARY_DAYS):
-        _enqueue(_queue, run_weekly_summary, user_id)
-    if _should_run_today(META_AUDIT_DAYS):
-        _enqueue(_queue, run_meta_audit, user_id)
+    # ARCHIVED: run_weekly_summary, run_meta_audit - see _archive/weekly_v1/
 
     schedule_theme_inference_jobs()
-    schedule_meta_reflection_jobs()
-    schedule_collective_learning()
+    # ARCHIVED: schedule_meta_reflection_jobs, schedule_collective_learning, schedule_rhythm_self_adjustment
     schedule_theme_rhythm_links()
-    schedule_rhythm_self_adjustment()
     schedule_tempo_updates()
     schedule_analytics_cache_job()
     check_and_enqueue_delta_jobs()
@@ -316,7 +303,7 @@ def schedule_reflection_jobs() -> None:
 def schedule_presence_jobs() -> None:
     """Enqueue presence outreach previews for pilot users."""
 
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_presence_queue, outreach, user_id)
     _enqueue(_presence_queue, run_presence_reflection, user_id)
 
@@ -325,7 +312,7 @@ def schedule_presence_reflection() -> None:
     """
     Adds morning/evening reflection & rhythm nudges.
     """
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_queue, reflect_morning_presence, user_id)
     _enqueue(_queue, send_rhythm_nudge, user_id)
     _enqueue(_queue, summarize_evening_state, user_id)
@@ -334,7 +321,7 @@ def schedule_presence_reflection() -> None:
 
 def schedule_tone_jobs() -> None:
     """Schedule tone continuity updates."""
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_queue, run_tone_continuity, user_id)
 
 
@@ -342,37 +329,11 @@ def schedule_theme_inference_jobs() -> None:
     """Weekly theme consolidation (Sunday)."""
     if not _should_run_today(THEME_INFERENCE_DAYS):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_queue, run_theme_inference, user_id)
 
 
-def schedule_meta_reflection_jobs(scheduler=None, redis_conn=None) -> None:
-    """
-    Schedule or enqueue weekly meta-reflection scoring jobs.
-    """
-
-    user_id = DEFAULT_USER_ID
-    queue_name = os.getenv("REFLECTION_QUEUE", "reflection")
-
-    if scheduler is not None:
-        scheduler.cron(
-            "0 6 * * 0",
-            queue=queue_name,
-            func=run_meta_reflection,
-            kwargs={"person_id": user_id},
-        )
-        return
-
-    if _should_run_today(META_REFLECTION_DAYS):
-        _enqueue(_queue, run_meta_reflection, user_id)
-
-
-def schedule_collective_learning() -> None:
-    """Enqueue weekly collective pattern aggregation (Monday)."""
-
-    if not _should_run_today(COLLECTIVE_LEARNING_DAYS):
-        return
-    _enqueue(_patterns_queue, collect_patterns_weekly)
+# ARCHIVED: schedule_meta_reflection_jobs, schedule_collective_learning - see _archive/weekly_v1/
 
 
 def schedule_theme_rhythm_links() -> None:
@@ -383,131 +344,33 @@ def schedule_theme_rhythm_links() -> None:
     _enqueue(_analytics_queue, update_theme_rhythm_links)
 
 
-def schedule_rhythm_self_adjustment() -> None:
-    """Apply rhythm self-adjustments after collective learning."""
-
-    if not _should_run_today(RHYTHM_SELF_ADJUST_DAYS):
-        return
-    _enqueue(_learning_queue, apply_rhythm_adjustments)
+# ARCHIVED: schedule_rhythm_self_adjustment - see _archive/weekly_v1/
 
 
 def schedule_tempo_updates() -> None:
-    """Run system tempo updates hourly."""
-
-    if not _should_run_minute(SYSTEM_TEMPO_MINUTE):
-        return
-    _enqueue(_analytics_queue, update_system_tempo)
+    """Legacy - system tempo now computed from personal_model."""
+    pass  # Removed: update_system_tempo used legacy body_metrics table
 
 
 def schedule_analytics_cache_job() -> None:
-    """Run nightly analytics cache sync around 02:00 UTC."""
-
-    if not _should_run_hour(ANALYTICS_CACHE_HOUR):
-        return
-    _enqueue(_learning_queue, sync_analytics_cache)
+    """Legacy - analytics now computed directly from personal_model."""
+    pass  # Removed: sync_analytics_cache used legacy emotional_tones table
 
 
 def schedule_learning_self_jobs() -> None:
     """Enqueue nightly self-learning updates for the default user."""
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_queue, compute_feedback_scores, user_id)
     _enqueue(_queue, update_prompt_profile, user_id)
     _enqueue(_queue, synthesize_meta_reflection, user_id)
     _enqueue(_queue, run_reinforcement_calibration, user_id)
     _enqueue(_queue, run_life_phase_mapper, user_id)
 
-def schedule_daily_reflection_v2() -> None:
-    """Nightly deterministic daily reflection summary (Build 88)."""
-    if not _should_run_hour(21):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_daily_reflection, user_id)
-
-
-def schedule_evening_closure() -> None:
-    """Evening closure ritual (Build 89) after daily reflection."""
-    if not _should_run_hour(20):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_evening_closure, user_id)
-
-
-def schedule_morning_preview() -> None:
-    """Morning preview snapshot (Build 90)."""
-    if not _should_run_hour(6):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_morning_preview, user_id)
-
-
-def schedule_morning_ask() -> None:
-    """Morning ask (Build 91) after morning preview."""
-    if not _should_run_hour(6):
-        return
-    if not _should_run_minute(MORNING_ASK_MINUTE):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_morning_ask, user_id)
-
-
-def schedule_morning_momentum() -> None:
-    """Morning momentum (Build 92) after morning ask."""
-    if not _should_run_hour(6):
-        return
-    if not _should_run_minute(MORNING_MOMENTUM_MINUTE):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_morning_momentum, user_id)
-
-
-def schedule_micro_momentum() -> None:
-    """Mid-morning micro momentum nudge (Build 93)."""
-    if not _should_run_hour(9):
-        return
-    if not _should_run_minute(MICRO_MOMENTUM_MINUTE):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_micro_momentum, user_id)
-
-
-def schedule_micro_recovery() -> None:
-    """Afternoon micro-recovery nudge (Build 94)."""
-    if not _should_run_hour(MICRO_RECOVERY_HOUR):
-        return
-    if not _should_run_minute(MICRO_RECOVERY_MINUTE):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_micro_recovery, user_id)
-
-
-def schedule_focus_path() -> None:
-    """Focus path generation (Build 95) optional auto-run."""
-    if not _should_run_hour(FOCUS_PATH_HOUR):
-        return
-    if not _should_run_minute(FOCUS_PATH_MINUTE):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_focus_path, user_id)
-
-
-def schedule_mini_flow() -> None:
-    """Mini-flow generation (Build 96) optional auto-run."""
-    if not _should_run_hour(MINI_FLOW_HOUR):
-        return
-    if not _should_run_minute(MINI_FLOW_MINUTE):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_mini_flow, user_id)
-
-
-def schedule_micro_journey_daily() -> None:
-    """Generate the micro-journey (Build 98) once daily."""
-    if not _should_run_hour(MICRO_JOURNEY_HOUR):
-        return
-    if not _should_run_minute(MICRO_JOURNEY_MINUTE):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_queue, run_micro_journey, user_id)
+# ARCHIVED: schedule_daily_reflection_v2, schedule_evening_closure,
+# schedule_morning_preview, schedule_morning_ask, schedule_morning_momentum,
+# schedule_micro_momentum, schedule_micro_recovery, schedule_focus_path,
+# schedule_mini_flow, schedule_micro_journey_daily
+# See: sakhi/apps/worker/tasks/_archive/daily_v1/
 
 
 def check_and_enqueue_delta_jobs(limit: int = 10) -> None:
@@ -592,7 +455,7 @@ def schedule_rhythm_jobs() -> None:
     """Kick off background rhythm inference jobs."""
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     q = Queue("rhythm", connection=redis.from_url(redis_url))
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     q.enqueue(rhythm_inference.run_rhythm_inference, user_id)
 
 
@@ -600,7 +463,7 @@ def schedule_rhythm_forecast_jobs() -> None:
     """Runs rhythm forecasts every Monday on the rhythm queue."""
     if not _should_run_today(RHYTHM_FORECAST_DAYS):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_rhythm_queue, run_rhythm_forecast, user_id)
 
 
@@ -608,7 +471,7 @@ def schedule_rhythm_soul_daily() -> None:
     """Daily deep rhythm–soul sync around RHYTHM_SOUL_DAILY_HOUR."""
     if not _should_run_hour(RHYTHM_SOUL_DAILY_HOUR):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_analytics_queue, run_rhythm_soul_deep, user_id)
 
 
@@ -618,48 +481,13 @@ def schedule_rhythm_soul_weekly() -> None:
         return
     if not _should_run_hour(RHYTHM_SOUL_WEEKLY_HOUR):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_analytics_queue, run_rhythm_soul_deep, user_id)
 
 
-def schedule_esr_weekly() -> None:
-    """Weekly ESR deep sync at ESR_WEEKLY_HOUR."""
-    if not _should_run_today(ESR_WEEKLY_DAYS):
-        return
-    if not _should_run_hour(ESR_WEEKLY_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, run_esr_deep, user_id)
-
-
-def schedule_identity_momentum_weekly() -> None:
-    """Weekly identity momentum deep sync (default Wednesday at 08:00)."""
-    if not _should_run_today(IDENTITY_MOMENTUM_DAYS):
-        return
-    if not _should_run_hour(IDENTITY_MOMENTUM_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, run_identity_momentum_deep, user_id)
-
-
-def schedule_decision_graph_weekly() -> None:
-    """Weekly internal decision graph refresh (default Tuesday at 09:00)."""
-    if not _should_run_today(DECISION_GRAPH_DAYS):
-        return
-    if not _should_run_hour(DECISION_GRAPH_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, run_decision_graph_deep, user_id)
-
-
-def schedule_identity_timeline_weekly() -> None:
-    """Weekly identity timeline/persona evolution refresh (default Sunday at 10:00)."""
-    if not _should_run_today(IDENTITY_TIMELINE_DAYS):
-        return
-    if not _should_run_hour(IDENTITY_TIMELINE_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, run_identity_timeline_deep, user_id)
+# ARCHIVED: schedule_esr_weekly, schedule_identity_momentum_weekly,
+# schedule_decision_graph_weekly, schedule_identity_timeline_weekly
+# See: _archive/weekly_v1/
 
 
 def schedule_weekly_learning() -> None:
@@ -668,7 +496,7 @@ def schedule_weekly_learning() -> None:
         return
     if not _should_run_hour(LEARNING_WEEKLY_HOUR):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_learning_queue, run_weekly_learning, user_id)
 
 
@@ -678,28 +506,12 @@ def schedule_rhythm_rollup_weekly() -> None:
         return
     if not _should_run_hour(RHYTHM_ROLLUP_WEEKLY_HOUR):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_analytics_queue, run_weekly_rhythm_rollup, user_id)
 
 
-def schedule_planner_pressure_weekly() -> None:
-    """Weekly planner pressure rollup (task-safe aggregates)."""
-    if not _should_run_today(PLANNER_ROLLUP_WEEKLY_DAYS):
-        return
-    if not _should_run_hour(PLANNER_ROLLUP_WEEKLY_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, run_weekly_planner_pressure, user_id)
-
-
-def schedule_turn_personal_model_update_weekly() -> None:
-    """Weekly trends-only personal model update (writes longitudinal_state only)."""
-    if not _should_run_today(PM_UPDATE_WEEKLY_DAYS):
-        return
-    if not _should_run_hour(PM_UPDATE_WEEKLY_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_learning_queue, run_turn_personal_model_update, user_id)
+# ARCHIVED: schedule_planner_pressure_weekly, schedule_turn_personal_model_update_weekly
+# See: _archive/weekly_v1/
 
 
 def schedule_weekly_signals() -> None:
@@ -708,21 +520,71 @@ def schedule_weekly_signals() -> None:
         return
     if not _should_run_hour(WEEKLY_SIGNALS_HOUR):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_analytics_queue, run_weekly_signals_worker, user_id)
 def schedule_task_weaver_daily() -> None:
     """Daily task weaver refresh to keep auto-priorities current."""
     if not _should_run_hour(TASK_WEAVER_HOUR):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_analytics_queue, task_weaver_refresh, user_id)
+
+
+def schedule_goal_evolver_weekly() -> None:
+    """Weekly goal evolution - reviews goals against reflections and rhythm."""
+    if not _should_run_today(GOAL_EVOLVER_DAYS):
+        return
+    if not _should_run_hour(GOAL_EVOLVER_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_learning_queue, run_goal_evolver, user_id)
+
+
+# ARCHIVED: schedule_planner_summary_daily - see _archive/daily_v1/
+
+
+def schedule_crystallization_daily() -> None:
+    """Daily pattern crystallization - frequency and recurrence focus."""
+    if not _should_run_hour(CRYSTALLIZATION_DAILY_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_patterns_queue, run_daily_crystallization, user_id)
+
+
+def schedule_crystallization_weekly() -> None:
+    """Weekly pattern crystallization - trajectory and consistency focus."""
+    if not _should_run_today(CRYSTALLIZATION_WEEKLY_DAYS):
+        return
+    if not _should_run_hour(CRYSTALLIZATION_WEEKLY_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_patterns_queue, run_weekly_crystallization, user_id)
+
+
+def schedule_crystallization_monthly() -> None:
+    """Monthly pattern crystallization - identity and traits focus."""
+    # Run on first day of month
+    if datetime.now(timezone.utc).day != 1:
+        return
+    if not _should_run_hour(CRYSTALLIZATION_MONTHLY_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_patterns_queue, run_monthly_crystallization, user_id)
+
+
+def schedule_theme_uprank_daily() -> None:
+    """Daily theme upranking based on crystallized patterns."""
+    if not _should_run_hour(THEME_UPRANK_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_analytics_queue, run_theme_inference_incremental, user_id)
 
 
 def schedule_intent_decay_daily() -> None:
     """Daily decay for intent evolution."""
     if not _should_run_hour(INTENT_DECAY_HOUR):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_analytics_queue, intent_evolution_decay, user_id)
 
 
@@ -730,69 +592,19 @@ def schedule_emotion_loop_daily() -> None:
     """Daily refresh for emotion loop state."""
     if not _should_run_hour(EMOTION_LOOP_HOUR):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_analytics_queue, emotion_loop_refresh, user_id)
 
 
-def schedule_alignment_refresh_daily() -> None:
-    """Daily alignment map refresh."""
-    if not _should_run_hour(ALIGNMENT_REFRESH_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, alignment_refresh, user_id)
-
-
-def schedule_narrative_arc_daily() -> None:
-    """Daily narrative arc refresh."""
-    if not _should_run_hour(NARRATIVE_ARC_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, narrative_arc_refresh, user_id)
-
-
-def schedule_pattern_sense_daily() -> None:
-    """Daily pattern sense refresh."""
-    if not _should_run_hour(PATTERN_SENSE_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, pattern_sense_refresh, user_id)
-
-
-def schedule_inner_dialogue_daily() -> None:
-    """Daily inner dialogue refresh."""
-    if not _should_run_hour(INNER_DIALOGUE_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, inner_dialogue_refresh, user_id)
-
-
-def schedule_identity_drift_daily() -> None:
-    """Daily identity drift refresh."""
-    if not _should_run_hour(IDENTITY_DRIFT_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, identity_drift_refresh, user_id)
-
-
-def schedule_inner_conflict_daily() -> None:
-    """Daily inner conflict refresh."""
-    if not _should_run_hour(INNER_CONFLICT_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, run_inner_conflict, user_id)
-
-
-def schedule_coherence_state_daily() -> None:
-    """Daily coherence state refresh."""
-    if not _should_run_hour(COHERENCE_STATE_HOUR):
-        return
-    user_id = DEFAULT_USER_ID
-    _enqueue(_analytics_queue, run_coherence, user_id)
+# ARCHIVED: schedule_alignment_refresh_daily, schedule_narrative_arc_daily,
+# schedule_pattern_sense_daily, schedule_inner_dialogue_daily,
+# schedule_identity_drift_daily, schedule_inner_conflict_daily,
+# schedule_coherence_state_daily - see _archive/daily_v1/
 
 
 def schedule_forecast_jobs() -> None:
     """Forecast refresh daily and interval-based."""
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     if _should_run_hour(FORECAST_HOUR):
         _enqueue(_analytics_queue, run_forecast, user_id)
         _enqueue(_analytics_queue, run_nudge_check, user_id)
@@ -809,8 +621,56 @@ def schedule_nudge_checks() -> None:
     """Hourly nudge check using forecast cache and tone state."""
     if not _should_run_minute(NUDGE_CHECK_MINUTE):
         return
-    user_id = DEFAULT_USER_ID
+    user_id = DEMO_USER_ID
     _enqueue(_analytics_queue, run_nudge_check, user_id)
+
+
+# =============================================================================
+# Per-Turn Workers Moved to Daily Schedule (v2 Optimization)
+# These were previously running on every conversation turn but are now scheduled
+# daily to reduce turn processing overhead. Context is maintained via:
+# - conversation_history + memory_recall + memory_graph + personal_model
+# =============================================================================
+
+
+def schedule_ayurvedic_pipeline_daily() -> None:
+    """Daily Ayurvedic pipeline - dosha/elemental state computation."""
+    if not _should_run_hour(AYURVEDIC_PIPELINE_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_analytics_queue, run_ayurvedic_pipeline, user_id)
+
+
+def schedule_identity_momentum_daily() -> None:
+    """Daily identity momentum - tracks identity evolution patterns."""
+    if not _should_run_hour(IDENTITY_MOMENTUM_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_analytics_queue, run_identity_momentum_deep, user_id)
+
+
+def schedule_emotion_soul_rhythm_daily() -> None:
+    """Daily emotion-soul-rhythm integration."""
+    if not _should_run_hour(EMOTION_SOUL_RHYTHM_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_analytics_queue, run_emotion_soul_rhythm_deep, user_id)
+
+
+def schedule_esr_daily() -> None:
+    """Daily ESR (Emotion State Refresh)."""
+    if not _should_run_hour(ESR_DAILY_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_analytics_queue, run_emotion_state_refresh, user_id)
+
+
+def schedule_soul_refresh_daily() -> None:
+    """Daily soul/prakriti state refresh."""
+    if not _should_run_hour(SOUL_REFRESH_HOUR):
+        return
+    user_id = DEMO_USER_ID
+    _enqueue(_analytics_queue, soul_refresh_worker, user_id)
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -830,24 +690,28 @@ if __name__ == "__main__":  # pragma: no cover
         schedule_rhythm_forecast_jobs()
         schedule_rhythm_soul_daily()
         schedule_rhythm_soul_weekly()
-        schedule_esr_weekly()
-        schedule_identity_momentum_weekly()
-        schedule_decision_graph_weekly()
-        schedule_identity_timeline_weekly()
+        # ARCHIVED: schedule_esr_weekly, schedule_identity_momentum_weekly,
+        # schedule_decision_graph_weekly, schedule_identity_timeline_weekly,
+        # schedule_turn_personal_model_update_weekly, schedule_planner_pressure_weekly
         schedule_weekly_learning()
-        schedule_turn_personal_model_update_weekly()
         schedule_rhythm_rollup_weekly()
-        schedule_planner_pressure_weekly()
         schedule_weekly_signals()
         schedule_task_weaver_daily()
         schedule_intent_decay_daily()
         schedule_emotion_loop_daily()
-        schedule_alignment_refresh_daily()
-        schedule_narrative_arc_daily()
-        schedule_pattern_sense_daily()
-        schedule_inner_dialogue_daily()
-        schedule_identity_drift_daily()
-        schedule_inner_conflict_daily()
-        schedule_coherence_state_daily()
+        # ARCHIVED: alignment_refresh, narrative_arc, pattern_sense,
+        # inner_dialogue, identity_drift, inner_conflict, coherence_state
         schedule_forecast_jobs()
         schedule_nudge_checks()
+        schedule_goal_evolver_weekly()
+        # ARCHIVED: planner_summary_daily
+        schedule_crystallization_daily()
+        schedule_crystallization_weekly()
+        schedule_crystallization_monthly()
+        schedule_theme_uprank_daily()
+        # Per-turn workers moved to daily schedule (v2 optimization)
+        schedule_ayurvedic_pipeline_daily()
+        schedule_identity_momentum_daily()
+        schedule_emotion_soul_rhythm_daily()
+        schedule_esr_daily()
+        schedule_soul_refresh_daily()

@@ -18,7 +18,8 @@ from sakhi.apps.api.services.turn.reply_service import build_turn_reply
 from sakhi.apps.worker.pipelines.turn_updates import runner as turn_runner
 from sakhi.apps.api.core.db import q, exec as dbexec
 from sakhi.apps.api.services.memory.consolidation import consolidate_memory
-from sakhi.apps.worker.tasks.turn_personal_model_update import run_turn_personal_model_update
+# NOTE: turn_personal_model_update archived in v2 refactor
+# from sakhi.apps.worker.tasks.turn_personal_model_update import run_turn_personal_model_update
 from sakhi.libs.embeddings import embed_text
 from sakhi.libs.retrieval.episodic_retrieval import retrieve_episodic_slices
 from sakhi.apps.api.services.journaling.enrich import enrich_journal_entry
@@ -26,7 +27,8 @@ from sakhi.apps.api.services.memory_graph.graph import build_graph_from_enrichme
 from sakhi.apps.api.services.memory_graph.persist import persist_enrichment, persist_memory_graph
 from sakhi.apps.worker.narrative_deep import generate_deep_soul_narrative
 from sakhi.apps.worker.identity_momentum_deep import run_identity_momentum_deep
-from sakhi.apps.worker.decision_graph_deep import run_decision_graph_deep
+# NOTE: decision_graph_deep archived in v2 refactor
+# from sakhi.apps.worker.decision_graph_deep import run_decision_graph_deep
 from sakhi.apps.worker.rhythm_soul_deep import run_rhythm_soul_deep
 from sakhi.apps.worker.tasks.esr_worker import run_emotion_state_refresh
 from sakhi.apps.worker.tasks.emotion_soul_rhythm_deep import run_emotion_soul_rhythm_deep
@@ -236,27 +238,16 @@ async def _run_worker_sync(worker_key: str, *, turn_id: str, person_id: str, pay
             }
 
     if worker_key == "personal-model":
-        started_at_dt = dt.datetime.utcnow()
-        started_at = started_at_dt.isoformat()
-        try:
-            result = await run_turn_personal_model_update(person_id)
-            finished_at = dt.datetime.utcnow().isoformat()
-            return {
-                "worker": worker_key,
-                "status": "ok",
-                "writes": {"updated": result},
-                "finished_at": finished_at,
-                "started_at": started_at,
-            }
-        except Exception as exc:  # pragma: no cover - debug fallback
-            finished_at = dt.datetime.utcnow().isoformat()
-            return {
-                "worker": worker_key,
-                "status": "error",
-                "error": str(exc),
-                "finished_at": finished_at,
-                "started_at": started_at,
-            }
+        # NOTE: turn_personal_model_update archived in v2 refactor
+        started_at = dt.datetime.utcnow().isoformat()
+        finished_at = started_at
+        return {
+            "worker": worker_key,
+            "status": "archived",
+            "writes": {"note": "Worker archived in v2 - use daily workers instead"},
+            "finished_at": finished_at,
+            "started_at": started_at,
+        }
 
     if worker_key == "narrative-deep":
         started_at_dt = dt.datetime.utcnow()
@@ -306,27 +297,16 @@ async def _run_worker_sync(worker_key: str, *, turn_id: str, person_id: str, pay
             }
 
     if worker_key == "decision-graph-deep":
-        started_at_dt = dt.datetime.utcnow()
-        started_at = started_at_dt.isoformat()
-        try:
-            result = await run_decision_graph_deep(person_id)
-            finished_at = dt.datetime.utcnow().isoformat()
-            return {
-                "worker": worker_key,
-                "status": "ok",
-                "writes": {"updated": bool(result)},
-                "finished_at": finished_at,
-                "started_at": started_at,
-            }
-        except Exception as exc:  # pragma: no cover
-            finished_at = dt.datetime.utcnow().isoformat()
-            return {
-                "worker": worker_key,
-                "status": "error",
-                "error": str(exc),
-                "finished_at": finished_at,
-                "started_at": started_at,
-            }
+        # NOTE: decision_graph_deep archived in v2 refactor
+        started_at = dt.datetime.utcnow().isoformat()
+        finished_at = started_at
+        return {
+            "worker": worker_key,
+            "status": "archived",
+            "writes": {"note": "Worker archived in v2 - use memory graph instead"},
+            "finished_at": finished_at,
+            "started_at": started_at,
+        }
 
     if worker_key == "rhythm-soul-deep":
         started_at_dt = dt.datetime.utcnow()
@@ -579,10 +559,7 @@ async def lab_live_turn(body: LiveTurnBody):
     if body.mode != "replay_existing" and not (body.journal_text or "").strip():
         raise HTTPException(status_code=400, detail="journal_text required for live-turn")
 
-    lab_inline_memory = os.getenv("LAB_INLINE_MEMORY", "0") == "1"
-    # Force full writes in lab mode so workers have complete inputs (disable minimal/capture-only shortcuts).
-    os.environ["SAKHI_TURN_MINIMAL_WRITE"] = "0"
-    os.environ["SAKHI_UNIFIED_INGEST"] = "1"
+    # Lab mode always uses full writes (inline memory processing)
 
     lab_session_id = body.session_id or f"lab-{uuid4()}"
     turn_id = str(uuid4())  # use real UUIDs for downstream jobs/storage
@@ -1302,6 +1279,248 @@ async def lab_memory_details(
     except Exception:
         goals_themes = []
 
+    # =========================================================================
+    # FRICTION FRAMEWORK: Personal Operating System & State Vectors
+    # =========================================================================
+    friction_framework = {}
+    try:
+        ff_row = await q(
+            """
+            SELECT operating_system, life_context, decision_profile,
+                   forecast_state, coherence_state, alignment_state,
+                   nudge_state, long_term, updated_at
+            FROM personal_model
+            WHERE person_id = $1
+            """,
+            person_id,
+            one=True,
+        )
+        if ff_row:
+            friction_framework = {
+                "operating_system": ff_row.get("operating_system"),
+                "life_context": ff_row.get("life_context"),
+                "decision_profile": ff_row.get("decision_profile"),
+                "forecast_state": ff_row.get("forecast_state"),
+                "coherence_state": ff_row.get("coherence_state"),
+                "alignment_state": ff_row.get("alignment_state"),
+                "nudge_state": ff_row.get("nudge_state"),
+                "long_term": ff_row.get("long_term"),
+                "updated_at": ff_row.get("updated_at"),
+            }
+    except Exception:
+        friction_framework = {}
+
+    # State vectors from recent episodic entries
+    state_vectors = []
+    try:
+        sv_rows = await q(
+            """
+            SELECT id, state_vector, guna_vector, created_at
+            FROM memory_episodic
+            WHERE person_id = $1
+              AND (state_vector IS NOT NULL OR guna_vector IS NOT NULL)
+            ORDER BY created_at DESC
+            LIMIT 10
+            """,
+            person_id,
+        )
+        state_vectors = sv_rows or []
+    except Exception:
+        state_vectors = []
+
+    # Compute friction state from state vectors
+    friction_state = None
+    if friction_framework.get("operating_system") and state_vectors:
+        try:
+            os_data = friction_framework["operating_system"]
+            if isinstance(os_data, str):
+                os_data = json.loads(os_data)
+            baseline = os_data.get("dosha_baseline", {"vata": 0.33, "pitta": 0.33, "kapha": 0.34})
+
+            current_dosha = {"vata": 0.0, "pitta": 0.0, "kapha": 0.0}
+            current_guna = {"sattva": 0.0, "rajas": 0.0, "tamas": 0.0}
+            count = 0
+
+            for row in state_vectors[:10]:
+                sv = row.get("state_vector")
+                gv = row.get("guna_vector")
+                if isinstance(sv, str):
+                    sv = json.loads(sv)
+                if isinstance(gv, str):
+                    gv = json.loads(gv)
+
+                if sv and sv.get("dosha"):
+                    dosha = sv["dosha"]
+                    current_dosha["vata"] += dosha.get("vata", 0)
+                    current_dosha["pitta"] += dosha.get("pitta", 0)
+                    current_dosha["kapha"] += dosha.get("kapha", 0)
+                    count += 1
+
+                if gv:
+                    current_guna["sattva"] += gv.get("sattva", 0)
+                    current_guna["rajas"] += gv.get("rajas", 0)
+                    current_guna["tamas"] += gv.get("tamas", 0)
+
+            if count > 0:
+                current_dosha = {k: round(v / count, 3) for k, v in current_dosha.items()}
+                current_guna = {k: round(v / count, 3) for k, v in current_guna.items()}
+
+                drifts = {
+                    "vata": round(current_dosha["vata"] - baseline.get("vata", 0.33), 3),
+                    "pitta": round(current_dosha["pitta"] - baseline.get("pitta", 0.33), 3),
+                    "kapha": round(current_dosha["kapha"] - baseline.get("kapha", 0.34), 3),
+                }
+                max_drift = max(drifts.items(), key=lambda x: x[1])
+
+                friction_type = "balanced"
+                friction_severity = "none"
+                if max_drift[1] >= 0.25:
+                    friction_map = {"vata": "chaos", "pitta": "intensity", "kapha": "stagnation"}
+                    friction_type = friction_map.get(max_drift[0], "unknown")
+                    friction_severity = "high" if max_drift[1] >= 0.4 else "moderate"
+
+                # Determine operating mode from guna
+                dominant_guna = max(current_guna.items(), key=lambda x: x[1])
+                mode_map = {"sattva": "clarity", "rajas": "activation", "tamas": "recovery"}
+
+                friction_state = {
+                    "baseline_dosha": baseline,
+                    "current_dosha": current_dosha,
+                    "current_guna": current_guna,
+                    "drifts": drifts,
+                    "friction_type": friction_type,
+                    "friction_severity": friction_severity,
+                    "operating_mode": mode_map.get(dominant_guna[0], "unknown"),
+                    "sample_count": count,
+                }
+        except Exception:
+            friction_state = None
+
+    # =========================================================================
+    # CACHE TABLES: Daily, Morning, Micro, Scaffolds
+    # =========================================================================
+    today = dt.date.today()
+
+    # Daily reflection
+    daily_reflection = None
+    try:
+        daily_reflection = await q(
+            "SELECT summary, reflection_date, generated_at FROM daily_reflection_cache WHERE person_id = $1 AND reflection_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        daily_reflection = None
+
+    # Daily closure
+    daily_closure = None
+    try:
+        daily_closure = await q(
+            "SELECT completed, pending, signals, summary, closure_date, generated_at FROM daily_closure_cache WHERE person_id = $1 AND closure_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        daily_closure = None
+
+    # Morning preview
+    morning_preview = None
+    try:
+        morning_preview = await q(
+            "SELECT focus_areas, key_tasks, reminders, rhythm_hint, summary, preview_date, generated_at FROM morning_preview_cache WHERE person_id = $1 AND preview_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        morning_preview = None
+
+    # Morning ask
+    morning_ask = None
+    try:
+        morning_ask = await q(
+            "SELECT question, reason, ask_date, generated_at FROM morning_ask_cache WHERE person_id = $1 AND ask_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        morning_ask = None
+
+    # Morning momentum
+    morning_momentum = None
+    try:
+        morning_momentum = await q(
+            "SELECT momentum_hint, suggested_start, reason, momentum_date, generated_at FROM morning_momentum_cache WHERE person_id = $1 AND momentum_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        morning_momentum = None
+
+    # Micro momentum
+    micro_momentum = None
+    try:
+        micro_momentum = await q(
+            "SELECT nudge, reason, nudge_date, generated_at FROM micro_momentum_cache WHERE person_id = $1 AND nudge_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        micro_momentum = None
+
+    # Micro recovery
+    micro_recovery = None
+    try:
+        micro_recovery = await q(
+            "SELECT nudge, reason, recovery_date, generated_at FROM micro_recovery_cache WHERE person_id = $1 AND recovery_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        micro_recovery = None
+
+    # Focus path
+    focus_path = None
+    try:
+        focus_path = await q(
+            "SELECT anchor_step, progress_step, closure_step, intent_source, path_date, generated_at FROM focus_path_cache WHERE person_id = $1 AND path_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        focus_path = None
+
+    # Mini flow
+    mini_flow = None
+    try:
+        mini_flow = await q(
+            "SELECT warmup_step, focus_block_step, closure_step, optional_reward, source, flow_date, generated_at, rhythm_slot FROM mini_flow_cache WHERE person_id = $1 AND flow_date = $2",
+            person_id, today, one=True,
+        )
+    except Exception:
+        mini_flow = None
+
+    # Micro journey (not date-scoped)
+    micro_journey = None
+    try:
+        micro_journey = await q(
+            "SELECT flow_count, rhythm_slot, journey, generated_at FROM micro_journey_cache WHERE person_id = $1",
+            person_id, one=True,
+        )
+    except Exception:
+        micro_journey = None
+
+    # Continuity state
+    continuity_state = None
+    try:
+        continuity_state = await q(
+            "SELECT * FROM continuity_state WHERE person_id = $1",
+            person_id, one=True,
+        )
+    except Exception:
+        continuity_state = None
+
+    # Reflection trace (latest)
+    reflection_trace = None
+    try:
+        reflection_trace = await q(
+            "SELECT * FROM reflection_trace WHERE person_id = $1 ORDER BY created_at DESC LIMIT 1",
+            person_id, one=True,
+        )
+    except Exception:
+        reflection_trace = None
+
     logger.info(
         "[lab] memory-details payload",
         extra={
@@ -1313,6 +1532,9 @@ async def lab_memory_details(
             "energy_monthly": len(energy_monthly or []),
             "personal_model_elemental": bool(personal_model_elemental),
             "personal_model_energy": bool(personal_model_energy),
+            "friction_framework": bool(friction_framework),
+            "state_vectors_count": len(state_vectors),
+            "friction_state": bool(friction_state),
         },
     )
 
@@ -1343,6 +1565,24 @@ async def lab_memory_details(
         "energy_weekly": energy_weekly or [],
         "energy_monthly": energy_monthly or [],
         "personal_model_energy": personal_model_energy or {},
+        # Friction Framework
+        "friction_framework": friction_framework or {},
+        "state_vectors": state_vectors or [],
+        "friction_state": friction_state,
+        # Cache Tables (Today)
+        "cache_date": str(today),
+        "daily_reflection": daily_reflection,
+        "daily_closure": daily_closure,
+        "morning_preview": morning_preview,
+        "morning_ask": morning_ask,
+        "morning_momentum": morning_momentum,
+        "micro_momentum": micro_momentum,
+        "micro_recovery": micro_recovery,
+        "focus_path": focus_path,
+        "mini_flow": mini_flow,
+        "micro_journey": micro_journey,
+        "continuity_state": continuity_state,
+        "reflection_trace": reflection_trace,
     }
 
 

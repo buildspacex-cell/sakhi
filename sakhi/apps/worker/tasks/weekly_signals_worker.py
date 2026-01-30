@@ -123,10 +123,10 @@ def _confidence_from_inputs(
 ) -> float:
     parts = []
     if rhythm_conf is not None:
-        parts.append(_clamp(rhythm_conf))
+        parts.append(_clamp(float(rhythm_conf)))  # Convert Decimal to float
     if planner_conf is not None:
-        parts.append(_clamp(planner_conf))
-    count = episodic_stats.get("episode_count", 0)
+        parts.append(_clamp(float(planner_conf)))  # Convert Decimal to float
+    count = int(episodic_stats.get("episode_count", 0) or 0)
     if count:
         parts.append(_clamp(min(1.0, 0.1 + 0.02 * min(count, 20))))
     if not parts:

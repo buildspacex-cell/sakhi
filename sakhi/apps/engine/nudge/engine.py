@@ -1,10 +1,25 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 from typing import Any, Dict
 
 from sakhi.apps.api.core.db import q
 from sakhi.apps.api.core.person_utils import resolve_person_id
+
+
+def _ensure_dict(val: Any) -> Dict[str, Any]:
+    """Convert value to dict, handling JSON strings."""
+    if isinstance(val, dict):
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+    return {}
 
 
 def _latest_nudge_ts(nudge_state: Dict[str, Any]) -> dt.datetime | None:
@@ -35,14 +50,14 @@ def _tone_prefix(tone_state: Dict[str, Any]) -> str:
 
 async def compute_nudge(person_id: str, forecast_state: Dict[str, Any] | None, tone_state: Dict[str, Any] | None) -> Dict[str, Any]:
     person_id = await resolve_person_id(person_id) or person_id
-    forecast_state = forecast_state or {}
+    forecast_state = _ensure_dict(forecast_state)
 
     pm_row = await q(
         "SELECT nudge_state FROM personal_model WHERE person_id = $1",
         person_id,
         one=True,
     ) or {}
-    nudge_state = pm_row.get("nudge_state") or {}
+    nudge_state = _ensure_dict(pm_row.get("nudge_state"))
 
     result: Dict[str, Any] = {
         "category": None,

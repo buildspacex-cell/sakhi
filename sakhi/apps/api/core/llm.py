@@ -176,3 +176,71 @@ def _coerce_json(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_coerce_json(v) for v in value]
     return value
+
+
+def extract_json_from_llm_response(text: str) -> Any:
+    """
+    Extract JSON from LLM response that may include markdown code blocks.
+
+    Handles responses like:
+    - Raw JSON: {"key": "value"}
+    - Markdown wrapped: ```json\n{"key": "value"}\n```
+    - Prefixed: "Here's the result:\n```json\n{...}\n```"
+
+    Returns the parsed JSON object/array, or the original text if parsing fails.
+    """
+    import re
+
+    if not text:
+        return {}
+
+    text = text.strip()
+
+    # Try direct JSON parse first
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Handle markdown code blocks with prefix text
+    if "```json" in text:
+        start_idx = text.find("```json")
+        text = text[start_idx + 7:]  # Skip ```json
+        if "```" in text:
+            end_idx = text.find("```")
+            text = text[:end_idx]
+    elif "```" in text:
+        start_idx = text.find("```")
+        text = text[start_idx + 3:]
+        # Skip language identifier if present
+        if text and text[0] != "\n" and text[0] != "{" and text[0] != "[":
+            newline_idx = text.find("\n")
+            if newline_idx != -1:
+                text = text[newline_idx + 1:]
+        if "```" in text:
+            end_idx = text.find("```")
+            text = text[:end_idx]
+
+    text = text.strip()
+
+    # Find JSON boundaries
+    if text:
+        array_start = text.find("[")
+        obj_start = text.find("{")
+        if array_start >= 0 and (obj_start < 0 or array_start < obj_start):
+            text = text[array_start:]
+        elif obj_start >= 0:
+            text = text[obj_start:]
+
+        # Find closing bracket
+        closing_idx = max(text.rfind("]"), text.rfind("}"))
+        if closing_idx != -1:
+            text = text[:closing_idx + 1]
+
+    # Strip trailing commas
+    text = re.sub(r",(\s*[}\]])", r"\1", text)
+
+    try:
+        return json.loads(text.strip())
+    except json.JSONDecodeError:
+        return {"_raw": text}

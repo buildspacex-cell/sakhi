@@ -15,10 +15,14 @@ from sakhi.apps.api.services.memory.synthesis import (
     run_memory_synthesis,
 )
 from sakhi.apps.worker.tasks.weekly_rhythm_rollup_worker import run_weekly_rhythm_rollup
-from sakhi.apps.worker.tasks.weekly_planner_pressure_worker import run_weekly_planner_pressure
 from sakhi.apps.worker.tasks.weekly_signals_worker import run_weekly_signals_worker
-from sakhi.apps.worker.tasks.turn_personal_model_update import run_turn_personal_model_update
-from sakhi.apps.worker.tasks.weekly_reflection import generate_weekly_reflection, _fetch_weekly_signals
+# NOTE: Using stubs for archived workers (v2 refactor)
+from sakhi.apps.worker.tasks._stubs import (
+    run_weekly_planner_pressure,
+    run_turn_personal_model_update,
+    generate_weekly_reflection,
+    _fetch_weekly_signals,
+)
 from sakhi.libs.schemas.settings import get_settings
 from sakhi.apps.api.core.db import q, exec as dbexec
 from sakhi.apps.api.utils.person_resolver import resolve_person
@@ -96,9 +100,9 @@ async def get_weekly_summaries(
             )
             logger.error("WEEKLY_DEBUG: episodic build stats", extra={"person_id": person_id, **build_stats})
         await run_weekly_rhythm_rollup(resolved_id)
-        await run_weekly_planner_pressure(resolved_id)
+        await run_weekly_planner_pressure(resolved_id)  # Stub in v2
         await run_weekly_signals_worker(resolved_id, target_week_start=target_week_start)
-        await run_turn_personal_model_update(resolved_id)
+        await run_turn_personal_model_update(resolved_id)  # Stub in v2
         episodic_count = await q(
             "SELECT COUNT(*) FROM memory_episodic WHERE user_id = $1",
             resolved_id,

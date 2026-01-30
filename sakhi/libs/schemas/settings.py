@@ -40,7 +40,7 @@ class AppSettings(BaseSettings):
     supabase_service_key: str = Field(
         default="changeme",
         validation_alias=AliasChoices(
-            "SUPABASE_SERVICE_KEY", "SAKHI_SUPABASE_SERVICE_KEY"
+            "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SERVICE_KEY", "SAKHI_SUPABASE_SERVICE_KEY"
         ),
     )
     postgres_dsn: str = Field(
@@ -104,7 +104,7 @@ class AppSettings(BaseSettings):
         ),
     )
     enable_rhythm_forecast_writes: bool = Field(
-        default=False,
+        default=True,
         validation_alias=AliasChoices(
             "ENABLE_RHYTHM_FORECAST_WRITES", "SAKHI_ENABLE_RHYTHM_FORECAST_WRITES"
         ),

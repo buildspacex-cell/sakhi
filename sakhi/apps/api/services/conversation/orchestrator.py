@@ -58,7 +58,7 @@ async def orchestrate_turn(
         "meta_reflection_triggers": None,
     }
 
-    minimal_write = capture_only or os.getenv("SAKHI_TURN_MINIMAL_WRITE") == "1" or os.getenv("SAKHI_UNIFIED_INGEST") != "1"
+    minimal_write = capture_only  # Full ingest by default
     turn_ts: dt.datetime | None = None
     if isinstance(ts, dt.datetime):
         turn_ts = ts

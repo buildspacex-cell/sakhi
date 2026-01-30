@@ -40,17 +40,6 @@ async def _build_deep_recall(person_id: str, limit: int = 3) -> Dict[str, Any]:
         person_id,
         limit,
     )
-    events = await dbfetch(
-        """
-        SELECT recall_id, event_label, weight, evidence, created_at
-        FROM life_event_links
-        WHERE person_id = $1
-        ORDER BY created_at DESC
-        LIMIT 2 * $2
-        """,
-        person_id,
-        limit,
-    )
     threads = await dbfetch(
         """
         SELECT thread_id, continuity_hint, persona_stability, last_turn_id, updated_at
@@ -77,16 +66,6 @@ async def _build_deep_recall(person_id: str, limit: int = 3) -> Dict[str, Any]:
         }
         for r in recalls
     ]
-    serialized_events = [
-        {
-            "recall_id": e.get("recall_id"),
-            "event_label": e.get("event_label"),
-            "weight": _to_float(e.get("weight")),
-            "evidence": e.get("evidence") or {},
-            "created_at": e.get("created_at"),
-        }
-        for e in events
-    ]
     serialized_threads = [
         {
             "thread_id": t.get("thread_id"),
@@ -100,7 +79,7 @@ async def _build_deep_recall(person_id: str, limit: int = 3) -> Dict[str, Any]:
 
     return {
         "recalls": serialized_recalls,
-        "life_events": serialized_events,
+        "life_events": [],
         "threads": serialized_threads,
     }
 

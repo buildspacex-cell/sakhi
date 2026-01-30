@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Dict
 
@@ -8,10 +9,16 @@ from sakhi.apps.api.core.llm import call_llm
 from sakhi.apps.api.services.memory.recall import build_recall_context
 from sakhi.apps.api.services.patterns.detector import build_patterns_context
 from sakhi.apps.api.services.journaling.ai import generate_journaling_guidance
+from sakhi.apps.api.services.response import (
+    run_adaptive_pipeline,
+    should_use_adaptive_pipeline,
+)
 
 from .conversation_context_builder import build_conversation_context
 from .conversation_reasoner import build_prompt
 from .conversation_tone import decide_tone
+
+logger = logging.getLogger(__name__)
 
 
 async def generate_reply(
@@ -20,10 +27,19 @@ async def generate_reply(
     metadata: Dict[str, Any] | None = None,
     behavior_profile: Dict[str, Any] | None = None,
     *,
+    session_id: str = "",
     return_debug: bool = False,
 ) -> Dict[str, Any]:
     """
     Main entry point for the conversation-v2 engine.
+
+    Args:
+        person_id: User ID
+        user_text: User's message
+        metadata: Additional context metadata
+        behavior_profile: Behavior profile for personalization
+        session_id: Session ID for loading session_summary in adaptive pipeline
+        return_debug: Whether to include debug info in response
     """
 
     metadata_payload: Dict[str, Any] = dict(metadata or {})
@@ -73,14 +89,84 @@ async def generate_reply(
     except Exception:
         journaling_ai = None
 
-    prompt = build_prompt(user_text, context, tone, metadata=metadata_payload)
+    # Check if adaptive pipeline should be used
+    adaptive_context = None
+    adaptive_prompt = None
+    adaptive_error = None  # Track top-level errors
+    use_adaptive = os.getenv("SAKHI_USE_ADAPTIVE_RESPONSE", "1") == "1"
+
+    if use_adaptive and should_use_adaptive_pipeline(user_text):
+        try:
+            adaptive_context = await run_adaptive_pipeline(person_id, user_text, session_id=session_id)
+            if adaptive_context.pipeline_stages.get("prompt"):
+                adaptive_prompt = adaptive_context.adaptive_prompt
+                logger.debug(
+                    "[generate_reply] Using adaptive pipeline: mode=%s, symptom=%s",
+                    adaptive_context.strategy.mode,
+                    adaptive_context.sense.symptom,
+                )
+            elif adaptive_context.errors:
+                # Pipeline ran but didn't complete - errors are already in context
+                logger.warning(
+                    "[generate_reply] Adaptive pipeline incomplete, errors: %s",
+                    adaptive_context.errors,
+                )
+        except Exception as e:
+            adaptive_error = f"Pipeline exception: {type(e).__name__}: {str(e)}"
+            logger.warning("[generate_reply] Adaptive pipeline failed, falling back: %s", e)
+            adaptive_prompt = None
+
+    # Build prompts
+    base_prompt = build_prompt(user_text, context, tone, metadata=metadata_payload)
     recall_ctx = await build_recall_context(person_id, user_text)
     pattern_ctx = await build_patterns_context(person_id)
     system_ctx = f"{recall_ctx}\n\nPatterns:\n{pattern_ctx}"
-    messages = [
-        {"role": "system", "content": system_ctx},
-        {"role": "system", "content": prompt},
-    ]
+
+    # Build message history for LLM context continuity
+    conversation_history = metadata_payload.get("conversation_history") or []
+    session_summary = metadata_payload.get("session_summary") or ""
+
+    # Use adaptive prompt if available, otherwise use base prompt
+    if adaptive_prompt:
+        messages = [
+            {"role": "system", "content": system_ctx},
+            {"role": "system", "content": adaptive_prompt},
+        ]
+    else:
+        messages = [
+            {"role": "system", "content": system_ctx},
+            {"role": "system", "content": base_prompt},
+        ]
+
+    # Add session summary as compressed older context (if available)
+    # This gives the LLM awareness of earlier parts of the conversation
+    # The summary contains semantic markers for pronouns, topics, and entities
+    if session_summary:
+        context_instruction = """[Earlier Conversation Context]
+Use this context to understand references in the recent conversation:
+- When user says "she/he/they", refer to People & Relationships
+- When user says "it/that/the project", refer to Topics & References
+- Be aware of the Emotional Thread and Open Threads
+
+"""
+        messages.append({
+            "role": "system",
+            "content": context_instruction + session_summary,
+        })
+
+    # Add recent conversation history as alternating user/assistant messages
+    # These are verbatim for immediate context and natural flow
+    for turn in conversation_history:
+        role = turn.get("role", "user")
+        text = turn.get("text", "")
+        if text:
+            # Map sakhi/assistant role to 'assistant' for OpenAI API compatibility
+            # DB stores 'assistant', but we also handle legacy 'sakhi' for backwards compat
+            llm_role = "assistant" if role in ("sakhi", "assistant") else "user"
+            messages.append({"role": llm_role, "content": text})
+
+    # Add current user message
+    messages.append({"role": "user", "content": user_text})
 
     model_name = os.getenv("MODEL_CONVERSATION", "gpt-4o-mini")
     response = await call_llm(
@@ -134,9 +220,23 @@ async def generate_reply(
         "journaling_ai": journaling_ai,
         "behavior_profile": behavior_profile,
     }
+
+    # Include adaptive context metadata if used
+    if adaptive_context:
+        response_payload["adaptive_response"] = adaptive_context.to_metadata()
+    elif adaptive_error:
+        # Pipeline failed completely - surface the error
+        response_payload["adaptive_response"] = {
+            "pipeline_stages": {},
+            "errors": {"pipeline": adaptive_error},
+            "warnings": [],
+        }
+
     if return_debug:
         response_payload["debug"] = {
-            "prompt": prompt,
+            "prompt": adaptive_prompt or base_prompt,
+            "base_prompt": base_prompt,
+            "adaptive_prompt": adaptive_prompt,
             "system_context": system_ctx,
             "messages": messages,
             "metadata": metadata_payload,
@@ -144,6 +244,9 @@ async def generate_reply(
             "recall_context": recall_ctx,
             "pattern_context": pattern_ctx,
             "tone_blueprint": tone,
+            "adaptive_context": adaptive_context.to_metadata() if adaptive_context else None,
+            "adaptive_error": adaptive_error,  # Top-level pipeline error
+            "used_fallback": adaptive_prompt is None and use_adaptive,  # Did we fall back?
         }
     return response_payload
 

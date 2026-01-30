@@ -140,14 +140,41 @@ def _coerce_score(value: Any, *, default: float) -> float:
 
 def _extract_json_block(blob: str) -> str:
     text = (blob or "").strip()
-    if text.startswith("```"):
+    # Handle case where LLM prefixes text before markdown code block
+    if "```json" in text:
+        start_idx = text.find("```json")
+        text = text[start_idx + 7:]  # Skip ```json
+        if "```" in text:
+            end_idx = text.find("```")
+            text = text[:end_idx]
+    elif "```" in text:
+        start_idx = text.find("```")
+        text = text[start_idx + 3:]
+        # Skip language identifier if present
+        if text.startswith("\n") or text[0:1].isalpha():
+            end_lang = text.find("\n")
+            if end_lang != -1:
+                text = text[end_lang + 1:]
+        if "```" in text:
+            end_idx = text.find("```")
+            text = text[:end_idx]
+    elif text.startswith("```"):
         end_lang = text.find("\n")
         if end_lang != -1:
             text = text[end_lang + 1 :]
         if text.endswith("```"):
             text = text[:-3]
     text = text.strip()
+    # Find JSON array or object boundaries
     if text:
+        # Find the first [ or { to start JSON
+        array_start = text.find("[")
+        obj_start = text.find("{")
+        if array_start >= 0 and (obj_start < 0 or array_start < obj_start):
+            text = text[array_start:]
+        elif obj_start >= 0:
+            text = text[obj_start:]
+        # Find closing bracket
         closing_idx = max(text.rfind("]"), text.rfind("}"))
         if closing_idx != -1:
             text = text[: closing_idx + 1]
@@ -159,4 +186,153 @@ def _strip_trailing_commas(text: str) -> str:
     return re.sub(r",(\s*[}\]])", r"\1", text)
 
 
-__all__ = ["run_theme_inference"]
+async def run_theme_inference_incremental(person_id: str) -> Dict[str, Any]:
+    """
+    Incremental theme inference with upranking and decay.
+
+    - Boost clarity for recurring themes (+10% per occurrence)
+    - Decay unused themes (-15% per week)
+    - Never delete, just deprioritize
+
+    This complements the full run_theme_inference by maintaining
+    theme momentum based on crystallized patterns.
+    """
+    db = await get_db()
+    try:
+        # Get crystallized theme patterns
+        crystallized_themes = await db.fetch(
+            """
+            SELECT pattern_value, confidence, mention_count, last_seen
+            FROM crystallized_patterns
+            WHERE person_id = $1
+              AND pattern_type = 'theme'
+              AND status = 'active'
+            """,
+            person_id,
+        )
+
+        # Get existing theme states
+        existing_themes = await db.fetch(
+            """
+            SELECT theme, clarity_score, updated_at
+            FROM theme_states
+            WHERE person_id = $1
+            """,
+            person_id,
+        )
+
+        existing_map = {
+            row["theme"]: {
+                "clarity": row.get("clarity_score", 0.5),
+                "updated_at": row.get("updated_at"),
+            }
+            for row in existing_themes
+        }
+
+        boosted = 0
+        decayed = 0
+
+        # Boost themes that appear in crystallized patterns
+        for crystal in crystallized_themes:
+            theme_name = crystal.get("pattern_value")
+            if not theme_name:
+                continue
+
+            crystal_confidence = float(crystal.get("confidence", 0.5))
+            mention_count = crystal.get("mention_count", 1)
+
+            # Calculate boost: base +10% per occurrence beyond threshold
+            boost = min(0.25, 0.10 * max(0, mention_count - 3))
+
+            if theme_name in existing_map:
+                # Update existing theme
+                current_clarity = existing_map[theme_name]["clarity"]
+                new_clarity = min(0.95, current_clarity + boost)
+
+                await db.execute(
+                    """
+                    UPDATE theme_states
+                    SET clarity_score = $3, updated_at = NOW()
+                    WHERE person_id = $1 AND theme = $2
+                    """,
+                    person_id,
+                    theme_name,
+                    new_clarity,
+                )
+                boosted += 1
+            else:
+                # Create new theme from crystallized pattern
+                await db.execute(
+                    """
+                    INSERT INTO theme_states (
+                        person_id, theme, rhythm_state, emotional_state,
+                        clarity_score, updated_at
+                    )
+                    VALUES ($1, $2, '{}'::jsonb, '{}'::jsonb, $3, NOW())
+                    ON CONFLICT (person_id, theme) DO UPDATE
+                    SET clarity_score = EXCLUDED.clarity_score, updated_at = NOW()
+                    """,
+                    person_id,
+                    theme_name,
+                    crystal_confidence,
+                )
+                boosted += 1
+
+        # Decay themes not in crystallized patterns
+        crystallized_names = {c.get("pattern_value") for c in crystallized_themes}
+
+        for theme_name, theme_data in existing_map.items():
+            if theme_name in crystallized_names:
+                continue  # Already boosted
+
+            updated_at = theme_data.get("updated_at")
+            if not updated_at:
+                continue
+
+            # Calculate weeks since last update
+            from datetime import datetime, timezone
+
+            now = datetime.now(timezone.utc)
+            if hasattr(updated_at, "tzinfo") and updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=timezone.utc)
+
+            weeks_since = (now - updated_at).days / 7
+
+            if weeks_since < 1:
+                continue  # Only decay after a week
+
+            # Apply decay: -15% per week
+            current_clarity = theme_data["clarity"]
+            decay = 0.15 * weeks_since
+            new_clarity = max(0.1, current_clarity - decay)
+
+            await db.execute(
+                """
+                UPDATE theme_states
+                SET clarity_score = $3, updated_at = NOW()
+                WHERE person_id = $1 AND theme = $2
+                """,
+                person_id,
+                theme_name,
+                new_clarity,
+            )
+            decayed += 1
+
+        LOGGER.info(
+            "[Theme Inference] Incremental update for %s: boosted=%d, decayed=%d",
+            person_id,
+            boosted,
+            decayed,
+        )
+
+        return {
+            "boosted": boosted,
+            "decayed": decayed,
+            "crystallized_themes": len(crystallized_themes),
+        }
+
+    finally:
+        await db.close()
+
+
+__all__ = ["run_theme_inference", "run_theme_inference_incremental"]

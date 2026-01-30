@@ -128,19 +128,6 @@ async def build_meta_context(person_id: str) -> Dict[str, Any]:
             )
             context["tone_hint"] = tone_hint
 
-        meta_note = await db.fetchrow(
-            """
-            SELECT correction_note
-            FROM meta_audit
-            WHERE person_id = $1
-            ORDER BY created_at DESC
-            LIMIT 1
-            """,
-            person_id,
-        )
-        if meta_note:
-            context["correction_note"] = meta_note.get("correction_note")
-
         emotion_state = context.get("emotion")
         if not isinstance(emotion_state, dict):
             emotion_state = _ensure_mapping(emotion_state)

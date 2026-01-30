@@ -1,22 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import Any, Mapping
 
 from sakhi.apps.api.core.db import get_db
-from sakhi.apps.logic.brain import brain_engine
-
-_BRAIN_TRIGGER_LAYERS = {
-    "journal",
-    "turn",
-    "planner",
-    "focus",
-    "relationship",
-    "rhythm",
-    "environment",
-    "summary",
-}
 
 
 async def log_event(
@@ -25,7 +12,7 @@ async def log_event(
     event: str,
     payload: Mapping[str, Any] | None = None,
 ) -> None:
-    """Persist a structured system event for dev-console streaming and trigger brain refresh."""
+    """Persist a structured system event for dev-console streaming."""
 
     if not person_id:
         return
@@ -46,8 +33,8 @@ async def log_event(
     finally:
         await db.close()
 
-    if layer in _BRAIN_TRIGGER_LAYERS:
-        asyncio.create_task(brain_engine.refresh_brain(person_id, refresh_journey=True))
+    # Note: Brain refresh is now handled by background workers (episodic_consolidation, esr, etc.)
+    # No inline state refresh needed here.
 
 
 __all__ = ["log_event"]

@@ -24,6 +24,19 @@ from sakhi.apps.worker.jobs import _get_router
 from sakhi.libs.embeddings import embed_text, to_pgvector
 from sakhi.libs.schemas import get_settings
 
+# Memory Graph wiring for cross-entity relationships
+try:
+    from sakhi.apps.api.services.memory_graph.wiring import (
+        wire_soul_signals_to_graph,
+        wire_soul_conflict_to_graph,
+        wire_soul_friction_to_graph,
+        wire_activity_to_time_slot,
+        ensure_time_slots,
+    )
+    MEMORY_GRAPH_ENABLED = True
+except ImportError:
+    MEMORY_GRAPH_ENABLED = False
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -146,6 +159,173 @@ def extract_context_tags(text: str) -> List[Dict[str, str]]:
         add_tag("mind", "clarity", "down")
 
     return tags
+
+
+async def wire_episode_to_memory_graph(
+    person_id: str,
+    episode_id: str,
+    soul_signals: Dict[str, List[str]],
+    soul_conflict: Dict[str, Any],
+    soul_friction: Dict[str, Any],
+    activities: List[Dict[str, str]] = None,
+) -> None:
+    """
+    Wire episode signals to the memory graph for cross-entity relationships.
+
+    This enables intelligent context loading by creating nodes/edges for:
+    - Core values, shadows, lights (soul signals)
+    - Value conflicts (soul_conflict)
+    - Direction vs block tensions (soul_friction)
+    - Activities linked to time slots
+    """
+    if not MEMORY_GRAPH_ENABLED:
+        return
+
+    activities = activities or []
+
+    try:
+        # Ensure time slots exist for this person
+        await ensure_time_slots(person_id)
+
+        # Wire soul signals (values, patterns)
+        if soul_signals:
+            counts = await wire_soul_signals_to_graph(
+                person_id=person_id,
+                soul_signals=soul_signals,
+                episode_id=episode_id,
+            )
+            if counts.get("value", 0) + counts.get("pattern", 0) > 0:
+                _log(
+                    "memory_graph",
+                    "wired soul signals",
+                    episode_id=episode_id,
+                    values=counts.get("value", 0),
+                    patterns=counts.get("pattern", 0),
+                    edges=counts.get("edges", 0),
+                )
+
+        # Wire value conflicts (opposite_of edges)
+        if soul_conflict and soul_conflict.get("themes"):
+            edges = await wire_soul_conflict_to_graph(
+                person_id=person_id,
+                conflict_themes=soul_conflict.get("themes", []),
+            )
+            if edges > 0:
+                _log(
+                    "memory_graph",
+                    "wired soul conflict",
+                    episode_id=episode_id,
+                    conflict_edges=edges,
+                )
+
+        # Wire soul friction (blocks edges)
+        if soul_friction and soul_friction.get("areas"):
+            edges = await wire_soul_friction_to_graph(
+                person_id=person_id,
+                friction_areas=soul_friction.get("areas", []),
+            )
+            if edges > 0:
+                _log(
+                    "memory_graph",
+                    "wired soul friction",
+                    episode_id=episode_id,
+                    friction_edges=edges,
+                )
+
+        # Wire activities to time slots
+        if activities:
+            activities_wired = 0
+            for act in activities:
+                activity_name = act.get("activity", "")
+                time_slot = act.get("time_slot", "")
+                confidence = float(act.get("confidence", 0.5))
+                if activity_name and time_slot:
+                    await wire_activity_to_time_slot(
+                        person_id=person_id,
+                        activity_name=activity_name,
+                        time_slot=time_slot,
+                        weight=confidence,
+                    )
+                    activities_wired += 1
+            if activities_wired > 0:
+                _log(
+                    "memory_graph",
+                    "wired activities to time slots",
+                    episode_id=episode_id,
+                    activities_count=activities_wired,
+                )
+
+    except Exception as exc:
+        _log(
+            "memory_graph",
+            f"wiring failed (non-fatal): {exc}",
+            episode_id=episode_id,
+        )
+
+
+async def log_pattern_occurrences(
+    person_id: str,
+    episode_id: str,
+    entry_id: str | None,
+    soul_signals: Dict[str, List[str]],
+    summary_snippet: str,
+    confidence: float = 0.5,
+) -> None:
+    """
+    Log pattern occurrences to pattern_occurrences table for crystallization.
+
+    Patterns are logged here and only promoted to crystallized_patterns
+    when they meet thresholds (handled by crystallization worker).
+    """
+    pattern_mappings = [
+        ("core_value", soul_signals.get("soul") or []),
+        ("shadow", soul_signals.get("soul_shadow") or []),
+        ("light", soul_signals.get("soul_light") or []),
+    ]
+
+    snippet = (summary_snippet or "")[:500]  # Truncate for storage
+
+    for pattern_type, values in pattern_mappings:
+        for value in values:
+            if not value or not value.strip():
+                continue
+            try:
+                await dbexec(
+                    """
+                    INSERT INTO pattern_occurrences (
+                        person_id, pattern_type, pattern_value,
+                        episode_id, entry_id, snippet, confidence
+                    )
+                    VALUES ($1, $2, $3, $4::uuid, $5::uuid, $6, $7)
+                    """,
+                    person_id,
+                    pattern_type,
+                    value.strip()[:200],  # Truncate value
+                    episode_id,
+                    entry_id,
+                    snippet,
+                    confidence,
+                )
+            except Exception as exc:
+                _log(
+                    "pattern_occurrences",
+                    f"failed to log {pattern_type}",
+                    person_id=person_id,
+                    value=value[:50],
+                    error=str(exc),
+                )
+
+    count = sum(len(v) for v in [soul_signals.get("soul") or [], soul_signals.get("soul_shadow") or [], soul_signals.get("soul_light") or []])
+    if count > 0:
+        _log(
+            "pattern_occurrences",
+            f"logged {count} occurrences",
+            person_id=person_id,
+            episode_id=episode_id,
+            core_values=len(soul_signals.get("soul") or []),
+            shadows=len(soul_signals.get("soul_shadow") or []),
+            lights=len(soul_signals.get("soul_light") or []),
+        )
 
 
 async def extract_episodic_soul(summary_text: str) -> Dict[str, List[str]]:
@@ -404,6 +584,187 @@ Return JSON only with:
         return {}
 
 
+async def extract_state_vector(summary_text: str, emotional_state: Dict[str, Any], rhythm_state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compute dosha state vector for Friction Framework from episode summary.
+
+    Dosha mapping:
+    - Vata (Adaptive): scattered, anxious, variable, creative, quick-thinking
+    - Pitta (Performance): intense, focused, irritable, driven, goal-oriented
+    - Kapha (Conservation): steady, slow, heavy, calm, resistant to change
+
+    Returns normalized dosha scores that sum to 1.0
+    """
+    if not summary_text or not summary_text.strip():
+        return {"dosha": {"vata": 0.33, "pitta": 0.33, "kapha": 0.34}, "confidence": 0.3}
+
+    # Deterministic keyword-based computation (fast, no LLM)
+    lowered = summary_text.lower()
+    scores = {"vata": 0.0, "pitta": 0.0, "kapha": 0.0}
+
+    # Vata signals (Adaptive - scattered, anxious, creative)
+    vata_keywords = [
+        "scattered", "anxious", "worry", "racing", "overwhelmed", "distracted",
+        "creative", "ideas", "brainstorm", "change", "varied", "variable",
+        "restless", "insomnia", "couldn't sleep", "mind racing", "jumping"
+    ]
+    for kw in vata_keywords:
+        if kw in lowered:
+            scores["vata"] += 0.15
+
+    # Pitta signals (Performance - intense, focused, driven)
+    pitta_keywords = [
+        "intense", "focused", "productive", "deadline", "accomplished", "driven",
+        "irritable", "frustrated", "angry", "impatient", "critical", "perfection",
+        "competitive", "goal", "achievement", "pushed", "hard work"
+    ]
+    for kw in pitta_keywords:
+        if kw in lowered:
+            scores["pitta"] += 0.15
+
+    # Kapha signals (Conservation - steady, slow, heavy)
+    kapha_keywords = [
+        "steady", "calm", "grounded", "stable", "routine", "consistent",
+        "tired", "heavy", "sluggish", "drained", "stuck", "unmotivated",
+        "rest", "comfort", "relaxed", "slow", "peaceful"
+    ]
+    for kw in kapha_keywords:
+        if kw in lowered:
+            scores["kapha"] += 0.15
+
+    # Integrate emotional state signals
+    if emotional_state:
+        activation = float(emotional_state.get("activation", 0.5))
+        stability = float(emotional_state.get("stability", 0.5))
+        valence = float(emotional_state.get("valence", 0.0))
+
+        # High activation + negative valence = elevated Pitta
+        if activation > 0.6 and valence < -0.2:
+            scores["pitta"] += 0.2
+        # Low activation = elevated Kapha
+        if activation < 0.4:
+            scores["kapha"] += 0.15
+        # Low stability = elevated Vata
+        if stability < 0.4:
+            scores["vata"] += 0.2
+
+    # Integrate rhythm state signals
+    if rhythm_state:
+        energy = float(rhythm_state.get("energy_level", 0.5))
+        structure = float(rhythm_state.get("structure", 0.5))
+
+        # Low energy = Kapha elevated
+        if energy < 0.4:
+            scores["kapha"] += 0.15
+        # High energy + low structure = Vata elevated
+        if energy > 0.6 and structure < 0.4:
+            scores["vata"] += 0.15
+
+    # Normalize to sum to 1.0
+    total = sum(scores.values())
+    if total > 0:
+        scores = {k: round(v / total, 2) for k, v in scores.items()}
+    else:
+        scores = {"vata": 0.33, "pitta": 0.33, "kapha": 0.34}
+
+    # Ensure exactly 1.0
+    adjustment = 1.0 - sum(scores.values())
+    scores["kapha"] = round(scores["kapha"] + adjustment, 2)
+
+    confidence = min(0.85, 0.3 + total * 0.1)  # Higher confidence with more signals
+
+    return {
+        "dosha": scores,
+        "confidence": round(confidence, 2),
+        "computed_at": datetime.now(timezone.utc).isoformat()
+    }
+
+
+async def extract_guna_vector(summary_text: str, emotional_state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compute guna state vector for Operating Mode from episode summary.
+
+    Guna mapping (Operating Modes):
+    - Sattva (Clarity): balanced, clear, peaceful, aligned
+    - Rajas (Activation): active, driven, restless, ambitious
+    - Tamas (Recovery): heavy, slow, foggy, resistant
+
+    Returns normalized guna scores that sum to 1.0
+    """
+    if not summary_text or not summary_text.strip():
+        return {"sattva": 0.33, "rajas": 0.34, "tamas": 0.33, "confidence": 0.3}
+
+    lowered = summary_text.lower()
+    scores = {"sattva": 0.0, "rajas": 0.0, "tamas": 0.0}
+
+    # Sattva signals (Clarity mode)
+    sattva_keywords = [
+        "clarity", "clear", "peaceful", "balanced", "aligned", "centered",
+        "grateful", "content", "harmony", "flow", "present", "mindful",
+        "insight", "understanding", "calm focus", "serene"
+    ]
+    for kw in sattva_keywords:
+        if kw in lowered:
+            scores["sattva"] += 0.2
+
+    # Rajas signals (Activation mode)
+    rajas_keywords = [
+        "busy", "active", "productive", "rushing", "deadline", "meetings",
+        "ambitious", "driven", "restless", "anxious", "scattered", "racing",
+        "stressed", "overwhelmed", "too much", "multitasking"
+    ]
+    for kw in rajas_keywords:
+        if kw in lowered:
+            scores["rajas"] += 0.2
+
+    # Tamas signals (Recovery mode)
+    tamas_keywords = [
+        "tired", "heavy", "sluggish", "unmotivated", "foggy", "drained",
+        "stuck", "resistant", "avoidant", "procrastinating", "low energy",
+        "need rest", "exhausted", "burnt out", "numb"
+    ]
+    for kw in tamas_keywords:
+        if kw in lowered:
+            scores["tamas"] += 0.2
+
+    # Integrate emotional state
+    if emotional_state:
+        valence = float(emotional_state.get("valence", 0.0))
+        activation = float(emotional_state.get("activation", 0.5))
+        stability = float(emotional_state.get("stability", 0.5))
+
+        # Positive valence + high stability = Sattva
+        if valence > 0.2 and stability > 0.6:
+            scores["sattva"] += 0.25
+        # High activation + instability = Rajas
+        if activation > 0.6 and stability < 0.5:
+            scores["rajas"] += 0.25
+        # Low activation + negative valence = Tamas
+        if activation < 0.4 and valence < 0:
+            scores["tamas"] += 0.25
+
+    # Normalize to sum to 1.0
+    total = sum(scores.values())
+    if total > 0:
+        scores = {k: round(v / total, 2) for k, v in scores.items()}
+    else:
+        scores = {"sattva": 0.33, "rajas": 0.34, "tamas": 0.33}
+
+    # Ensure exactly 1.0
+    adjustment = 1.0 - sum(scores.values())
+    scores["tamas"] = round(scores["tamas"] + adjustment, 2)
+
+    confidence = min(0.85, 0.3 + total * 0.1)
+
+    return {
+        "sattva": scores["sattva"],
+        "rajas": scores["rajas"],
+        "tamas": scores["tamas"],
+        "confidence": round(confidence, 2),
+        "computed_at": datetime.now(timezone.utc).isoformat()
+    }
+
+
 async def extract_episodic_emotional_state(summary_text: str) -> Dict[str, Any]:
     """
     Returns a coarse emotional aggregate for the day.
@@ -501,6 +862,77 @@ energy_trend="flat", load_balance="balanced", recovery_signal="unknown"
         }
 
 
+async def extract_activities_with_time_slots(summary_text: str) -> List[Dict[str, str]]:
+    """
+    Extract activities and their associated time slots from conversation text.
+
+    Returns list of {activity, time_slot, confidence} dictionaries.
+    Time slots: morning, afternoon, evening, night
+
+    This enables the memory graph to track:
+    - What activities the person does/wants to do
+    - When they prefer to do them
+    - Potential conflicts (two activities competing for morning slot)
+    """
+    prompt = """Extract activities mentioned in this text along with their time context.
+
+Rules:
+- Output STRICT JSON only.
+- Focus on concrete activities/habits, not abstract concepts.
+- Include activities they DO or WANT TO DO.
+- Time slots: morning (6am-12pm), afternoon (12pm-6pm), evening (6pm-10pm), night (10pm-6am)
+- If time is not explicitly stated, infer from context (e.g., "first thing" = morning)
+- Skip activities with no time context.
+- Confidence: 0.0-1.0 based on explicitness.
+
+Schema:
+{
+  "activities": [
+    {"activity": "yoga", "time_slot": "morning", "confidence": 0.9},
+    {"activity": "work meeting", "time_slot": "afternoon", "confidence": 0.7}
+  ]
+}
+
+Return empty activities array [] if none found with time context.
+"""
+    try:
+        router = _get_router()
+        model = (get_settings().model_reflect or os.getenv("MODEL_REFLECT")) or "gpt-4o-mini"
+        resp = await router.chat(
+            messages=[
+                {"role": "system", "content": "You extract activities and their time contexts from text."},
+                {"role": "user", "content": prompt + "\n\nTEXT:\n" + summary_text[:2000]}
+            ],
+            model=model,
+        )
+        raw = (resp.text or "").strip()
+        parsed = json.loads(raw)
+        activities = parsed.get("activities", [])
+
+        # Validate and filter
+        valid_slots = {"morning", "afternoon", "evening", "night"}
+        validated = []
+        for act in activities[:10]:  # Limit to 10
+            if not act.get("activity") or not act.get("time_slot"):
+                continue
+            if act.get("time_slot", "").lower() not in valid_slots:
+                continue
+            confidence = float(act.get("confidence", 0.5))
+            if confidence < 0.3:
+                continue
+            validated.append({
+                "activity": act["activity"].lower().strip()[:50],
+                "time_slot": act["time_slot"].lower().strip(),
+                "confidence": confidence,
+            })
+
+        return validated
+
+    except Exception as exc:
+        _log("episodic_v21", f"activity_extraction_failed {exc}")
+        return []
+
+
 async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]) -> None:
     """
     Episodic v2.1 skeleton: compute daily window, read journals, log exit path.
@@ -584,7 +1016,7 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
 
     dedup_row = await dbfetch(
         """
-        SELECT id
+        SELECT id, content_hash, record->>'source_entry_ids' as source_ids
         FROM memory_episodic
         WHERE user_id = $1
           AND record->>'episode_type' = 'daily'
@@ -599,17 +1031,160 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
     )
 
     if dedup_row:
+        existing_hash = dedup_row.get("content_hash")
+        existing_episode_id = dedup_row.get("id")
+
+        # Check if content changed (new journals added)
+        if existing_hash == content_hash:
+            _log(
+                "episodic_v21",
+                "exit: daily episode already exists with same content",
+                user_id=user_id,
+                entry_id=entry_id,
+                start=window_start.isoformat(),
+                end=window_end.isoformat(),
+                journal_count=count,
+                content_hash=content_hash,
+                episode_id=existing_episode_id,
+            )
+            return
+
+        # Content changed - update existing episode with new journals
         _log(
             "episodic_v21",
-            "exit: daily episode already exists for window",
+            "updating existing episode with new journals",
             user_id=user_id,
             entry_id=entry_id,
             start=window_start.isoformat(),
             end=window_end.isoformat(),
             journal_count=count,
-            content_hash=content_hash,
-            episode_id=dedup_row.get("id"),
+            old_hash=existing_hash,
+            new_hash=content_hash,
+            episode_id=existing_episode_id,
         )
+
+        # Recalculate everything with all journals
+        summary_text = await _summarize_day(journals, window_start)
+        vector_values, has_vec = await _embed_summary(summary_text)
+        vector_literal = to_pgvector(vector_values, length=1536) if has_vec else None
+        soul_signals = await extract_episodic_soul(summary_text)
+        episodic_emotional_state = await extract_episodic_emotional_state(summary_text)
+        episodic_rhythm_state = await extract_episodic_rhythm_state(summary_text)
+        # Recompute state vectors for Friction Framework
+        state_vector = await extract_state_vector(summary_text, episodic_emotional_state, episodic_rhythm_state)
+        guna_vector = await extract_guna_vector(summary_text, episodic_emotional_state)
+        recent_summaries_prev = await _fetch_recent_episode_summaries_before(user_id, limit=7, before_ts=window_end)
+        recent_summaries = [summary_text] + recent_summaries_prev
+        soul_conflict = await extract_soul_conflict(recent_summaries)
+        soul_friction = await extract_soul_friction(recent_summaries)
+        emotion_loop = await extract_emotion_loop(recent_summaries)
+
+        # Extract activities with time slots for memory graph
+        activities = await extract_activities_with_time_slots(summary_text)
+
+        # Log pattern occurrences for crystallization layer
+        await log_pattern_occurrences(
+            person_id=user_id,
+            episode_id=str(existing_episode_id),
+            entry_id=entry_id,
+            soul_signals=soul_signals,
+            summary_snippet=summary_text,
+            confidence=0.6,  # Higher confidence for multi-journal episodes
+        )
+
+        # Wire to memory graph for cross-entity relationships
+        await wire_episode_to_memory_graph(
+            person_id=user_id,
+            episode_id=str(existing_episode_id),
+            soul_signals=soul_signals,
+            soul_conflict=soul_conflict,
+            soul_friction=soul_friction,
+            activities=activities,
+        )
+
+        record_payload = {
+            "source_entry_ids": source_entry_ids,
+            "window_start": window_start.isoformat(),
+            "window_end": window_end.isoformat(),
+            "model_version": "episodic_v2.1",
+            "episode_type": "daily",
+            "summary": summary_text,
+        }
+
+        try:
+            await dbexec(
+                """
+                UPDATE memory_episodic
+                SET
+                    text = $2,
+                    record = $3::jsonb,
+                    vector_vec = CASE
+                        WHEN $4::text IS NULL THEN NULL::vector
+                        ELSE ($4::text)::vector
+                    END,
+                    content_hash = $5,
+                    context_tags = $6::jsonb,
+                    soul = $7::jsonb,
+                    soul_shadow = $8::jsonb,
+                    soul_light = $9::jsonb,
+                    emotional_state = $10::jsonb,
+                    rhythm_state = $11::jsonb,
+                    soul_conflict = $12::jsonb,
+                    soul_friction = $13::jsonb,
+                    emotion_loop = $14::jsonb,
+                    state_vector = $15::jsonb,
+                    guna_vector = $16::jsonb
+                WHERE id = $1
+                """,
+                existing_episode_id,
+                summary_text,
+                json.dumps(record_payload, ensure_ascii=False),
+                vector_literal,
+                content_hash,
+                json.dumps(extract_context_tags(summary_text)),
+                json.dumps(soul_signals.get("soul") or []),
+                json.dumps(soul_signals.get("soul_shadow") or []),
+                json.dumps(soul_signals.get("soul_light") or []),
+                json.dumps(episodic_emotional_state),
+                json.dumps(episodic_rhythm_state),
+                json.dumps(soul_conflict),
+                json.dumps(soul_friction),
+                json.dumps(emotion_loop),
+                json.dumps(state_vector),
+                json.dumps(guna_vector),
+            )
+            _log(
+                "episodic_v21",
+                "updated episode with new journals",
+                user_id=user_id,
+                entry_id=entry_id,
+                episode_id=existing_episode_id,
+                start=window_start.isoformat(),
+                end=window_end.isoformat(),
+                journal_count=count,
+                content_hash=content_hash,
+                source_entry_ids=source_entry_ids,
+                has_vector=has_vec,
+                summary_len=len(summary_text),
+            )
+            _log(
+                "episodic_v21",
+                "friction_vectors_updated",
+                episode_id=existing_episode_id,
+                state_vector_dosha=state_vector.get("dosha"),
+                state_vector_conf=state_vector.get("confidence"),
+                guna_vector_sattva=guna_vector.get("sattva"),
+                guna_vector_rajas=guna_vector.get("rajas"),
+                guna_vector_tamas=guna_vector.get("tamas"),
+            )
+        except Exception as exc:
+            _log(
+                "episodic_v21",
+                f"update failed: {exc}",
+                user_id=user_id,
+                entry_id=entry_id,
+                episode_id=existing_episode_id,
+            )
         return
 
     # Create stub episode (no embeddings, no LLM)
@@ -619,13 +1194,40 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
     soul_signals = await extract_episodic_soul(summary_text)
     episodic_emotional_state = await extract_episodic_emotional_state(summary_text)
     episodic_rhythm_state = await extract_episodic_rhythm_state(summary_text)
+    # Compute state vectors for Friction Framework
+    state_vector = await extract_state_vector(summary_text, episodic_emotional_state, episodic_rhythm_state)
+    guna_vector = await extract_guna_vector(summary_text, episodic_emotional_state)
     recent_summaries_prev = await _fetch_recent_episode_summaries_before(user_id, limit=7, before_ts=window_end)
     recent_summaries = [summary_text] + recent_summaries_prev
     soul_conflict = await extract_soul_conflict(recent_summaries)
     soul_friction = await extract_soul_friction(recent_summaries)
     emotion_loop = await extract_emotion_loop(recent_summaries)
 
+    # Extract activities with time slots for memory graph
+    activities = await extract_activities_with_time_slots(summary_text)
+
     episode_id = str(uuid.uuid4())
+
+    # Log pattern occurrences for crystallization layer
+    await log_pattern_occurrences(
+        person_id=user_id,
+        episode_id=episode_id,
+        entry_id=entry_id,
+        soul_signals=soul_signals,
+        summary_snippet=summary_text,
+        confidence=0.6,  # Higher confidence for multi-journal episodes
+    )
+
+    # Wire to memory graph for cross-entity relationships
+    await wire_episode_to_memory_graph(
+        person_id=user_id,
+        episode_id=episode_id,
+        soul_signals=soul_signals,
+        soul_conflict=soul_conflict,
+        soul_friction=soul_friction,
+        activities=activities,
+    )
+
     record_payload = {
         "source_entry_ids": source_entry_ids,
         "window_start": window_start.isoformat(),
@@ -655,7 +1257,9 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
                 rhythm_state,
                 soul_conflict,
                 soul_friction,
-                emotion_loop
+                emotion_loop,
+                state_vector,
+                guna_vector
             )
             VALUES (
                 $1,
@@ -678,27 +1282,31 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
                 $15::jsonb,
                 $16::jsonb,
                 $17::jsonb,
-                $18::jsonb
+                $18::jsonb,
+                $19::jsonb,
+                $20::jsonb
             )
             """,
             episode_id,
             user_id,
             person_id,
             summary_text,
-        json.dumps(record_payload, ensure_ascii=False),
-        vector_literal,
-        content_hash,
-        json.dumps(extract_context_tags(summary_text)),
-        window_start,
-        window_start,
-        json.dumps(soul_signals.get("soul") or []),
-        json.dumps(soul_signals.get("soul_shadow") or []),
-        json.dumps(soul_signals.get("soul_light") or []),
+            json.dumps(record_payload, ensure_ascii=False),
+            vector_literal,
+            content_hash,
+            json.dumps(extract_context_tags(summary_text)),
+            window_start,
+            window_start,
+            json.dumps(soul_signals.get("soul") or []),
+            json.dumps(soul_signals.get("soul_shadow") or []),
+            json.dumps(soul_signals.get("soul_light") or []),
             json.dumps(episodic_emotional_state),
             json.dumps(episodic_rhythm_state),
             json.dumps(soul_conflict),
             json.dumps(soul_friction),
             json.dumps(emotion_loop),
+            json.dumps(state_vector),
+            json.dumps(guna_vector),
         )
         _log(
             "episodic_v21",
@@ -728,6 +1336,16 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
             episode_id=episode_id,
             has_emotion=bool(episodic_emotional_state),
             has_rhythm=bool(episodic_rhythm_state),
+        )
+        _log(
+            "episodic_v21",
+            "friction_vectors_enriched",
+            episode_id=episode_id,
+            state_vector_dosha=state_vector.get("dosha"),
+            state_vector_conf=state_vector.get("confidence"),
+            guna_vector_sattva=guna_vector.get("sattva"),
+            guna_vector_rajas=guna_vector.get("rajas"),
+            guna_vector_tamas=guna_vector.get("tamas"),
         )
         _log(
             "episodic_v22",

@@ -107,4 +107,9 @@ async def compute_deep_identity_timeline(
     result = await call_llm(messages=[{"role": "user", "content": f"{prompt}\n\nPAYLOAD:\n{payload}"}])
     if isinstance(result, dict):
         return result
+    # Handle string response with potential markdown blocks
+    from sakhi.apps.api.core.llm import extract_json_from_llm_response
+    parsed = extract_json_from_llm_response(str(result))
+    if isinstance(parsed, dict) and "_raw" not in parsed:
+        return parsed
     return {"identity_arc": str(result)}

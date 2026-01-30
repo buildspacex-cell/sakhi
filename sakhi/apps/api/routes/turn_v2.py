@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import datetime
 import logging
@@ -26,10 +27,16 @@ from sakhi.libs.reasoning.engine import run_reasoning
 from sakhi.apps.api.services.ingestion.unified_ingest import ingest_heavy
 from sakhi.libs.debug.narrative_unified import build_unified_narrative
 from sakhi.apps.api.services.turn.context_loader import load_memory_context
+from sakhi.apps.api.services.turn.deterministic_context_loader import (
+    load_deterministic_context,
+    load_internal_state,
+    calculate_gap_hours,
+)
 from sakhi.apps.api.services.turn.reply_service import build_turn_reply
 from sakhi.apps.api.services.turn.async_triggers import enqueue_turn_jobs
-from sakhi.apps.api.services.conversation.topic_manager import extract_topics
-from sakhi.apps.logic.harmony.orchestrator import run_unified_turn
+from sakhi.apps.api.services.conversation.topic_manager import extract_topics, update_conversation_topics
+from sakhi.apps.api.core.dialog_state import update_dialog_state
+from sakhi.apps.api.services.memory.ingest_reasoning import ingest_reasoning_to_memory
 from sakhi.core.soul.narrative_engine import compute_fast_narrative
 from sakhi.core.soul.alignment_engine import compute_alignment
 from sakhi.core.rhythm.rhythm_soul_engine import compute_fast_rhythm_soul_frame
@@ -52,17 +59,21 @@ from sakhi.apps.engine.focus_path.engine import generate_focus_path, persist_foc
 from sakhi.apps.engine.mini_flow.engine import generate_mini_flow, persist_mini_flow
 from sakhi.apps.engine.focus_path.engine import generate_focus_path, persist_focus_path
 from sakhi.apps.services import micro_goals_service
-from sakhi.apps.logic.harmony.memory_write_controller import write_turn_memory
 from sakhi.apps.api.utils.person_resolver import resolve_person
 from sakhi.apps.api.ingest.extractor import extract
 from sakhi.apps.api.services.emotion_engine import compute as compute_emotion_state
 from sakhi.apps.api.services.mind_engine import compute as compute_mind_state
+from sakhi.apps.api.services.memory.sessions import (
+    ensure_session,
+    append_turn,
+    load_recent_turns,
+    load_context_with_summary,
+    compress_older_turns_to_summary,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v2", tags=["conversation-v2"])
-BUILD32_MODE = os.getenv("SAKHI_BUILD32_MODE", "0") == "1"
-logger.info("[turn_v2] Build32 mode=%s", BUILD32_MODE)
 
 _UNIFIED_INGEST_SCHEMA_OK: bool | None = None
 
@@ -98,97 +109,94 @@ class TurnIn(BaseModel):
     text: str
     clarity_phrase: str | None = None
     capture_only: bool = False
+    source: str = "text"  # "text" or "voice"
 
 
+# NOTE: _load_internal_state now uses the shared deterministic_context_loader module.
+# This ensures consistency between /v2/turn and /lab/live-turn endpoints.
+# See: sakhi/apps/api/services/turn/deterministic_context_loader.py
 async def _load_internal_state(person_id: str) -> Dict[str, Any]:
-    state = {
-        "emotion": None,
-        "mind": None,
-        "context_vector_available": False,
-        "cognitive_load": None,
-        "priority": None,
-        "priority_topics": None,
-        "soul_values": None,
-        "soul_identity": None,
-        "life_themes": None,
-        "identity_graph": None,
-    }
-    try:
-        row = await q(
-            "SELECT long_term FROM personal_model WHERE person_id = $1",
-            person_id,
-            one=True,
-        )
-        if row and row.get("long_term"):
-            long_term = row["long_term"]
-            layers = long_term.get("layers") if isinstance(long_term, dict) else {}
-            emotion = layers.get("emotion") if layers else {}
-            mind = layers.get("mind") if layers else {}
-            state["emotion"] = (emotion or {}).get("summary")
-            state["mind"] = (mind or {}).get("summary")
-            metrics = (mind or {}).get("metrics") or {}
-            state["cognitive_load"] = metrics.get("cognitive_load")
-            state["priority"] = metrics.get("top_priority")
-            state["priority_topics"] = metrics.get("priority_topics")
-            soul = layers.get("soul") if layers else {}
-            soul_metrics = (soul or {}).get("metrics") or {}
-            state["soul_values"] = soul_metrics.get("values")
-            state["soul_identity"] = soul_metrics.get("identity_anchors")
-            state["life_themes"] = soul_metrics.get("life_themes")
-            if isinstance(long_term, dict) and long_term.get("identity_graph"):
-                state["identity_graph"] = long_term.get("identity_graph")
-    except Exception:
-        pass
+    """Load internal state using the shared deterministic context loader."""
+    return await load_internal_state(person_id)
 
-    try:
-        ctx_row = await q(
-            "SELECT merged_context_vector FROM memory_context_cache WHERE person_id = $1",
-            person_id,
-            one=True,
-        )
-        if ctx_row and ctx_row.get("merged_context_vector") is not None:
-            state["context_vector_available"] = True
-    except Exception:
-        pass
 
-    # fallback quick compute if missing
-    if not state.get("emotion"):
+def _ensure_dict(value: Any) -> Dict[str, Any]:
+    """Safely ensure a value is a dict."""
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
         try:
-            summary = await compute_emotion_state(person_id)
-            state["emotion"] = summary.get("summary")
-        except Exception:
-            state["emotion"] = None
-    if not state.get("mind"):
-        try:
-            summary = await compute_mind_state(person_id)
-            state["mind"] = summary.get("summary")
-            metrics = summary.get("metrics") or {}
-            state["cognitive_load"] = metrics.get("cognitive_load")
-            state["priority"] = metrics.get("top_priority")
-            state["priority_topics"] = metrics.get("priority_topics")
-        except Exception:
-            state["mind"] = None
-    if not state.get("soul_values"):
-        try:
-            row = await q(
-                "SELECT long_term FROM personal_model WHERE person_id = $1",
-                person_id,
-                one=True,
-            )
-            if row and row.get("long_term"):
-                long_term = row["long_term"]
-                layers = long_term.get("layers") if isinstance(long_term, dict) else {}
-                soul = layers.get("soul") if layers else {}
-                metrics = (soul or {}).get("metrics") or {}
-                state["soul_values"] = metrics.get("values")
-                state["soul_identity"] = metrics.get("identity_anchors")
-                state["life_themes"] = metrics.get("life_themes")
-                if isinstance(long_term, dict) and long_term.get("identity_graph"):
-                    state["identity_graph"] = long_term.get("identity_graph")
+            import json
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return parsed
         except Exception:
             pass
+    return {}
 
-    return state
+
+async def _get_brain_state_from_personal_model(person_id: str) -> Dict[str, Any]:
+    """
+    Get brain state directly from personal_model (replaces legacy brain_engine).
+    Returns the key state fields used for context in turn processing.
+    """
+    row = await q(
+        """
+        SELECT operating_system, emotion_state, soul_state, rhythm_state,
+               longitudinal_state, identity_momentum_state
+        FROM personal_model
+        WHERE person_id = $1
+        """,
+        person_id,
+        one=True,
+    )
+    if not row:
+        return {}
+    return {
+        "operating_system": _ensure_dict(row.get("operating_system")),
+        "emotion_state": _ensure_dict(row.get("emotion_state")),
+        "soul_state": _ensure_dict(row.get("soul_state")),
+        "rhythm_state": _ensure_dict(row.get("rhythm_state")),
+        "longitudinal_state": _ensure_dict(row.get("longitudinal_state")),
+        "identity_momentum_state": _ensure_dict(row.get("identity_momentum_state")),
+    }
+
+
+async def _write_turn_memory(
+    person_id: str,
+    dialog_state: Dict[str, Any],
+    reasoning: Dict[str, Any] | None,
+    entry_id: str | None,
+    user_text: str,
+) -> Dict[str, Any]:
+    """
+    Write turn memory (replaces legacy memory_write_controller).
+    Handles dialog state and reasoning ingestion.
+    """
+    dialog_result: Dict[str, Any] | None = None
+    reasoning_result: Dict[str, Any] | None = None
+
+    try:
+        dialog_result = await update_dialog_state(
+            person_id=person_id,
+            conv_id=entry_id or person_id,
+            state=dialog_state,
+        )
+    except Exception as exc:
+        dialog_result = {"error": str(exc)}
+
+    if reasoning:
+        try:
+            reasoning_result = await ingest_reasoning_to_memory(
+                person_id=person_id,
+                reasoning=reasoning,
+                source_turn_id=entry_id or person_id,
+            )
+        except Exception as exc:
+            reasoning_result = {"error": str(exc)}
+
+    return {"dialog_state": dialog_result, "reasoning_ingest": reasoning_result}
+
 
 async def _turn_lightweight(body: TurnIn, user_id: str) -> Dict[str, Any]:
     context_snapshot = await load_memory_context(user_id)
@@ -208,14 +216,16 @@ async def _turn_lightweight(body: TurnIn, user_id: str) -> Dict[str, Any]:
         context_snapshot=context_snapshot,
     )
     turn_id = str(uuid4())
+    # Per-turn workers: Only essential memory capture + episodic consolidation
+    # Other state workers (ayurvedic, rhythm, soul, etc.) run on daily schedule
+    # Context comes from: conversation_history + memory_recall + memory_graph + personal_model
     queued_jobs = [
-        "turn_memory_update",
-        "turn_planner_update",
-        "turn_rhythm_update",
-        "turn_persona_update",
-        "turn_insight_update",
-        "brain_refresh",
+        "turn_memory_update",           # Essential: captures turn to memory
+        "episodic_consolidation_v21",   # Essential: creates episodes + state vectors
     ]
+    # MOVED TO DAILY SCHEDULE (see scheduler.py):
+    # - ayurvedic_pipeline, rhythm_forecast, identity_momentum_deep
+    # - emotion_soul_rhythm_deep, esr, soul_refresh, longitudinal_update, rhythm_soul_deep
     enqueue_turn_jobs(
         turn_id,
         user_id,
@@ -253,18 +263,45 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
 
     if not body.text.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty text")
-    if BUILD32_MODE:
-        return await _turn_lightweight(body, user_id)
 
-    minimal_mode = body.capture_only or os.getenv("SAKHI_TURN_MINIMAL_WRITE") == "1" or os.getenv("SAKHI_UNIFIED_INGEST") != "1"
-    logger.error(
-        "[turn_v2] env capture_only=%s minimal_mode=%s TURN_MINIMAL=%s UNIFIED_INGEST=%s",
-        body.capture_only,
-        minimal_mode,
-        os.getenv("SAKHI_TURN_MINIMAL_WRITE"),
-        os.getenv("SAKHI_UNIFIED_INGEST"),
-    )
-    logger.error("[turn_v2] minimal_mode=%s user_id=%s text_len=%s", minimal_mode, user_id, len(body.text or ""))
+    # Ensure conversation session and load history for context
+    # Hybrid approach: recent turns verbatim + summary of older context
+    recent_limit = int(os.getenv("SAKHI_CONVERSATION_RECENT_LIMIT", "8"))  # Verbatim turns
+    compress_threshold = int(os.getenv("SAKHI_CONVERSATION_COMPRESS_THRESHOLD", "16"))  # When to compress
+    session_id = None
+    conversation_history = []
+    session_summary = ""
+    total_turns = 0
+
+    # Step 1: Ensure session exists (critical for saving turns)
+    try:
+        session_id = await ensure_session(user_id, slug="converse")
+        logger.info("[turn_v2] Session ensured: %s", session_id)
+    except Exception as exc:
+        logger.error("[turn_v2] CRITICAL - Failed to ensure session: %s", exc)
+
+    # Step 2: Load context (non-critical - can proceed without history)
+    if session_id:
+        try:
+            context_data = await load_context_with_summary(str(session_id), recent_limit=recent_limit)
+            conversation_history = context_data.get("recent_turns", [])
+            session_summary = context_data.get("session_summary", "")
+            total_turns = context_data.get("total_turns", 0)
+
+            # Trigger compression if we have many turns and no summary yet
+            if total_turns >= compress_threshold and not session_summary:
+                try:
+                    await compress_older_turns_to_summary(str(session_id), keep_recent=recent_limit)
+                    context_data = await load_context_with_summary(str(session_id), recent_limit=recent_limit)
+                    session_summary = context_data.get("session_summary", "")
+                except Exception as comp_exc:
+                    logger.warning("[turn_v2] Failed to compress older turns: %s", comp_exc)
+        except Exception as exc:
+            # Session exists but context loading failed - session_id is preserved for saving turns
+            logger.warning("[turn_v2] Context load failed (session preserved): %s", exc)
+
+    minimal_mode = body.capture_only  # Full ingest by default
+    logger.info("[turn_v2] user_id=%s text_len=%s capture_only=%s", user_id, len(body.text or ""), minimal_mode)
 
     fast_ingest = {}  # Build 50: avoid ingest work in route; delegate to workers
     turn_context = await orchestrate_turn(
@@ -324,25 +361,18 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
                 "embedding_table": "journal_embeddings",
                 "entry_written": bool(entry_id),
                 "embedding_enqueued": bool(entry_id),
-                "unified_ingest_env": os.getenv("SAKHI_UNIFIED_INGEST"),
-                "unified_ingest_schema_ok": schema_ok,
-                "note": "No embed-on-read. Embedding is done once on write via background task/worker.",
+                "note": "Embedding is done once on write via background task/worker.",
             },
         }
 
-    try:
-        brain_state = await personal_brain.get_brain_state(user_id, force_refresh=False)
-        behavior_profile = compute_behavior_profile(brain_state)
-    except Exception:
-        behavior_profile = {}
-
-    orchestration = await run_unified_turn(user_id, body.text)
-    behavior_profile = orchestration.get("behavior_profile") or {}
-    planner_payload = orchestration.get("planner")
-    insight_bundle = orchestration.get("insight")
-    activation = orchestration.get("activation") or {}
-    triage = orchestration.get("triage") or {}
-    triage_local = triage or extract(body.text, datetime.datetime.utcnow())
+    # Get brain state directly from personal_model (replaces legacy harmony orchestrator)
+    brain_state = await _get_brain_state_from_personal_model(user_id)
+    behavior_profile = {}  # Computed on-demand if needed
+    planner_payload = None  # Planner runs in workers
+    insight_bundle = None  # Insights generated by workers
+    activation = {}  # No longer using legacy activation system
+    triage = {}  # No longer using legacy triage
+    triage_local = extract(body.text, datetime.datetime.utcnow())
     mood_affect = (triage_local.get("slots") or {}).get("mood_affect") if isinstance(triage_local, dict) else {}
     emotion_update = {
         "summary": (mood_affect or {}).get("label"),
@@ -351,34 +381,34 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
 
     internal_state = await _load_internal_state(user_id)
 
-    fast_narrative = compute_fast_narrative([], (orchestration.get("brain") or {}).get("soul_state") or {})
+    fast_narrative = compute_fast_narrative([], brain_state.get("soul_state") or {})
     alignment = compute_alignment(
         None,
-        (orchestration.get("brain") or {}).get("soul_state") or {},
-        (orchestration.get("brain") or {}).get("goals_state") or {},
+        brain_state.get("soul_state") or {},
+        brain_state.get("goals_state") or {},
     )
     fast_rhythm_soul = compute_fast_rhythm_soul_frame(
         [],
-        (orchestration.get("brain") or {}).get("rhythm_state") or {},
-        (orchestration.get("brain") or {}).get("soul_state") or {},
+        brain_state.get("rhythm_state") or {},
+        brain_state.get("soul_state") or {},
     )
     fast_esr = compute_fast_esr_frame(
-        (orchestration.get("brain") or {}).get("emotion_state") or {},
-        (orchestration.get("brain") or {}).get("soul_state") or {},
-        (orchestration.get("brain") or {}).get("rhythm_state") or {},
+        brain_state.get("emotion_state") or {},
+        brain_state.get("soul_state") or {},
+        brain_state.get("rhythm_state") or {},
     )
     fast_identity_momentum = compute_fast_identity_momentum(
         [],
-        (orchestration.get("brain") or {}).get("soul_state") or {},
-        (orchestration.get("brain") or {}).get("emotion_state") or {},
-        (orchestration.get("brain") or {}).get("rhythm_state") or {},
+        brain_state.get("soul_state") or {},
+        brain_state.get("emotion_state") or {},
+        brain_state.get("rhythm_state") or {},
     )
     fast_identity_timeline = compute_fast_identity_timeline_frame(
         [],
-        (orchestration.get("brain") or {}).get("soul_state") or {},
-        (orchestration.get("brain") or {}).get("emotion_state") or {},
-        (orchestration.get("brain") or {}).get("rhythm_state") or {},
-        (orchestration.get("brain") or {}).get("identity_momentum_state") or {},
+        brain_state.get("soul_state") or {},
+        brain_state.get("emotion_state") or {},
+        brain_state.get("rhythm_state") or {},
+        brain_state.get("identity_momentum_state") or {},
     )
     try:
         inner_dialogue = await inner_dialogue_engine.compute_inner_dialogue(
@@ -661,7 +691,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
 
     try:
         moment_model = compute_moment_model(
-            emotion_state=(orchestration.get("brain") or {}).get("emotion_state") or {},
+            emotion_state=brain_state.get("emotion_state") or {},
             coherence_state=state_row.get("coherence_state") or {},
             alignment_state=state_row.get("alignment_state") or {},
             mind_state={"cognitive_load": internal_state.get("cognitive_load")},
@@ -726,6 +756,11 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "soul_identity": internal_state.get("soul_identity"),
         "life_themes": internal_state.get("life_themes"),
         "identity_graph": internal_state.get("identity_graph"),
+        # Friction Framework context
+        "operating_system": internal_state.get("operating_system"),
+        "dosha_baseline": internal_state.get("dosha_baseline"),
+        "life_context": internal_state.get("life_context"),
+        "decision_profile": internal_state.get("decision_profile"),
         "narrative_trace": fast_narrative,
         "alignment_frame": alignment,
         "rhythm_soul_frame": fast_rhythm_soul,
@@ -762,6 +797,10 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "moment_model": moment_model,
         "evidence_pack": evidence_pack,
         "deliberation_scaffold": deliberation_scaffold,
+        # Conversation history for LLM context continuity
+        "conversation_history": conversation_history,
+        "session_summary": session_summary,  # Compressed older context
+        "total_turns": total_turns,
     }
 
     # background task routing refresh when new task intent might be present
@@ -777,13 +816,43 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         user_text=body.text,
         metadata=metadata_payload,
         behavior_profile=behavior_profile,
+        session_id=str(session_id) if session_id else "",
+        return_debug=True,  # Enable debug info for adaptive response
     )
+
     reply_text = reply_bundle.get("reply", "")
     tone_blueprint = reply_bundle.get("tone_blueprint") or {}
     journaling_ai = reply_bundle.get("journaling_ai")
+    adaptive_response = reply_bundle.get("adaptive_response")  # Adaptive Response Framework output
+    reply_debug = reply_bundle.get("debug") or {}  # Full debug from conversation engine
+
+    # Persist conversation turns to database for continuity
+    if session_id:
+        try:
+            # Store user turn
+            await append_turn(
+                user_id=user_id,
+                session_id=str(session_id),
+                role="user",
+                text=body.text,
+                source=body.source,
+            )
+            # Store assistant turn (use 'assistant' for DB constraint compatibility)
+            if reply_text:
+                await append_turn(
+                    user_id=user_id,
+                    session_id=str(session_id),
+                    role="assistant",  # DB constraint requires 'user' or 'assistant'
+                    text=reply_text,
+                    tone=tone_blueprint.get("style"),
+                    source=body.source,  # Inherit source from user turn
+                )
+        except Exception as exc:
+            logger.error("[turn_v2] Turn persistence failed: %s", exc)
+
     result = {
         "reply": reply_text,
-        "sessionId": user_id,
+        "sessionId": str(session_id) if session_id else user_id,
         "tone": tone_blueprint.get("style") or "auto",
         "toneBlueprint": tone_blueprint,
         "tone_used": (tone_state or {}).get("final"),
@@ -802,6 +871,11 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "soul_identity": internal_state.get("soul_identity"),
         "life_themes": internal_state.get("life_themes"),
         "identity_graph": internal_state.get("identity_graph"),
+        # Friction Framework context
+        "operating_system": internal_state.get("operating_system"),
+        "dosha_baseline": internal_state.get("dosha_baseline"),
+        "life_context": internal_state.get("life_context"),
+        "decision_profile": internal_state.get("decision_profile"),
         "rhythm_soul_frame": fast_rhythm_soul,
         "emotion_soul_rhythm_frame": fast_esr,
         "identity_momentum_frame": fast_identity_momentum,
@@ -922,7 +996,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "response_preview": response_text[:120],
     }
 
-    memory_write = await write_turn_memory(
+    memory_write = await _write_turn_memory(
         person_id=user_id,
         dialog_state=dialog_state,
         reasoning=reasoning,
@@ -942,10 +1016,10 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
                 "tone_state": tone_state,
                 "empathy_state": empathy_state,
                 "microreg_state": microreg_state,
-                "forecast_state": (orchestration.get("brain") or {}).get("forecast_state") or {},
+                "forecast_state": brain_state.get("forecast_state") or {},
             },
             memory_short_term=[],
-            pattern_sense=(orchestration.get("brain") or {}).get("pattern_sense"),
+            pattern_sense=brain_state.get("pattern_sense"),
         )
     except Exception:
         pass
@@ -990,19 +1064,12 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "activation": activation,
         "triage": triage,
         "reflection_trace": reflection_trace_payload,
+        # Adaptive Response Framework debug
+        "adaptive_response": adaptive_response,
+        "conversation_engine_debug": reply_debug,
     }
 
-    human_insights = None
-    if os.getenv("SAKHI_DEV_DEBUG") == "1":
-        try:
-            payload = await assemble_human_debug_panel(
-                person_id=user_id,
-                input_text=body.text,
-                reply_text=response_text,
-            )
-        except Exception as exc:  # pragma: no cover - best effort
-            payload = {"error": str(exc)}
-        human_insights = payload or None
+    human_insights = None  # Debug panel disabled by default
 
     # ----------------------------------------------------------------------
     # NEW: Narrative Trace (non-technical explanation)
@@ -1029,26 +1096,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         except Exception:  # pragma: no cover - best effort
             narrative_trace = None
 
-    if os.getenv("SAKHI_DEV_DEBUG") == "1":
-        try:
-            unified_narrative = build_unified_narrative(
-                {
-                    "person_id": user_id,
-                    "input_text": body.text,
-                    "reply_text": response_text,
-                    "triage": turn_context.get("triage"),
-                    "intents": stored_intents,
-                    "emotion": emotion,
-                    "topics": topics,
-                    "memory_context": mem_context,
-                    "reasoning": reasoning,
-                    "personal_model": persona_update,
-                    "planner": planner_payload,
-                    "layer": "conversation",
-                }
-            )
-        except Exception as exc:
-            unified_narrative = {"error": str(exc)}
+    unified_narrative = None  # Debug narrative disabled by default
 
     try:
         await publish(
@@ -1064,11 +1112,10 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     except Exception:
         pass
 
-    if os.getenv("SAKHI_UNIFIED_INGEST") == "1" and entry_id and not minimal_mode:
+    # Unified ingest: queue heavy memory processing for background workers
+    if entry_id and not minimal_mode:
         if not await _unified_ingest_schema_ok():
-            logger.warning(
-                "[UnifiedIngest] Skipping ingest_heavy: DB schema missing memory_short_term.entry_id (set SAKHI_UNIFIED_INGEST=0 or migrate schema)",
-            )
+            logger.warning("[UnifiedIngest] Skipping: schema not ready")
         else:
             try:
                 asyncio.create_task(
@@ -1088,20 +1135,25 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
                 )
 
     turn_id = str(entry_id) if entry_id else str(uuid4())
+    # Per-turn workers: Only essential memory capture + episodic consolidation
+    # Other state workers run on daily schedule - context comes from:
+    # conversation_history + memory_recall + memory_graph + personal_model (refreshed daily)
     queued_jobs = [
-        "turn_memory_update",
-        "neutral_signal_extraction",
-        "turn_planner_update",
-        "turn_rhythm_update",
-        "turn_persona_update",
-        "turn_insight_update",
-        "brain_refresh",
-        "ayurvedic_pipeline",
+        "turn_memory_update",           # Essential: captures turn to memory
+        "episodic_consolidation_v21",   # Essential: creates episodes + state vectors + feeds memory graph
     ]
-    # Enqueue episodic v2.1 consolidation as a separate async job (no change to turn latency).
-    episodic_job = "episodic_consolidation_v21"
-    if entry_id:
-        queued_jobs.append("journal_enrich")
+    # MOVED TO DAILY SCHEDULE (see scheduler.py):
+    # - ayurvedic_pipeline (daily 6am)
+    # - rhythm_forecast (daily 7am, also weekly)
+    # - identity_momentum_deep (daily 6am)
+    # - emotion_soul_rhythm_deep (daily 4am)
+    # - esr (daily 4am)
+    # - soul_refresh (daily 6am)
+    # - longitudinal_update (weekly - already scheduled)
+    # - rhythm_soul_deep (daily 6am, weekly 8am)
+    # DISABLED: journal_enrich until reviewed
+    # if entry_id:
+    #     queued_jobs.append("journal_enrich")
     inferred_intent = stored_intents[0] if stored_intents else (topics_for_signals[0] if topics_for_signals else None)
     facets_for_worker = {
         "emotion": emotion,
@@ -1123,25 +1175,24 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "emotion_update": emotion_update,
         "persona_update": persona_update,
     }
-    jobs = queued_jobs + [episodic_job]
     logger.error(
         "[turn_v2] dispatch mode=%s SAKHI_DISABLE_QUEUE=%s turn_id=%s jobs=%s",
         "inline" if disable_queue else "queue",
         "1" if disable_queue else "0",
         turn_id,
-        jobs,
+        queued_jobs,
     )
     if disable_queue:
         logger.error("[turn_v2] queue disabled via SAKHI_DISABLE_QUEUE, running inline turn_id=%s", turn_id)
-        from sakhi.apps.worker.pipelines.turn_updates.runner import process_turn_job
+        from sakhi.apps.worker.pipelines.turn_updates.runner import process_turn_job_async
 
-        for job_type in jobs:
+        for job_type in queued_jobs:
             try:
-                process_turn_job(job_type=job_type, turn_id=turn_id, person_id=user_id, payload=payload)
+                await process_turn_job_async(job_type=job_type, turn_id=turn_id, person_id=user_id, payload=payload)
             except Exception as exc:
                 logger.warning("[turn_v2] inline job failed type=%s turn_id=%s err=%s", job_type, turn_id, exc)
     else:
-        enqueue_turn_jobs(turn_id, user_id, jobs, payload)
+        enqueue_turn_jobs(turn_id, user_id, queued_jobs, payload)
 
     logger.error(
         "[turn_v2] response snapshot entry_id=%s session_id=%s minimal_mode=%s queued_jobs=%s",
@@ -1177,4 +1228,5 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "narrative": unified_narrative,
         "journaling_ai": journaling_ai,
         "insight_bundle": insight_bundle,
+        "adaptive_response": adaptive_response,  # Adaptive Response Framework output
     }

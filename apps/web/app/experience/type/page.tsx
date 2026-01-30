@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type React from "react";
 import type { Route } from "next";
 
@@ -15,10 +15,6 @@ const palette = {
 };
 
 const turnApiPath = "/api/turn-v2";
-const DEV_USERS = {
-  a: { label: "Vidhya" },
-  b: { label: "Ravi" },
-};
 
 type Ack = {
   entry_id?: string;
@@ -199,17 +195,6 @@ const mutedSmall: React.CSSProperties = {
   marginBottom: "12px",
 };
 
-const devSelectStyle: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: "10px",
-  border: `1px solid ${palette.divider}`,
-  background: "transparent",
-  color: palette.accent,
-  fontSize: "13px",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif',
-};
-
 export default function ExperienceTypePage() {
   return (
     <Suspense fallback={null}>
@@ -220,10 +205,8 @@ export default function ExperienceTypePage() {
 
 function ExperienceTypePageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const searchUser = searchParams.get("user");
-  const initialUser: "a" | "b" = searchUser === "b" ? "b" : "a";
-  const [devUser, setDevUser] = useState<"a" | "b">(initialUser);
+  const [authUser, setAuthUser] = useState<{ person_id: string; full_name?: string | null } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [text, setText] = useState("");
   const [captured, setCaptured] = useState(false);
@@ -237,26 +220,31 @@ function ExperienceTypePageContent() {
   const [weeklyLoading, setWeeklyLoading] = useState(false);
   const [entryId, setEntryId] = useState<string | null>(null);
 
+  // Load authenticated user to drive the person_id
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem("dev_user");
-      if (!searchUser && stored && (stored === "a" || stored === "b") && stored !== devUser) {
-        setDevUser(stored);
-        return;
+    const loadAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) {
+          setError("Unable to load account. Please re-login.");
+          return;
+        }
+        const data = await res.json();
+        setAuthUser({ person_id: data.person_id, full_name: data.full_name });
+      } catch (err) {
+        setError("Unable to load account. Please re-login.");
+      } finally {
+        setAuthLoading(false);
       }
-      window.localStorage.setItem("dev_user", devUser);
-      const url = new URL(window.location.href);
-      url.searchParams.set("user", devUser);
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, [devUser, searchUser]);
-
-  const devLabel = DEV_USERS[devUser]?.label || devUser;
+    };
+    loadAuth();
+  }, []);
 
   const fetchWeekly = async () => {
     setWeeklyLoading(true);
+    if (!authUser?.person_id) return;
     try {
-      const res = await fetch(`/api/memory/weekly?user=${encodeURIComponent(devUser)}&limit=1`);
+      const res = await fetch(`/api/memory/weekly?user=${encodeURIComponent(authUser.person_id)}&limit=1`);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       let item = Array.isArray(data?.items) && data.items.length ? data.items[0] : null;
@@ -279,11 +267,15 @@ function ExperienceTypePageContent() {
 
   const submitToApi = async (bodyText: string) => {
     if (!bodyText.trim()) return;
+    if (!authUser?.person_id) {
+      setError("No user found. Please sign in again.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setDebugData(null);
     try {
-      const res = await fetch(`${turnApiPath}?user=${encodeURIComponent(devUser)}`, {
+      const res = await fetch(`${turnApiPath}?user=${encodeURIComponent(authUser.person_id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: bodyText, capture_only: true }),
@@ -327,7 +319,8 @@ function ExperienceTypePageContent() {
   };
 
   const goToWeeklyPage = () => {
-    window.location.href = `/experience/weekly?user=${encodeURIComponent(devUser)}`;
+    if (!authUser?.person_id) return;
+    window.location.href = `/experience/weekly?user=${encodeURIComponent(authUser.person_id)}`;
   };
 
   const saveEdit = () => {
@@ -348,21 +341,11 @@ function ExperienceTypePageContent() {
       <div style={outerStyle}>
         <div style={containerStyle}>
         <div style={brandStyle}>Sakhi</div>
-          <div style={{ marginBottom: 12, color: palette.muted }}>Dev slot: {devLabel}</div>
-          <div style={{ marginBottom: 16 }}>
-            <select
-              value={devUser}
-              onChange={(e) => setDevUser(e.target.value === "b" ? "b" : "a")}
-              style={devSelectStyle}
-              aria-label="Select dev user"
-            >
-              {Object.entries(DEV_USERS).map(([key, value]) => (
-                <option value={key} key={key}>
-                  {value.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {authLoading ? (
+            <div style={{ marginBottom: 24, color: palette.muted }}>Loading your account…</div>
+          ) : authUser?.full_name ? (
+            <div style={{ marginBottom: 24, color: palette.muted }}>Welcome, {authUser.full_name.split(" ")[0]}.</div>
+          ) : null}
           <div style={promptStyle}>Prefer typing? Share what&apos;s on your mind.</div>
 
           {captured ? (
@@ -392,7 +375,10 @@ function ExperienceTypePageContent() {
                       <span aria-hidden="true">✏️</span>
                       Edit
                     </button>
-                    <Link href={`/experience/listening?user=${encodeURIComponent(devUser)}`} style={{ textDecoration: "none" }}>
+                    <Link
+                      href={`/experience/listening?user=${encodeURIComponent(authUser?.person_id || "")}`}
+                      style={{ textDecoration: "none" }}
+                    >
                       <button type="button" style={actionButtonStyle}>
                         <span aria-hidden="true">🎙️</span>
                         Record instead
@@ -405,7 +391,7 @@ function ExperienceTypePageContent() {
                     <Link
                       href={
                         entryId
-                          ? (`/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(devUser)}` as Route)
+                          ? (`/experience/feedback?entry_id=${encodeURIComponent(entryId)}&user=${encodeURIComponent(authUser?.person_id || "")}` as Route)
                           : "#"
                       }
                       style={{
@@ -421,7 +407,10 @@ function ExperienceTypePageContent() {
                 )}
               </div>
               <div style={navRowStyle}>
-                <Link href={`/experience?user=${encodeURIComponent(devUser)}`} style={{ ...actionButtonStyle, textDecoration: "none" }}>
+                <Link
+                  href={`/experience?user=${encodeURIComponent(authUser?.person_id || "")}`}
+                  style={{ ...actionButtonStyle, textDecoration: "none" }}
+                >
                   <span aria-hidden="true">🏠</span>
                   Home
                 </Link>

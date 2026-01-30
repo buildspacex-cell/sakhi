@@ -31,7 +31,8 @@ async def run_meta_reflection_weekly() -> bool:
                    json_agg(
                        jsonb_build_object(
                            'content', e.content,
-                           'theme', e.theme,
+                           'layer', e.layer,
+                           'mood', e.mood,
                            'ts', e.created_at
                        )
                        ORDER BY e.created_at
@@ -84,11 +85,11 @@ Entries JSON:
             await db.execute(
                 """
                 INSERT INTO meta_reflections (person_id, period, summary, insights, created_at)
-                VALUES ($1, 'weekly', $2, jsonb_build_object('entries', $3), NOW())
+                VALUES ($1, 'weekly', $2, $3::jsonb, NOW())
                 """,
                 person_id,
                 summary_text,
-                json.dumps(entries, ensure_ascii=False),
+                json.dumps({"entries": entries}, ensure_ascii=False),
             )
             LOGGER.info("[Meta Reflection] Weekly summary generated for %s", person_id)
 
