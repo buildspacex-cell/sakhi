@@ -140,10 +140,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-// Config for larger audio files
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
