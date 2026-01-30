@@ -2,14 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getApiBase } from "@/lib/api-base";
 import OpenAI from "openai";
 
+// Force dynamic to avoid build-time initialization without env vars
+export const dynamic = "force-dynamic";
+
 // =============================================================================
 // VOICE TURN ENDPOINT
 // Pipeline: Audio → Whisper STT → Sakhi Turn API → OpenAI TTS → Audio
 // =============================================================================
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization to avoid build-time errors
+let openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,7 +56,7 @@ export async function POST(req: NextRequest) {
       type: audioFile.type || "audio/webm",
     });
 
-    const transcription = await openai.audio.transcriptions.create({
+    const transcription = await getOpenAI().audio.transcriptions.create({
       file: transcriptionFile,
       model: "whisper-1",
       language: "en",
@@ -109,7 +119,7 @@ export async function POST(req: NextRequest) {
     // ==========================================================================
     console.log("[voice/turn] Generating TTS...");
 
-    const ttsResponse = await openai.audio.speech.create({
+    const ttsResponse = await getOpenAI().audio.speech.create({
       model: "tts-1",
       voice: "nova", // Warm, friendly female voice - fits Sakhi's tone
       input: reply,

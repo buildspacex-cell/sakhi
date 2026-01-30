@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
+// Force dynamic to avoid build-time initialization without env vars
+export const dynamic = "force-dynamic";
+
 // =============================================================================
 // TTS ENDPOINT
 // Converts text to speech using OpenAI TTS
 // =============================================================================
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization to avoid build-time errors
+let openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 // Voice options for different tones
 const VOICE_OPTIONS = {
@@ -38,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[voice/tts] Generating TTS for ${truncatedText.length} chars with voice: ${selectedVoice}`);
 
-    const ttsResponse = await openai.audio.speech.create({
+    const ttsResponse = await getOpenAI().audio.speech.create({
       model: "tts-1",
       voice: selectedVoice,
       input: truncatedText,

@@ -131,6 +131,41 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
     };
   }, [cleanupAudio]);
 
+  // Play audio from URL (declared early so stopRecording can reference it)
+  const playAudioFromUrl = useCallback(async (url: string) => {
+    try {
+      // Initialize AudioContext if needed
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
+      }
+
+      const audioContext = audioContextRef.current;
+
+      // Fetch and decode audio
+      const audioRes = await fetch(url);
+      const arrayBuffer = await audioRes.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      // Create and play source
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+
+      audioSourceRef.current = source;
+
+      return new Promise<void>((resolve) => {
+        source.onended = () => {
+          audioSourceRef.current = null;
+          resolve();
+        };
+        source.start();
+      });
+    } catch (err) {
+      console.error("Audio playback error:", err);
+      throw err;
+    }
+  }, []);
+
   // Start recording
   const startRecording = useCallback(async () => {
     try {
@@ -272,6 +307,7 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
     onTranscript,
     onResponse,
     autoPlayResponse,
+    playAudioFromUrl,
   ]);
 
   // Cancel recording without processing
@@ -279,41 +315,6 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
     cleanupAudio();
     updateState("idle");
   }, [cleanupAudio, updateState]);
-
-  // Play audio from URL
-  const playAudioFromUrl = useCallback(async (url: string) => {
-    try {
-      // Initialize AudioContext if needed
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-
-      const audioContext = audioContextRef.current;
-
-      // Fetch and decode audio
-      const audioRes = await fetch(url);
-      const arrayBuffer = await audioRes.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-      // Create and play source
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-
-      audioSourceRef.current = source;
-
-      return new Promise<void>((resolve) => {
-        source.onended = () => {
-          audioSourceRef.current = null;
-          resolve();
-        };
-        source.start();
-      });
-    } catch (err) {
-      console.error("Audio playback error:", err);
-      throw err;
-    }
-  }, []);
 
   // Play the current response
   const playResponse = useCallback(async () => {

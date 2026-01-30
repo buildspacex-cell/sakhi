@@ -279,7 +279,7 @@ export function VoiceButton({
           <div style={statusStyle}>{getStatusText()}</div>
           {transcript && state !== "idle" && (
             <div style={transcriptStyle} title={transcript}>
-              "{transcript}"
+              &ldquo;{transcript}&rdquo;
             </div>
           )}
         </>
