@@ -63,12 +63,88 @@ from sakhi.apps.api.utils.person_resolver import resolve_person
 from sakhi.apps.api.ingest.extractor import extract
 from sakhi.apps.api.services.emotion_engine import compute as compute_emotion_state
 from sakhi.apps.api.services.mind_engine import compute as compute_mind_state
+from sakhi.apps.api.services.ayurveda.vikriti import (
+    compute_current_vikriti,
+    compute_baseline_drift,
+    classify_friction_state,
+)
+from sakhi.apps.api.services.recommendations import (
+    build_recommendation_context,
+    generate_personalized_recommendations,
+)
+from sakhi.apps.api.services.calendar import (
+    detect_scheduling_intent,
+    parse_scheduling_request,
+    get_events_for_day,
+    get_week_summary,
+    find_best_times,
+    detect_confirmation,
+    save_pending_request,
+    get_pending_request,
+    execute_pending_confirmation,
+    SchedulingIntent,
+)
+from sakhi.apps.api.services.relationships.repository import (
+    get_relationships_needing_attention,
+    get_relationship_for_scheduling,
+)
+from sakhi.apps.api.services.mesh import (
+    find_by_handle,
+    are_connected,
+    get_trust_level,
+    get_profile,
+    initiate_coordination,
+    get_pending_proposals,
+    respond_to_proposal,
+    ProposalRequest,
+    CoordinationType,
+)
+from sakhi.apps.api.services.vision.context import (
+    get_relevant_media_for_context,
+    add_to_visual_context,
+)
+from sakhi.apps.api.services.vision.processor import (
+    process_image,
+    analyze_screenshot,
+)
+from sakhi.apps.api.services.vision.storage import (
+    store_media,
+    get_media,
+    update_media_analysis,
+    link_media_to_entry,
+)
+from sakhi.apps.api.services.vision.memory import learn_from_image
+from sakhi.apps.api.services.agentic.search import (
+    web_search,
+    summarize_search_results,
+)
+from sakhi.apps.api.services.agentic.tools import (
+    get_available_tools,
+    execute_tool,
+    can_auto_execute,
+)
 from sakhi.apps.api.services.memory.sessions import (
     ensure_session,
     append_turn,
     load_recent_turns,
     load_context_with_summary,
     compress_older_turns_to_summary,
+)
+from sakhi.apps.api.services.agent.chat_bridge import (
+    detect_agent_task_intent,
+    detect_task_confirmation,
+    create_pending_task,
+    get_pending_task as get_pending_agent_task,
+    confirm_task,
+    reject_task,
+    generate_task_plan,
+    start_task_execution,
+    get_task_execution_state,
+    approve_execution_step,
+    format_task_plan_for_chat,
+    format_execution_update_for_chat,
+    AgentTaskType,
+    get_active_agent_for_person,
 )
 
 logger = logging.getLogger(__name__)
@@ -110,6 +186,10 @@ class TurnIn(BaseModel):
     clarity_phrase: str | None = None
     capture_only: bool = False
     source: str = "text"  # "text" or "voice"
+    # Vision support
+    image_data: str | None = None  # Base64 encoded image
+    image_mime_type: str | None = None  # e.g., "image/png"
+    media_ids: list[str] | None = None  # Previously uploaded media IDs
 
 
 # NOTE: _load_internal_state now uses the shared deterministic_context_loader module.
@@ -222,6 +302,7 @@ async def _turn_lightweight(body: TurnIn, user_id: str) -> Dict[str, Any]:
     queued_jobs = [
         "turn_memory_update",           # Essential: captures turn to memory
         "episodic_consolidation_v21",   # Essential: creates episodes + state vectors
+        "preference_learning",          # Learn preferences from "I like..." statements
     ]
     # MOVED TO DAILY SCHEDULE (see scheduler.py):
     # - ayurvedic_pipeline, rhythm_forecast, identity_momentum_deep
@@ -300,8 +381,200 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             # Session exists but context loading failed - session_id is preserved for saving turns
             logger.warning("[turn_v2] Context load failed (session preserved): %s", exc)
 
+    # ==========================================================
+    # VISION CONTEXT: Process images if provided
+    # ==========================================================
+    vision_context = {}
+    if body.image_data or body.media_ids:
+        try:
+            import base64
+
+            # Process inline image if provided
+            if body.image_data:
+                mime_type = body.image_mime_type or "image/png"
+                image_bytes = base64.b64decode(body.image_data)
+
+                # Store the image
+                media_record = await store_media(
+                    person_id=user_id,
+                    media_bytes=image_bytes,
+                    mime_type=mime_type,
+                    media_type="image",
+                    source="chat",
+                    context=body.text[:100] if body.text else None,
+                )
+
+                # Analyze the image
+                analysis_result = await process_image(
+                    image_bytes,
+                    mime_type=mime_type,
+                    context=body.text,
+                )
+                analysis_dict = analysis_result.model_dump()
+
+                # Update media with analysis
+                await update_media_analysis(
+                    media_id=media_record.id,
+                    description=analysis_dict.get("description", ""),
+                    extracted_text=analysis_dict.get("extracted_text"),
+                    analysis=analysis_dict,
+                )
+
+                # Learn from the image
+                await learn_from_image(
+                    person_id=user_id,
+                    media_id=media_record.id,
+                    analysis=analysis_dict,
+                    description=analysis_dict.get("description", ""),
+                )
+
+                # Add to session context
+                if session_id:
+                    await add_to_visual_context(
+                        person_id=user_id,
+                        session_id=str(session_id),
+                        media_id=media_record.id,
+                        description=analysis_dict.get("description", ""),
+                    )
+
+                vision_context["current_image"] = {
+                    "media_id": media_record.id,
+                    "description": analysis_dict.get("description", ""),
+                    "extracted_text": analysis_dict.get("extracted_text"),
+                    "objects": analysis_dict.get("objects", []),
+                    "tags": analysis_dict.get("tags", []),
+                }
+
+                logger.info(
+                    "[turn_v2] Vision: processed image %s - %s",
+                    media_record.id,
+                    analysis_dict.get("description", "")[:50],
+                )
+
+            # Load previously uploaded media if referenced
+            if body.media_ids:
+                referenced_media = []
+                for media_id in body.media_ids[:5]:  # Max 5 references
+                    media_record = await get_media(media_id)
+                    if media_record and media_record.person_id == user_id:
+                        referenced_media.append({
+                            "media_id": media_id,
+                            "description": media_record.description,
+                            "extracted_text": media_record.extracted_text,
+                            "analysis": media_record.analysis,
+                        })
+                if referenced_media:
+                    vision_context["referenced_media"] = referenced_media
+
+            # Load relevant visual context from session
+            if session_id:
+                relevant_media = await get_relevant_media_for_context(
+                    person_id=user_id,
+                    session_id=str(session_id),
+                    max_items=3,
+                )
+                if relevant_media:
+                    vision_context["session_media"] = relevant_media
+
+        except Exception as vision_exc:
+            logger.warning("[turn_v2] Vision processing failed: %s", vision_exc)
+
+    # ==========================================================
+    # AGENTIC CONTEXT: Detect and execute tools when needed
+    # ==========================================================
+    # Sakhi can automatically search the web, fetch URLs, or use tools
+    # when the user asks questions that need external information.
+    agentic_context = {}
+    agentic_results = []
+
+    try:
+        text_lower = (body.text or "").lower()
+
+        # Detect if the query needs external information
+        search_triggers = [
+            "search for", "find out", "look up", "google",
+            "what is the latest", "what's new", "current",
+            "news about", "latest on", "tell me about",
+            "who is", "what happened", "recent",
+            "how do i", "how to", "what are the best",
+        ]
+        question_patterns = [
+            "what is", "what are", "who is", "when is",
+            "where is", "how much", "how many",
+        ]
+
+        needs_search = any(trigger in text_lower for trigger in search_triggers)
+        is_factual_question = any(p in text_lower for p in question_patterns)
+
+        # Only auto-search for queries that clearly need external info
+        # and aren't about the user's personal life
+        personal_indicators = [
+            "i feel", "i'm feeling", "i want", "i need", "my ",
+            "i've been", "i have", "i am", "i think", "i believe",
+        ]
+        is_personal = any(p in text_lower for p in personal_indicators)
+
+        if needs_search and not is_personal:
+            # Execute web search
+            try:
+                search_results = await web_search(
+                    query=body.text,
+                    max_results=5,
+                )
+
+                if search_results:
+                    # Summarize results for context
+                    summary = await summarize_search_results(
+                        results=search_results,
+                        query=body.text,
+                    )
+
+                    agentic_context["web_search"] = {
+                        "query": body.text,
+                        "result_count": len(search_results),
+                        "summary": summary,
+                        "sources": [
+                            {
+                                "title": r.get("title"),
+                                "url": r.get("url"),
+                                "snippet": r.get("snippet", "")[:200],
+                            }
+                            for r in search_results[:3]
+                        ],
+                    }
+                    agentic_results.append({
+                        "tool": "web_search",
+                        "success": True,
+                        "summary": summary,
+                    })
+                    logger.info(
+                        "[turn_v2] Agentic: web search executed for '%s' - %d results",
+                        body.text[:50],
+                        len(search_results),
+                    )
+            except Exception as search_exc:
+                logger.warning("[turn_v2] Web search failed: %s", search_exc)
+                agentic_context["web_search_error"] = str(search_exc)
+
+        # Store available tools info for context
+        try:
+            available_tools = await get_available_tools(user_id)
+            agentic_context["available_tools"] = [
+                {
+                    "name": t.tool_name,
+                    "description": t.description,
+                    "category": t.category,
+                }
+                for t in available_tools[:5]  # Limit to top 5
+            ]
+        except Exception:
+            pass
+
+    except Exception as agentic_exc:
+        logger.warning("[turn_v2] Agentic context failed: %s", agentic_exc)
+
     minimal_mode = body.capture_only  # Full ingest by default
-    logger.info("[turn_v2] user_id=%s text_len=%s capture_only=%s", user_id, len(body.text or ""), minimal_mode)
+    logger.info("[turn_v2] user_id=%s text_len=%s capture_only=%s vision=%s agentic=%s", user_id, len(body.text or ""), minimal_mode, bool(vision_context), bool(agentic_context))
 
     fast_ingest = {}  # Build 50: avoid ingest work in route; delegate to workers
     turn_context = await orchestrate_turn(
@@ -323,6 +596,43 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     generated_plans = turn_context.get("plans") or []
     rhythm_trigger_result = turn_context.get("rhythm_triggers")
     meta_reflection_result = turn_context.get("meta_reflection_triggers")
+
+    # ==========================================================
+    # LINK VISION TO JOURNAL ENTRY
+    # ==========================================================
+    # If we processed images and have an entry_id, link them
+    if entry_id and vision_context:
+        try:
+            # Link current image to entry
+            if vision_context.get("current_image"):
+                media_id = vision_context["current_image"].get("media_id")
+                if media_id:
+                    await link_media_to_entry(
+                        media_id=media_id,
+                        entry_id=str(entry_id),
+                        person_id=user_id,
+                        relationship="attachment",
+                        caption=vision_context["current_image"].get("description"),
+                    )
+                    logger.info(
+                        "[turn_v2] Linked media %s to entry %s",
+                        media_id,
+                        entry_id,
+                    )
+
+            # Link referenced media to entry
+            for ref_media in vision_context.get("referenced_media", []):
+                ref_media_id = ref_media.get("media_id")
+                if ref_media_id:
+                    await link_media_to_entry(
+                        media_id=ref_media_id,
+                        entry_id=str(entry_id),
+                        person_id=user_id,
+                        relationship="context",
+                        caption=ref_media.get("description"),
+                    )
+        except Exception as link_exc:
+            logger.warning("[turn_v2] Failed to link media to entry: %s", link_exc)
 
     if body.capture_only:
         schema_ok = False
@@ -736,6 +1046,518 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     except Exception:
         reflection_trace_payload = None
 
+    # ==========================================================================
+    # Personalized Recommendations Integration
+    # Surfaces recommendations based on: friction state, time of day, user request
+    # ==========================================================================
+    friction_state_computed = {}
+    personalized_recommendations = {}
+    recommendation_trigger = None  # Why recommendations are being surfaced
+
+    try:
+        operating_system = internal_state.get("operating_system") or {}
+
+        # Compute current vikriti (present state deviation)
+        vikriti = await compute_current_vikriti(user_id)
+
+        # Compute drift from baseline (Prakruti)
+        drift = compute_baseline_drift(operating_system, vikriti)
+        drift_percentage = drift.get("drift_percentage", 0)
+
+        # Classify the friction state
+        friction = classify_friction_state(drift)
+        friction_state_computed = {
+            "state": friction.get("state", "Balanced"),
+            "description": friction.get("description"),
+            "drift_percentage": drift_percentage,
+            "drift_direction": drift.get("direction"),
+            "primary_contributor": drift.get("primary_contributor"),
+        }
+
+        # Determine if recommendations should be proactively surfaced
+        # Triggers:
+        # 1. REACTIVE: User explicitly asks (detected via patterns)
+        # 2. PROACTIVE: High friction drift (>25%)
+        # 3. CONTEXTUAL: Morning (before 10am) or evening (after 7pm)
+        # 4. NUDGE: Moderate drift (15-25%) with relevant patterns
+
+        text_lower = (body.text or "").lower()
+        recommendation_patterns = [
+            "what should i", "recommend", "suggestion", "help me",
+            "what can i do", "how can i", "what would help",
+            "feeling off", "out of balance", "what do you suggest",
+        ]
+        is_reactive_request = any(p in text_lower for p in recommendation_patterns)
+
+        current_hour = datetime.datetime.utcnow().hour
+        is_morning = current_hour < 10
+        is_evening = current_hour >= 19
+
+        # Determine trigger reason
+        if is_reactive_request:
+            recommendation_trigger = "reactive"  # User asked
+        elif drift_percentage > 25:
+            recommendation_trigger = "proactive"  # High friction
+        elif is_morning or is_evening:
+            recommendation_trigger = "contextual"  # Scheduled moment
+        elif 15 <= drift_percentage <= 25:
+            recommendation_trigger = "nudge"  # Gentle suggestion
+
+        # Generate recommendations if triggered
+        if recommendation_trigger:
+            try:
+                rec_context = await build_recommendation_context(user_id)
+                recs = await generate_personalized_recommendations(
+                    context=rec_context,
+                    max_foods=3,
+                    max_practices=3,
+                )
+                personalized_recommendations = {
+                    "friction_state": recs.friction_state,
+                    "urgency_level": recs.urgency_level,
+                    "personalization_confidence": recs.personalization_confidence,
+                    "why_this_state": recs.why_this_state,
+                    "personal_insight": recs.personal_insight,
+                    "immediate_actions": [r.model_dump() for r in recs.immediate_actions[:2]],
+                    "foods": [r.model_dump() for r in recs.foods[:3]],
+                    "practices": [r.model_dump() for r in recs.practices[:2]],
+                    "watch_for": recs.watch_for,
+                    "trigger": recommendation_trigger,
+                    "trigger_reason": {
+                        "reactive": "You asked for suggestions",
+                        "proactive": f"Your friction drift is {drift_percentage:.0f}% - let me suggest some rebalancing",
+                        "contextual": "Morning check-in" if is_morning else "Evening wind-down time",
+                        "nudge": "A gentle suggestion based on your patterns",
+                    }.get(recommendation_trigger),
+                }
+                logger.info(
+                    "[turn_v2] Recommendations surfaced: trigger=%s drift=%.1f%%",
+                    recommendation_trigger,
+                    drift_percentage,
+                )
+            except Exception as rec_exc:
+                logger.warning("[turn_v2] Recommendation generation failed: %s", rec_exc)
+                personalized_recommendations = {}
+    except Exception as friction_exc:
+        logger.warning("[turn_v2] Friction state computation failed: %s", friction_exc)
+        friction_state_computed = {}
+
+    recommendation_guard = (
+        "Recommendations are personalized based on Ayurvedic principles and personal patterns. "
+        "Surface them naturally when relevant. For proactive triggers, weave them in gently. "
+        "For reactive requests, be direct and helpful. Never force recommendations."
+    )
+
+    # ==========================================================================
+    # Scheduling Integration
+    # Surfaces scheduling suggestions based on: explicit requests, journal hints,
+    # relationship nudges, and calendar queries. User ALWAYS confirms before action.
+    # ==========================================================================
+    scheduling_context = {}
+    scheduling_intent_detected = None
+    relationship_nudges = []
+    today_calendar = []
+    week_summary = {}
+    scheduling_confirmation_result = None  # Set if user confirmed a pending request
+
+    try:
+        text_lower = (body.text or "").lower()
+
+        # 0. CHECK FOR CONFIRMATION: Did user confirm a pending scheduling request?
+        confirmation_check = detect_confirmation(body.text)
+        if confirmation_check:
+            is_confirmation, option_number = confirmation_check
+            pending_request = await get_pending_request(user_id)
+
+            if pending_request:
+                # User is confirming a pending scheduling request
+                confirmation_result = await execute_pending_confirmation(
+                    person_id=user_id,
+                    request_id=str(pending_request["id"]),
+                    option_number=option_number or 1,
+                )
+                scheduling_confirmation_result = confirmation_result
+                scheduling_context["confirmation"] = {
+                    "status": confirmation_result.status,
+                    "message": confirmation_result.message,
+                    "created_event": confirmation_result.created_event,
+                }
+                scheduling_intent_detected = "confirmed"
+                logger.info(
+                    "[turn_v2] Scheduling confirmation executed: status=%s",
+                    confirmation_result.status,
+                )
+
+        # 1. EXPLICIT SCHEDULING: Detect scheduling intent in user message
+        if not scheduling_confirmation_result:
+            scheduling_intent_detected = detect_scheduling_intent(body.text)
+
+        if (
+            scheduling_intent_detected
+            and scheduling_intent_detected != SchedulingIntent.QUERY
+            and scheduling_intent_detected != "confirmed"
+            and not scheduling_confirmation_result
+        ):
+            # Parse the scheduling request for details
+            parsed_request = await parse_scheduling_request(user_id, body.text, scheduling_intent_detected)
+            scheduling_context["intent"] = scheduling_intent_detected.value
+            scheduling_context["parsed_request"] = {
+                "event_type": parsed_request.event_type,
+                "participants": parsed_request.participants,
+                "timeframe": parsed_request.timeframe,
+                "duration_minutes": parsed_request.duration_minutes,
+                "location_hint": parsed_request.location_hint,
+                "missing_slots": parsed_request.missing_slots,
+            }
+
+            # Find best times for the request
+            if parsed_request.participants:
+                # Look up relationship for participant context
+                for participant in parsed_request.participants[:2]:  # Limit to 2
+                    relationship = await get_relationship_for_scheduling(user_id, participant)
+                    if relationship:
+                        # usual_activities comes as JSON from the query
+                        usual_activities = relationship.get("usual_activities") or []
+                        if isinstance(usual_activities, str):
+                            import json as json_mod
+                            try:
+                                usual_activities = json_mod.loads(usual_activities)
+                            except Exception:
+                                usual_activities = []
+                        scheduling_context.setdefault("participant_context", []).append({
+                            "name": participant,
+                            "last_seen": str(relationship.get("last_seen_at")) if relationship.get("last_seen_at") else None,
+                            "relationship_type": relationship.get("relationship_type"),
+                            "usual_activities": usual_activities if isinstance(usual_activities, list) else [],
+                        })
+
+                    # ==========================================================
+                    # SAKHI MESH CHECK: Does participant have Sakhi?
+                    # ==========================================================
+                    # Check if participant has a Sakhi profile (Sakhi-to-Sakhi coordination)
+                    try:
+                        # Try to find participant's Sakhi profile by name or handle
+                        participant_handle = participant.lower().replace(" ", "_")
+                        mesh_profile = await find_by_handle(participant_handle)
+
+                        if mesh_profile:
+                            # They have Sakhi! Check if connected
+                            mesh_connected = await are_connected(user_id, mesh_profile.person_id)
+
+                            if mesh_connected:
+                                # Full Sakhi-to-Sakhi coordination available
+                                trust = await get_trust_level(user_id, mesh_profile.person_id)
+                                scheduling_context.setdefault("mesh_coordination", {})
+                                scheduling_context["mesh_coordination"][participant] = {
+                                    "has_sakhi": True,
+                                    "connected": True,
+                                    "trust_level": trust.value if trust else "friend",
+                                    "sakhi_handle": mesh_profile.sakhi_handle,
+                                    "shares_availability": mesh_profile.share_availability,
+                                    "can_auto_coordinate": True,
+                                    "message": f"@{mesh_profile.sakhi_handle} is on Sakhi! I can coordinate directly with their Sakhi.",
+                                }
+                                logger.info(
+                                    "[turn_v2] Sakhi mesh detected: participant=%s handle=%s trust=%s",
+                                    participant,
+                                    mesh_profile.sakhi_handle,
+                                    trust.value if trust else "friend",
+                                )
+                            else:
+                                # Has Sakhi but not connected - suggest connecting
+                                scheduling_context.setdefault("mesh_coordination", {})
+                                scheduling_context["mesh_coordination"][participant] = {
+                                    "has_sakhi": True,
+                                    "connected": False,
+                                    "can_auto_coordinate": False,
+                                    "sakhi_handle": mesh_profile.sakhi_handle,
+                                    "message": f"@{mesh_profile.sakhi_handle} is on Sakhi but you're not connected yet. Would you like to send a connection request?",
+                                }
+                    except Exception as mesh_exc:
+                        logger.debug("[turn_v2] Mesh check failed for %s: %s", participant, mesh_exc)
+
+            # Get availability suggestions
+            try:
+                best_times = await find_best_times(
+                    person_id=user_id,
+                    event_type=parsed_request.event_type or "meeting",
+                    duration_minutes=parsed_request.duration_minutes or 60,
+                    days_ahead=7,
+                    max_suggestions=3,
+                )
+                scheduling_context["suggested_times"] = [
+                    {
+                        "start": str(t.get("start")),
+                        "end": str(t.get("end")),
+                        "quality": t.get("quality"),
+                        "quality_reason": t.get("quality_reason"),
+                    }
+                    for t in best_times[:3]
+                ]
+
+                # Save pending request so we can confirm on next turn
+                if best_times:
+                    try:
+                        pending_id = await save_pending_request(
+                            person_id=user_id,
+                            original_request=body.text,
+                            parsed=parsed_request,
+                            proposed_times=best_times[:3],
+                        )
+                        scheduling_context["pending_request_id"] = pending_id
+                        logger.info("[turn_v2] Saved pending scheduling request: %s", pending_id)
+                    except Exception as save_exc:
+                        logger.warning("[turn_v2] Failed to save pending request: %s", save_exc)
+
+            except Exception as avail_exc:
+                logger.warning("[turn_v2] Availability lookup failed: %s", avail_exc)
+
+        # 2. CALENDAR QUERY: "What's my week look like?"
+        elif scheduling_intent_detected == SchedulingIntent.QUERY:
+            scheduling_context["intent"] = "query"
+            try:
+                week_summary = await get_week_summary(user_id)
+                scheduling_context["week_summary"] = week_summary
+            except Exception:
+                pass
+            try:
+                today_calendar = await get_events_for_day(user_id)
+                scheduling_context["today_events"] = [
+                    {
+                        "title": e.title,
+                        "start": str(e.start_time),
+                        "end": str(e.end_time),
+                        "event_type": e.event_type,
+                        "relationship_note": e.relationship_note,
+                    }
+                    for e in today_calendar[:5]
+                ]
+            except Exception:
+                pass
+
+        # 3. PROACTIVE JOURNAL HINTS: Detect scheduling-related wishes in journal
+        journal_scheduling_patterns = [
+            "should visit", "should see", "need to catch up with",
+            "want to meet", "thinking about visiting", "miss seeing",
+            "haven't seen", "been a while since", "should call",
+        ]
+        detected_hints = [p for p in journal_scheduling_patterns if p in text_lower]
+        if detected_hints and not scheduling_intent_detected:
+            scheduling_context["journal_hint"] = {
+                "detected_patterns": detected_hints,
+                "suggestion_type": "proactive",
+            }
+            scheduling_intent_detected = "journal_hint"
+
+        # 4. RELATIONSHIP NUDGES: People you haven't connected with recently
+        # Only surface if no explicit scheduling intent (don't overwhelm)
+        if not scheduling_context.get("intent"):
+            try:
+                nudge_relationships = await get_relationships_needing_attention(
+                    user_id, limit=2
+                )
+                if nudge_relationships:
+                    relationship_nudges = [
+                        {
+                            "name": r.get("name"),
+                            "last_seen": str(r.get("last_seen_at")) if r.get("last_seen_at") else None,
+                            "days_since": r.get("days_since_contact"),
+                            "relationship_type": r.get("relationship_type"),
+                            "frequency_target": r.get("frequency_target"),
+                        }
+                        for r in nudge_relationships
+                    ]
+                    scheduling_context["relationship_nudges"] = relationship_nudges
+            except Exception as nudge_exc:
+                logger.warning("[turn_v2] Relationship nudge lookup failed: %s", nudge_exc)
+
+        if scheduling_context:
+            logger.info(
+                "[turn_v2] Scheduling context loaded: intent=%s nudges=%d",
+                scheduling_intent_detected,
+                len(relationship_nudges),
+            )
+
+    except Exception as sched_exc:
+        logger.warning("[turn_v2] Scheduling context loading failed: %s", sched_exc)
+        scheduling_context = {}
+
+    scheduling_guard = (
+        "CRITICAL: User is the FINAL decision maker for all scheduling. "
+        "Sakhi SUGGESTS and OFFERS options, never acts without explicit confirmation. "
+        "For explicit scheduling requests: present 2-3 time options with quality context, "
+        "then ask 'Would you like me to block one of these?' "
+        "For journal hints: gently offer 'Would you like me to help schedule that?' "
+        "For relationship nudges: only mention if natural, e.g., 'By the way, you mentioned wanting to see Alex...' "
+        "For calendar queries: summarize with relationship/energy context. "
+        "SAKHI MESH: If mesh_coordination shows has_sakhi=True and connected=True, mention "
+        "'Their Sakhi can help find times that work for both of you' and offer to coordinate. "
+        "If has_sakhi=True but connected=False, suggest 'They're on Sakhi - connect to coordinate easier.' "
+        "NEVER create calendar events without explicit 'yes' or 'confirm' from user."
+    )
+
+    # ==========================================================================
+    # Agent Task Integration
+    # Detects autonomous task requests and manages the execution flow.
+    # When user says "book me a table" or "find me running shoes on Amazon",
+    # Sakhi creates a plan, asks for confirmation, then executes via vision loop.
+    # ==========================================================================
+    agent_task_context = {}
+    agent_task_detected = None
+    agent_task_plan = None
+    agent_task_execution = None
+
+    try:
+        text_lower = (body.text or "").lower()
+
+        # 1. CHECK FOR TASK CONFIRMATION: Did user confirm/reject a pending task?
+        pending_agent_task = await get_pending_agent_task(user_id)
+
+        if pending_agent_task:
+            confirmation = detect_task_confirmation(body.text)
+
+            if confirmation is True:
+                # User confirmed - start real execution via desktop agent
+                confirmed_task = await confirm_task(pending_agent_task.task_id)
+                if confirmed_task:
+                    execution_state = await start_task_execution(confirmed_task)
+                    agent_task_execution = {
+                        "task_id": confirmed_task.task_id,
+                        "status": execution_state.status,
+                        "current_step": execution_state.current_step + 1,
+                        "total_steps": execution_state.total_steps,
+                        "message": format_execution_update_for_chat(execution_state),
+                        "agent_id": execution_state.agent_id,
+                    }
+                    agent_task_context["execution"] = agent_task_execution
+                    agent_task_context["confirmed"] = True
+                    logger.info(
+                        "[turn_v2] Agent task confirmed and started: task_id=%s agent_id=%s",
+                        confirmed_task.task_id,
+                        execution_state.agent_id,
+                    )
+
+            elif confirmation is False:
+                # User rejected
+                await reject_task(pending_agent_task.task_id)
+                agent_task_context["rejected"] = True
+                agent_task_context["message"] = "No problem, I've cancelled that."
+                logger.info(
+                    "[turn_v2] Agent task rejected: task_id=%s",
+                    pending_agent_task.task_id,
+                )
+
+            else:
+                # User said something else - keep the pending task in context
+                agent_task_context["pending_task"] = {
+                    "task_id": pending_agent_task.task_id,
+                    "task_type": pending_agent_task.task_type.value,
+                    "description": pending_agent_task.task_description,
+                    "awaiting_confirmation": True,
+                }
+
+        # 2. DETECT NEW AGENT TASK: Is this a new task request?
+        if not pending_agent_task or agent_task_context.get("rejected"):
+            task_detection = detect_agent_task_intent(body.text)
+
+            if task_detection:
+                task_type, matched_pattern, confidence = task_detection
+                agent_task_detected = {
+                    "type": task_type.value,
+                    "confidence": confidence,
+                }
+
+                # Generate a task plan
+                plan_result = await generate_task_plan(
+                    person_id=user_id,
+                    task_type=task_type,
+                    task_request=body.text,
+                )
+
+                if plan_result.get("success"):
+                    # Create pending task for confirmation
+                    new_task = await create_pending_task(
+                        person_id=user_id,
+                        task_type=task_type,
+                        original_request=body.text,
+                        plan_steps=plan_result.get("steps", []),
+                        context_used=plan_result.get("context", {}),
+                    )
+
+                    agent_task_plan = {
+                        "task_id": new_task.task_id,
+                        "task_type": task_type.value,
+                        "steps": plan_result.get("steps", []),
+                        "estimated_duration": plan_result.get("estimated_duration", 2),
+                        "context_used": plan_result.get("context", {}),
+                        "formatted_plan": format_task_plan_for_chat(
+                            task_type,
+                            plan_result,
+                            plan_result.get("context", {}),
+                        ),
+                    }
+                    agent_task_context["new_task"] = agent_task_plan
+                    agent_task_context["awaiting_confirmation"] = True
+
+                    logger.info(
+                        "[turn_v2] Agent task detected: type=%s task_id=%s steps=%d",
+                        task_type.value,
+                        new_task.task_id,
+                        len(plan_result.get("steps", [])),
+                    )
+
+        # 3. CHECK EXECUTION STATE: Is there a running task?
+        if pending_agent_task and pending_agent_task.status == "confirmed":
+            execution_state = await get_task_execution_state(pending_agent_task.task_id)
+            if execution_state:
+                # Check if waiting for step approval
+                step_confirmation = detect_task_confirmation(body.text)
+
+                if execution_state.status == "waiting_approval" and step_confirmation is True:
+                    # Approve the step and continue
+                    updated_state = await approve_execution_step(pending_agent_task.task_id)
+                    if updated_state:
+                        execution_state = updated_state
+
+                agent_task_execution = {
+                    "task_id": pending_agent_task.task_id,
+                    "status": execution_state.status,
+                    "current_step": execution_state.current_step + 1,
+                    "total_steps": execution_state.total_steps,
+                    "pending_approval": execution_state.pending_approval,
+                    "message": format_execution_update_for_chat(execution_state),
+                    "agent_id": execution_state.agent_id,
+                }
+                agent_task_context["execution"] = agent_task_execution
+
+    except Exception as agent_exc:
+        logger.warning("[turn_v2] Agent task processing failed: %s", agent_exc)
+        agent_task_context = {}
+
+    agent_task_guard = (
+        "When agent_task_context is present, respond according to the task state:\n"
+        "1. NEW TASK (new_task present): Present the formatted_plan naturally. "
+        "Ask 'Would you like me to proceed?' or 'Should I start?'\n"
+        "2. PENDING CONFIRMATION (awaiting_confirmation): The user hasn't confirmed yet. "
+        "Gently remind them of the pending task if relevant.\n"
+        "3. EXECUTION (execution present): Report progress. If waiting_approval, "
+        "explain what step needs approval and ask for confirmation.\n"
+        "4. REJECTED: Acknowledge cancellation briefly and move on.\n"
+        "5. COMPLETED: Celebrate the completion and summarize what was done.\n"
+        "CRITICAL: Never execute agent tasks without explicit user confirmation."
+    )
+
+    agentic_guard = (
+        "When agentic_context contains web_search results: "
+        "1. Use the search summary to inform your response naturally - don't just list sources. "
+        "2. Cite specific facts from the search when relevant. "
+        "3. If asked, mention you searched the web for current information. "
+        "4. For factual questions, prioritize search results over general knowledge. "
+        "5. If search results are empty or irrelevant, rely on your own knowledge. "
+        "6. Never make up information that wasn't in search results or your training. "
+        "7. For personal questions about the user, DON'T use web search - use their history."
+    )
+
     metadata_payload = {
         "entry_id": entry_id,
         "topics": topics,
@@ -797,6 +1619,30 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "moment_model": moment_model,
         "evidence_pack": evidence_pack,
         "deliberation_scaffold": deliberation_scaffold,
+        # Personalized Recommendations (Ayurvedic + personal patterns)
+        "friction_state": friction_state_computed,
+        "personalized_recommendations": personalized_recommendations,
+        "recommendation_trigger": recommendation_trigger,
+        "recommendation_guard": recommendation_guard,
+        # Scheduling & Calendar Context
+        "scheduling_context": scheduling_context,
+        "scheduling_intent": scheduling_intent_detected.value if hasattr(scheduling_intent_detected, 'value') else scheduling_intent_detected,
+        "relationship_nudges": relationship_nudges,
+        "scheduling_guard": scheduling_guard,
+        # Sakhi Mesh coordination context
+        "mesh_coordination": scheduling_context.get("mesh_coordination") if scheduling_context else None,
+        # Vision context (images, documents in conversation)
+        "vision_context": vision_context if vision_context else None,
+        # Agentic context (web search results, tool outputs)
+        "agentic_context": agentic_context if agentic_context else None,
+        "agentic_results": agentic_results if agentic_results else None,
+        "agentic_guard": agentic_guard,
+        # Agent Task context (autonomous task execution)
+        "agent_task_context": agent_task_context if agent_task_context else None,
+        "agent_task_detected": agent_task_detected,
+        "agent_task_plan": agent_task_plan,
+        "agent_task_execution": agent_task_execution,
+        "agent_task_guard": agent_task_guard,
         # Conversation history for LLM context continuity
         "conversation_history": conversation_history,
         "session_summary": session_summary,  # Compressed older context
@@ -900,6 +1746,23 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "moment_model": moment_model,
         "evidence_pack": evidence_pack,
         "deliberation_scaffold": deliberation_scaffold,
+        # Personalized Recommendations (Ayurvedic + personal patterns)
+        "friction_state": friction_state_computed,
+        "personalized_recommendations": personalized_recommendations,
+        "recommendation_trigger": recommendation_trigger,
+        # Scheduling & Calendar Context
+        "scheduling_context": scheduling_context,
+        "scheduling_intent": scheduling_intent_detected.value if hasattr(scheduling_intent_detected, 'value') else scheduling_intent_detected,
+        "relationship_nudges": relationship_nudges,
+        "mesh_coordination": scheduling_context.get("mesh_coordination") if scheduling_context else None,
+        "vision_context": vision_context if vision_context else None,
+        "agentic_context": agentic_context if agentic_context else None,
+        "agentic_results": agentic_results if agentic_results else None,
+        # Agent Task context
+        "agent_task_context": agent_task_context if agent_task_context else None,
+        "agent_task_detected": agent_task_detected,
+        "agent_task_plan": agent_task_plan,
+        "agent_task_execution": agent_task_execution,
     }
 
     session_id = result.get("sessionId") or result.get("session_id")
@@ -1141,6 +2004,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     queued_jobs = [
         "turn_memory_update",           # Essential: captures turn to memory
         "episodic_consolidation_v21",   # Essential: creates episodes + state vectors + feeds memory graph
+        "preference_learning",          # Learn preferences from "I like..." statements
     ]
     # MOVED TO DAILY SCHEDULE (see scheduler.py):
     # - ayurvedic_pipeline (daily 6am)

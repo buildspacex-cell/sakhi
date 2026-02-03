@@ -115,6 +115,10 @@ from sakhi.apps.api.routers import narratives as narratives_router
 from sakhi.apps.api.routers import debug as debug_router
 from sakhi.apps.api.routes.alignment import router as alignment_router
 from sakhi.apps.api.routes.coherence import router as coherence_router
+from sakhi.apps.api.routes.relationships import router as relationships_router
+from sakhi.apps.api.routes.scheduling import router as scheduling_router
+from sakhi.apps.api.routes.calendar import router as calendar_router
+from sakhi.apps.api.routes.knowledge_graph import router as knowledge_graph_router
 from sakhi.apps.api.routes.narrative_arcs import router as narrative_arcs_router
 from sakhi.apps.api.routes.patterns import router as patterns_router
 from sakhi.apps.api.routes.inner_dialogue import router as inner_dialogue_router
@@ -142,7 +146,14 @@ from sakhi.apps.api.routes.friction_state import router as friction_state_router
 from sakhi.apps.api.routes.conversation_history import router as conversation_history_router
 from sakhi.apps.api.routes.recommendations import router as recommendations_router
 from sakhi.apps.api.routes.health import router as health_router
+from sakhi.apps.api.routes.mesh import router as mesh_router
+from sakhi.apps.api.routes.vision import router as vision_router
+from sakhi.apps.api.routes.agentic import router as agentic_router
+from sakhi.apps.api.routes.agent import router as agent_router
 from sakhi.apps.api.routes.dev import router as dev_router
+from sakhi.apps.api.routes.demo import router as demo_router
+from sakhi.apps.api.routes.learning import router as learning_router
+from sakhi.apps.api.routes.missions import router as missions_router
 from sakhi.apps.api.routers import person as person_router
 from sakhi.apps.api.routers import person_edit as person_edit_router
 from sakhi.apps.api.core.llm import set_router as set_llm_router
@@ -1453,6 +1464,10 @@ app.include_router(clarity_router.router)
 app.include_router(debug_router.router)
 app.include_router(alignment_router)
 app.include_router(coherence_router)
+app.include_router(relationships_router)
+app.include_router(scheduling_router)
+app.include_router(calendar_router)
+app.include_router(knowledge_graph_router)
 app.include_router(narrative_arcs_router)
 app.include_router(patterns_router)
 app.include_router(inner_dialogue_router)
@@ -1482,7 +1497,14 @@ app.include_router(friction_state_router)
 app.include_router(recommendations_router)
 app.include_router(health_router)
 app.include_router(conversation_history_router)
+app.include_router(mesh_router)
+app.include_router(vision_router)
+app.include_router(agentic_router)
+app.include_router(agent_router)
 app.include_router(dev_router)
+app.include_router(demo_router)
+app.include_router(learning_router)
+app.include_router(missions_router)
 
 # Startup route dump was for debugging; disable to reduce noise in logs.
 # LOGGER.info("Printing registered routes (startup debug)")

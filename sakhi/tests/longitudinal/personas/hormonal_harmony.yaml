@@ -1,0 +1,327 @@
+# Hormonal Harmony Persona
+# Woman navigating difficult menstrual cycles with Kapha-Vata constitution
+
+id: hormonal_harmony
+name: Diya
+description: >
+  A 28-year-old graphic designer working from home. Kapha-dominant with
+  Vata tendencies, she experiences challenging menstrual cycles with heavy
+  flow, severe cramps, and significant mood fluctuations. She's learning
+  to work WITH her cycle rather than against it.
+
+dosha_baseline:
+  vata: 0.30
+  pitta: 0.20
+  kapha: 0.50
+
+rhythm:
+  morning: low
+  afternoon: medium
+  evening: medium
+  best_work_time: afternoon
+  sleep_quality: variable
+
+traits:
+  - name: body_aware
+    description: Highly attuned to physical sensations and cycles
+    intensity: 0.85
+    journal_patterns:
+      - "my body is telling me"
+      - "I can feel"
+      - "physically drained"
+      - "cramps started"
+
+  - name: emotionally_sensitive
+    description: Deep feeler, mood shifts with cycle
+    intensity: 0.80
+    journal_patterns:
+      - "feeling emotional"
+      - "tears came out of nowhere"
+      - "mood swings"
+      - "overwhelmed by feelings"
+
+  - name: steady_when_balanced
+    description: Naturally grounded when not in hormonal flux
+    intensity: 0.75
+    journal_patterns:
+      - "feeling like myself again"
+      - "steady day"
+      - "grounded and calm"
+      - "good flow"
+
+  - name: self_care_seeker
+    description: Actively seeks remedies and routines
+    intensity: 0.70
+    journal_patterns:
+      - "trying something new"
+      - "herbal tea helped"
+      - "need to rest more"
+      - "listening to my body"
+
+life_context:
+  occupation: Freelance Graphic Designer (works from home)
+  relationships:
+    mom: very close, shares health wisdom
+    sister: Priya, also struggles with cycles
+    partner: Arjun, understanding but unsure how to help
+    best_friend: Meera, yoga buddy
+  current_challenges:
+    - Heavy periods that last 6-7 days
+    - Severe cramps days 1-2
+    - PMS mood swings 5 days before period
+    - Low energy during luteal phase
+    - Client deadlines don't respect her cycle
+  values:
+    - Self-compassion
+    - Natural healing
+    - Connection
+    - Creativity
+  hobbies:
+    - gentle yoga (helps with cramps)
+    - cooking Ayurvedic recipes
+    - journaling
+    - walking in nature
+
+arc:
+  name: Cycle Awareness Journey
+  description: >
+    Diya tracks her menstrual cycle over 2 months, learning patterns,
+    trying different remedies, and gradually finding what works for her
+    unique constitution. The journey shows how the same symptoms need
+    different treatment than someone with a different prakruti.
+
+  phases:
+    # Month 1 - Follicular (post-period, rising energy)
+    - name: Post-Period Rising
+      duration_days: 10
+      emotional_state: relieved and energized
+      energy_modifier: 1.1
+      dosha_shift:
+        vata: 0.25
+        pitta: 0.25
+        kapha: 0.50
+      themes:
+        - energy returning
+        - creative flow
+        - optimism
+        - catching up on work
+      events:
+        - Period finally ended after 7 days
+        - Got back to yoga class
+        - Feeling clear-headed
+      entry_frequency: 0.8
+
+    # Month 1 - Ovulation (peak energy)
+    - name: Ovulation Peak
+      duration_days: 5
+      emotional_state: confident and social
+      energy_modifier: 1.3
+      dosha_shift:
+        vata: 0.20
+        pitta: 0.35
+        kapha: 0.45
+      themes:
+        - high energy
+        - social connection
+        - productive
+        - feeling good in body
+      events:
+        - Finished big client project
+        - Went out with friends
+        - Felt attractive and confident
+      entry_frequency: 0.7
+
+    # Month 1 - Luteal (declining, PMS building)
+    - name: Luteal Decline
+      duration_days: 12
+      emotional_state: withdrawing and sensitive
+      energy_modifier: 0.7
+      dosha_shift:
+        vata: 0.40
+        pitta: 0.20
+        kapha: 0.40
+      themes:
+        - fatigue setting in
+        - craving comfort foods
+        - mood dips
+        - wanting solitude
+      events:
+        - Snapped at Arjun over nothing
+        - Cried watching a commercial
+        - Bloating started
+        - Breast tenderness
+      entry_frequency: 1.2
+
+    # Month 1 - Menstruation (low point)
+    - name: Period Week
+      duration_days: 7
+      emotional_state: surrendering to rest
+      energy_modifier: 0.5
+      dosha_shift:
+        vata: 0.50
+        pitta: 0.15
+        kapha: 0.35
+      themes:
+        - severe cramps
+        - heavy bleeding
+        - needing rest
+        - hot water bottle
+      events:
+        - Day 1 cramps so bad called in sick
+        - Heavy flow, changed pad every 2 hours
+        - Mom brought kadha (herbal drink)
+        - Could only do gentle stretches
+      entry_frequency: 1.5
+
+    # Month 2 - Follicular (learning patterns)
+    - name: Second Follicular
+      duration_days: 10
+      emotional_state: hopeful and observant
+      energy_modifier: 1.0
+      dosha_shift:
+        vata: 0.25
+        pitta: 0.25
+        kapha: 0.50
+      themes:
+        - tracking patterns
+        - what worked last month
+        - planning for next cycle
+        - gratitude for good days
+      events:
+        - Started tracking in app
+        - Noticed pattern - cramps worse when stressed
+        - Researched Ayurvedic remedies for Kapha
+      entry_frequency: 0.9
+
+    # Month 2 - Ovulation
+    - name: Second Ovulation
+      duration_days: 5
+      emotional_state: aware and prepared
+      energy_modifier: 1.2
+      dosha_shift:
+        vata: 0.20
+        pitta: 0.30
+        kapha: 0.50
+      themes:
+        - using good days well
+        - stocking up on supplies
+        - scheduling light week ahead
+        - feeling proactive
+      events:
+        - Told clients about "creative reset week" coming
+        - Bought heating pad
+        - Prepared freezer meals
+      entry_frequency: 0.7
+
+    # Month 2 - Luteal (implementing learnings)
+    - name: Managed Luteal
+      duration_days: 12
+      emotional_state: accepting and prepared
+      energy_modifier: 0.75
+      dosha_shift:
+        vata: 0.35
+        pitta: 0.20
+        kapha: 0.45
+      themes:
+        - recognizing warning signs
+        - communicating needs
+        - reducing commitments
+        - gentle movement
+      events:
+        - Told Arjun PMS is coming, need patience
+        - Did restorative yoga instead of vinyasa
+        - Avoided cold foods (Kapha advice)
+        - Started ginger tea early
+      entry_frequency: 1.3
+
+    # Month 2 - Menstruation (improved experience)
+    - name: Managed Period
+      duration_days: 7
+      emotional_state: coping and learning
+      energy_modifier: 0.6
+      dosha_shift:
+        vata: 0.45
+        pitta: 0.15
+        kapha: 0.40
+      themes:
+        - cramps still hard but better
+        - knowing what helps
+        - self-compassion
+        - progress not perfection
+      events:
+        - Day 1 still rough but used heating pad early
+        - Flow slightly lighter than last month
+        - Arjun made dinner without being asked
+        - Journaling helped process emotions
+      entry_frequency: 1.4
+
+writing_style: conversational
+typical_entry_length: medium
+entry_times:
+  - morning
+  - evening
+
+checkpoints:
+  # Week 1: Body awareness patterns
+  - day: 7
+    name: Body Awareness Detected
+    assertions:
+      theme_emerged:
+        keywords: ["body", "energy", "feeling", "physical"]
+        min_occurrences: 4
+      dosha_state:
+        primary: kapha
+        min_percentage: 40
+
+  # End of first cycle: PMS patterns
+  - day: 27
+    name: PMS Pattern Recognition
+    assertions:
+      pattern_crystallized:
+        type: emotion
+        value: mood_fluctuation
+        min_occurrences: 3
+      theme_emerged:
+        keywords: ["mood", "emotional", "sensitive", "craving"]
+        min_occurrences: 5
+
+  # First period: Vata elevation during menstruation
+  - day: 34
+    name: Menstruation Vata Spike
+    assertions:
+      dosha_drift:
+        dosha: vata
+        direction: elevated
+        min_percentage: 15
+      friction_state:
+        expected: chaos
+        min_confidence: 0.5
+
+  # Mid month 2: Learning patterns
+  - day: 50
+    name: Cycle Awareness Growing
+    assertions:
+      theme_emerged:
+        keywords: ["pattern", "tracking", "learned", "prepare"]
+        min_occurrences: 3
+      pattern_crystallized:
+        type: behavior
+        value: self_care
+        min_occurrences: 4
+
+  # End of simulation: Holistic picture
+  - day: 68
+    name: Full Cycle Understanding
+    assertions:
+      rhythm_learned:
+        slot: morning
+        expected: low
+      pattern_crystallized:
+        type: physical
+        value: menstrual_cycle
+        min_occurrences: 8
+      friction_state:
+        expected_in: [balanced, stagnation]  # Kapha tends toward stagnation when imbalanced
+        min_confidence: 0.5
+
+version: "1.0"

@@ -152,9 +152,10 @@ async def embed_normalized(text: str) -> List[float]:
     return _zero_vector()
 
 
-def to_pgvector(vec: Sequence[Any] | None, *, length: int | None = None) -> str:
+def to_pgvector(vec: Sequence[Any] | None, *, length: int | None = None) -> str | None:
     """
     Render a Python sequence as a pgvector literal.
+    Returns None if vector is empty (pgvector requires at least 1 dimension).
     """
     floats = _coerce_float_list(vec or [])
     if length is not None:
@@ -165,7 +166,8 @@ def to_pgvector(vec: Sequence[Any] | None, *, length: int | None = None) -> str:
         else:
             floats = floats[:length]
     if not floats:
-        return "[]"
+        # pgvector requires at least 1 dimension - return None instead of "[]"
+        return None
     return "[" + ",".join(f"{value:.6f}" for value in floats) + "]"
 
 

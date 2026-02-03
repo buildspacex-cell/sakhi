@@ -31,6 +31,9 @@ __pycache__/
 .venv/
 venv/
 
+# Logs
+logs/
+
 # macOS / editor
 .DS_Store
 .idea/

@@ -78,10 +78,12 @@ export interface FrictionState {
   friction?: {
     state: string;
     name: string;
+    description?: string;
     short: string;
     dosha: string | null;
     drift_percentage: number;
     severity: string;
+    recommendations_focus?: string[];
   };
 }
 

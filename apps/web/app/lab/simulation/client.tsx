@@ -467,6 +467,19 @@ export default function SimulationDemoClient() {
       {/* 3. Story Intro Card */}
       <StoryIntroCard persona={data.persona} />
 
+      {/* 3.5 Current Friction State - shows REAL computed state from simulation */}
+      <CurrentFrictionState
+        currentSnapshot={currentSnapshot}
+        persona={data.persona}
+        currentDay={currentDay}
+      />
+
+      {/* 3.6 Personalization Demo - LLM-generated recommendations */}
+      <PersonalizationDemo
+        persona={data.persona}
+        currentDay={currentDay}
+      />
+
       {/* 4. Timeline Controls */}
       <TimelineControls
         currentDay={currentDay}
@@ -690,16 +703,13 @@ function PersonaSelector({
   onChange: (id: string) => void;
 }) {
   const personas = [
-    { id: "anxious_achiever", label: "Maya", subtitle: "Burnout & Recovery" },
-    {
-      id: "stuck_creative",
-      label: "Alex",
-      subtitle: "Stagnation & Awakening",
-    },
+    { id: "anxious_achiever", label: "Maya", subtitle: "Burnout & Recovery", prakruti: "Pitta-dominant" },
+    { id: "stuck_creative", label: "Alex", subtitle: "Stagnation & Awakening", prakruti: "Kapha-Pitta" },
+    { id: "hormonal_harmony", label: "Diya", subtitle: "Cycle Awareness", prakruti: "Kapha-Vata" },
   ];
 
   return (
-    <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+    <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
       {personas.map((p) => {
         const isActive = current === p.id;
         return (
@@ -707,7 +717,7 @@ function PersonaSelector({
             key={p.id}
             onClick={() => onChange(p.id)}
             style={{
-              flex: 1,
+              flex: "1 1 200px",
               padding: "14px 20px",
               border: `2px solid ${isActive ? palette.accent : palette.border}`,
               borderRadius: 12,
@@ -717,14 +727,24 @@ function PersonaSelector({
               transition: "all 0.2s",
             }}
           >
-            <div
-              style={{ fontWeight: 600, fontSize: 16, color: palette.text }}
-            >
-              {p.label}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontWeight: 600, fontSize: 16, color: palette.text }}>
+                {p.label}
+              </div>
+              <span
+                style={{
+                  fontSize: 10,
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                  background: isActive ? palette.accent : palette.cardAlt,
+                  color: isActive ? "#fff" : palette.muted,
+                  fontWeight: 500,
+                }}
+              >
+                {p.prakruti}
+              </span>
             </div>
-            <div
-              style={{ fontSize: 13, color: palette.muted, marginTop: 2 }}
-            >
+            <div style={{ fontSize: 13, color: palette.muted, marginTop: 4 }}>
               {p.subtitle}
               {isActive && (
                 <span
@@ -894,6 +914,605 @@ function DoshaBar({
             transition: "width 0.3s",
           }}
         />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Current Friction State - Shows REAL computed friction state from simulation
+// ============================================================================
+
+function CurrentFrictionState({
+  currentSnapshot,
+  persona,
+  currentDay,
+}: {
+  currentSnapshot: StateSnapshot | null;
+  persona: SimulationData["persona"];
+  currentDay: number;
+}) {
+  // Only show after day 5 (once some data is available)
+  if (currentDay < 5 || !currentSnapshot) return null;
+
+  const friction = currentSnapshot.friction_state?.friction;
+  const drift = currentSnapshot.friction_state?.drift;
+  const baseline = currentSnapshot.friction_state?.baseline;
+
+  if (!friction) return null;
+
+  // Color based on friction state
+  const stateColors: Record<string, string> = {
+    chaos: palette.chaos,
+    intensity: palette.intensity,
+    stagnation: palette.stagnation,
+    balanced: palette.balanced,
+  };
+  const stateColor = stateColors[friction.state] || palette.muted;
+
+  // Dosha colors
+  const doshaColors: Record<string, string> = {
+    vata: palette.vata,
+    pitta: palette.pitta,
+    kapha: palette.kapha,
+  };
+
+  return (
+    <div style={{ ...styles.card, marginBottom: 24, borderLeft: `4px solid ${stateColor}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: palette.text }}>
+            Current Friction State
+          </div>
+          <div style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>
+            Computed from {persona.name}&apos;s journal entries through Day {currentDay}
+          </div>
+        </div>
+        <span
+          style={{
+            padding: "4px 10px",
+            background: "#e8f5e9",
+            borderRadius: 6,
+            color: palette.balanced,
+            fontWeight: 600,
+            fontSize: 11,
+          }}
+        >
+          Real Pipeline Data
+        </span>
+      </div>
+
+      {/* Friction State Badge + Description */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <span
+            style={{
+              padding: "6px 14px",
+              background: stateColor,
+              color: "#fff",
+              borderRadius: 20,
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            {friction.name || friction.state.toUpperCase()}
+          </span>
+          {drift && (
+            <span style={{ fontSize: 12, color: palette.muted }}>
+              {drift.drift_percentage.toFixed(1)}% drift from baseline
+              {drift.direction && ` (${drift.direction})`}
+            </span>
+          )}
+        </div>
+        {friction.description && (
+          <div style={{ fontSize: 13, color: palette.text, lineHeight: 1.6 }}>
+            {friction.description}
+          </div>
+        )}
+      </div>
+
+      {/* Recommendations Focus */}
+      {friction.recommendations_focus && friction.recommendations_focus.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: palette.muted, marginBottom: 8 }}>
+            Focus Areas for Balance:
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {friction.recommendations_focus.map((focus, i) => (
+              <span
+                key={i}
+                style={{
+                  padding: "4px 10px",
+                  background: palette.accentLight,
+                  color: palette.accent,
+                  borderRadius: 12,
+                  fontSize: 12,
+                  fontWeight: 500,
+                }}
+              >
+                {focus}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dosha Drift Visualization */}
+      {drift?.raw_distances && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: palette.muted, marginBottom: 8 }}>
+            Dosha Drift from Baseline:
+          </div>
+          <div style={{ display: "flex", gap: 16 }}>
+            {(["vata", "pitta", "kapha"] as const).map((dosha) => {
+              const distance = drift.raw_distances[dosha] || 0;
+              const direction = distance > 0 ? "↑" : distance < 0 ? "↓" : "—";
+              const isPrimary = drift.primary_contributor === dosha;
+              return (
+                <div key={dosha} style={{ flex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{
+                      fontSize: 11,
+                      color: isPrimary ? doshaColors[dosha] : palette.muted,
+                      fontWeight: isPrimary ? 600 : 400,
+                    }}>
+                      {dosha.charAt(0).toUpperCase() + dosha.slice(1)}
+                      {isPrimary && " (primary)"}
+                    </span>
+                    <span style={{ fontSize: 11, color: palette.muted }}>
+                      {direction} {Math.abs(distance * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div style={{ height: 6, background: palette.cardAlt, borderRadius: 3 }}>
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${Math.min(Math.abs(distance) * 200, 100)}%`,
+                        background: doshaColors[dosha],
+                        borderRadius: 3,
+                        opacity: isPrimary ? 1 : 0.5,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Constitution Reminder */}
+      {baseline?.dosha_baseline && (
+        <div
+          style={{
+            padding: "12px 16px",
+            background: palette.cardAlt,
+            borderRadius: 8,
+            fontSize: 12,
+            color: palette.muted,
+          }}
+        >
+          <strong style={{ color: palette.text }}>{persona.name}&apos;s Constitution (Prakruti):</strong>{" "}
+          {Math.round(baseline.dosha_baseline.vata * 100)}% Vata,{" "}
+          {Math.round(baseline.dosha_baseline.pitta * 100)}% Pitta,{" "}
+          {Math.round(baseline.dosha_baseline.kapha * 100)}% Kapha
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Personalization Comparison - Side-by-side LLM recommendations for Maya vs Diya
+// ============================================================================
+
+const SYMPTOM_OPTIONS = [
+  "Feeling tired and low energy",
+  "Feeling anxious and scattered",
+  "Trouble sleeping",
+  "Overwhelmed by workload",
+];
+
+// Fixed prakruti for comparison
+const MAYA_PRAKRUTI = { vata: 0.25, pitta: 0.50, kapha: 0.25 };
+const DIYA_PRAKRUTI = { vata: 0.30, pitta: 0.20, kapha: 0.50 };
+
+interface LLMRecommendation {
+  action: string;
+  details?: {
+    what: string;
+    when: string;
+    how: string;
+  };
+  why: string;
+  category: string;
+}
+
+interface LLMRecommendationResponse {
+  constitution: {
+    dominant: string;
+    secondary: string;
+    type: string;
+    vata: number;
+    pitta: number;
+    kapha: number;
+  };
+  friction_state: string;
+  recommendations: LLMRecommendation[];
+  pattern_insight?: {
+    pattern: string;
+    suggestion: string;
+  };
+  source: string;
+}
+
+function PersonalizationDemo({
+  persona,
+  currentDay,
+}: {
+  persona: SimulationData["persona"];
+  currentDay: number;
+}) {
+  const [selectedSymptom, setSelectedSymptom] = useState(0);
+  const [mayaResponse, setMayaResponse] = useState<LLMRecommendationResponse | null>(null);
+  const [diyaResponse, setDiyaResponse] = useState<LLMRecommendationResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isMaya = persona.id === "anxious_achiever";
+  const isDiya = persona.id === "hormonal_harmony";
+
+  // Only show after day 7
+  if (currentDay < 7) return null;
+
+  const fetchBothRecommendations = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    const symptom = SYMPTOM_OPTIONS[selectedSymptom];
+
+    try {
+      // Fetch both in parallel
+      const [mayaRes, diyaRes] = await Promise.all([
+        fetch("/api/friction/recommendations/by-constitution", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...MAYA_PRAKRUTI, symptom }),
+        }),
+        fetch("/api/friction/recommendations/by-constitution", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...DIYA_PRAKRUTI, symptom }),
+        }),
+      ]);
+
+      if (!mayaRes.ok || !diyaRes.ok) {
+        throw new Error("Failed to get recommendations");
+      }
+
+      const [mayaData, diyaData] = await Promise.all([
+        mayaRes.json(),
+        diyaRes.json(),
+      ]);
+
+      setMayaResponse(mayaData);
+      setDiyaResponse(diyaData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const hasResults = mayaResponse && diyaResponse;
+  const source = mayaResponse?.source || "none";
+
+  return (
+    <div style={{ ...styles.card, marginBottom: 24, borderLeft: `4px solid ${palette.accent}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: palette.text }}>
+            Personalization in Action
+          </div>
+          <div style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>
+            Same symptom, different advice — real LLM-generated based on constitution
+          </div>
+        </div>
+        <span
+          style={{
+            padding: "4px 10px",
+            background: source === "llm" ? "#e3f2fd" : "#e8f5e9",
+            borderRadius: 6,
+            color: source === "llm" ? "#1976d2" : palette.balanced,
+            fontWeight: 600,
+            fontSize: 11,
+          }}
+        >
+          {source === "llm" ? "LLM Powered" : "Why Sakhi is Different"}
+        </span>
+      </div>
+
+      {/* Symptom selector */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {SYMPTOM_OPTIONS.map((symptom, i) => (
+          <button
+            key={i}
+            onClick={() => {
+              setSelectedSymptom(i);
+              setMayaResponse(null);
+              setDiyaResponse(null);
+            }}
+            style={{
+              padding: "6px 12px",
+              border: `1px solid ${selectedSymptom === i ? palette.accent : palette.border}`,
+              borderRadius: 20,
+              background: selectedSymptom === i ? palette.accentLight : palette.card,
+              color: selectedSymptom === i ? palette.accent : palette.muted,
+              fontSize: 12,
+              cursor: "pointer",
+              fontWeight: selectedSymptom === i ? 600 : 400,
+            }}
+          >
+            {symptom}
+          </button>
+        ))}
+      </div>
+
+      {/* Generate button */}
+      <button
+        onClick={fetchBothRecommendations}
+        disabled={isLoading}
+        style={{
+          padding: "10px 20px",
+          background: isLoading ? palette.muted : palette.accent,
+          color: "#fff",
+          border: "none",
+          borderRadius: 8,
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: isLoading ? "not-allowed" : "pointer",
+          marginBottom: 16,
+        }}
+      >
+        {isLoading ? "Generating personalized advice..." : "Compare Maya vs Diya"}
+      </button>
+
+      {/* Error */}
+      {error && (
+        <div style={{ padding: 12, background: "#ffebee", borderRadius: 8, color: "#c62828", fontSize: 12, marginBottom: 16 }}>
+          {error}. Make sure the Python backend is running on port 8080.
+        </div>
+      )}
+
+      {/* Side-by-side comparison */}
+      {hasResults && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {/* Maya (Pitta) */}
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              background: isMaya ? palette.accentLight : palette.cardAlt,
+              border: isMaya ? `2px solid ${palette.accent}` : `1px solid ${palette.border}`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: palette.pitta,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 14,
+                }}
+              >
+                M
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: palette.text }}>Maya</div>
+                <div style={{ fontSize: 11, color: palette.muted }}>
+                  {mayaResponse.constitution.type} (50% Pitta)
+                </div>
+              </div>
+              {isMaya && (
+                <span style={{ marginLeft: "auto", fontSize: 10, color: palette.accent, fontWeight: 600 }}>
+                  CURRENT
+                </span>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 10 }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  padding: "2px 8px",
+                  background: palette.pitta,
+                  color: "#fff",
+                  borderRadius: 10,
+                  fontWeight: 600,
+                }}
+              >
+                {mayaResponse.friction_state}
+              </span>
+            </div>
+
+            {/* First recommendation */}
+            {mayaResponse.recommendations[0] && (
+              <>
+                <div style={{ fontSize: 13, color: palette.text, lineHeight: 1.6, marginBottom: 8 }}>
+                  <strong>Advice:</strong> {mayaResponse.recommendations[0].action}
+                </div>
+
+                {/* Details: What, When, How */}
+                {mayaResponse.recommendations[0].details && (
+                  <div style={{
+                    fontSize: 11,
+                    color: palette.text,
+                    lineHeight: 1.6,
+                    marginBottom: 10,
+                    padding: "10px 12px",
+                    background: "rgba(255,255,255,0.7)",
+                    borderRadius: 8,
+                    borderLeft: `3px solid ${palette.pitta}`,
+                  }}>
+                    <div style={{ marginBottom: 6 }}>
+                      <strong style={{ color: palette.pitta }}>What:</strong>{" "}
+                      {mayaResponse.recommendations[0].details.what}
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
+                      <strong style={{ color: palette.pitta }}>When:</strong>{" "}
+                      {mayaResponse.recommendations[0].details.when}
+                    </div>
+                    <div>
+                      <strong style={{ color: palette.pitta }}>How:</strong>{" "}
+                      {mayaResponse.recommendations[0].details.how}
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: palette.muted,
+                    lineHeight: 1.5,
+                    padding: "8px 10px",
+                    background: "rgba(255,255,255,0.5)",
+                    borderRadius: 6,
+                    fontStyle: "italic",
+                  }}
+                >
+                  <strong>Why:</strong> {mayaResponse.recommendations[0].why}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Diya (Kapha) */}
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              background: isDiya ? palette.accentLight : palette.cardAlt,
+              border: isDiya ? `2px solid ${palette.accent}` : `1px solid ${palette.border}`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: palette.kapha,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 14,
+                }}
+              >
+                D
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: palette.text }}>Diya</div>
+                <div style={{ fontSize: 11, color: palette.muted }}>
+                  {diyaResponse.constitution.type} (50% Kapha)
+                </div>
+              </div>
+              {isDiya && (
+                <span style={{ marginLeft: "auto", fontSize: 10, color: palette.accent, fontWeight: 600 }}>
+                  CURRENT
+                </span>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 10 }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  padding: "2px 8px",
+                  background: palette.kapha,
+                  color: "#fff",
+                  borderRadius: 10,
+                  fontWeight: 600,
+                }}
+              >
+                {diyaResponse.friction_state}
+              </span>
+            </div>
+
+            {/* First recommendation */}
+            {diyaResponse.recommendations[0] && (
+              <>
+                <div style={{ fontSize: 13, color: palette.text, lineHeight: 1.6, marginBottom: 8 }}>
+                  <strong>Advice:</strong> {diyaResponse.recommendations[0].action}
+                </div>
+
+                {/* Details: What, When, How */}
+                {diyaResponse.recommendations[0].details && (
+                  <div style={{
+                    fontSize: 11,
+                    color: palette.text,
+                    lineHeight: 1.6,
+                    marginBottom: 10,
+                    padding: "10px 12px",
+                    background: "rgba(255,255,255,0.7)",
+                    borderRadius: 8,
+                    borderLeft: `3px solid ${palette.kapha}`,
+                  }}>
+                    <div style={{ marginBottom: 6 }}>
+                      <strong style={{ color: palette.kapha }}>What:</strong>{" "}
+                      {diyaResponse.recommendations[0].details.what}
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
+                      <strong style={{ color: palette.kapha }}>When:</strong>{" "}
+                      {diyaResponse.recommendations[0].details.when}
+                    </div>
+                    <div>
+                      <strong style={{ color: palette.kapha }}>How:</strong>{" "}
+                      {diyaResponse.recommendations[0].details.how}
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: palette.muted,
+                    lineHeight: 1.5,
+                    padding: "8px 10px",
+                    background: "rgba(255,255,255,0.5)",
+                    borderRadius: 6,
+                    fontStyle: "italic",
+                  }}
+                >
+                  <strong>Why:</strong> {diyaResponse.recommendations[0].why}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom insight */}
+      <div
+        style={{
+          marginTop: 16,
+          padding: "12px 16px",
+          background: palette.cardAlt,
+          borderRadius: 8,
+          fontSize: 12,
+          color: palette.muted,
+          textAlign: "center",
+        }}
+      >
+        <strong style={{ color: palette.text }}>Generic health apps give everyone the same advice.</strong>
+        {" "}Sakhi uses {source === "llm" ? "real LLM + Ayurvedic reasoning" : "constitution-aware logic"} to tailor recommendations to YOUR body.
       </div>
     </div>
   );

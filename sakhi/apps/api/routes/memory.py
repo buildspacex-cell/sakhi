@@ -9,6 +9,12 @@ from fastapi import APIRouter, Query, Request
 from sakhi.apps.api.services.memory.recall import recall_advanced
 from sakhi.apps.api.services.memory.memory_ingest import ingest_journal_entry
 from sakhi.apps.api.services.memory.memory_episodic import build_episodic_from_journals_v2
+from sakhi.apps.api.services.memory.product_matching import (
+    score_product,
+    score_products_batch,
+    get_preference_summary_for_category,
+)
+from sakhi.apps.api.services.memory.sensory_preferences import get_sensory_profile
 from sakhi.apps.api.services.memory.synthesis import (
     fetch_monthly_recaps,
     fetch_weekly_summaries,
@@ -32,8 +38,10 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/memory/recall")
-async def recall_api(person_id: str = Query(...), q: str = Query(...), k: int = Query(5, ge=1, le=25)):
-    return await recall_advanced(person_id, q, k=k)
+async def recall_api(request: Request, person_id: str = Query(..., alias="person_id"), q: str = Query(...), k: int = Query(5, ge=1, le=25)):
+    # Resolve person shortcut (e.g., "a") to actual UUID
+    resolved_id, _, _ = resolve_person(request, person_id)
+    return await recall_advanced(resolved_id, q, k=k)
 
 
 @router.post("/memory/{person_id}/synthesis")
@@ -408,6 +416,111 @@ async def get_weekly_summaries_dev(
 @router.get("/memory/{person_id}/monthly")
 async def get_monthly_recaps(person_id: str, limit: int = Query(3, ge=1, le=6)):
     return await fetch_monthly_recaps(person_id, limit=limit)
+
+
+# =============================================================================
+# Product Matching Endpoints
+# =============================================================================
+
+
+@router.post("/memory/product/score")
+async def score_product_endpoint(
+    request: Request,
+    person_id: str = Query(..., description="User ID or shortcut (a, b)"),
+    category: str = Query(None, description="Product category (e.g., car_perfume, food)"),
+):
+    """
+    Score a single product against user preferences.
+
+    Request body:
+    {
+        "description": "Woody cedar car freshener with sandalwood",
+        "name": "Cedar Dreams Car Perfume"
+    }
+
+    Returns match score (0-1) with reasons and warnings.
+    """
+    resolved_id, _, _ = resolve_person(request, person_id)
+    body = await request.json()
+
+    match = await score_product(
+        person_id=resolved_id,
+        product_description=body.get("description", ""),
+        product_name=body.get("name"),
+        category=category,
+    )
+
+    return {
+        "score": match.score,
+        "level": match.level.value,
+        "reasons": match.reasons,
+        "warnings": match.warnings,
+        "preference_hits": match.preference_hits,
+    }
+
+
+@router.post("/memory/products/score-batch")
+async def score_products_batch_endpoint(
+    request: Request,
+    person_id: str = Query(..., description="User ID or shortcut (a, b)"),
+    category: str = Query(None, description="Product category"),
+):
+    """
+    Score multiple products and return sorted by match.
+
+    Request body:
+    {
+        "products": [
+            {"name": "Product A", "description": "..."},
+            {"name": "Product B", "description": "..."}
+        ]
+    }
+
+    Returns products with match_score added, sorted best first.
+    """
+    resolved_id, _, _ = resolve_person(request, person_id)
+    body = await request.json()
+
+    products = body.get("products", [])
+    scored = await score_products_batch(
+        person_id=resolved_id,
+        products=products,
+        category=category,
+    )
+
+    return {"products": scored, "count": len(scored)}
+
+
+@router.get("/memory/{person_id}/preferences")
+async def get_preferences_endpoint(
+    request: Request,
+    person_id: str,
+    category: str = Query(None, description="Filter by category (car_perfume, food, etc.)"),
+):
+    """
+    Get user's sensory preferences.
+
+    Returns full profile or category-specific summary.
+    """
+    resolved_id, _, _ = resolve_person(request, person_id)
+
+    if category:
+        summary = await get_preference_summary_for_category(resolved_id, category)
+        return summary
+
+    profile = await get_sensory_profile(resolved_id)
+    return {
+        "person_id": resolved_id,
+        "temperature": profile.temperature,
+        "texture": profile.texture,
+        "spice": profile.spice,
+        "flavor": profile.flavor,
+        "visual": profile.visual,
+        "ambiance": profile.ambiance,
+        "portion": profile.portion,
+        "service": profile.service,
+        "last_updated": profile.last_updated.isoformat() if profile.last_updated else None,
+    }
 
 
 __all__ = ["router"]

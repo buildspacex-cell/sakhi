@@ -41,6 +41,7 @@ cd sakhi && python -m apps.worker.main
 ### Features
 | Document | Description |
 |----------|-------------|
+| [Agent Task Orchestrator](features/agent-task-orchestrator.md) | Preference-aware autonomous task execution (shopping, restaurants, etc.) |
 | [Friction Framework](features/friction-framework.md) | User-facing framework API (Operating System, Modes, States) |
 | [Adaptive Response](features/adaptive-response.md) | 5-stage response pipeline |
 | [Body State](features/body-state.md) | Health/body intelligence integration |
@@ -114,6 +115,18 @@ sakhi/
 │   ├── api/              # FastAPI backend (60+ routes)
 │   │   ├── routes/       # API endpoints
 │   │   └── services/     # Business logic
+│   │       ├── agent/    # Desktop agent & task orchestrator
+│   │       │   ├── task_orchestrator.py  # Preference-aware task execution
+│   │       │   ├── vision_loop.py        # Screenshot → Analyze → Act loop
+│   │       │   ├── screen_analyzer.py    # Claude Vision analysis
+│   │       │   ├── action_decider.py     # Context-aware action decisions
+│   │       │   └── action_approval.py    # User approval for critical actions
+│   │       └── memory/   # Memory & preferences
+│   │           ├── recall.py             # Hybrid search (BM25 + vector)
+│   │           ├── bm25.py               # Keyword search
+│   │           ├── sensory_preferences.py # Temp, texture, spice prefs
+│   │           ├── food_memory.py        # Food experiences & restaurants
+│   │           └── last_time.py          # "When did I last..." queries
 │   └── worker/           # Background workers (85+ tasks)
 │       ├── tasks/        # Individual worker tasks
 │       └── pipelines/    # Worker orchestration
@@ -124,6 +137,7 @@ sakhi/
 apps/web/                 # Next.js frontend
 ├── app/
 │   ├── experience/       # User experience pages
+│   ├── demo/             # Demo pages (coordination, restaurant, etc.)
 │   ├── api/              # API routes (turn, voice, auth)
 │   └── auth/             # Auth pages
 └── lib/hooks/            # React hooks (useVoice, etc.)
@@ -160,6 +174,14 @@ See [Getting Started](guides/getting-started.md) for full setup.
 ### Voice
 - `POST /api/voice/turn` — Voice conversation (STT → Sakhi → TTS)
 - `POST /api/voice/tts` — Standalone text-to-speech
+
+### Agent Task Orchestrator
+- `POST /api/v1/agent/task/execute` — Execute preference-aware autonomous task
+- `POST /api/v1/agent/task/shopping` — Shopping-specific task (Amazon, etc.)
+- `POST /api/v1/agent/task/restaurant` — Restaurant finding with food memory
+- `POST /api/v1/agent/task/plan` — Preview task plan without executing
+- `GET /api/v1/agent/task/approvals/pending` — Get actions awaiting user approval
+- `POST /api/v1/agent/task/approvals/{id}/respond` — Approve/reject an action
 
 ### Lab/Debug
 - `GET /lab/memory-details` — View all intelligence for a user

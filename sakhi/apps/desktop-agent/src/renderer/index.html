@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Sakhi Agent</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Title Bar (frameless window) -->
+    <header class="title-bar">
+      <div class="title-bar-drag">
+        <span class="title">Sakhi Agent</span>
+      </div>
+      <div class="window-controls">
+        <button class="btn-minimize" onclick="window.sakhi.minimize()">−</button>
+        <button class="btn-close" onclick="window.sakhi.close()">×</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="content">
+      <!-- Connection Status -->
+      <section class="status-card" id="status-section">
+        <div class="status-indicator" id="status-indicator">
+          <div class="status-dot"></div>
+          <span class="status-text">Connecting...</span>
+        </div>
+        <p class="status-detail" id="status-detail">Initializing agent...</p>
+      </section>
+
+      <!-- Registration Form (shown when not registered) -->
+      <section class="card" id="registration-section" style="display: none;">
+        <h2>Connect to Sakhi</h2>
+        <form id="registration-form">
+          <div class="form-group">
+            <label for="person-id">Your Person ID</label>
+            <input
+              type="text"
+              id="person-id"
+              placeholder="Enter your Sakhi person ID"
+              required
+            >
+            <small>Find this in the Sakhi app settings</small>
+          </div>
+          <div class="form-group">
+            <label for="agent-name">Agent Name (optional)</label>
+            <input
+              type="text"
+              id="agent-name"
+              placeholder="My MacBook"
+            >
+          </div>
+          <button type="submit" class="btn primary">Connect</button>
+        </form>
+      </section>
+
+      <!-- Task Control (shown when registered) -->
+      <section class="card" id="task-section" style="display: none;">
+        <h2>Current Task</h2>
+        <div id="active-task" style="display: none;">
+          <div class="task-info">
+            <span class="task-name" id="task-name">-</span>
+            <span class="task-status" id="task-status">Active</span>
+          </div>
+          <div class="task-stats">
+            <span id="actions-count">0 actions</span>
+          </div>
+          <button class="btn danger" id="stop-task-btn">Stop Task</button>
+        </div>
+        <div id="no-task">
+          <p class="empty-state">No active task</p>
+          <small>Start a task from the Sakhi app</small>
+        </div>
+      </section>
+
+      <!-- Quick Actions -->
+      <section class="card" id="actions-section" style="display: none;">
+        <h2>Quick Actions</h2>
+        <div class="actions-grid">
+          <button class="action-btn" id="screenshot-btn">
+            <span class="icon">📸</span>
+            <span>Screenshot</span>
+          </button>
+          <button class="action-btn" id="open-app-btn">
+            <span class="icon">🌐</span>
+            <span>Open App</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Stats -->
+      <section class="card stats-card" id="stats-section" style="display: none;">
+        <div class="stat">
+          <span class="stat-value" id="total-actions">0</span>
+          <span class="stat-label">Actions Today</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="last-heartbeat">-</span>
+          <span class="stat-label">Last Sync</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span class="version" id="version">v1.0.0</span>
+      <a href="#" id="help-link">Help</a>
+    </footer>
+  </div>
+
+  <script type="module" src="./index.ts"></script>
+</body>
+</html>

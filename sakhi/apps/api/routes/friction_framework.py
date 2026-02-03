@@ -1951,3 +1951,354 @@ async def get_weekly_state(person_id: str, request: Request):
         ),
         weekly_insight=insight
     )
+
+
+# =============================================================================
+# CONSTITUTION-BASED RECOMMENDATIONS (No DB user required)
+# For demo/simulation purposes - takes prakruti directly
+# =============================================================================
+
+class ConstitutionRecommendationRequest(BaseModel):
+    """Request for constitution-based recommendations."""
+    vata: float = Field(ge=0, le=1, description="Vata percentage (0-1)")
+    pitta: float = Field(ge=0, le=1, description="Pitta percentage (0-1)")
+    kapha: float = Field(ge=0, le=1, description="Kapha percentage (0-1)")
+    symptom: str = Field(description="Current symptom or concern")
+
+
+class RecommendationDetails(BaseModel):
+    """Details for a recommendation (what, when, how)."""
+    what: str = ""
+    when: str = ""
+    how: str = ""
+
+
+class ConstitutionRecommendation(BaseModel):
+    """A single constitution-based recommendation."""
+    action: str
+    details: Optional[RecommendationDetails] = None
+    why: str = ""
+    category: str = "immediate"
+
+
+class ConstitutionRecommendationResponse(BaseModel):
+    """Response with LLM-generated recommendations."""
+    constitution: Dict[str, Any]
+    friction_state: str
+    recommendations: List[ConstitutionRecommendation]
+    pattern_insight: Optional[Dict[str, str]] = None
+    source: str = Field(description="'llm' or 'rules'")
+
+
+@router.post("/recommendations/by-constitution", response_model=ConstitutionRecommendationResponse)
+async def get_recommendations_by_constitution(
+    request_data: ConstitutionRecommendationRequest,
+    request: Request,
+):
+    """
+    Get personalized recommendations based on constitution (prakruti) without requiring a user in DB.
+
+    This endpoint is designed for demo/simulation purposes where we want to show
+    how different constitutions get different recommendations for the same symptom.
+
+    The LLM generates personalized advice based on:
+    - The user's constitutional type (dominant dosha)
+    - Their current symptom
+    - Ayurvedic principles for balancing that dosha
+    """
+    vata = request_data.vata
+    pitta = request_data.pitta
+    kapha = request_data.kapha
+    symptom = request_data.symptom
+
+    # Determine dominant dosha
+    doshas = {"vata": vata, "pitta": pitta, "kapha": kapha}
+    dominant = max(doshas, key=doshas.get)
+    sorted_doshas = sorted(doshas.items(), key=lambda x: x[1], reverse=True)
+    secondary = sorted_doshas[1][0]
+
+    # Map dosha to Operating System type
+    os_type_map = {
+        "vata": "Adaptive",
+        "pitta": "Performance",
+        "kapha": "Conservation",
+    }
+    os_type = os_type_map[dominant]
+
+    # Map dosha to friction state when imbalanced
+    friction_map = {
+        "vata": "Chaos Friction",
+        "pitta": "Intensity Friction",
+        "kapha": "Stagnation Friction",
+    }
+    friction_state = friction_map[dominant]
+
+    # Try LLM-based generation
+    llm_router: LLMRouter | None = getattr(request.app.state, "llm_router", None)
+
+    if llm_router:
+        try:
+            llm_result = await _generate_constitution_recommendations_llm(
+                router=llm_router,
+                os_type=os_type,
+                dominant_dosha=dominant,
+                secondary_dosha=secondary,
+                friction_state=friction_state,
+                symptom=symptom,
+                prakruti=doshas,
+            )
+
+            if llm_result and llm_result.get("recommendations"):
+                return ConstitutionRecommendationResponse(
+                    constitution={
+                        "dominant": dominant,
+                        "secondary": secondary,
+                        "type": f"{os_type}-{os_type_map[secondary]}",
+                        "vata": vata,
+                        "pitta": pitta,
+                        "kapha": kapha,
+                    },
+                    friction_state=friction_state,
+                    recommendations=llm_result.get("recommendations", []),
+                    pattern_insight=llm_result.get("pattern_insight"),
+                    source="llm",
+                )
+        except Exception as e:
+            LOGGER.warning(f"LLM generation failed, falling back to rules: {e}")
+
+    # Fallback to rule-based recommendations
+    fallback = _get_constitution_fallback_recommendations(dominant, symptom)
+
+    return ConstitutionRecommendationResponse(
+        constitution={
+            "dominant": dominant,
+            "secondary": secondary,
+            "type": f"{os_type}-{os_type_map[secondary]}",
+            "vata": vata,
+            "pitta": pitta,
+            "kapha": kapha,
+        },
+        friction_state=friction_state,
+        recommendations=fallback.get("recommendations", []),
+        pattern_insight=fallback.get("pattern_insight"),
+        source="rules",
+    )
+
+
+async def _generate_constitution_recommendations_llm(
+    router: LLMRouter,
+    os_type: str,
+    dominant_dosha: str,
+    secondary_dosha: str,
+    friction_state: str,
+    symptom: str,
+    prakruti: Dict[str, float],
+) -> Dict[str, Any]:
+    """
+    Generate personalized recommendations using LLM based on constitution.
+
+    This is similar to _generate_llm_recommendations but doesn't require
+    a user in the database - it works directly from prakruti percentages.
+    """
+
+    system_prompt = """You are Sakhi, a wise wellness companion grounded in Ayurvedic wisdom but speaking in modern, accessible language.
+
+Your role is to provide personalized, DETAILED and ACTIONABLE recommendations based on someone's constitutional type (prakruti).
+
+IMPORTANT AYURVEDIC CONTEXT:
+- Vata (Adaptive) = Air/Space. When imbalanced: scattered, anxious, cold, dry. Balance with: warmth, grounding, routine, moisture.
+- Pitta (Performance) = Fire/Water. When imbalanced: irritable, inflamed, overheated, intense. Balance with: cooling, moderation, play, surrender.
+- Kapha (Conservation) = Earth/Water. When imbalanced: sluggish, stuck, heavy, unmotivated. Balance with: stimulation, movement, lightness, novelty.
+
+CRITICAL: The SAME SYMPTOM needs OPPOSITE treatments depending on constitution:
+- "Feeling tired" for Pitta = COOL DOWN (they're burnt out from excess fire)
+- "Feeling tired" for Kapha = WARM UP and MOVE (they're sluggish from stagnation)
+- "Feeling tired" for Vata = GROUND and REST (they're depleted from scattered energy)
+
+RESPONSE FORMAT (JSON) - Keep responses CONCISE:
+{
+  "recommendations": [
+    {
+      "action": "Brief action summary (5-10 words)",
+      "details": {
+        "what": "Specific items (e.g., 'peppermint tea with honey')",
+        "when": "Timing (e.g., 'mid-afternoon, 3-4pm')",
+        "how": "Method in 1-2 sentences (e.g., 'Steep 5 min, sip slowly away from desk')"
+      },
+      "why": "1 sentence connecting to their dosha",
+      "category": "immediate"
+    }
+  ],
+  "pattern_insight": {
+    "pattern": "Brief insight (1 sentence)",
+    "suggestion": "One practice (1 sentence)"
+  }
+}
+
+REQUIRED - Every recommendation MUST include "details" with what/when/how. Keep each field BRIEF (under 20 words).
+
+Provide exactly 3 recommendations. Be SPECIFIC to their constitution."""
+
+    dosha_percentages = f"Vata: {prakruti['vata']*100:.0f}%, Pitta: {prakruti['pitta']*100:.0f}%, Kapha: {prakruti['kapha']*100:.0f}%"
+
+    user_prompt = f"""Constitution Profile:
+- Operating System: {os_type} (Primary: {dominant_dosha.title()}, Secondary: {secondary_dosha.title()})
+- Dosha Balance: {dosha_percentages}
+- Current Symptom: "{symptom}"
+- Expected Friction: {friction_state}
+
+Based on this {dominant_dosha.title()}-dominant constitution experiencing "{symptom}", what 3 specific actions would help them right now?
+
+Remember: This is a {dominant_dosha.title()} type, so recommendations should address the ROOT CAUSE for their constitution, not generic advice."""
+
+    try:
+        from sakhi.libs.schemas import get_settings
+        settings = get_settings()
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+
+        response = await router.chat(
+            messages=messages,
+            model=settings.model_chat or "gpt-4o-mini",
+            response_format={"type": "json_object"},
+            max_tokens=1500,  # Ensure complete JSON response
+        )
+
+        if response.text:
+            LOGGER.debug(f"LLM constitution response (first 500 chars): {response.text[:500]}")
+            result = json.loads(response.text)
+
+            # Validate and clean up recommendations array
+            # Sometimes LLM returns malformed JSON where pattern_insight leaks into recommendations
+            if "recommendations" in result and isinstance(result["recommendations"], list):
+                valid_recommendations = []
+                for rec in result["recommendations"]:
+                    # Only keep entries that are proper dicts with an 'action' key
+                    if isinstance(rec, dict) and "action" in rec:
+                        # Ensure required fields have defaults
+                        rec.setdefault("why", "")
+                        rec.setdefault("category", "immediate")
+                        # Validate details structure
+                        if "details" in rec and isinstance(rec["details"], dict):
+                            rec["details"].setdefault("what", "")
+                            rec["details"].setdefault("when", "")
+                            rec["details"].setdefault("how", "")
+                        valid_recommendations.append(rec)
+                    else:
+                        LOGGER.warning(f"Skipping invalid recommendation entry: {str(rec)[:100]}")
+
+                result["recommendations"] = valid_recommendations
+
+                if not valid_recommendations:
+                    LOGGER.warning("No valid recommendations found in LLM response")
+                    return {}
+
+                LOGGER.info(f"Validated {len(valid_recommendations)} recommendations from LLM")
+
+            return result
+        return {}
+
+    except json.JSONDecodeError as e:
+        LOGGER.error(f"LLM constitution recommendation JSON parse failed: {e}")
+        return {}
+    except Exception as e:
+        LOGGER.error(f"LLM constitution recommendation failed: {e}")
+        return {}
+
+
+def _get_constitution_fallback_recommendations(
+    dominant_dosha: str,
+    symptom: str,
+) -> Dict[str, Any]:
+    """
+    Rule-based fallback recommendations when LLM is unavailable.
+    """
+
+    # Symptom-specific recommendations by dosha
+    recommendations_by_dosha = {
+        "vata": {
+            "tired": [
+                {"action": "Drink warm ginger tea and wrap yourself in a cozy blanket", "why": "Vata types get depleted and cold when tired. Warmth restores your energy without overstimulating.", "category": "immediate"},
+                {"action": "Do 5 minutes of slow, grounding stretches", "why": "Gentle movement brings scattered Vata energy back to center.", "category": "immediate"},
+                {"action": "Take a warm bath with sesame oil", "why": "Oil and warmth are the antidotes to Vata depletion.", "category": "today"},
+            ],
+            "anxious": [
+                {"action": "Drink warm milk with nutmeg and honey", "why": "Vata anxiety is airy and cold. Warm, heavy drinks calm the nervous system.", "category": "immediate"},
+                {"action": "Do slow yoga poses held for 10+ breaths", "why": "Slow, grounded movement counters Vata's scattered energy.", "category": "immediate"},
+                {"action": "Use a weighted blanket or firm pressure massage", "why": "Heaviness grounds Vata's light, airy nature.", "category": "today"},
+            ],
+            "default": [
+                {"action": "Establish a warm, consistent routine", "why": "Vata thrives on regularity - it counters their naturally variable nature.", "category": "immediate"},
+                {"action": "Favor warm, cooked foods over raw or cold", "why": "Warm food balances Vata's cold, dry qualities.", "category": "today"},
+                {"action": "Go to bed by 10pm in a warm room", "why": "Regular sleep is medicine for Vata.", "category": "today"},
+            ],
+        },
+        "pitta": {
+            "tired": [
+                {"action": "Take a 10-minute break in shade or cool room", "why": "Pitta fatigue is often burnout from excess fire. Cooling restores balance.", "category": "immediate"},
+                {"action": "Drink coconut water or cool mint tea", "why": "Cooling drinks reduce the heat that's depleting you.", "category": "immediate"},
+                {"action": "Splash cool water on your face and wrists", "why": "Pitta runs hot - cooling the pulse points rapidly reduces heat.", "category": "immediate"},
+            ],
+            "anxious": [
+                {"action": "Make a short to-do list and tackle ONE task", "why": "Pitta anxiety comes from feeling out of control. Structure restores confidence.", "category": "immediate"},
+                {"action": "Take 3 deep breaths, then reward yourself after the task", "why": "Pitta needs quick wins - they're goal-oriented by nature.", "category": "immediate"},
+                {"action": "Go for a walk in nature, away from screens", "why": "Nature cools Pitta's intensity and reminds them life isn't all work.", "category": "today"},
+            ],
+            "default": [
+                {"action": "Avoid intense exercise during the heat of the day", "why": "Pitta already runs hot - adding more heat leads to burnout.", "category": "immediate"},
+                {"action": "Favor cooling foods: cucumber, coconut, leafy greens", "why": "Cool foods balance Pitta's natural fire.", "category": "today"},
+                {"action": "Schedule play time - not everything needs to be productive", "why": "Pitta's intensity needs regular release through play.", "category": "today"},
+            ],
+        },
+        "kapha": {
+            "tired": [
+                {"action": "Take a brisk 15-minute walk outside", "why": "Kapha fatigue is stagnation - movement activates circulation and lifts heaviness.", "category": "immediate"},
+                {"action": "Drink stimulating chai with ginger and black pepper", "why": "Warming spices counter Kapha's cold, heavy nature.", "category": "immediate"},
+                {"action": "Do 5 minutes of vigorous breathwork (kapalabhati)", "why": "Energizing breath clears Kapha's mental fog.", "category": "immediate"},
+            ],
+            "anxious": [
+                {"action": "Change your environment - go somewhere new", "why": "Kapha anxiety is heavy and stuck. Fresh perspectives release stagnant worry.", "category": "immediate"},
+                {"action": "Call a friend and talk it out", "why": "Connection moves Kapha's stuck energy.", "category": "immediate"},
+                {"action": "Do dynamic stretches or dance for 5 minutes", "why": "Movement is the best medicine for Kapha's heavy anxiety.", "category": "immediate"},
+            ],
+            "default": [
+                {"action": "Wake with the sun and avoid daytime naps", "why": "Kapha needs stimulation - sleeping too much increases sluggishness.", "category": "immediate"},
+                {"action": "Favor light, spicy, warm foods over heavy, cold ones", "why": "Light food counters Kapha's heavy digestion.", "category": "today"},
+                {"action": "Try something new each day to break routine", "why": "Novelty combats Kapha's tendency toward stagnation.", "category": "today"},
+            ],
+        },
+    }
+
+    # Determine symptom category
+    symptom_lower = symptom.lower()
+    symptom_key = "default"
+    if "tired" in symptom_lower or "energy" in symptom_lower or "fatigue" in symptom_lower:
+        symptom_key = "tired"
+    elif "anxious" in symptom_lower or "scatter" in symptom_lower or "worry" in symptom_lower:
+        symptom_key = "anxious"
+
+    recs = recommendations_by_dosha.get(dominant_dosha, {}).get(symptom_key, recommendations_by_dosha[dominant_dosha]["default"])
+
+    # Pattern insight
+    pattern_insights = {
+        "vata": {
+            "pattern": "Vata types often feel depleted when they've been too scattered or skipped routines",
+            "suggestion": "Establish anchor points in your day: same wake time, same meal times, same wind-down routine"
+        },
+        "pitta": {
+            "pattern": "Pitta types often burn out from pushing too hard without cooling breaks",
+            "suggestion": "Schedule mandatory 'non-productive' time - your body needs it even if your mind disagrees"
+        },
+        "kapha": {
+            "pattern": "Kapha types often feel stuck when they've been too sedentary or comfortable",
+            "suggestion": "Introduce small challenges daily - your body thrives on being gently pushed"
+        },
+    }
+
+    return {
+        "recommendations": recs,
+        "pattern_insight": pattern_insights.get(dominant_dosha),
+    }

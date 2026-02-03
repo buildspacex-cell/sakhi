@@ -71,13 +71,46 @@ echo ""
 LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 
+# Track PIDs
+API_PID=""
+WORKER_PID=""
+WEB_PID=""
+
 # Function to cleanup on exit
 cleanup() {
     echo ""
     echo -e "${YELLOW}Shutting down...${NC}"
 
-    # Kill all background jobs
-    kill $(jobs -p) 2>/dev/null
+    # Send SIGTERM first for graceful shutdown
+    if [ -n "$WEB_PID" ] && kill -0 $WEB_PID 2>/dev/null; then
+        echo "  Stopping Web server..."
+        kill -TERM $WEB_PID 2>/dev/null
+    fi
+
+    if [ -n "$WORKER_PID" ] && kill -0 $WORKER_PID 2>/dev/null; then
+        echo "  Stopping Worker (graceful)..."
+        kill -TERM $WORKER_PID 2>/dev/null
+    fi
+
+    if [ -n "$API_PID" ] && kill -0 $API_PID 2>/dev/null; then
+        echo "  Stopping API server..."
+        kill -TERM $API_PID 2>/dev/null
+    fi
+
+    # Give processes time to shut down gracefully
+    echo "  Waiting for processes to exit..."
+    sleep 2
+
+    # Force kill any remaining processes
+    for pid in $WEB_PID $WORKER_PID $API_PID; do
+        if [ -n "$pid" ] && kill -0 $pid 2>/dev/null; then
+            echo "  Force killing PID $pid..."
+            kill -9 $pid 2>/dev/null
+        fi
+    done
+
+    # Kill any remaining background jobs
+    jobs -p 2>/dev/null | xargs -r kill -9 2>/dev/null
 
     # Stop Redis if we started it
     if [ "$REDIS_STARTED" = "true" ]; then

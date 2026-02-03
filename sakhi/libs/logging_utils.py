@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import logging.handlers
 import os
 from datetime import datetime, timezone
 from logging.config import dictConfig
@@ -76,6 +77,35 @@ def configure_logging() -> None:
 
     formatter_name = "json" if log_format == "json" else "text"
 
+    # File logging configuration
+    log_file = os.getenv("SAKHI_LOG_FILE", "")
+    if not log_file and environment in {"local", "dev", "test"}:
+        # Default to logs/api.log in dev mode
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, "api.log")
+
+    handlers_config: Dict[str, Any] = {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": formatter_name,
+            "level": log_level,
+        }
+    }
+
+    root_handlers = ["console"]
+
+    if log_file:
+        handlers_config["file"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": log_file,
+            "formatter": "text",  # Use text format for file (easier to read)
+            "level": log_level,
+            "maxBytes": 10 * 1024 * 1024,  # 10 MB
+            "backupCount": 3,
+        }
+        root_handlers.append("file")
+
     dictConfig(
         {
             "version": 1,
@@ -89,16 +119,13 @@ def configure_logging() -> None:
                     "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
                 },
             },
-            "handlers": {
-                "console": {
-                    "class": "logging.StreamHandler",
-                    "formatter": formatter_name,
-                    "level": log_level,
-                }
-            },
+            "handlers": handlers_config,
             "root": {
-                "handlers": ["console"],
+                "handlers": root_handlers,
                 "level": log_level,
             },
         }
     )
+
+    if log_file:
+        logging.getLogger().info(f"Logging to file: {log_file}")

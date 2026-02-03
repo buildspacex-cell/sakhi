@@ -19,6 +19,13 @@ def set_router(router: LLMRouter) -> None:
     _ROUTER = router
 
 
+def get_router() -> LLMRouter:
+    """Get the global LLM router instance."""
+    if _ROUTER is None:
+        raise RuntimeError("LLM router has not been initialised")
+    return _ROUTER
+
+
 class LLMResponseError(RuntimeError):
     """Raised when the LLM output cannot be repaired."""
 

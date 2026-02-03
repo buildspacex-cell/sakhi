@@ -6,8 +6,11 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/friction/recommendations
  *
- * Fetches personalized recommendations based on current friction state.
- * Uses LLM-powered generation when available, falls back to rule-based.
+ * Fetches truly personalized recommendations based on:
+ * - Ayurvedic knowledge graph
+ * - Personal patterns (what's worked for YOU)
+ * - Current friction state and drift
+ * - Historical effectiveness
  */
 export async function GET(request: NextRequest) {
   const user = request.nextUrl.searchParams.get("user");
@@ -19,15 +22,25 @@ export async function GET(request: NextRequest) {
   const apiBase = getApiBase();
 
   try {
-    const response = await fetch(`${apiBase}/recommendations/now/${user}`);
+    // Use personalized recommendations endpoint for richer data
+    const response = await fetch(
+      `${apiBase}/recommendations/personalized/${user}?max_foods=5&max_practices=5`
+    );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Recommendations API error:", errorText);
-      return NextResponse.json(
-        { error: "Failed to fetch recommendations" },
-        { status: response.status }
+      // Fall back to basic recommendations if personalized fails
+      console.warn("Personalized recommendations unavailable, falling back");
+      const fallbackResponse = await fetch(
+        `${apiBase}/recommendations/now/${user}`
       );
+      if (!fallbackResponse.ok) {
+        return NextResponse.json(
+          { error: "Failed to fetch recommendations" },
+          { status: fallbackResponse.status }
+        );
+      }
+      const fallbackData = await fallbackResponse.json();
+      return NextResponse.json(fallbackData);
     }
 
     const data = await response.json();

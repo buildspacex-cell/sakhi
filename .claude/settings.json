@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/fanantics/Documents/Sakhi/sakhi/apps/desktop-agent/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron:*)"
+    ]
+  }
+}

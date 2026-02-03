@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+  <title>Welcome to Sakhi Agent</title>
+  <link rel="stylesheet" href="onboarding.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Step indicators -->
+    <div class="steps">
+      <div class="step active" data-step="1">
+        <span class="step-dot"></span>
+        <span class="step-label">Welcome</span>
+      </div>
+      <div class="step" data-step="2">
+        <span class="step-dot"></span>
+        <span class="step-label">Sign In</span>
+      </div>
+      <div class="step" data-step="3">
+        <span class="step-dot"></span>
+        <span class="step-label">Permissions</span>
+      </div>
+      <div class="step" data-step="4">
+        <span class="step-dot"></span>
+        <span class="step-label">Ready</span>
+      </div>
+    </div>
+
+    <!-- Step 1: Welcome -->
+    <div class="screen active" id="screen-welcome">
+      <div class="screen-content">
+        <div class="icon-large">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="38" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M25 40 L35 50 L55 30" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <h1>Welcome to Sakhi Agent</h1>
+        <p class="subtitle">Your personal AI assistant, now with hands.</p>
+        <p class="description">
+          Sakhi Agent runs quietly in the background, ready to help you
+          with tasks on your computer - clicking, typing, and navigating
+          so you don't have to.
+        </p>
+        <div class="features">
+          <div class="feature">
+            <span class="feature-icon">🖱️</span>
+            <span>Click & navigate for you</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">⌨️</span>
+            <span>Type and fill forms</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">👁️</span>
+            <span>See and understand your screen</span>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="nextStep()">Get Started</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Sign In -->
+    <div class="screen" id="screen-signin">
+      <div class="screen-content">
+        <div class="icon-large">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="30" r="12" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M20 65 C20 50 30 42 40 42 C50 42 60 50 60 65" stroke="currentColor" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+        <h1>Sign in to Sakhi</h1>
+        <p class="subtitle">Connect this device to your Sakhi account</p>
+
+        <div id="signin-initial">
+          <p class="description">
+            Click below to open Sakhi in your browser and link this device.
+          </p>
+          <button class="btn-primary" onclick="startLinking()">
+            Open Sakhi to Sign In
+          </button>
+        </div>
+
+        <div id="signin-waiting" class="hidden">
+          <div class="link-code-container">
+            <p class="code-label">Enter this code in your browser:</p>
+            <div class="link-code" id="link-code">----</div>
+            <p class="code-hint">Code expires in <span id="code-expiry">10:00</span></p>
+          </div>
+          <div class="spinner"></div>
+          <p class="waiting-text">Waiting for confirmation...</p>
+          <button class="btn-secondary" onclick="cancelLinking()">Cancel</button>
+        </div>
+
+        <div id="signin-success" class="hidden">
+          <div class="success-icon">✓</div>
+          <p class="success-text">Signed in as <strong id="user-name">User</strong></p>
+          <button class="btn-primary" onclick="nextStep()">Continue</button>
+        </div>
+
+        <div id="signin-error" class="hidden">
+          <div class="error-icon">!</div>
+          <p class="error-text" id="error-message">Something went wrong</p>
+          <button class="btn-primary" onclick="retryLinking()">Try Again</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Permissions -->
+    <div class="screen" id="screen-permissions">
+      <div class="screen-content">
+        <div class="icon-large">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="35" width="40" height="30" rx="3" stroke="currentColor" stroke-width="2" fill="none"/>
+            <circle cx="40" cy="50" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M30 35 V25 A10 10 0 0 1 50 25 V35" stroke="currentColor" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+        <h1>Grant Permissions</h1>
+        <p class="subtitle">Sakhi needs permission to help you</p>
+
+        <div class="permissions-list">
+          <div class="permission-item" id="perm-accessibility">
+            <div class="permission-status" id="status-accessibility">
+              <span class="status-pending">○</span>
+            </div>
+            <div class="permission-info">
+              <h3>Accessibility</h3>
+              <p>Required to click, type, and scroll for you</p>
+            </div>
+            <button class="btn-small" onclick="requestAccessibility()">Grant</button>
+          </div>
+
+          <div class="permission-item" id="perm-screen">
+            <div class="permission-status" id="status-screen">
+              <span class="status-pending">○</span>
+            </div>
+            <div class="permission-info">
+              <h3>Screen Recording</h3>
+              <p>Required to see and understand your screen</p>
+            </div>
+            <button class="btn-small" onclick="requestScreenRecording()">Grant</button>
+          </div>
+        </div>
+
+        <div class="permission-note">
+          <p>After granting, you may need to restart the app for changes to take effect.</p>
+        </div>
+
+        <button class="btn-primary" id="btn-continue-permissions" onclick="nextStep()" disabled>
+          Continue
+        </button>
+        <button class="btn-text" onclick="skipPermissions()">I'll do this later</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Ready -->
+    <div class="screen" id="screen-ready">
+      <div class="screen-content">
+        <div class="icon-large success">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="35" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M25 40 L35 50 L55 30" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <h1>You're All Set!</h1>
+        <p class="subtitle">Sakhi Agent is now running</p>
+
+        <div class="ready-info">
+          <div class="info-item">
+            <span class="info-icon">📍</span>
+            <p>Find Sakhi in your <strong>menu bar</strong> (top right)</p>
+          </div>
+          <div class="info-item">
+            <span class="info-icon">💬</span>
+            <p>Just ask Sakhi to do something, and it will use this agent</p>
+          </div>
+          <div class="info-item">
+            <span class="info-icon">🔒</span>
+            <p>You'll always be asked before sensitive actions</p>
+          </div>
+        </div>
+
+        <button class="btn-primary" onclick="finishOnboarding()">
+          Open Sakhi
+        </button>
+        <button class="btn-secondary" onclick="closeOnboarding()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="onboarding.js"></script>
+</body>
+</html>

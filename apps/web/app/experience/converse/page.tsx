@@ -27,18 +27,87 @@ const palette = {
 // TYPES
 // =============================================================================
 
+interface MessageInsight {
+  reasoning?: string;
+  memories?: Array<{ text: string; type?: string; score?: number }>;
+  stateContext?: {
+    friction_state?: string;
+    drift_percentage?: number;
+    why_this_advice?: string;
+  };
+}
+
 interface Message {
   id: string;
   role: "user" | "sakhi";
   content: string;
   timestamp: Date;
   source?: "text" | "voice";
+  // Agent task related
+  isTaskPlan?: boolean;
+  taskPlan?: TaskPlan;
+  isApprovalRequest?: boolean;
+  approvalRequest?: ApprovalRequest;
+  // Insight data for transparency
+  insight?: MessageInsight;
+}
+
+interface TaskPlan {
+  task_id: string;
+  task_type: string;
+  steps: TaskStep[];
+  estimated_duration: number;
+  formatted_plan: string;
+}
+
+interface TaskStep {
+  step_number: number;
+  action: string;
+  description: string;
+  requires_approval?: boolean;
+}
+
+interface ApprovalRequest {
+  request_id: string;
+  action_type: string;
+  action_description: string;
+  risk_level: string;
+  context_summary: string;
+  options: { label: string; value: string }[];
+}
+
+interface AgentTaskContext {
+  new_task?: TaskPlan;
+  awaiting_confirmation?: boolean;
+  execution?: {
+    task_id: string;
+    status: string;
+    current_step: number;
+    total_steps: number;
+    message: string;
+    pending_approval?: {
+      step: number;
+      action: string;
+      description: string;
+      request_id: string;
+    };
+  };
+  confirmed?: boolean;
+  rejected?: boolean;
+  message?: string;
 }
 
 interface AuthUser {
   person_id: string;
   full_name: string | null;
   email: string;
+}
+
+interface FrictionState {
+  friction_state: string | null;
+  friction_name: string | null;
+  drift_percentage: number | null;
+  severity: string | null;
 }
 
 // =============================================================================
@@ -73,9 +142,19 @@ function ConverseContent() {
   // FAB state
   const [fabOpen, setFabOpen] = useState(false);
 
+  // Expanded insights state (tracks which messages have insights panel open)
+  const [expandedInsights, setExpandedInsights] = useState<Set<string>>(new Set());
+
   // Debug panel state
   const [showDebug, setShowDebug] = useState(false);
   const [lastResponseDebug, setLastResponseDebug] = useState<Record<string, unknown> | null>(null);
+
+  // Friction state for UX indicator
+  const [frictionState, setFrictionState] = useState<FrictionState | null>(null);
+
+  // Agent task state
+  const [activeTask, setActiveTask] = useState<AgentTaskContext | null>(null);
+  const [isPollingApprovals, setIsPollingApprovals] = useState(false);
 
   // Voice hook - add messages from voice interactions
   const addVoiceMessage = useCallback((role: "user" | "sakhi", content: string) => {
@@ -145,6 +224,76 @@ function ConverseContent() {
     loadAuth();
   }, []);
 
+  // Track previous friction state for change notifications
+  const prevFrictionStateRef = useRef<string | null>(null);
+
+  // Load friction state for indicator
+  useEffect(() => {
+    if (!authUser?.person_id) return;
+
+    const loadFrictionState = async () => {
+      try {
+        const res = await fetch("/api/friction/state");
+        if (res.ok) {
+          const data = await res.json();
+          const newState = data.friction_state;
+          const prevState = prevFrictionStateRef.current;
+
+          // Check for significant state change
+          if (prevState && newState && prevState !== newState && prevState !== "balanced") {
+            // State changed - add a notification message
+            const stateMessages: Record<string, string> = {
+              chaos: "I notice you seem more scattered than usual. Would you like some grounding suggestions?",
+              intensity: "Your energy seems heightened right now. Might be a good time for some cooling practices.",
+              stagnation: "I sense some heaviness today. How about we get things moving?",
+              balanced: "You're looking more balanced now. Nice work taking care of yourself.",
+            };
+
+            const notificationMessage: Message = {
+              id: `state-change-${Date.now()}`,
+              role: "sakhi",
+              content: stateMessages[newState] || `Your state has shifted to ${data.friction_name || newState}.`,
+              timestamp: new Date(),
+              source: "text",
+              insight: {
+                stateContext: {
+                  friction_state: newState,
+                  drift_percentage: data.drift_percentage,
+                },
+              },
+            };
+
+            setMessages((prev) => {
+              // Don't add if we already have a recent state change message
+              const recentStateMsg = prev.find(
+                (m) => m.id.startsWith("state-change-") &&
+                       Date.now() - m.timestamp.getTime() < 5 * 60 * 1000
+              );
+              if (recentStateMsg) return prev;
+              return [...prev, notificationMessage];
+            });
+          }
+
+          prevFrictionStateRef.current = newState;
+          setFrictionState({
+            friction_state: newState,
+            friction_name: data.friction_name,
+            drift_percentage: data.drift_percentage,
+            severity: data.severity,
+          });
+        }
+      } catch (err) {
+        console.error("Friction state error:", err);
+      }
+    };
+
+    loadFrictionState();
+
+    // Refresh friction state every 5 minutes
+    const interval = setInterval(loadFrictionState, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [authUser?.person_id]);
+
   // Load conversation history when auth is ready
   useEffect(() => {
     if (!authUser?.person_id || historyLoaded) return;
@@ -184,6 +333,134 @@ function ConverseContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Poll for approval requests during task execution
+  useEffect(() => {
+    if (!isPollingApprovals || !authUser?.person_id) return;
+
+    const pollApprovals = async () => {
+      try {
+        const res = await fetch(
+          `/api/agent/approvals/pending?user=${encodeURIComponent(authUser.person_id)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+
+          // Check active tasks for status updates (failed, completed)
+          if (data.active_tasks && data.active_tasks.length > 0) {
+            const task = data.active_tasks[0];
+
+            // Handle failed status
+            if (task.status === "failed") {
+              const failedMessage: Message = {
+                id: `task-failed-${task.task_id}`,
+                role: "sakhi",
+                content: `I ran into an issue: ${task.error || "Task could not be completed"}. Would you like me to try again?`,
+                timestamp: new Date(),
+                source: "text",
+              };
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === failedMessage.id)) return prev;
+                return [...prev, failedMessage];
+              });
+              setActiveTask(null);
+              setIsPollingApprovals(false);
+              return;
+            }
+
+            // Handle completed status
+            if (task.status === "completed") {
+              const completedMessage: Message = {
+                id: `task-completed-${task.task_id}`,
+                role: "sakhi",
+                content: `Done! Completed all ${task.total_steps} steps successfully.`,
+                timestamp: new Date(),
+                source: "text",
+              };
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === completedMessage.id)) return prev;
+                return [...prev, completedMessage];
+              });
+              setActiveTask(null);
+              setIsPollingApprovals(false);
+              return;
+            }
+          }
+
+          // Check for pending approvals
+          if (data.pending && data.pending.length > 0) {
+            const approval = data.pending[0];
+            // Add approval message if not already shown
+            const approvalMessage: Message = {
+              id: `approval-${approval.request_id}`,
+              role: "sakhi",
+              content: `**${approval.context_summary}**\n\n${approval.action_description}\n\nShould I proceed?`,
+              timestamp: new Date(),
+              source: "text",
+              isApprovalRequest: true,
+              approvalRequest: approval,
+            };
+            setMessages((prev) => {
+              // Check if we already have this approval message
+              if (prev.some((m) => m.id === approvalMessage.id)) return prev;
+              return [...prev, approvalMessage];
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error polling approvals:", err);
+      }
+    };
+
+    // Poll every 2 seconds
+    const interval = setInterval(pollApprovals, 2000);
+    pollApprovals(); // Initial poll
+
+    return () => clearInterval(interval);
+  }, [isPollingApprovals, authUser?.person_id]);
+
+  // Handle approval response
+  const handleApprovalResponse = useCallback(
+    async (requestId: string, approved: boolean) => {
+      if (!authUser?.person_id) return;
+
+      try {
+        const res = await fetch(
+          `/api/agent/approvals/${requestId}/respond?user=${encodeURIComponent(authUser.person_id)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ approved }),
+          }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+
+          // Add response message
+          const responseMessage: Message = {
+            id: Date.now().toString(),
+            role: "sakhi",
+            content: approved
+              ? "Got it! Proceeding with the action..."
+              : "No problem, I'll skip this step.",
+            timestamp: new Date(),
+            source: "text",
+          };
+          setMessages((prev) => [...prev, responseMessage]);
+
+          // Continue polling or stop
+          if (data.task_completed) {
+            setIsPollingApprovals(false);
+            setActiveTask(null);
+          }
+        }
+      } catch (err) {
+        console.error("Error responding to approval:", err);
+      }
+    },
+    [authUser?.person_id]
+  );
+
   // Send message to API
   const sendMessage = useCallback(
     async (text: string) => {
@@ -219,13 +496,123 @@ function ConverseContent() {
             input_text: text.trim(),
           });
 
+          // Handle agent task context
+          const taskContext = data.agent_task_context as AgentTaskContext | null;
+          if (taskContext) {
+            setActiveTask(taskContext);
+
+            // If there's a new task plan, show it as a special message
+            if (taskContext.new_task) {
+              const planMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: "sakhi",
+                content: taskContext.new_task.formatted_plan,
+                timestamp: new Date(),
+                source: "text",
+                isTaskPlan: true,
+                taskPlan: taskContext.new_task,
+              };
+              setMessages((prev) => [...prev, planMessage]);
+              return; // Don't add the regular reply
+            }
+
+            // If task is executing and waiting for approval
+            if (taskContext.execution?.status === "waiting_approval") {
+              const approvalMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: "sakhi",
+                content: taskContext.execution.message,
+                timestamp: new Date(),
+                source: "text",
+                isApprovalRequest: true,
+              };
+              setMessages((prev) => [...prev, approvalMessage]);
+              setIsPollingApprovals(true);
+              return;
+            }
+
+            // If task was rejected
+            if (taskContext.rejected) {
+              const cancelMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: "sakhi",
+                content: taskContext.message || "No problem, I've cancelled that.",
+                timestamp: new Date(),
+                source: "text",
+              };
+              setMessages((prev) => [...prev, cancelMessage]);
+              setActiveTask(null);
+              return;
+            }
+
+            // If task was confirmed and started
+            if (taskContext.confirmed && taskContext.execution) {
+              const startMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: "sakhi",
+                content: taskContext.execution.message,
+                timestamp: new Date(),
+                source: "text",
+              };
+              setMessages((prev) => [...prev, startMessage]);
+
+              // Handle no_agent status - agent not connected
+              if (taskContext.execution.status === "no_agent") {
+                setActiveTask(null);
+                return;
+              }
+
+              // Handle failed status
+              if (taskContext.execution.status === "failed") {
+                setActiveTask(null);
+                return;
+              }
+
+              // Start polling if execution is in progress
+              if (taskContext.execution.status === "running" ||
+                  taskContext.execution.status === "waiting_approval") {
+                setIsPollingApprovals(true);
+              }
+              return;
+            }
+          }
+
           if (data.reply) {
+            // Extract insight data for transparency
+            const insight: MessageInsight = {};
+
+            // Get reasoning from adaptive response or reasoning field
+            const adaptiveReasoning = data.adaptive_response?.strategy?.reasoning;
+            const directReasoning = data.reasoning?.summary || data.reasoning?.explanation;
+            if (adaptiveReasoning || directReasoning) {
+              insight.reasoning = adaptiveReasoning || directReasoning;
+            }
+
+            // Get memories used
+            if (data.memory_recall && Array.isArray(data.memory_recall) && data.memory_recall.length > 0) {
+              insight.memories = data.memory_recall.slice(0, 3).map((m: { text?: string; content?: string; type?: string; score?: number }) => ({
+                text: m.text || m.content || "",
+                type: m.type,
+                score: m.score,
+              })).filter((m: { text: string }) => m.text);
+            }
+
+            // Get state context if available
+            if (data.adaptive_response?.context) {
+              insight.stateContext = {
+                friction_state: data.adaptive_response.context.friction_state,
+                drift_percentage: data.adaptive_response.context.drift_percentage,
+                why_this_advice: data.adaptive_response.strategy?.why,
+              };
+            }
+
             const sakhiMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: "sakhi",
               content: data.reply,
               timestamp: new Date(),
               source: "text",
+              insight: Object.keys(insight).length > 0 ? insight : undefined,
             };
             setMessages((prev) => [...prev, sakhiMessage]);
           }
@@ -237,6 +624,19 @@ function ConverseContent() {
       }
     },
     [authUser?.person_id]
+  );
+
+  // Handle task confirmation (must be after sendMessage)
+  const handleTaskConfirmation = useCallback(
+    async (confirmed: boolean) => {
+      if (!authUser?.person_id) return;
+
+      // Send confirmation as a message
+      const confirmText = confirmed ? "Yes, go ahead" : "No, cancel";
+      await sendMessage(confirmText);
+      setActiveTask(null);
+    },
+    [authUser?.person_id, sendMessage]
   );
 
   // Handle voice recording
@@ -313,6 +713,49 @@ function ConverseContent() {
     fontSize: "18px",
     color: palette.fg,
     fontWeight: 500,
+  };
+
+  // Friction state indicator styles
+  const getFrictionColors = () => {
+    if (!frictionState?.friction_state) {
+      return { bg: palette.border, text: palette.muted, dot: palette.muted };
+    }
+    switch (frictionState.friction_state) {
+      case "chaos":
+        return { bg: "#3b1f5e", text: "#c084fc", dot: "#a855f7" }; // Purple for Vata
+      case "intensity":
+        return { bg: "#5e1f2e", text: "#f87171", dot: "#ef4444" }; // Red for Pitta
+      case "stagnation":
+        return { bg: "#1f3d5e", text: "#60a5fa", dot: "#3b82f6" }; // Blue for Kapha
+      case "balanced":
+        return { bg: "#1f5e3d", text: "#4ade80", dot: "#22c55e" }; // Green for balanced
+      default:
+        return { bg: palette.border, text: palette.muted, dot: palette.muted };
+    }
+  };
+
+  const frictionColors = getFrictionColors();
+
+  const frictionIndicatorStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "6px 12px",
+    borderRadius: "16px",
+    background: frictionColors.bg,
+    fontSize: "12px",
+    color: frictionColors.text,
+    marginTop: "8px",
+    width: "fit-content",
+    cursor: "pointer",
+    transition: "all 200ms ease",
+  };
+
+  const frictionDotStyle: React.CSSProperties = {
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    background: frictionColors.dot,
   };
 
   const messagesContainerStyle: React.CSSProperties = {
@@ -517,10 +960,34 @@ function ConverseContent() {
 
       {/* Header */}
       <header style={headerStyle}>
-        <div style={brandStyle}>Sakhi</div>
-        <div style={greetingStyle}>
-          {getGreeting()}
-          {displayName && `, ${displayName}`}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={brandStyle}>Sakhi</div>
+            <div style={greetingStyle}>
+              {getGreeting()}
+              {displayName && `, ${displayName}`}
+            </div>
+          </div>
+          {/* Friction State Indicator */}
+          {frictionState && (
+            <div
+              style={frictionIndicatorStyle}
+              onClick={() => navigateTo("/experience/me")}
+              title={`${frictionState.friction_name || "Your State"}: ${frictionState.drift_percentage?.toFixed(0) || 0}% drift from baseline. Click to see more.`}
+            >
+              <div style={frictionDotStyle} />
+              <span>
+                {frictionState.friction_state === "balanced"
+                  ? "Balanced"
+                  : frictionState.friction_name?.replace(" Friction", "") || "Loading..."}
+              </span>
+              {frictionState.drift_percentage != null && frictionState.drift_percentage > 10 && (
+                <span style={{ opacity: 0.7, fontSize: "11px" }}>
+                  {frictionState.drift_percentage.toFixed(0)}%
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -558,7 +1025,270 @@ function ConverseContent() {
                     <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
                   </svg>
                 )}
-                {msg.content}
+                {/* Task Plan Icon */}
+                {msg.isTaskPlan && (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={palette.accent}
+                    strokeWidth="1.5"
+                    style={{
+                      width: 14,
+                      height: 14,
+                      marginRight: 8,
+                      display: "inline",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M7 8h10M7 12h6M7 16h8" strokeLinecap="round" />
+                  </svg>
+                )}
+                {/* State Change Notification Icon */}
+                {msg.id.startsWith("state-change-") && (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={palette.accent}
+                    strokeWidth="1.5"
+                    style={{
+                      width: 14,
+                      height: 14,
+                      marginRight: 8,
+                      display: "inline",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
+                  </svg>
+                )}
+                {/* Approval Icon */}
+                {msg.isApprovalRequest && (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth="1.5"
+                    style={{
+                      width: 14,
+                      height: 14,
+                      marginRight: 8,
+                      display: "inline",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
+                  </svg>
+                )}
+                <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+
+                {/* State Change - Quick Link to Me Page */}
+                {msg.id.startsWith("state-change-") && (
+                  <button
+                    onClick={() => navigateTo("/experience/me")}
+                    style={{
+                      display: "block",
+                      marginTop: "10px",
+                      background: "transparent",
+                      border: `1px solid ${palette.accent}`,
+                      color: palette.accent,
+                      fontSize: "12px",
+                      padding: "6px 12px",
+                      borderRadius: "16px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    View your wellness profile
+                  </button>
+                )}
+
+                {/* Insight Section - Why this response? */}
+                {msg.role === "sakhi" && msg.insight && (msg.insight.reasoning || msg.insight.memories?.length) && (
+                  <div style={{ marginTop: "12px" }}>
+                    <button
+                      onClick={() => {
+                        setExpandedInsights((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(msg.id)) {
+                            next.delete(msg.id);
+                          } else {
+                            next.add(msg.id);
+                          }
+                          return next;
+                        });
+                      }}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: palette.muted,
+                        fontSize: "11px",
+                        cursor: "pointer",
+                        padding: "4px 0",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        style={{
+                          width: 12,
+                          height: 12,
+                          transform: expandedInsights.has(msg.id) ? "rotate(90deg)" : "none",
+                          transition: "transform 150ms ease",
+                        }}
+                      >
+                        <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Why this response?
+                    </button>
+
+                    {expandedInsights.has(msg.id) && (
+                      <div
+                        style={{
+                          marginTop: "8px",
+                          padding: "12px",
+                          background: "rgba(99, 102, 241, 0.08)",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          lineHeight: "1.5",
+                        }}
+                      >
+                        {/* Reasoning */}
+                        {msg.insight.reasoning && (
+                          <div style={{ marginBottom: msg.insight.memories?.length ? "10px" : 0 }}>
+                            <div style={{ color: palette.accent, fontWeight: 500, marginBottom: "4px", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                              Reasoning
+                            </div>
+                            <div style={{ color: palette.fg, opacity: 0.9 }}>
+                              {msg.insight.reasoning}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Memories Used */}
+                        {msg.insight.memories && msg.insight.memories.length > 0 && (
+                          <div>
+                            <div style={{ color: palette.accent, fontWeight: 500, marginBottom: "4px", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                              I remembered...
+                            </div>
+                            <ul style={{ margin: 0, paddingLeft: "16px", color: palette.fg, opacity: 0.9 }}>
+                              {msg.insight.memories.map((mem, idx) => (
+                                <li key={idx} style={{ marginBottom: "4px" }}>
+                                  {mem.text.length > 100 ? `${mem.text.slice(0, 100)}...` : mem.text}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* State Context */}
+                        {msg.insight.stateContext?.friction_state && (
+                          <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${palette.border}` }}>
+                            <div style={{ color: palette.muted, fontSize: "11px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span>
+                                Your current state: <span style={{ color: palette.fg }}>{msg.insight.stateContext.friction_state}</span>
+                                {msg.insight.stateContext.drift_percentage != null && msg.insight.stateContext.drift_percentage > 10 && (
+                                  <span> ({msg.insight.stateContext.drift_percentage.toFixed(0)}% drift)</span>
+                                )}
+                              </span>
+                              <button
+                                onClick={() => navigateTo("/experience/me")}
+                                style={{
+                                  background: "transparent",
+                                  border: "none",
+                                  color: palette.accent,
+                                  fontSize: "11px",
+                                  cursor: "pointer",
+                                  textDecoration: "underline",
+                                }}
+                              >
+                                See full profile
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Task Plan Confirmation Buttons */}
+                {msg.isTaskPlan && msg.taskPlan && (
+                  <div style={{
+                    display: "flex",
+                    gap: "10px",
+                    marginTop: "16px",
+                    paddingTop: "12px",
+                    borderTop: `1px solid ${palette.border}`,
+                  }}>
+                    <button
+                      onClick={() => handleTaskConfirmation(true)}
+                      style={{
+                        padding: "10px 20px",
+                        borderRadius: "20px",
+                        border: "none",
+                        background: palette.accent,
+                        color: "#fff",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Yes, proceed
+                    </button>
+                    <button
+                      onClick={() => handleTaskConfirmation(false)}
+                      style={{
+                        padding: "10px 20px",
+                        borderRadius: "20px",
+                        border: `1px solid ${palette.border}`,
+                        background: "transparent",
+                        color: palette.fg,
+                        fontSize: "14px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {/* Approval Request Buttons */}
+                {msg.isApprovalRequest && msg.approvalRequest && (
+                  <div style={{
+                    display: "flex",
+                    gap: "10px",
+                    marginTop: "16px",
+                    paddingTop: "12px",
+                    borderTop: `1px solid ${palette.border}`,
+                  }}>
+                    {msg.approvalRequest.options.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => handleApprovalResponse(
+                          msg.approvalRequest!.request_id,
+                          opt.value === "approve"
+                        )}
+                        style={{
+                          padding: "10px 16px",
+                          borderRadius: "20px",
+                          border: opt.value === "approve" ? "none" : `1px solid ${palette.border}`,
+                          background: opt.value === "approve" ? palette.accent : "transparent",
+                          color: opt.value === "approve" ? "#fff" : palette.fg,
+                          fontSize: "13px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             {isSending && (
@@ -669,7 +1399,7 @@ function ConverseContent() {
       <div style={fabContainerStyle}>
         {/* FAB Options */}
         <div
-          style={{ ...fabOptionStyle, transitionDelay: "150ms" }}
+          style={{ ...fabOptionStyle, transitionDelay: "200ms" }}
           onClick={() => {
             setFabOpen(false);
             setShowDebug(true);
@@ -683,7 +1413,7 @@ function ConverseContent() {
         </div>
 
         <div
-          style={{ ...fabOptionStyle, transitionDelay: "100ms" }}
+          style={{ ...fabOptionStyle, transitionDelay: "150ms" }}
           onClick={() => navigateTo("/experience/state")}
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -694,7 +1424,7 @@ function ConverseContent() {
         </div>
 
         <div
-          style={{ ...fabOptionStyle, transitionDelay: "50ms" }}
+          style={{ ...fabOptionStyle, transitionDelay: "100ms" }}
           onClick={() => navigateTo("/experience/onboarding/result")}
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -702,6 +1432,17 @@ function ConverseContent() {
             <path d="M6 9l2 2 4-4" stroke={palette.success} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           My Operating System
+        </div>
+
+        <div
+          style={{ ...fabOptionStyle, transitionDelay: "50ms" }}
+          onClick={() => navigateTo("/experience/me")}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="6" r="3" stroke={palette.accent} strokeWidth="1.5" />
+            <path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke={palette.accent} strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          Me
         </div>
 
         <div
