@@ -52,3 +52,7 @@ logs/
 
 # Reorganization archive (historical code)
 _archive/
+# Desktop agent release artifacts (too large for GitHub)
+sakhi/apps/desktop-agent/release/
+sakhi/apps/desktop-agent/dist/
+*.dmg
