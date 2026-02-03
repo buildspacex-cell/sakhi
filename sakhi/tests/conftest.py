@@ -27,10 +27,16 @@ import uuid
 import pytest
 import pytest_asyncio
 
-# Load environment
+# Load environment - use .env.local for local development/testing
 from dotenv import load_dotenv
+env_local_path = Path(__file__).parents[2] / ".env.local"
 env_path = Path(__file__).parents[2] / ".env"
-load_dotenv(env_path)
+
+# Prefer .env.local (has secrets/LLM config), fallback to .env
+if env_local_path.exists():
+    load_dotenv(env_local_path)
+else:
+    load_dotenv(env_path)
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parents[2]))
