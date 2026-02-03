@@ -1,4 +1,4 @@
-import { normalizeSoulState, computeCoherence, timelineSeries } from "@ui/soulViewModel";
+import { normalizeSoulState, computeCoherence, timelineSeries } from "@/lib/soulViewModel";
 
 describe("soulViewModel (web)", () => {
   it("normalizes safely", () => {

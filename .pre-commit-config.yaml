@@ -1,0 +1,83 @@
+# Pre-commit hooks for Sakhi development
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Python formatting and linting
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        files: ^sakhi/
+        language_version: python3.11
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.4
+    hooks:
+      - id: ruff
+        files: ^sakhi/
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+        files: ^sakhi/
+
+  # Python type checking (optional, can be slow)
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.9.0
+  #   hooks:
+  #     - id: mypy
+  #       files: ^sakhi/
+  #       additional_dependencies: [types-all]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(_archive/|\.md$)
+      - id: end-of-file-fixer
+        exclude: ^(_archive/)
+      - id: check-yaml
+        args: [--unsafe]  # Allow custom tags
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: no-commit-to-branch
+        args: ['--branch', 'main']
+        stages: [commit]
+
+  # Security checks
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: ^(_archive/|\.lock$|pnpm-lock\.yaml$)
+
+  # Local hooks for project-specific checks
+  - repo: local
+    hooks:
+      # Quick Python import check
+      - id: python-import-check
+        name: Check Python imports
+        entry: python -c "from sakhi.apps.api.main import app; print('API imports OK')"
+        language: system
+        pass_filenames: false
+        files: ^sakhi/apps/api/
+
+      # Run fast tests only
+      - id: quick-tests
+        name: Run quick tests
+        entry: poetry run pytest sakhi/tests/v2/test_smoke.py -q --tb=no
+        language: system
+        pass_filenames: false
+        stages: [push]
+
+      # TypeScript type check (on push only)
+      - id: typescript-check
+        name: TypeScript check
+        entry: bash -c "cd apps/web && pnpm tsc --noEmit"
+        language: system
+        pass_filenames: false
+        files: ^apps/web/.*\.(ts|tsx)$
+        stages: [push]

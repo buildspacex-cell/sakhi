@@ -7,7 +7,7 @@ import {
   normalizeSoulState,
   summarizeSoul,
   timelineSeries,
-} from "@ui/soulViewModel";
+} from "@/lib/soulViewModel";
 import {
   ResponsiveContainer,
   BarChart,

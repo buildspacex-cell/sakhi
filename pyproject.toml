@@ -43,6 +43,16 @@ target-version = ["py311"]
 
 [tool.ruff]
 line-length = 88
+exclude = [
+    "_legacy_backup",
+    "_archive",
+    "legacy",
+    ".git",
+    "__pycache__",
+    "*.pyc",
+]
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]
 

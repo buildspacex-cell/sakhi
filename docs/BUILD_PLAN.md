@@ -2,7 +2,7 @@
 
 > Living document tracking all planned work. Update checkboxes as items are completed.
 >
-> Last Updated: 2026-02-03 (Session 6 - Added Long-Running Tasks & Life Dashboard)
+> Last Updated: 2026-02-03 (Reorganization - Verified implementation status against codebase)
 >
 > **Coverage**: 100% — All demo capabilities have paths to become REAL (not just simulated)
 >
@@ -622,40 +622,39 @@ Conversation                    Learning Pipeline
 
 ---
 
-## PHASE B: Voice Interface (Week 3-4)
+## PHASE B: Voice Interface (Week 3-4) - PARTIALLY COMPLETE
 
 ### B.1 Speech-to-Text Input
 
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
-| ⬜ | Web Speech API | Browser-native STT | `apps/web/lib/voice/stt.ts` | Transcription accuracy > 90% |
-| ⬜ | Whisper Fallback | OpenAI Whisper for better accuracy | `services/voice/transcribe.py` | Works when Web Speech fails |
-| ⬜ | Voice Input UI | Microphone button in chat | `apps/web/components/VoiceInput.tsx` | Visual feedback while recording |
+| ✅ | Whisper STT | OpenAI Whisper transcription | `apps/web/app/api/voice/turn/route.ts` | Audio → Whisper → text |
+| ✅ | Voice Input UI | useVoice hook with recording | `apps/web/lib/hooks/useVoice.ts` | Visual feedback while recording |
 | ⬜ | Continuous Listening | Optional always-on mode | `apps/web/lib/voice/continuous.ts` | Detects wake word or push-to-talk |
 
-**Test**: Say "What's my day look like?" → correctly transcribed and processed.
+**Test**: Say "What's my day look like?" → correctly transcribed and processed. ✅
 
 ### B.2 Text-to-Speech Output
 
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
-| ⬜ | Web Speech TTS | Browser-native TTS | `apps/web/lib/voice/tts.ts` | Reads responses naturally |
-| ⬜ | ElevenLabs Option | Higher quality voice | `services/voice/speak.py` | Premium voice quality |
+| ✅ | OpenAI TTS | High quality voice (nova) | `apps/web/app/api/voice/turn/route.ts` | Reads responses naturally |
+| ✅ | TTS API | Standalone TTS endpoint | `apps/web/app/api/voice/tts/route.ts` | Text-to-speech on demand |
 | ⬜ | Voice Selection | Choose voice persona | `apps/web/components/VoiceSettings.tsx` | User can pick preferred voice |
 | ⬜ | Streaming TTS | Start speaking before full response | `services/voice/stream.py` | < 1s latency to first audio |
 
-**Test**: Sakhi reads morning briefing aloud with natural intonation.
+**Test**: Sakhi reads responses aloud with OpenAI nova voice. ✅
 
 ### B.3 Voice Conversation Mode
 
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
+| ✅ | Voice Turn Pipeline | Audio → STT → Sakhi → TTS → Audio | `apps/web/app/api/voice/turn/route.ts` | Full pipeline implemented |
+| ✅ | useVoice Hook | State machine: idle → recording → processing → speaking | `apps/web/lib/hooks/useVoice.ts` | States managed correctly |
 | ⬜ | Voice-First UI | Full-screen voice mode | `apps/web/app/experience/voice/page.tsx` | Clean interface for voice |
-| ⬜ | Conversation Flow | Back-and-forth dialogue | `services/conversation/voice_mode.py` | Natural turn-taking |
 | ⬜ | Interruption Handling | User can interrupt Sakhi | `apps/web/lib/voice/interrupt.ts` | Stops speaking, listens |
-| ⬜ | Context Preservation | Voice uses same conversation context | `services/conversation/` | Voice and text share history |
 
-**Test**: 5-minute voice conversation with multiple back-and-forth exchanges.
+**Test**: Voice conversation works via useVoice hook. ✅ UI polish pending.
 
 ---
 

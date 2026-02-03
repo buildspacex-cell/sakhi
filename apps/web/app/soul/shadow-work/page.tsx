@@ -3,7 +3,7 @@
 import useSWR from "swr";
 import Link from "next/link";
 import React from "react";
-import { summarizeSoul, normalizeSoulState } from "@ui/soulViewModel";
+import { summarizeSoul, normalizeSoulState } from "@/lib/soulViewModel";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 
 const ResponsiveContainerAny = ResponsiveContainer as unknown as React.ComponentType<any>;

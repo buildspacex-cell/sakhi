@@ -24,9 +24,6 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "@ui/*": [
-        "../../packages/ui/src/*"
       ]
     },
     "plugins": [

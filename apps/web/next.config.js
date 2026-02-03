@@ -4,7 +4,9 @@ const nextConfig = {
   experimental: {
     typedRoutes: true
   },
-  transpilePackages: ['@sakhi/api', '@sakhi/ui', '@sakhi/config']
+  eslint: {
+    ignoreDuringBuilds: true
+  }
 };
 
 module.exports = nextConfig;

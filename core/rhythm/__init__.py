@@ -1,1 +1,0 @@
-"""Deterministic rhythm engine components."""

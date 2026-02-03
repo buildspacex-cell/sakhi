@@ -49,4 +49,6 @@ logs/
 *.tar.gz
 *.tgz
 *.img
-unders/
+
+# Reorganization archive (historical code)
+_archive/

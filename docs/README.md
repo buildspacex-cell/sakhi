@@ -7,54 +7,67 @@
 ## Quick Start
 
 ```bash
-# 1. Start the backend
-cd sakhi && uvicorn apps.api.main:app --reload --port 8000
+# Start the backend
+make dev
 
-# 2. Start the frontend
-cd apps/web && pnpm dev
+# Start the frontend (in another terminal)
+pnpm dev:web
 
-# 3. Start workers (optional - for background processing)
-cd sakhi && python -m apps.worker.main
+# Start workers (optional - for background processing)
+make worker
 ```
 
-**Demo User:** `565bdb63-124b-4692-a039-846fddceff90` (Vidhya)
+**Demo User:** `6b5b2fbc-9efb-4ba4-be0a-9ec527e23f90` (Vidhya)
 
 ---
 
 ## Documentation Index
 
-### Vision & Philosophy
-| Document | Description |
-|----------|-------------|
-| [Product Philosophy](vision/philosophy.md) | Core product vision and principles |
-| [Inner Mirror Spec](vision/inner-mirror-spec.md) | The inner mirror concept |
-| [Safety & Ethics](vision/safety-ethics.md) | Safety boundaries and ethics |
+### Core Reference
 
-### Architecture
 | Document | Description |
 |----------|-------------|
-| [System Overview](architecture/system-overview.md) | Complete system architecture, API routes, services |
-| [Database Schema](architecture/database-schema.md) | All 117 tables with columns and types |
-| [Conversation Flow](architecture/conversation-flow.md) | Turn processing, workers, context loading |
-| [Workers](architecture/workers.md) | All 85+ workers, queues, scheduler config |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, conversation flow, memory system |
+| [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | Complete schema reference (179 tables) |
+| [DATABASE_MIGRATIONS.md](DATABASE_MIGRATIONS.md) | How to make database changes |
+
+### Planning & Roadmap
+
+| Document | Description |
+|----------|-------------|
+| [BUILD_PLAN.md](BUILD_PLAN.md) | Feature roadmap with completion status |
+| [AYURVEDIC_ENGINE_DEEPENING_PLAN.md](AYURVEDIC_ENGINE_DEEPENING_PLAN.md) | Knowledge Graph implementation plan |
 
 ### Features
+
 | Document | Description |
 |----------|-------------|
-| [Agent Task Orchestrator](features/agent-task-orchestrator.md) | Preference-aware autonomous task execution (shopping, restaurants, etc.) |
-| [Friction Framework](features/friction-framework.md) | User-facing framework API (Operating System, Modes, States) |
+| [Friction Framework](features/friction-framework.md) | User-facing Operating System, Modes, States |
+| [Friction Framework Mapping](features/FRICTION_FRAMEWORK_MAPPING.md) | Technical Ayurvedic-to-Friction mapping |
 | [Adaptive Response](features/adaptive-response.md) | 5-stage response pipeline |
+| [Agent Task Orchestrator](features/agent-task-orchestrator.md) | Preference-aware autonomous task execution |
 | [Body State](features/body-state.md) | Health/body intelligence integration |
 | [Pattern Crystallization](features/pattern-crystallization.md) | Threshold-based pattern promotion |
-| [Voice Integration](features/voice.md) | Speech-to-text and text-to-speech |
+| [Voice](features/voice.md) | Speech-to-text and text-to-speech |
 
 ### Guides
+
 | Document | Description |
 |----------|-------------|
 | [Getting Started](guides/getting-started.md) | Setup and run instructions |
-| [Onboarding](guides/onboarding.md) | User onboarding flow |
 | [Authentication](guides/authentication.md) | Google/Supabase auth setup |
+| [Onboarding](guides/onboarding.md) | User onboarding flow |
 | [Testing](guides/testing.md) | How to test the system |
+| [Test Status](TEST_STATUS.md) | Test coverage tracking (workers, routes) |
+| [Deployment Checklist](guides/TODO_DEPLOY.md) | Pre-deploy checklist and env vars |
+
+### Vision & Philosophy
+
+| Document | Description |
+|----------|-------------|
+| [Philosophy](vision/philosophy.md) | Core product vision and principles |
+| [Inner Mirror](vision/inner-mirror-spec.md) | The inner mirror concept |
+| [Safety & Ethics](vision/safety-ethics.md) | Safety boundaries and ethics |
 
 ---
 
@@ -88,59 +101,33 @@ cd sakhi && python -m apps.worker.main
 ### Conversation Turn Flow
 
 ```
-User Message
-     ↓
-┌─────────────────────────────────────────────┐
-│  SYNCHRONOUS (< 500ms)                      │
-│  Load context → Generate reply → Return     │
-└─────────────────────────────────────────────┘
-     ↓
-┌─────────────────────────────────────────────┐
-│  ASYNC (background)                         │
-│  10 workers update intelligence             │
-└─────────────────────────────────────────────┘
-     ↓
-Next turn loads fresh context
+User Message → Load Context → Generate Reply → Return (< 500ms)
+                    ↓
+            Queue Workers (async)
+                    ↓
+            Update Intelligence
+                    ↓
+            Next Turn Loads Fresh Context
 ```
-
-**Workers triggered per turn:** `turn_memory_update`, `ayurvedic_pipeline`, `episodic_consolidation_v21`, `rhythm_forecast`, `identity_momentum_deep`, `emotion_soul_rhythm_deep`, `esr`, `soul_refresh`, `longitudinal_update`, `rhythm_soul_deep`
 
 ---
 
 ## Project Structure
 
 ```
-sakhi/
+sakhi-monorepo/
 ├── apps/
-│   ├── api/              # FastAPI backend (60+ routes)
-│   │   ├── routes/       # API endpoints
-│   │   └── services/     # Business logic
-│   │       ├── agent/    # Desktop agent & task orchestrator
-│   │       │   ├── task_orchestrator.py  # Preference-aware task execution
-│   │       │   ├── vision_loop.py        # Screenshot → Analyze → Act loop
-│   │       │   ├── screen_analyzer.py    # Claude Vision analysis
-│   │       │   ├── action_decider.py     # Context-aware action decisions
-│   │       │   └── action_approval.py    # User approval for critical actions
-│   │       └── memory/   # Memory & preferences
-│   │           ├── recall.py             # Hybrid search (BM25 + vector)
-│   │           ├── bm25.py               # Keyword search
-│   │           ├── sensory_preferences.py # Temp, texture, spice prefs
-│   │           ├── food_memory.py        # Food experiences & restaurants
-│   │           └── last_time.py          # "When did I last..." queries
-│   └── worker/           # Background workers (85+ tasks)
-│       ├── tasks/        # Individual worker tasks
-│       └── pipelines/    # Worker orchestration
-├── core/                 # Domain logic (soul, rhythm, emotion)
-├── libs/                 # Shared libraries (embeddings, LLM, retrieval)
-└── infra/scripts/migrations/  # Database migrations (41 files)
-
-apps/web/                 # Next.js frontend
-├── app/
-│   ├── experience/       # User experience pages
-│   ├── demo/             # Demo pages (coordination, restaurant, etc.)
-│   ├── api/              # API routes (turn, voice, auth)
-│   └── auth/             # Auth pages
-└── lib/hooks/            # React hooks (useVoice, etc.)
+│   ├── web/               # Next.js frontend
+│   └── mobile/            # React Native (Expo)
+├── sakhi/                 # Python backend (CANONICAL)
+│   ├── apps/api/          # FastAPI API
+│   ├── apps/worker/       # Background job workers
+│   ├── libs/              # Shared Python libraries
+│   ├── tests/             # All Python tests
+│   └── infra/scripts/     # DB migrations, scripts
+├── docs/                  # All documentation
+├── scripts/               # Dev/utility scripts
+└── config/                # App configuration
 ```
 
 ---
@@ -158,56 +145,8 @@ OPENAI_API_KEY=sk-...
 ```bash
 SUPABASE_URL=https://...
 SUPABASE_SERVICE_ROLE_KEY=...
-SAKHI_DISABLE_QUEUE=0  # Set to 1 for inline workers (dev)
+SAKHI_DISABLE_QUEUE=1  # Run workers inline (dev)
 ```
-
-See [Getting Started](guides/getting-started.md) for full setup.
-
----
-
-## API Endpoints
-
-### Core Conversation
-- `POST /v2/turn` — Main conversation endpoint
-- `GET /v2/conversation/history` — Get conversation history
-
-### Voice
-- `POST /api/voice/turn` — Voice conversation (STT → Sakhi → TTS)
-- `POST /api/voice/tts` — Standalone text-to-speech
-
-### Agent Task Orchestrator
-- `POST /api/v1/agent/task/execute` — Execute preference-aware autonomous task
-- `POST /api/v1/agent/task/shopping` — Shopping-specific task (Amazon, etc.)
-- `POST /api/v1/agent/task/restaurant` — Restaurant finding with food memory
-- `POST /api/v1/agent/task/plan` — Preview task plan without executing
-- `GET /api/v1/agent/task/approvals/pending` — Get actions awaiting user approval
-- `POST /api/v1/agent/task/approvals/{id}/respond` — Approve/reject an action
-
-### Lab/Debug
-- `GET /lab/memory-details` — View all intelligence for a user
-- `POST /lab/run-worker` — Test individual workers
-- `GET /lab/live-turn` — Test turn with debug output
-
-See [System Overview](architecture/system-overview.md) for complete API reference.
-
----
-
-## Testing
-
-```bash
-# Backend tests
-cd sakhi && pytest tests/
-
-# Frontend type check
-cd apps/web && pnpm tsc --noEmit
-
-# Test a specific worker
-curl -X POST http://localhost:8000/lab/run-worker \
-  -H "Content-Type: application/json" \
-  -d '{"person_id": "565bdb63-124b-4692-a039-846fddceff90", "worker": "esr"}'
-```
-
-See [Testing Guide](guides/testing.md) for comprehensive testing instructions.
 
 ---
 

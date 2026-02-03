@@ -5,14 +5,18 @@ from __future__ import annotations
 import json
 import os
 
-if os.getenv("ENV", "development") in {"development", "dev", "local"}:
-    try:
-        from dotenv import load_dotenv  # type: ignore
+try:
+    from dotenv import load_dotenv  # type: ignore
 
-        load_dotenv()
-    except Exception:
-        # In production containers we should never depend on a local .env file.
-        pass
+    if os.getenv("ENV", "development") in {"development", "dev", "local"}:
+        # Local: load .env.local (gitignored, has secrets/LLM config)
+        load_dotenv(".env.local")
+    else:
+        # Production: load .env (deployed config)
+        load_dotenv(".env")
+except Exception:
+    # dotenv not installed or file missing - rely on platform env vars
+    pass
 
 REQUIRED_ENV_VARS = ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "OPENAI_API_KEY")
 _missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]

@@ -15,7 +15,7 @@ import {
   Legend,
 } from "recharts";
 import React from "react";
-import { normalizeSoulState } from "@ui/soulViewModel";
+import { normalizeSoulState } from "@/lib/soulViewModel";
 
 const ResponsiveContainerAny = ResponsiveContainer as unknown as React.ComponentType<any>;
 const PieChartAny = PieChart as unknown as React.ComponentType<any>;

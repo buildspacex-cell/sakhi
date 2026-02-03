@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { timelineSeries } from "@ui/soulViewModel";
+import { timelineSeries } from "@/lib/soulViewModel";
 import Link from "next/link";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend } from "recharts";
 
