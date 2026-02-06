@@ -24,8 +24,102 @@ from sakhi.apps.api.services.ayurveda.graph_reasoning import (
     query_practices_for_dosha,
     query_symptoms_for_dosha,
 )
+from sakhi.apps.api.core.db import q as dbfetch
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Herb Query Functions
+# =============================================================================
+
+async def query_herbs_for_dosha(dosha: str, limit: int = 10) -> List[Dict[str, Any]]:
+    """Query herbs that pacify a specific dosha."""
+    import json
+    results = await dbfetch(
+        """
+        SELECT n.name, n.name_sanskrit, n.display_name, n.attrs, n.citations,
+               n.confidence, e.weight
+        FROM ay_nodes n
+        JOIN ay_edges e ON n.id = e.src
+        JOIN ay_nodes d ON e.dst = d.id
+        WHERE n.kind = 'herb'
+          AND d.kind = 'dosha'
+          AND d.name = $1
+          AND e.rel = 'PACIFIES'
+        ORDER BY e.weight DESC
+        LIMIT $2
+        """,
+        dosha,
+        limit,
+    )
+
+    herbs = []
+    for r in results or []:
+        attrs = r.get("attrs") or {}
+        if isinstance(attrs, str):
+            attrs = json.loads(attrs)
+
+        citations = r.get("citations") or []
+        if isinstance(citations, str):
+            citations = json.loads(citations)
+
+        herbs.append({
+            "name": r["name"],
+            "name_sanskrit": r.get("name_sanskrit"),
+            "display_name": r.get("display_name") or r["name"].replace("_", " ").title(),
+            "weight": float(r.get("weight") or 0.8),
+            "rasa": attrs.get("rasa"),
+            "virya": attrs.get("virya"),
+            "therapeutic_uses": attrs.get("therapeutic_uses", []),
+            "citations": citations[:1] if citations else [],
+        })
+    return herbs
+
+
+async def check_contraindications(item_name: str) -> List[str]:
+    """Check for contraindications for an item."""
+    import json
+    results = await dbfetch(
+        """
+        SELECT d.name, d.display_name, e.context
+        FROM ay_nodes n
+        JOIN ay_edges e ON n.id = e.src
+        JOIN ay_nodes d ON e.dst = d.id
+        WHERE n.name ILIKE $1
+          AND e.rel = 'CONTRAINDICATED_WITH'
+        LIMIT 5
+        """,
+        f"%{item_name}%",
+    )
+
+    contraindications = []
+    for r in results or []:
+        context = r.get("context") or {}
+        if isinstance(context, str):
+            context = json.loads(context)
+        reason = context.get("reason", "")
+        target = r.get("display_name") or r.get("name", "")
+        if reason:
+            contraindications.append(f"Avoid with {target}: {reason}")
+        else:
+            contraindications.append(f"Avoid combining with {target}")
+
+    return contraindications
+
+
+def _format_citation(citations: List[Dict[str, Any]]) -> Optional[str]:
+    """Format citation reference from knowledge graph."""
+    if not citations:
+        return None
+    cite = citations[0] if citations else None
+    if not cite or not isinstance(cite, dict):
+        return None
+    source = cite.get("source", "").replace("_", " ").title()
+    chapter = cite.get("chapter", "")
+    if source and chapter:
+        return f"{source}, {chapter}"
+    return source if source else None
 
 
 # =============================================================================
@@ -35,7 +129,8 @@ logger = logging.getLogger(__name__)
 class PersonalizedRecommendation(BaseModel):
     """A single personalized recommendation."""
     name: str
-    category: str = Field(description="food, practice, immediate_action")
+    name_sanskrit: Optional[str] = None
+    category: str = Field(description="food, practice, herb, immediate_action")
     score: float = Field(ge=0.0, le=1.0)
 
     # Personalization
@@ -44,12 +139,14 @@ class PersonalizedRecommendation(BaseModel):
 
     # Ayurvedic basis
     ayurvedic_reason: str
+    ayurvedic_source: Optional[str] = None  # Citation from classical text
     dosha_effect: Optional[str] = None
 
     # Metadata
     duration_minutes: Optional[int] = None
     time_of_day: Optional[str] = None
     season_appropriate: bool = True
+    contraindications: List[str] = Field(default_factory=list)
 
 
 class RecommendationSet(BaseModel):
@@ -63,6 +160,7 @@ class RecommendationSet(BaseModel):
     immediate_actions: List[PersonalizedRecommendation] = Field(default_factory=list)
     foods: List[PersonalizedRecommendation] = Field(default_factory=list)
     practices: List[PersonalizedRecommendation] = Field(default_factory=list)
+    herbs: List[PersonalizedRecommendation] = Field(default_factory=list)
 
     # Explanations
     why_this_state: str
@@ -280,10 +378,11 @@ async def generate_personalized_recommendations(
     # Determine target dosha
     target_dosha = context.current_state.primary_imbalance or "vata"
 
-    # Get base recommendations from knowledge graph
+    # Get base recommendations from knowledge graph (now includes citations)
     foods_raw = await query_foods_for_dosha(target_dosha, "PACIFIES", limit=30)
     practices_raw = await query_practices_for_dosha(target_dosha, limit=20)
     symptoms_raw = await query_symptoms_for_dosha(target_dosha, limit=10)
+    herbs_raw = await query_herbs_for_dosha(target_dosha, limit=10)
 
     # Score and rank foods
     scored_foods = []
@@ -292,12 +391,14 @@ async def generate_personalized_recommendations(
         personal_relevance = get_personal_relevance(food.get("name", ""), context)
 
         scored_foods.append(PersonalizedRecommendation(
-            name=food.get("name", "").replace("_", " ").title(),
+            name=food.get("display_name") or food.get("name", "").replace("_", " ").title(),
+            name_sanskrit=food.get("name_sanskrit"),
             category="food",
             score=score,
             is_personally_effective=food.get("name", "") in context.historical_effectiveness.effective_foods,
             personal_relevance=personal_relevance,
             ayurvedic_reason=_format_food_reason(food),
+            ayurvedic_source=_format_citation(food.get("citations", [])),
             dosha_effect=f"Pacifies {target_dosha}",
             season_appropriate=food.get("season", "all") in ("all", context.temporal.season),
         ))
@@ -311,18 +412,40 @@ async def generate_personalized_recommendations(
         personal_relevance = get_personal_relevance(practice.get("name", ""), context)
 
         scored_practices.append(PersonalizedRecommendation(
-            name=practice.get("name", "").replace("_", " ").title(),
+            name=practice.get("display_name") or practice.get("name", "").replace("_", " ").title(),
+            name_sanskrit=practice.get("name_sanskrit"),
             category="practice",
             score=score,
             is_personally_effective=practice.get("name", "") in context.historical_effectiveness.effective_practices,
             personal_relevance=personal_relevance,
             ayurvedic_reason=_format_practice_reason(practice),
+            ayurvedic_source=_format_citation(practice.get("citations", [])),
             dosha_effect=f"Pacifies {target_dosha}",
             duration_minutes=practice.get("duration_min"),
             time_of_day=practice.get("time"),
         ))
 
     scored_practices.sort(key=lambda x: x.score, reverse=True)
+
+    # Score and rank herbs (new!)
+    scored_herbs = []
+    for herb in herbs_raw:
+        score = score_recommendation(herb, context, "herb")
+        personal_relevance = get_personal_relevance(herb.get("name", ""), context)
+
+        scored_herbs.append(PersonalizedRecommendation(
+            name=herb.get("display_name") or herb.get("name", "").replace("_", " ").title(),
+            name_sanskrit=herb.get("name_sanskrit"),
+            category="herb",
+            score=score,
+            is_personally_effective=False,  # Herbs tracked separately
+            personal_relevance=personal_relevance,
+            ayurvedic_reason=_format_herb_reason(herb),
+            ayurvedic_source=_format_citation(herb.get("citations", [])),
+            dosha_effect=f"Pacifies {target_dosha}",
+        ))
+
+    scored_herbs.sort(key=lambda x: x.score, reverse=True)
 
     # Build immediate actions (quick wins from practices)
     immediate_actions = [
@@ -349,10 +472,11 @@ async def generate_personalized_recommendations(
     watch_for = [s.get("name", "").replace("_", " ").title() for s in symptoms_raw[:5]]
 
     logger.info(
-        "[RecommendationGenerator] person=%s foods=%d practices=%d immediate=%d",
+        "[RecommendationGenerator] person=%s foods=%d practices=%d herbs=%d immediate=%d",
         context.person_id,
         len(scored_foods[:max_foods]),
         len(scored_practices[:max_practices]),
+        len(scored_herbs[:3]),
         len(immediate_actions),
     )
 
@@ -364,6 +488,7 @@ async def generate_personalized_recommendations(
         immediate_actions=immediate_actions,
         foods=scored_foods[:max_foods],
         practices=scored_practices[:max_practices],
+        herbs=scored_herbs[:3],  # Top 3 herbs
         why_this_state=why_this_state,
         personal_insight=personal_insight,
         watch_for=watch_for,
@@ -383,6 +508,19 @@ def _format_practice_reason(practice: Dict[str, Any]) -> str:
     intensity = practice.get("intensity", "gentle")
     duration = practice.get("duration_min", 10)
     return f"{intensity.title()} {practice_type}, {duration} minutes"
+
+
+def _format_herb_reason(herb: Dict[str, Any]) -> str:
+    """Format Ayurvedic reason for herb recommendation."""
+    rasa = herb.get("rasa", "balanced")
+    virya = herb.get("virya", "neutral")
+    uses = herb.get("therapeutic_uses", [])
+
+    reason = f"{rasa.title()} taste with {virya} energy"
+    if uses:
+        reason += f". {uses[0]}" if uses[0] else ""
+
+    return reason
 
 
 __all__ = [

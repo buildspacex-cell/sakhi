@@ -3,9 +3,17 @@ import { cookies } from "next/headers";
 
 const API_BASE = process.env.SAKHI_API_URL || "http://localhost:8080";
 
+// Default demo user for development
+const DEMO_PERSON_ID = "6b5b2fbc-9efb-4ba4-be0a-9ec527e23f90";
+
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
-  const personId = cookieStore.get("sakhi_person_id")?.value;
+
+  // Try cookie first, then query param, then fall back to demo user in dev
+  const personId =
+    cookieStore.get("sakhi_person_id")?.value ||
+    request.nextUrl.searchParams.get("user") ||
+    (process.env.NODE_ENV === "development" ? DEMO_PERSON_ID : null);
 
   if (!personId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

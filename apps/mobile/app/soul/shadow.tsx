@@ -1,9 +1,7 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryPie, VictoryTheme, VictoryLegend } from "victory-native";
-import { summarizeSoul, normalizeSoulState } from "@ui/soulViewModel";
+import { summarizeSoul, normalizeSoulState } from "../../lib/soulViewModel";
 
 export default function SoulShadowScreen() {
   const [summary, setSummary] = useState<any>({});

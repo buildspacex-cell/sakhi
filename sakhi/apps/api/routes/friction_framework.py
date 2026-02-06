@@ -184,6 +184,45 @@ class FullOnboardingResult(BaseModel):
     stored: bool
 
 
+# Mobile phased onboarding models
+class MobileOnboardingRequest(BaseModel):
+    """Request for mobile phased onboarding submission."""
+    person_id: str
+    source: str = Field(default="mobile", description="Source: 'web' or 'mobile'")
+    phase: str = Field(..., description="Phase: 'phase1', 'phase2a', 'phase2b', or 'full'")
+    responses: Dict[str, Any] = Field(..., description="Flat key-value responses")
+    expansion_responses: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Optional expanded text responses (web only)"
+    )
+    completed_at: Optional[str] = Field(
+        default=None,
+        description="ISO timestamp when completed"
+    )
+
+
+class OSDetails(BaseModel):
+    """Rich OS details for display."""
+    description: str
+    strengths: List[str]
+    patterns_to_watch: List[str]
+
+
+class MobileOnboardingResponse(BaseModel):
+    """Response for mobile phased onboarding."""
+    success: bool
+    person_id: str
+    phase_completed: str
+    phases_remaining: List[str]
+    operating_system: str
+    primary: str
+    secondary: Optional[str]
+    dosha_baseline: DoshaBaseline
+    os_confidence: float = Field(..., description="Confidence 0.0-1.0, increases with more data")
+    os_label: str = Field(..., description="Human-friendly label: 'Early snapshot', 'Getting clearer', 'Ready to go'")
+    os_details: OSDetails
+
+
 # =============================================================================
 # OPERATING SYSTEM DEFINITIONS
 # =============================================================================
@@ -1229,6 +1268,367 @@ async def complete_full_onboarding(request: FullOnboardingRequest, req: Request)
         life_context=life_context,
         decision_profile=decision_profile,
         stored=stored
+    )
+
+
+# =============================================================================
+# MOBILE PHASED ONBOARDING
+# =============================================================================
+
+# Phase definitions
+PHASE_QUESTIONS = {
+    "phase1": ["preferred_name", "clarity_window", "pacing_under_demand", "first_stress_signal"],
+    "phase2a": ["current_energy", "body_request", "fastest_recovery"],
+    "phase2b": ["life_phase", "active_roles", "responsibility_load", "time_horizon",
+                "decision_driver", "flexibility_under_load", "body_rhythm"],
+}
+
+PHASE_CONFIG = {
+    "phase1": {
+        "confidence": 0.55,
+        "label": "Early snapshot",
+        "next_phases": ["phase2a", "phase2b"],
+    },
+    "phase2a": {
+        "confidence": 0.70,
+        "label": "Getting clearer",
+        "next_phases": ["phase2b"],
+    },
+    "phase2b": {
+        "confidence": 0.85,
+        "label": "Ready to go",
+        "next_phases": [],
+    },
+    "full": {
+        "confidence": 0.95,
+        "label": "Complete profile",
+        "next_phases": [],
+    },
+}
+
+
+def _compute_os_confidence(phase: str, responses: Dict[str, Any]) -> float:
+    """Compute OS confidence based on phase and number of responses."""
+    base_confidence = PHASE_CONFIG.get(phase, {}).get("confidence", 0.55)
+
+    # Adjust slightly based on actual response count
+    response_count = len([v for v in responses.values() if v is not None])
+    if response_count >= 14:
+        return min(0.95, base_confidence + 0.05)
+    elif response_count >= 7:
+        return min(0.85, base_confidence + 0.05)
+    return base_confidence
+
+
+def _get_os_label(phase: str) -> str:
+    """Get human-friendly label for the OS based on phase."""
+    return PHASE_CONFIG.get(phase, {}).get("label", "Early snapshot")
+
+
+def _get_remaining_phases(current_phase: str) -> List[str]:
+    """Get list of remaining phases after the current one."""
+    return PHASE_CONFIG.get(current_phase, {}).get("next_phases", [])
+
+
+async def _get_stored_responses(person_id: str) -> Dict[str, Any]:
+    """Retrieve previously stored onboarding responses for merging."""
+    result = await q(
+        "SELECT operating_system FROM personal_model WHERE person_id = $1",
+        person_id,
+        one=True
+    )
+    if result and result.get("operating_system"):
+        os_data = result["operating_system"]
+        if isinstance(os_data, str):
+            os_data = json.loads(os_data)
+        return os_data.get("onboarding_responses", {})
+    return {}
+
+
+async def _store_mobile_onboarding(
+    person_id: str,
+    phase: str,
+    source: str,
+    responses: Dict[str, Any],
+    operating_system_data: Dict[str, Any],
+    life_context: Dict[str, Any],
+    decision_profile: Dict[str, Any],
+    completed_at: str
+) -> bool:
+    """Store mobile onboarding data with phase tracking."""
+    try:
+        # Convert completed_at string to datetime if needed
+        from datetime import datetime, timezone
+        if isinstance(completed_at, str):
+            # Handle ISO format with timezone
+            completed_at = datetime.fromisoformat(completed_at.replace('Z', '+00:00'))
+        elif completed_at is None:
+            completed_at = datetime.now(timezone.utc)
+        # Ensure person exists
+        await exec(
+            "INSERT INTO persons (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
+            person_id
+        )
+
+        # Ensure base user/profile rows exist
+        email_row = await q(
+            "SELECT email FROM auth_users WHERE id = $1 OR supabase_user_id = $1",
+            person_id,
+            one=True,
+        )
+        email = email_row["email"] if isinstance(email_row, dict) and email_row.get("email") else f"{person_id}@placeholder.sakhi"
+
+        await exec(
+            """
+            INSERT INTO public.users (id, email)
+            VALUES ($1, $2)
+            ON CONFLICT (id) DO UPDATE SET email = COALESCE(public.users.email, EXCLUDED.email)
+            """,
+            person_id,
+            email
+        )
+
+        await exec(
+            "INSERT INTO profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING",
+            person_id
+        )
+
+        # Check if personal_model exists
+        existing = await q(
+            "SELECT person_id FROM personal_model WHERE person_id = $1",
+            person_id,
+            one=True
+        )
+
+        # Build phase timestamp column name
+        phase_col = f"{phase}_completed_at" if phase != "full" else None
+
+        if existing:
+            # Update existing record
+            if phase_col:
+                await exec(
+                    f"""
+                    UPDATE personal_model
+                    SET
+                        operating_system = $2,
+                        life_context = $3,
+                        decision_profile = $4,
+                        onboarding_source = $5,
+                        onboarding_phase = $6,
+                        {phase_col} = $7,
+                        updated_at = NOW()
+                    WHERE person_id = $1
+                    """,
+                    person_id,
+                    json.dumps(operating_system_data),
+                    json.dumps(life_context),
+                    json.dumps(decision_profile),
+                    source,
+                    phase,
+                    completed_at
+                )
+            else:
+                await exec(
+                    """
+                    UPDATE personal_model
+                    SET
+                        operating_system = $2,
+                        life_context = $3,
+                        decision_profile = $4,
+                        onboarding_source = $5,
+                        onboarding_phase = $6,
+                        updated_at = NOW()
+                    WHERE person_id = $1
+                    """,
+                    person_id,
+                    json.dumps(operating_system_data),
+                    json.dumps(life_context),
+                    json.dumps(decision_profile),
+                    source,
+                    phase
+                )
+        else:
+            # Insert new record
+            initial_data = {"initialized_from": "mobile_onboarding"}
+            initial_longitudinal = {"layers": {}}
+
+            if phase_col:
+                await exec(
+                    f"""
+                    INSERT INTO personal_model (
+                        person_id, data, longitudinal_state, operating_system,
+                        life_context, decision_profile, onboarding_source,
+                        onboarding_phase, {phase_col}, updated_at
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+                    """,
+                    person_id,
+                    json.dumps(initial_data),
+                    json.dumps(initial_longitudinal),
+                    json.dumps(operating_system_data),
+                    json.dumps(life_context),
+                    json.dumps(decision_profile),
+                    source,
+                    phase,
+                    completed_at
+                )
+            else:
+                await exec(
+                    """
+                    INSERT INTO personal_model (
+                        person_id, data, longitudinal_state, operating_system,
+                        life_context, decision_profile, onboarding_source,
+                        onboarding_phase, updated_at
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                    """,
+                    person_id,
+                    json.dumps(initial_data),
+                    json.dumps(initial_longitudinal),
+                    json.dumps(operating_system_data),
+                    json.dumps(life_context),
+                    json.dumps(decision_profile),
+                    source,
+                    phase
+                )
+
+        # Update auth_users phase tracking
+        if phase_col:
+            await exec(
+                f"""
+                UPDATE auth_users
+                SET onboarding_phase = $2, {phase_col} = $3
+                WHERE id = $1 OR supabase_user_id = $1
+                """,
+                person_id,
+                phase,
+                completed_at
+            )
+
+        LOGGER.info(f"Mobile onboarding {phase} completed for {person_id}")
+        return True
+    except Exception as e:
+        LOGGER.error(f"Failed to store mobile onboarding data: {e}")
+        return False
+
+
+@router.post("/onboarding/submit", response_model=MobileOnboardingResponse)
+async def submit_mobile_onboarding(request: MobileOnboardingRequest, req: Request):
+    """
+    Submit mobile phased onboarding responses.
+
+    This endpoint supports the mobile app's 3-phase onboarding flow:
+    - Phase 1: 3 mandatory questions (clarity_window, pacing_under_demand, first_stress_signal)
+    - Phase 2a: 3 optional questions (current_energy, body_request, fastest_recovery)
+    - Phase 2b: 7 optional questions (life context, decision-making, body_rhythm)
+
+    For each phase:
+    1. Merges new responses with any previously stored responses
+    2. Computes/updates the Operating System using all available data
+    3. Returns the OS result with confidence and display details
+
+    Mobile users can exit to voice conversation after any phase.
+    """
+    person_id = request.person_id
+    phase = request.phase
+    source = request.source
+    new_responses = request.responses
+    completed_at = request.completed_at or datetime.now(timezone.utc).isoformat()
+
+    # Validate phase
+    if phase not in PHASE_CONFIG:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid phase: {phase}. Must be one of: phase1, phase2a, phase2b, full"
+        )
+
+    # For phases after phase1, merge with previously stored responses
+    if phase in ["phase2a", "phase2b"]:
+        stored_responses = await _get_stored_responses(person_id)
+        merged_responses = {**stored_responses, **new_responses}
+    else:
+        merged_responses = new_responses
+
+    # Compute dosha scores from all available responses
+    structured_scores = _compute_dosha_from_full_onboarding(merged_responses)
+
+    # For web source with expansion text, try LLM enhancement
+    text_adjustments = None
+    if source == "web" and request.expansion_responses:
+        llm_router: LLMRouter | None = getattr(req.app.state, "llm_router", None)
+        if llm_router:
+            try:
+                # Merge expansion responses into the responses dict for LLM analysis
+                expanded_responses = {**merged_responses}
+                for key, value in request.expansion_responses.items():
+                    expanded_responses[f"{key}_expanded"] = value
+                text_adjustments = await _analyze_expanded_text_with_llm(llm_router, expanded_responses)
+            except Exception as e:
+                LOGGER.warning(f"LLM text analysis failed: {e}")
+
+    # Combine structured scores with any text analysis
+    dosha_baseline = _compute_dosha_with_text_analysis(structured_scores, text_adjustments)
+
+    # Determine OS type
+    os_type = _determine_os_type(dosha_baseline)
+    os_def = OS_TYPE_DEFINITIONS.get(os_type, OS_TYPE_DEFINITIONS["Balanced"])
+
+    # Compute confidence and label based on phase
+    confidence = _compute_os_confidence(phase, merged_responses)
+    label = _get_os_label(phase)
+    remaining_phases = _get_remaining_phases(phase)
+
+    # Extract life context and decision profile
+    life_context = _extract_life_context(merged_responses)
+    decision_profile = _extract_decision_profile(merged_responses)
+
+    # Build operating system data
+    operating_system_data = {
+        "type": os_type,
+        "primary": os_def["primary"],
+        "secondary": os_def.get("secondary"),
+        "dosha_baseline": dosha_baseline,
+        "computed_at": completed_at,
+        "onboarding_responses": merged_responses,
+        "source": source,
+        "phase": phase,
+        "confidence": confidence,
+        "label": label,
+        "is_soft_constraint": True,
+        "override_by_observation": True,
+    }
+
+    # Store in database
+    stored = await _store_mobile_onboarding(
+        person_id=person_id,
+        phase=phase,
+        source=source,
+        responses=merged_responses,
+        operating_system_data=operating_system_data,
+        life_context=life_context,
+        decision_profile=decision_profile,
+        completed_at=completed_at
+    )
+
+    # Build OS details for display
+    os_details = OSDetails(
+        description=os_def.get("description", ""),
+        strengths=os_def.get("strengths", []),
+        patterns_to_watch=os_def.get("vulnerabilities", [])
+    )
+
+    return MobileOnboardingResponse(
+        success=stored,
+        person_id=person_id,
+        phase_completed=phase,
+        phases_remaining=remaining_phases,
+        operating_system=os_type,
+        primary=os_def["primary"],
+        secondary=os_def.get("secondary"),
+        dosha_baseline=DoshaBaseline(**dosha_baseline),
+        os_confidence=confidence,
+        os_label=label,
+        os_details=os_details
     )
 
 

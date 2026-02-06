@@ -1,0 +1,1089 @@
+[
+  {
+    "validated": true,
+    "name_sanskrit": "Ratri Jagarana",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "According to Ayurveda, Vata dosha is associated with movement and activity. Staying awake late at night increases mental activity and movement, which are qualities of Vata. This disrupts the natural circadian rhythm and increases the light, dry, and mobile qualities of Vata, leading to its aggravation."
+    },
+    "symptoms_caused": [
+      "Insomnia",
+      "Anxiety",
+      "Restlessness",
+      "Fatigue",
+      "Digestive issues"
+    ],
+    "related_concepts": {
+      "nidana": "Vihara (lifestyle)",
+      "samprapti": "Vata Prakopa (aggravation of Vata)"
+    },
+    "citations": [
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Sutra Sthana, Chapter 7",
+        "context": "Discussion on the effects of improper sleep and its impact on doshas, particularly Vata."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To pacify Vata, it is recommended to maintain a regular sleep schedule by going to bed early. Incorporate calming evening routines such as meditation, warm baths, or drinking warm milk with spices like nutmeg or ashwagandha to promote relaxation and better sleep.",
+    "original": {
+      "name": "late_night_sleep",
+      "aggravates": "vata",
+      "category": "sleep"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Vishama Ahara",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Irregular meals disrupt the natural rhythm and routine of the body, which is governed by Vata. Vata dosha is responsible for movement and communication in the body, including the movement of food through the digestive tract. Irregular eating habits can lead to erratic digestive processes, leading to Vata imbalance."
+    },
+    "symptoms_caused": [
+      "bloating",
+      "indigestion",
+      "gas",
+      "constipation",
+      "anxiety",
+      "restlessness"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara Nidana (dietary causes)",
+      "samprapti": "Vata Prakopa (aggravation of Vata)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 5",
+        "context": "Charaka emphasizes the importance of regularity in meals to maintain balance in the doshas, particularly Vata."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Sutra Sthana, Chapter 8",
+        "context": "Vagbhata discusses the impact of irregular eating habits on the balance of doshas, highlighting the role of regularity in pacifying Vata."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To maintain balance, it is recommended to eat meals at regular intervals and in a calm environment. This helps in stabilizing Vata and promoting better digestion and overall health.",
+    "original": {
+      "name": "irregular_meals",
+      "aggravates": "vata",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ati Y\u0101na",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Excessive travel involves constant movement and irregular routines, which are characteristics of Vata. This leads to an increase in the mobile and erratic qualities of Vata, causing its aggravation."
+    },
+    "symptoms_caused": [
+      "Anxiety",
+      "Restlessness",
+      "Insomnia",
+      "Dryness",
+      "Fatigue"
+    ],
+    "related_concepts": {
+      "nidana": "Vata Vriddhikara Nidana",
+      "samprapti": "Vata Prakopa"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 20",
+        "context": "Charaka discusses the causes of Vata aggravation, including excessive movement and travel."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To counteract the effects of excessive travel, establish a regular routine, incorporate grounding practices such as Abhyanga (oil massage), and consume warm, nourishing foods.",
+    "original": {
+      "name": "excessive_travel",
+      "aggravates": "vata",
+      "category": "lifestyle"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Sheeta Sparsha",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Cold exposure increases the qualities of cold (Sheeta) and dry (Ruksha), which are inherent in Vata dosha. This can lead to an imbalance in Vata, as Vata is naturally cold and dry, and excess exposure to these qualities can exacerbate its imbalance."
+    },
+    "symptoms_caused": [
+      "Dry skin",
+      "Joint pain",
+      "Anxiety",
+      "Constipation",
+      "Restlessness"
+    ],
+    "related_concepts": {
+      "nidana": "Parinama (seasonal and environmental changes)",
+      "samprapti": "Vata Prakopa (aggravation of Vata)"
+    },
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutra Sthana, Chapter 17",
+        "context": "Discussion on the effects of seasonal changes and environmental factors on doshas, particularly how cold and dry qualities aggravate Vata."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To counteract the effects of cold exposure, engage in practices that increase warmth and moisture, such as applying warm oil massages (Abhyanga), consuming warm and nourishing foods, and wearing warm clothing.",
+    "original": {
+      "name": "cold_exposure",
+      "aggravates": "vata",
+      "category": "environment"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ativachana",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Excessive talking is considered a Vata-aggravating activity because it involves continuous movement and stimulation of the vocal apparatus, which is governed by Vata. Vata dosha is characterized by qualities such as mobility, dryness, and lightness, and excessive talking can increase these qualities, leading to an imbalance."
+    },
+    "symptoms_caused": [
+      "Dryness of the throat",
+      "Hoarseness of voice",
+      "Fatigue",
+      "Anxiety",
+      "Restlessness"
+    ],
+    "related_concepts": {
+      "nidana": "Prajnaparadha (intellectual blasphemy)",
+      "samprapti": "Vata Prakopa (aggravation of Vata leading to imbalance)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 20",
+        "context": "Discussion on the causes of Vata aggravation, including excessive talking and its effects on the body."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To balance Vata, it is recommended to practice mindful speech, incorporate periods of silence, and engage in grounding activities such as meditation or yoga. Additionally, maintaining a regular routine and consuming warm, moist, and nourishing foods can help pacify Vata.",
+    "original": {
+      "name": "excessive_talking",
+      "aggravates": "vata",
+      "category": "activity"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Anashana",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Skipping meals leads to an empty stomach, which increases dryness and lightness in the body, qualities associated with Vata. This can disturb the natural flow of Vata, leading to its aggravation."
+    },
+    "symptoms_caused": [
+      "bloating",
+      "gas",
+      "constipation",
+      "anxiety",
+      "restlessness",
+      "fatigue"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara (dietary habits)",
+      "samprapti": "Vata prakopa (Vata aggravation)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Vimana Sthana, Chapter 1",
+        "context": "The text discusses the importance of regular meals and the effects of improper dietary habits on dosha balance."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Sutra Sthana, Chapter 8",
+        "context": "This chapter outlines the importance of proper meal timings and the consequences of skipping meals on Vata dosha."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Instead of skipping meals, aim to eat at regular intervals with balanced meals that include all six tastes (sweet, sour, salty, bitter, pungent, astringent) to maintain dosha balance. If a meal must be skipped, consider having a light snack or warm herbal tea to mitigate Vata aggravation.",
+    "original": {
+      "name": "skipping_meals",
+      "aggravates": "vata",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ativyayama",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Excessive fasting leads to depletion of bodily tissues and dryness, which are qualities associated with Vata. This depletion and lack of nourishment increase the light, dry, and mobile qualities of Vata, leading to its aggravation."
+    },
+    "symptoms_caused": [
+      "Dryness of skin",
+      "Anxiety",
+      "Restlessness",
+      "Weakness",
+      "Constipation"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara (dietary habits)",
+      "samprapti": "Vata prakopa (aggravation of Vata due to lack of nourishment)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 21",
+        "context": "Discussion on the effects of improper dietary habits and their impact on doshas, particularly Vata."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Instead of excessive fasting, adopt a balanced diet that includes regular meals with Vata-pacifying foods such as warm, moist, and nourishing foods. Incorporate healthy fats and grounding foods to maintain balance.",
+    "original": {
+      "name": "excessive_fasting",
+      "aggravates": "vata",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ati Vyayama",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Excessive exercise leads to overexertion, which is a known factor in aggravating Vata. Vata is characterized by movement and dryness, and excessive exercise exacerbates these qualities by depleting bodily tissues and fluids, leading to an imbalance."
+    },
+    "symptoms_caused": [
+      "Fatigue",
+      "Joint pain",
+      "Dryness",
+      "Anxiety",
+      "Insomnia"
+    ],
+    "related_concepts": {
+      "nidana": "Ati Vyayama (excessive exercise)",
+      "samprapti": "Overexertion leads to depletion of bodily tissues and fluids, causing an imbalance in Vata, which manifests as various symptoms."
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 7",
+        "context": "Charaka discusses the effects of overexertion and its role in aggravating Vata dosha."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Engage in moderate exercise that is appropriate for your body type and energy levels. Incorporate rest and rejuvenation practices such as yoga, meditation, and adequate sleep to balance Vata.",
+    "original": {
+      "name": "excessive_exercise",
+      "aggravates": "vata",
+      "category": "activity"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Vega Dharana",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Suppressing natural urges (Vega Dharana) leads to obstruction and disturbance in the normal flow of Vata, causing its aggravation. Vata is responsible for movement and flow in the body, and suppression leads to stagnation and imbalance."
+    },
+    "symptoms_caused": [
+      "Constipation",
+      "Bloating",
+      "Anxiety",
+      "Headaches",
+      "Pain in the body"
+    ],
+    "related_concepts": {
+      "nidana": "Aharaja (dietary and lifestyle habits)",
+      "samprapti": "Vega Dharana leads to the obstruction of Vata, causing its accumulation and aggravation, which can further disturb other doshas and bodily functions."
+    },
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutra Sthana, Chapter 7",
+        "context": "Charaka discusses the importance of not suppressing natural urges and the consequences of doing so, particularly on Vata dosha."
+      },
+      {
+        "source": "Ashtanga Hridaya",
+        "chapter": "Sutra Sthana, Chapter 4",
+        "context": "Vagbhata elaborates on the effects of suppressing natural urges and its impact on doshic balance, especially Vata."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Instead of suppressing urges, it is recommended to respond to them promptly and appropriately. For example, when feeling the urge to urinate or defecate, it should be addressed immediately to maintain Vata balance and overall health.",
+    "original": {
+      "name": "suppressing_urges",
+      "aggravates": "vata",
+      "category": "habits"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ati Darshana",
+    "validated_effects": {
+      "aggravates": [
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Excessive screen time can lead to overstimulation of the nervous system, which is governed by Vata dosha. The rapid movement of images and information on screens can increase the qualities of Vata such as mobility and lightness, leading to its aggravation."
+    },
+    "symptoms_caused": [
+      "Insomnia",
+      "Anxiety",
+      "Dry eyes",
+      "Headaches",
+      "Poor concentration"
+    ],
+    "related_concepts": {
+      "nidana": "Ati Yoga (excessive use)",
+      "samprapti": "Vata Prakopa (aggravation of Vata leading to imbalance)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Discussion on the effects of excessive sensory input and its impact on Vata dosha."
+      }
+    ],
+    "confidence": 0.8,
+    "recommendations": "Limit screen time, take regular breaks, practice grounding activities such as yoga or meditation, and ensure adequate hydration and rest.",
+    "original": {
+      "name": "excessive_screen_time",
+      "aggravates": "vata",
+      "category": "modern"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Krodha Bhojana",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta"
+      ],
+      "pacifies": [],
+      "mechanism": "In Ayurveda, emotions such as anger are associated with the Pitta dosha, which is characterized by heat and intensity. Eating while angry can lead to an imbalance by further increasing the heat and intensity of Pitta, leading to digestive issues and other Pitta-related disorders."
+    },
+    "symptoms_caused": [
+      "Acid reflux",
+      "Indigestion",
+      "Heartburn",
+      "Inflammation",
+      "Irritability"
+    ],
+    "related_concepts": {
+      "nidana": "Aharaja Nidana (dietary causes)",
+      "samprapti": "Pitta Prakopa (aggravation of Pitta)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Vimana Sthana, Chapter 2",
+        "context": "The text discusses the impact of emotions on digestion and the importance of a calm mind while eating."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "It is recommended to practice mindfulness and calm the mind before eating. Techniques such as deep breathing, meditation, or taking a short walk can help reduce anger and create a more balanced state for digestion.",
+    "original": {
+      "name": "eating_when_angry",
+      "aggravates": "pitta",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Atapa Sevana",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta"
+      ],
+      "pacifies": [
+        "Kapha"
+      ],
+      "mechanism": "Excessive sun exposure increases heat and intensity in the body, which are qualities associated with Pitta. Pitta dosha is characterized by heat, sharpness, and intensity, and excessive sun exposure can lead to an imbalance by increasing these qualities. Meanwhile, the warmth can help reduce the cold and heavy qualities of Kapha, thereby pacifying it to some extent."
+    },
+    "symptoms_caused": [
+      "Skin rashes",
+      "Burning sensation",
+      "Inflammation",
+      "Heat exhaustion",
+      "Irritability"
+    ],
+    "related_concepts": {
+      "nidana": "Environmental factors",
+      "samprapti": "Pitta prakopa (aggravation) leading to symptoms like inflammation and burning sensations"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Discussion on the effects of environmental factors on doshas, particularly how heat and sun exposure can aggravate Pitta."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Limit sun exposure during peak hours, wear protective clothing, and apply cooling substances like sandalwood paste or aloe vera to balance Pitta. Incorporate cooling foods and drinks into your diet, such as cucumber, watermelon, and coconut water.",
+    "original": {
+      "name": "excessive_sun_exposure",
+      "aggravates": "pitta",
+      "category": "environment"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Spardha Vyapara",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta"
+      ],
+      "pacifies": [],
+      "mechanism": "Competitive activities are driven by ambition, intensity, and a desire to achieve, which are qualities associated with Pitta dosha. These activities increase heat, intensity, and stress, thereby aggravating Pitta."
+    },
+    "symptoms_caused": [
+      "Increased irritability",
+      "Anger",
+      "Burnout",
+      "Acid reflux",
+      "Skin rashes"
+    ],
+    "related_concepts": {
+      "nidana": "Aharaja (dietary and lifestyle factors)",
+      "samprapti": "Pitta prakopa (aggravation of Pitta)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 7",
+        "context": "Discussion on factors that aggravate Pitta, including intense and competitive activities."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Engage in calming activities such as yoga, meditation, or walking in nature to balance Pitta. Incorporate cooling foods and practices into your routine.",
+    "original": {
+      "name": "competitive_activities",
+      "aggravates": "pitta",
+      "category": "activity"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ati Katu Ahara",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta"
+      ],
+      "pacifies": [
+        "Kapha"
+      ],
+      "mechanism": "Spicy foods are considered to have a 'Katu' (pungent) taste, which is known to increase the heat and sharpness in the body, thereby aggravating Pitta dosha. Pitta is associated with fire and heat, and excessive consumption of spicy foods can lead to an imbalance by increasing these qualities. Conversely, the pungent taste can help reduce Kapha, which is associated with heaviness and coldness."
+    },
+    "symptoms_caused": [
+      "Acidity",
+      "Heartburn",
+      "Inflammation",
+      "Skin rashes",
+      "Excessive thirst"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara Nidana",
+      "samprapti": "Pitta Prakopa"
+    },
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutra Sthana, Chapter 26",
+        "context": "Discussion on the effects of different tastes on doshas."
+      },
+      {
+        "source": "Ashtanga Hridaya",
+        "chapter": "Sutra Sthana, Chapter 10",
+        "context": "Explanation of how different foods and tastes affect doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To balance Pitta, incorporate cooling and sweet foods such as milk, rice, and cucumbers. Avoid excessive spicy, sour, and salty foods. Practice moderation and include more Pitta-pacifying herbs like coriander and fennel.",
+    "original": {
+      "name": "spicy_food_excess",
+      "aggravates": "pitta",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Madya",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta",
+        "Vata"
+      ],
+      "pacifies": [
+        "Kapha"
+      ],
+      "mechanism": "Alcohol consumption, known as 'Madya' in Ayurveda, is considered to have hot, sharp, and penetrating qualities. These qualities are similar to those of Pitta dosha, thus leading to its aggravation. Additionally, alcohol can be drying and light, which may also disturb Vata dosha. However, its heating nature can temporarily pacify Kapha dosha, which is cold and heavy."
+    },
+    "symptoms_caused": [
+      "Increased irritability",
+      "Inflammation",
+      "Digestive issues",
+      "Dehydration",
+      "Restlessness"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara (dietary factors)",
+      "samprapti": "The consumption of alcohol leads to an imbalance in the doshas, primarily aggravating Pitta and Vata, which can disrupt the normal functioning of the body and lead to various symptoms."
+    },
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutra Sthana, Chapter 24",
+        "context": "Charaka discusses the effects of various substances, including alcohol, on the doshas, highlighting its potential to aggravate Pitta and Vata."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To maintain dosha balance, it is recommended to limit alcohol consumption and instead opt for cooling and hydrating beverages such as coconut water or herbal teas that pacify Pitta and Vata.",
+    "original": {
+      "name": "alcohol_consumption",
+      "aggravates": "pitta",
+      "category": "substance"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ahara Vihara",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta"
+      ],
+      "pacifies": [],
+      "mechanism": "Working through lunch can lead to irregular eating habits, which is known to aggravate Pitta due to increased stress and heat in the body. Pitta is associated with the fire element, and skipping meals or eating at irregular times can increase internal heat and acidity, leading to Pitta imbalance."
+    },
+    "symptoms_caused": [
+      "Acidity",
+      "Irritability",
+      "Heartburn",
+      "Increased stress levels"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara (dietary habits) and Vihara (lifestyle habits)",
+      "samprapti": "Agni (digestive fire) imbalance leading to Pitta aggravation"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "The importance of regular meals and the effects of irregular eating habits on dosha balance."
+      }
+    ],
+    "confidence": 0.85,
+    "recommendations": "Instead of working through lunch, take a break to eat a balanced meal at regular intervals. This helps maintain Agni (digestive fire) and prevents Pitta aggravation.",
+    "original": {
+      "name": "working_through_lunch",
+      "aggravates": "pitta",
+      "category": "work"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Krodha",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta"
+      ],
+      "pacifies": [],
+      "mechanism": "Intense arguments lead to heightened emotions such as anger and frustration, which are directly linked to the increase of Pitta dosha. Pitta is associated with heat, intensity, and transformation, and emotional disturbances like anger can increase internal heat and bile, leading to Pitta imbalance."
+    },
+    "symptoms_caused": [
+      "Increased irritability",
+      "Acid reflux",
+      "Skin rashes",
+      "Hypertension",
+      "Digestive issues"
+    ],
+    "related_concepts": {
+      "nidana": "Manasika Nidana (psychological etiological factor)",
+      "samprapti": "The emotional disturbance leads to an increase in internal heat and bile, disrupting the balance of Pitta dosha and manifesting in physical and mental symptoms."
+    },
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutra Sthana, Chapter 7",
+        "context": "Charaka discusses the effects of emotions like anger on the doshas, particularly how they can aggravate Pitta."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Engage in calming practices such as meditation, deep breathing exercises, or yoga to manage emotions and prevent Pitta aggravation. Cultivate patience and understanding to avoid intense arguments.",
+    "original": {
+      "name": "intense_arguments",
+      "aggravates": "pitta",
+      "category": "emotional"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Atisaukshmya",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta"
+      ],
+      "pacifies": [],
+      "mechanism": "Perfectionism involves intense focus, critical thinking, and a drive for excellence, which are qualities associated with Pitta dosha. This behavior can lead to an increase in heat, intensity, and sharpness, thereby aggravating Pitta."
+    },
+    "symptoms_caused": [
+      "irritability",
+      "impatience",
+      "burnout",
+      "stress-related disorders"
+    ],
+    "related_concepts": {
+      "nidana": "Manasika Nidana (mental etiological factor)",
+      "samprapti": "Pitta Prakopa (aggravation of Pitta)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 1",
+        "context": "Discussion on the qualities and behaviors that aggravate Pitta."
+      }
+    ],
+    "confidence": 0.85,
+    "recommendations": "Engage in activities that promote relaxation and balance, such as meditation, yoga, and spending time in nature. Practice self-compassion and set realistic goals to reduce the drive for perfection.",
+    "original": {
+      "name": "perfectionism",
+      "aggravates": "pitta",
+      "category": "mental"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ati Vyavaya",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta",
+        "Vata"
+      ],
+      "pacifies": [],
+      "mechanism": "Overworking leads to excessive heat and stress, which are characteristics of Pitta. It also causes irregular routines and exhaustion, which can disturb Vata."
+    },
+    "symptoms_caused": [
+      "burnout",
+      "irritability",
+      "digestive issues",
+      "insomnia",
+      "headaches"
+    ],
+    "related_concepts": {
+      "nidana": "Asatmya Indriyartha Samyoga (improper use of senses)",
+      "samprapti": "Overworking leads to an increase in Pitta and Vata doshas, causing imbalance and resulting in various symptoms."
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 11",
+        "context": "Describes the effects of overexertion and its impact on dosha balance."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Incorporate regular breaks, practice mindfulness, and ensure a balanced work-life schedule to maintain dosha balance.",
+    "original": {
+      "name": "overworking",
+      "aggravates": "pitta",
+      "category": "work"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ushna Vata Avastha",
+    "validated_effects": {
+      "aggravates": [
+        "Pitta"
+      ],
+      "pacifies": [
+        "Kapha"
+      ],
+      "mechanism": "According to Ayurveda, Pitta dosha is associated with heat and fire. Exposure to a hot environment increases the heat in the body, thereby aggravating Pitta. This can lead to an imbalance as Pitta is already hot by nature. Conversely, a hot environment can help pacify Kapha dosha, which is cold and heavy, by counteracting its qualities."
+    },
+    "symptoms_caused": [
+      "Excessive sweating",
+      "Irritability",
+      "Inflammation",
+      "Acid reflux",
+      "Skin rashes"
+    ],
+    "related_concepts": {
+      "nidana": "Parinama (environmental factors)",
+      "samprapti": "Pitta Vriddhi (increase of Pitta)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 17",
+        "context": "Discussion on the effects of environmental factors on doshas, particularly how heat increases Pitta."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To balance Pitta, it is recommended to stay in cool environments, consume cooling foods and drinks, and practice calming activities such as meditation and yoga.",
+    "original": {
+      "name": "hot_environment",
+      "aggravates": "pitta",
+      "category": "environment"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Divasvapna",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [
+        "Vata"
+      ],
+      "mechanism": "Daytime sleeping increases the qualities of heaviness and stability, which are attributes of Kapha. It can lead to an imbalance by increasing Kapha dosha, especially when done excessively or by individuals with a Kapha constitution. However, it can pacify Vata due to its grounding and stabilizing effects."
+    },
+    "symptoms_caused": [
+      "Lethargy",
+      "Weight gain",
+      "Sluggish digestion",
+      "Congestion"
+    ],
+    "related_concepts": {
+      "nidana": "Aharaja Nidana (dietary and lifestyle causes)",
+      "samprapti": "Kapha Vriddhi (increase in Kapha dosha)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 21",
+        "context": "Charaka discusses the effects of improper sleep and its impact on doshas, particularly emphasizing the aggravation of Kapha due to daytime sleeping."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To avoid aggravating Kapha, it is recommended to engage in activities that are stimulating and invigorating during the day, such as light exercise or walking. If rest is needed, a short nap (less than 30 minutes) may be beneficial for individuals with a Vata constitution.",
+    "original": {
+      "name": "daytime_sleeping",
+      "aggravates": "kapha",
+      "category": "sleep"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Atimadhura Bhakshana",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [],
+      "mechanism": "Overeating leads to an increase in the qualities of heaviness (guru) and dullness (manda), which are inherent in Kapha. This results in the accumulation of undigested food (ama) and an imbalance in the digestive fire (agni), further aggravating Kapha."
+    },
+    "symptoms_caused": [
+      "Lethargy",
+      "Weight gain",
+      "Indigestion",
+      "Sluggishness",
+      "Congestion"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara (dietary habits)",
+      "samprapti": "Kapha vriddhi (increase in Kapha)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 23",
+        "context": "Discussion on the effects of improper eating habits and their impact on doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Practice mindful eating by consuming meals in moderation and focusing on foods that are light and easy to digest. Incorporate spices like ginger and black pepper to enhance digestion and balance Kapha.",
+    "original": {
+      "name": "overeating",
+      "aggravates": "kapha",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": false,
+    "original": {
+      "name": "sedentary_lifestyle",
+      "aggravates": "kapha",
+      "category": "lifestyle"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ati Madhura Sevana",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [
+        "Vata"
+      ],
+      "mechanism": "Excessive consumption of sweet foods increases the earth and water elements, which are predominant in Kapha dosha, leading to its aggravation. Sweet taste is heavy, moist, and cooling, which can lead to an imbalance in Kapha. However, it can pacify Vata due to its grounding and nourishing qualities."
+    },
+    "symptoms_caused": [
+      "weight gain",
+      "lethargy",
+      "congestion",
+      "excess mucus production",
+      "sluggish digestion"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara (dietary factors)",
+      "samprapti": "Kapha Vriddhi (increase in Kapha)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 26",
+        "context": "Charaka discusses the effects of various tastes on the doshas, noting that sweet taste increases Kapha and decreases Vata."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Moderate the intake of sweet foods and incorporate more pungent, bitter, and astringent tastes to balance Kapha. Engage in regular physical activity to counteract Kapha's heavy and sluggish qualities.",
+    "original": {
+      "name": "excessive_sweets",
+      "aggravates": "kapha",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015a\u012bta Dampatva",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [
+        "Pitta"
+      ],
+      "mechanism": "In Ayurveda, Kapha dosha is characterized by qualities such as coldness, heaviness, and dampness. Exposure to a cold and damp environment increases these qualities in the body, leading to an imbalance in Kapha. This can result in the accumulation of mucus, lethargy, and other Kapha-related symptoms. Conversely, such an environment can pacify Pitta, which is characterized by heat and dryness."
+    },
+    "symptoms_caused": [
+      "congestion",
+      "lethargy",
+      "water retention",
+      "cold-related ailments"
+    ],
+    "related_concepts": {
+      "nidana": "Pari\u1e47\u0101ma (environmental factors)",
+      "samprapti": "Kapha Prakopa (aggravation of Kapha)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 17",
+        "context": "Discussion on the effect of external environment on dosha balance"
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To mitigate the effects of a cold and damp environment, one can incorporate warming and drying practices such as consuming warm and spicy foods, engaging in regular exercise, and using warming herbs like ginger and cinnamon. Additionally, staying in warm and dry environments when possible can help maintain dosha balance.",
+    "original": {
+      "name": "cold_damp_environment",
+      "aggravates": "kapha",
+      "category": "environment"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Alasya (Laziness/Inactivity)",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [
+        "Vata"
+      ],
+      "mechanism": "In Ayurveda, lack of exercise leads to stagnation and accumulation of Kapha dosha. Kapha is associated with qualities like heaviness, stability, and coldness. Physical inactivity increases these qualities, leading to an imbalance. Conversely, it may pacify Vata due to the reduction of movement and activity, which are Vata characteristics."
+    },
+    "symptoms_caused": [
+      "Weight gain",
+      "Lethargy",
+      "Sluggish digestion",
+      "Depression"
+    ],
+    "related_concepts": {
+      "nidana": "Aharaja (dietary and lifestyle factors)",
+      "samprapti": "Kapha vriddhi (increase in Kapha leading to disease)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 7",
+        "context": "Discussion on the causes of Kapha imbalance, including lack of exercise and its effects."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Engage in regular physical activity appropriate for your body type and season to maintain dosha balance. Incorporate exercises like yoga, brisk walking, or other moderate activities to prevent Kapha accumulation.",
+    "original": {
+      "name": "lack_of_exercise",
+      "aggravates": "kapha",
+      "category": "lifestyle"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Atyashana",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [],
+      "mechanism": "Emotional eating often leads to overeating, which increases the heaviness and sluggishness associated with Kapha. This behavior can lead to an accumulation of Ama (toxins) due to improper digestion, further aggravating Kapha dosha."
+    },
+    "symptoms_caused": [
+      "weight gain",
+      "lethargy",
+      "indigestion",
+      "emotional imbalance"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara (dietary factors)",
+      "samprapti": "Kapha vriddhi (increase in Kapha)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Vimana Sthana, Chapter 1",
+        "context": "Charaka discusses the impact of improper dietary habits and their role in aggravating Kapha."
+      }
+    ],
+    "confidence": 0.85,
+    "recommendations": "Practice mindful eating, focusing on balanced meals and addressing emotional triggers through meditation or counseling.",
+    "original": {
+      "name": "emotional_eating",
+      "aggravates": "kapha",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Dugdha Sevana",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [
+        "Vata"
+      ],
+      "mechanism": "Excessive consumption of dairy products, which are heavy, cold, and oily in nature, can increase the qualities of Kapha dosha such as heaviness and moisture. This leads to an imbalance in Kapha, manifesting as congestion, lethargy, and other Kapha-related disorders. However, the same qualities can help pacify Vata, which is dry and light by nature."
+    },
+    "symptoms_caused": [
+      "congestion",
+      "weight gain",
+      "lethargy",
+      "mucus production"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara Nidana (dietary causes)",
+      "samprapti": "Kapha Vriddhi (increase in Kapha)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 6",
+        "context": "Charaka discusses the qualities of Kapha and how certain foods can increase its dosha, leading to imbalance."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "To balance Kapha, incorporate more warming, light, and dry foods such as ginger, black pepper, and legumes. Reduce the intake of heavy and cold foods like excessive dairy.",
+    "original": {
+      "name": "excessive_dairy",
+      "aggravates": "kapha",
+      "category": "eating"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Bhuktanidra",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [],
+      "mechanism": "Sleeping immediately after meals leads to improper digestion and metabolism, resulting in the accumulation of Ama (toxins) and increased Kapha dosha. This is because sleep is a Kapha-dominant activity, and combining it with the Kapha-increasing effect of a full stomach further aggravates Kapha."
+    },
+    "symptoms_caused": [
+      "Lethargy",
+      "Weight gain",
+      "Indigestion",
+      "Sluggish metabolism"
+    ],
+    "related_concepts": {
+      "nidana": "Ahara Vidhi (dietary habits)",
+      "samprapti": "Kapha Vriddhi (increase in Kapha)"
+    },
+    "citations": [
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Sutra Sthana, Chapter 7",
+        "context": "Discussion on proper dietary habits and the effects of improper sleep patterns on doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "recommendations": "Instead of sleeping immediately after meals, engage in a light walk or sit upright for some time to aid digestion. Ensure a gap of at least 2-3 hours between meals and sleep.",
+    "original": {
+      "name": "sleeping_after_meals",
+      "aggravates": "kapha",
+      "category": "sleep"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Parivartanabhava",
+    "validated_effects": {
+      "aggravates": [
+        "Kapha"
+      ],
+      "pacifies": [
+        "Vata"
+      ],
+      "mechanism": "Avoiding change leads to stagnation and inertia, which are qualities associated with Kapha. Kapha dosha is characterized by stability, heaviness, and sluggishness. When one avoids change, these qualities are reinforced, leading to an imbalance in Kapha. On the other hand, Vata, which is characterized by movement and change, may be pacified by stability and routine."
+    },
+    "symptoms_caused": [
+      "Lethargy",
+      "Weight gain",
+      "Depression",
+      "Lack of motivation"
+    ],
+    "related_concepts": {
+      "nidana": "Aharaja Nidana (dietary and lifestyle causes)",
+      "samprapti": "Kapha Vriddhi (increase in Kapha)"
+    },
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 6",
+        "context": "Charaka discusses the causes of dosha aggravation, emphasizing the role of lifestyle choices in maintaining doshic balance."
+      }
+    ],
+    "confidence": 0.85,
+    "recommendations": "Incorporate regular changes in routine, engage in stimulating activities, and practice exercises that promote movement and flexibility to balance Kapha and prevent stagnation.",
+    "original": {
+      "name": "avoiding_change",
+      "aggravates": "kapha",
+      "category": "mental"
+    }
+  }
+]

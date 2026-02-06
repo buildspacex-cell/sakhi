@@ -1,0 +1,591 @@
+[
+  {
+    "validated": true,
+    "name_sanskrit": "\u091a\u094d\u092f\u0935\u0928\u092a\u094d\u0930\u093e\u0936",
+    "validated_properties": {
+      "type": "kamya rasayana",
+      "primary_action": "rejuvenation and immune enhancement",
+      "key_ingredients": [
+        "Amla (Emblica officinalis)",
+        "Ghee",
+        "Honey",
+        "Pippali (Piper longum)",
+        "Ashwagandha (Withania somnifera)"
+      ],
+      "anupana": "warm milk"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "best_for": "Tridoshic, but especially beneficial for Vata and Pitta constitutions"
+    },
+    "benefits": [
+      "Enhances immunity",
+      "Improves digestion and metabolism",
+      "Promotes longevity and vitality",
+      "Boosts energy and strength",
+      "Supports respiratory health"
+    ],
+    "indications": [
+      "Respiratory issues",
+      "Weak immunity",
+      "General debility",
+      "Aging-related conditions"
+    ],
+    "contraindications": [
+      "Diabetes (due to sugar content)",
+      "Obesity (use with caution due to calorie content)"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana, Chapter 1",
+        "context": "Chyawanprash is described as a potent rejuvenative formulation that enhances longevity and vitality."
+      }
+    ],
+    "confidence": 0.95,
+    "traditional_usage": "Traditionally taken in the morning with warm milk to enhance absorption and effectiveness.",
+    "original_name": "chyawanprash"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u092c\u094d\u0930\u0939\u094d\u092e \u0930\u0938\u093e\u092f\u0928",
+    "validated_properties": {
+      "type": "kamya rasayana",
+      "primary_action": "enhances cognitive function and vitality",
+      "key_ingredients": [
+        "Amla (Emblica officinalis)",
+        "Haritaki (Terminalia chebula)",
+        "Pippali (Piper longum)",
+        "Ghee",
+        "Honey"
+      ],
+      "anupana": "warm milk or water"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "best_for": "Vata-Pitta constitution"
+    },
+    "benefits": [
+      "Improves memory and concentration",
+      "Boosts immunity",
+      "Enhances energy and vitality",
+      "Promotes longevity",
+      "Supports mental clarity"
+    ],
+    "indications": [
+      "Cognitive decline",
+      "Fatigue",
+      "Weak immunity",
+      "Stress and anxiety"
+    ],
+    "contraindications": [
+      "Diabetes (due to honey content)",
+      "Obesity (due to ghee content)"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana, Rasayana Adhyaya",
+        "context": "Brahma Rasayana is described as a formulation to enhance mental faculties and overall vitality."
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken in the morning on an empty stomach, followed by warm milk or water.",
+    "original_name": "brahma_rasayana"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0906\u092e\u0932\u0915\u0940 \u0930\u0938\u093e\u092f\u0928",
+    "validated_properties": {
+      "type": "kamya rasayana",
+      "primary_action": "rejuvenation and longevity",
+      "key_ingredients": [
+        "Amalaki (Emblica officinalis)"
+      ],
+      "anupana": "warm water or honey"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Vata"
+      ],
+      "best_for": "Pitta constitution"
+    },
+    "benefits": [
+      "Enhances immunity",
+      "Improves digestion",
+      "Promotes longevity",
+      "Boosts energy levels",
+      "Improves skin health"
+    ],
+    "indications": [
+      "Weak immunity",
+      "Digestive issues",
+      "Premature aging",
+      "Fatigue",
+      "Skin disorders"
+    ],
+    "contraindications": [
+      "Severe cold and cough",
+      "Acute diarrhea",
+      "Hypoglycemia"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana, Rasayana Adhyaya",
+        "context": "Amalaki is described as a potent rasayana for rejuvenation and enhancing longevity."
+      }
+    ],
+    "confidence": 0.95,
+    "traditional_usage": "Traditionally taken in the morning on an empty stomach with warm water or honey.",
+    "original_name": "amalaki_rasayana"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0905\u0936\u094d\u0935\u0917\u0928\u094d\u0927\u093e \u0932\u0947\u0939\u094d\u092f",
+    "validated_properties": {
+      "type": "kamya rasayana",
+      "primary_action": "rejuvenation and vitality enhancement",
+      "key_ingredients": [
+        "Ashwagandha (Withania somnifera)",
+        "Ghee",
+        "Honey",
+        "Sugar"
+      ],
+      "anupana": "warm milk"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "best_for": "Vata constitution"
+    },
+    "benefits": [
+      "Enhances strength and vitality",
+      "Improves memory and cognitive function",
+      "Boosts immunity",
+      "Reduces stress and anxiety",
+      "Supports reproductive health"
+    ],
+    "indications": [
+      "General debility",
+      "Chronic fatigue",
+      "Stress-related disorders",
+      "Anxiety",
+      "Impotence"
+    ],
+    "contraindications": [
+      "Excessive Kapha conditions",
+      "Pregnancy without medical supervision",
+      "Diabetes (due to sugar content)"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana, Rasayana Adhyaya",
+        "context": "Describes the use of Ashwagandha in rejuvenative therapies for enhancing strength and vitality."
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken in the morning on an empty stomach with warm milk.",
+    "original_name": "ashwagandha_lehya"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0936\u0924\u093e\u0935\u0930\u0940 \u0915\u0932\u094d\u092a",
+    "validated_properties": {
+      "type": "kamya rasayana",
+      "primary_action": "nourishing and rejuvenating",
+      "key_ingredients": [
+        "Shatavari (Asparagus racemosus)",
+        "Sugar",
+        "Ghee"
+      ],
+      "anupana": "Milk"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "best_for": "Pitta constitution"
+    },
+    "benefits": [
+      "Enhances vitality and strength",
+      "Improves reproductive health",
+      "Boosts immunity",
+      "Supports lactation",
+      "Promotes mental clarity"
+    ],
+    "indications": [
+      "General debility",
+      "Reproductive health issues",
+      "Low immunity",
+      "Menopausal symptoms",
+      "Digestive disorders"
+    ],
+    "contraindications": [
+      "Kapha dominance",
+      "Obesity",
+      "Diabetes (due to sugar content)"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana, Rasayana Adhyaya",
+        "context": "Discussion on rejuvenative therapies and formulations"
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken with warm milk, especially in the morning or evening.",
+    "original_name": "shatavari_kalpa"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u092a\u093f\u092a\u094d\u092a\u0932\u0940 \u0930\u0938\u093e\u092f\u0928",
+    "validated_properties": {
+      "type": "naimittika rasayana",
+      "primary_action": "enhances respiratory function and boosts immunity",
+      "key_ingredients": [
+        "Pippali (Piper longum)"
+      ],
+      "anupana": "honey and ghee"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "best_for": "Kapha constitution"
+    },
+    "benefits": [
+      "Improves respiratory health",
+      "Enhances digestion",
+      "Boosts immunity",
+      "Promotes longevity",
+      "Increases strength and vitality"
+    ],
+    "indications": [
+      "Chronic respiratory conditions",
+      "Weak digestion",
+      "Low immunity",
+      "General debility"
+    ],
+    "contraindications": [
+      "High Pitta conditions",
+      "Acute fever",
+      "Pregnancy"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana, Rasayana Adhyaya",
+        "context": "Describes the use of Pippali as a rejuvenative for respiratory and digestive health."
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken with honey and ghee in the morning on an empty stomach for a specific duration.",
+    "original_name": "pippali_rasayana"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0905\u092d\u092f\u093e-\u0906\u092e\u0932\u0915\u0940",
+    "validated_properties": {
+      "type": "naimittika rasayana",
+      "primary_action": "rejuvenation and longevity",
+      "key_ingredients": [
+        "Haritaki (Terminalia chebula)",
+        "Amalaki (Emblica officinalis)"
+      ],
+      "anupana": "warm water or honey"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "best_for": "Tridoshic constitution"
+    },
+    "benefits": [
+      "Enhances digestion and metabolism",
+      "Boosts immunity",
+      "Improves skin health",
+      "Promotes longevity",
+      "Supports mental clarity"
+    ],
+    "indications": [
+      "Digestive disorders",
+      "Weak immunity",
+      "Premature aging",
+      "Skin conditions",
+      "Cognitive decline"
+    ],
+    "contraindications": [
+      "Severe diarrhea",
+      "Acute respiratory infections",
+      "Pregnancy without supervision"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana, Rasayana Adhyaya",
+        "context": "Describes the formulation and benefits of rasayanas for rejuvenation and longevity."
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken in the morning on an empty stomach with warm water or honey.",
+    "original_name": "abhaya_amalaki"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0905\u0917\u0938\u094d\u0924\u094d\u092f \u0939\u0930\u093f\u0924\u0915\u0940",
+    "validated_properties": {
+      "type": "naimittika rasayana",
+      "primary_action": "respiratory rejuvenation and overall vitality",
+      "key_ingredients": [
+        "Haritaki (Terminalia chebula)",
+        "Agastya (Sesbania grandiflora)",
+        "Pippali (Piper longum)"
+      ],
+      "anupana": "warm water or honey"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "best_for": "Kapha constitution"
+    },
+    "benefits": [
+      "Enhances respiratory health",
+      "Improves digestion",
+      "Boosts immunity",
+      "Promotes longevity",
+      "Supports detoxification"
+    ],
+    "indications": [
+      "Chronic respiratory conditions",
+      "Asthma",
+      "Cough",
+      "Digestive issues"
+    ],
+    "contraindications": [
+      "Severe Pitta conditions",
+      "Pregnancy without medical supervision"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana, Rasayana Adhyaya",
+        "context": "Describes the use of Agastya Haritaki as a rejuvenative for respiratory health."
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken in the morning on an empty stomach with warm water or honey.",
+    "original_name": "agastya_haritaki"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0935\u0938\u0928\u094d\u0924\u0915\u0941\u0938\u0941\u092e\u093e\u0915\u0930",
+    "validated_properties": {
+      "type": "kamya rasayana",
+      "primary_action": "rejuvenation and vitality enhancement",
+      "key_ingredients": [
+        "Swarnabhasma (Gold Bhasma)",
+        "Rajata Bhasma (Silver Bhasma)",
+        "Vanga Bhasma (Tin Bhasma)",
+        "Loha Bhasma (Iron Bhasma)",
+        "Abhraka Bhasma (Mica Bhasma)",
+        "Mukta Pishti (Pearl Calcium)"
+      ],
+      "anupana": "milk or honey"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "best_for": "Vata-Pitta constitution"
+    },
+    "benefits": [
+      "Enhances vitality and strength",
+      "Improves cognitive functions",
+      "Supports healthy aging",
+      "Boosts immunity",
+      "Enhances complexion and skin health"
+    ],
+    "indications": [
+      "Diabetes",
+      "General debility",
+      "Impotence",
+      "Nervous disorders",
+      "Respiratory issues"
+    ],
+    "contraindications": [
+      "Pregnancy",
+      "Severe liver disorders",
+      "Acute infections"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Discusses various rasayanas for rejuvenation and vitality."
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken with milk or honey, usually in the morning on an empty stomach.",
+    "original_name": "vasant_kusumakar"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u092e\u0915\u0930\u0927\u094d\u0935\u091c",
+    "validated_properties": {
+      "type": "kamya rasayana",
+      "primary_action": "rejuvenation and vitality enhancement",
+      "key_ingredients": [
+        "Parada (purified mercury)",
+        "Gandhaka (purified sulfur)",
+        "Swarnabhasma (gold ash)"
+      ],
+      "anupana": "milk or honey"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "best_for": "Vata-Pitta constitution"
+    },
+    "benefits": [
+      "Enhances vitality and strength",
+      "Improves immunity",
+      "Supports mental clarity and focus",
+      "Promotes longevity",
+      "Boosts overall energy levels"
+    ],
+    "indications": [
+      "General debility",
+      "Immunity enhancement",
+      "Sexual weakness",
+      "Chronic fatigue"
+    ],
+    "contraindications": [
+      "Pregnancy",
+      "Severe liver disorders",
+      "High Pitta conditions"
+    ],
+    "citations": [
+      {
+        "source": "rasaratna_samucchaya",
+        "chapter": "Rasayana section",
+        "context": "Discusses the preparation and benefits of Makaradhwaj as a potent rejuvenative formula."
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken in small doses with milk or honey, often in the morning on an empty stomach.",
+    "original_name": "makaradhwaj"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0938\u094d\u0935\u0930\u094d\u0923 \u092d\u0938\u094d\u092e",
+    "validated_properties": {
+      "type": "Naimittika Rasayana",
+      "primary_action": "Rejuvenation and longevity",
+      "key_ingredients": [
+        "Gold ash (Swarna Bhasma)"
+      ],
+      "anupana": "Honey or Ghee"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "best_for": "Vata-Pitta constitution"
+    },
+    "benefits": [
+      "Enhances immunity",
+      "Improves cognitive functions",
+      "Promotes longevity",
+      "Boosts vitality and strength",
+      "Supports cardiac health"
+    ],
+    "indications": [
+      "Chronic diseases",
+      "Mental debility",
+      "Immunodeficiency",
+      "Aging-related issues"
+    ],
+    "contraindications": [
+      "Pregnancy",
+      "Acute infections",
+      "Severe liver disorders"
+    ],
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Chikitsa Sthana, Rasayana Adhyaya",
+        "context": "Describes the use of Swarna Bhasma as a rejuvenative and its benefits."
+      }
+    ],
+    "confidence": 0.9,
+    "traditional_usage": "Traditionally taken in small doses mixed with honey or ghee, often under the guidance of an Ayurvedic practitioner.",
+    "original_name": "swarna_bhasma"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0932\u094b\u0939 \u092d\u0938\u094d\u092e (Loha Bhasma)",
+    "validated_properties": {
+      "type": "naimittika rasayana",
+      "primary_action": "rejuvenation and strengthening of the body",
+      "key_ingredients": [
+        "purified iron"
+      ],
+      "anupana": "honey or ghee"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "best_for": "Pitta constitution"
+    },
+    "benefits": [
+      "Enhances overall strength and vitality",
+      "Improves hemoglobin levels",
+      "Supports healthy digestion",
+      "Boosts immunity",
+      "Promotes longevity"
+    ],
+    "indications": [
+      "Anemia",
+      "General debility",
+      "Chronic fatigue",
+      "Weakness"
+    ],
+    "contraindications": [
+      "Iron overload conditions",
+      "Severe liver disorders",
+      "Pregnancy without medical supervision"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Discussion on the use of metals and minerals in rasayana therapy"
+      }
+    ],
+    "confidence": 0.85,
+    "traditional_usage": "Traditionally taken with honey or ghee to enhance absorption and efficacy",
+    "original_name": "loha_bhasma"
+  }
+]

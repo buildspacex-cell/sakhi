@@ -15,6 +15,18 @@ build/
 out/
 coverage/
 
+# Expo / React Native
+.expo/
+ios/
+android/
+*.ipa
+*.apk
+*.aab
+
+# Root-level Expo artifacts (init leftovers)
+/App.js
+/app.json
+
 # Environment files
 .env
 .env.*.local
@@ -42,6 +54,9 @@ logs/
 # Misc
 *.swp
 *.swo
+
+# Temporary docs
+docs/temp/
 
 # Archives / images
 *.zip

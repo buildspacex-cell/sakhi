@@ -1,8 +1,6 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
-import { timelineSeries } from "@ui/soulViewModel";
+import { timelineSeries } from "../../lib/soulViewModel";
 import { VictoryChart, VictoryLine, VictoryTheme, VictoryLegend } from "victory-native";
 
 export default function SoulTimelineScreen() {

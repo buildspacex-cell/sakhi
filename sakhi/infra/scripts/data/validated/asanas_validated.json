@@ -1,0 +1,2613 @@
+[
+  {
+    "validated": true,
+    "name_sanskrit": "T\u0101\u1e0d\u0101sana",
+    "english_name": "Mountain Pose",
+    "validated_properties": {
+      "category": "standing",
+      "level": "beginner",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale to lengthen, exhale to ground"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata"
+      ],
+      "may_aggravate": [],
+      "mechanism": "T\u0101\u1e0d\u0101sana provides stability and grounding, which helps to calm the erratic nature of vata. The focus on alignment and balance enhances prana flow, stabilizing the mind and body."
+    },
+    "benefits": [
+      "Improves posture",
+      "Enhances balance and stability",
+      "Increases awareness and concentration",
+      "Strengthens legs and core",
+      "Promotes a sense of grounding"
+    ],
+    "contraindications": [
+      "Severe balance disorders",
+      "Recent or chronic injury to the feet, ankles, or knees"
+    ],
+    "preparatory_poses": [
+      "Samasthiti",
+      "Urdhva Hastasana"
+    ],
+    "follow_up_poses": [
+      "Uttanasana",
+      "Virabhadrasana I"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Standing postures are foundational for grounding and stability"
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "For beginners or those with balance issues, practice near a wall for support.",
+    "original": {
+      "name": "tadasana",
+      "category": "standing",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "V\u1e5bk\u1e63\u0101sana",
+    "english_name": "Tree Pose",
+    "validated_properties": {
+      "category": "standing",
+      "level": "beginner",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "steady breathing, maintain balance with slow, deep breaths"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata"
+      ],
+      "may_aggravate": [
+        "none"
+      ],
+      "mechanism": "V\u1e5bk\u1e63\u0101sana promotes grounding and stability, which counteracts the mobile and erratic nature of vata dosha. By focusing on balance and stillness, it helps to calm the mind and nervous system, which are often affected by vata imbalance."
+    },
+    "benefits": [
+      "Improves balance and stability",
+      "Strengthens the legs and core",
+      "Enhances concentration and focus",
+      "Promotes a sense of grounding",
+      "Calms the nervous system"
+    ],
+    "contraindications": [
+      "Recent or chronic knee or hip injury",
+      "Severe balance disorders"
+    ],
+    "preparatory_poses": [
+      "Tadasana (Mountain Pose)",
+      "Uttanasana (Standing Forward Bend)"
+    ],
+    "follow_up_poses": [
+      "Tadasana (Mountain Pose)",
+      "Virabhadrasana I (Warrior I)"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "While V\u1e5bk\u1e63\u0101sana is not explicitly mentioned, the text emphasizes the importance of standing poses for balance and grounding."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Vata Management",
+        "context": "Grounding practices are recommended to pacify vata dosha."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a wall or chair for support if balance is challenging.",
+    "original": {
+      "name": "vrikshasana",
+      "category": "standing",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Utt\u0101n\u0101sana",
+    "english_name": "Standing Forward Bend",
+    "validated_properties": {
+      "category": "forward_bend",
+      "level": "beginner",
+      "hold_time_seconds": "15-60",
+      "breath_pattern": "exhale as you fold forward, inhale to lengthen the spine"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata"
+      ],
+      "may_aggravate": [
+        "kapha"
+      ],
+      "mechanism": "Uttanasana helps to ground the body and calm the mind, which can be beneficial for pacifying vata dosha. The forward bending motion encourages introspection and relaxation, balancing the air and space elements associated with vata. However, it may increase kapha if held for too long or practiced excessively, as it can induce lethargy."
+    },
+    "benefits": [
+      "Stretches the hamstrings and calves",
+      "Relieves tension in the spine and neck",
+      "Calms the mind and reduces stress",
+      "Improves digestion",
+      "Stimulates the liver and kidneys"
+    ],
+    "contraindications": [
+      "Back injuries",
+      "Hamstring injuries",
+      "High blood pressure",
+      "Glaucoma"
+    ],
+    "preparatory_poses": [
+      "Adho Mukha Svanasana (Downward-Facing Dog)",
+      "Tadasana (Mountain Pose)"
+    ],
+    "follow_up_poses": [
+      "Adho Mukha Svanasana (Downward-Facing Dog)",
+      "Tadasana (Mountain Pose)"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)",
+      "Svadhisthana (Sacral Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1, Verse 27",
+        "context": "Describes the benefits of forward bends in calming the mind and balancing the body."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2, Verse 19",
+        "context": "Mentions the importance of forward bends in the purification of nadis and calming the nervous system."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a yoga block under the hands or bend the knees slightly to accommodate tight hamstrings or lower back issues.",
+    "original": {
+      "name": "uttanasana",
+      "category": "forward_bend",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Pa\u015bcimott\u0101n\u0101sana",
+    "english_name": "Seated Forward Bend",
+    "validated_properties": {
+      "category": "forward_bend",
+      "level": "intermediate",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "exhale as you fold forward, inhale to lengthen the spine"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "pitta"
+      ],
+      "may_aggravate": [
+        "kapha"
+      ],
+      "mechanism": "This asana helps in calming the nervous system and promoting introspection, which balances vata. The cooling and calming nature of the pose can also help in reducing excess pitta. However, due to its grounding nature, it may increase kapha if held for too long or practiced excessively."
+    },
+    "benefits": [
+      "Stretches the spine, shoulders, and hamstrings",
+      "Calms the mind and helps relieve stress",
+      "Improves digestion",
+      "Stimulates the liver, kidneys, ovaries, and uterus",
+      "Soothes headache and reduces fatigue"
+    ],
+    "contraindications": [
+      "Asthma",
+      "Diarrhea",
+      "Back injury",
+      "Pregnancy"
+    ],
+    "preparatory_poses": [
+      "Adho Mukha Svanasana (Downward-Facing Dog)",
+      "Janu Sirsasana (Head-to-Knee Forward Bend)"
+    ],
+    "follow_up_poses": [
+      "Ardha Matsyendrasana (Half Lord of the Fishes Pose)",
+      "Purvottanasana (Upward Plank Pose)"
+    ],
+    "chakra_activation": [
+      "Svadhisthana (Sacral Chakra)",
+      "Manipura (Solar Plexus Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1, Verse 29",
+        "context": "Describes the benefits and practice of Pa\u015bcimott\u0101n\u0101sana as a key forward bend."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2, Verse 26",
+        "context": "Mentions the physical and mental benefits of practicing Pa\u015bcimott\u0101n\u0101sana."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a strap around the feet if you cannot reach them, or bend the knees slightly to maintain a straight spine.",
+    "original": {
+      "name": "paschimottanasana",
+      "category": "forward_bend",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "B\u0101l\u0101sana",
+    "english_name": "Child's Pose",
+    "validated_properties": {
+      "category": "restorative",
+      "level": "beginner",
+      "hold_time_seconds": "30-120",
+      "breath_pattern": "inhale to prepare, exhale to fold forward, maintain slow and steady breathing"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata"
+      ],
+      "may_aggravate": [],
+      "mechanism": "B\u0101l\u0101sana is grounding and calming, which helps to stabilize the erratic and mobile qualities of vata. The forward bending and inward focus promote relaxation and a sense of security, counteracting vata's tendency towards anxiety and restlessness."
+    },
+    "benefits": [
+      "Calms the mind and reduces stress",
+      "Gently stretches the hips, thighs, and ankles",
+      "Relieves back and neck pain when done with head and torso supported",
+      "Promotes relaxation and helps alleviate fatigue",
+      "Encourages introspection and emotional release"
+    ],
+    "contraindications": [
+      "Knee injuries",
+      "Pregnancy (may require modifications)",
+      "Severe back problems"
+    ],
+    "preparatory_poses": [
+      "Sukhasana",
+      "Adho Mukha Svanasana"
+    ],
+    "follow_up_poses": [
+      "Bhujangasana",
+      "Adho Mukha Svanasana"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Not specifically mentioned, but principles of grounding and calming align with classical teachings",
+        "context": "Classical texts emphasize the importance of grounding and calming practices for balancing vata"
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a bolster or blanket under the torso for additional support, especially for those with knee or back issues.",
+    "original": {
+      "name": "balasana",
+      "category": "restorative",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Supta Baddha Konasana (IAST: Supta Baddha Ko\u1e47\u0101sana)",
+    "english_name": "Reclining Bound Angle Pose",
+    "validated_properties": {
+      "category": "restorative",
+      "level": "beginner",
+      "hold_time_seconds": "30-300",
+      "breath_pattern": "natural breathing, focus on deep inhales and exhales"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata"
+      ],
+      "may_aggravate": [],
+      "mechanism": "This pose opens the hips and groin, promoting relaxation and grounding, which helps to balance the erratic and mobile qualities of Vata dosha."
+    },
+    "benefits": [
+      "Opens the hips and groin",
+      "Reduces stress and anxiety",
+      "Improves circulation",
+      "Enhances relaxation",
+      "Supports reproductive health"
+    ],
+    "contraindications": [
+      "Severe lower back pain",
+      "Hip injuries",
+      "Knee injuries"
+    ],
+    "preparatory_poses": [
+      "Baddha Konasana",
+      "Supta Padangusthasana"
+    ],
+    "follow_up_poses": [
+      "Savasana",
+      "Balasana"
+    ],
+    "chakra_activation": [
+      "Svadhisthana (Sacral Chakra)",
+      "Muladhara (Root Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "While Supta Baddha Konasana is not explicitly mentioned, the principles of relaxation and grounding align with the text's emphasis on balancing prana."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Vata Balancing Practices",
+        "context": "The pose's calming effect on the nervous system is consistent with Ayurvedic recommendations for pacifying Vata."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use bolsters or blankets under the knees for support if there is discomfort in the hips or groin.",
+    "original": {
+      "name": "supta_baddha_konasana",
+      "category": "restorative",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Vipar\u012bta Kara\u1e47\u012b",
+    "english_name": "Legs-Up-the-Wall Pose",
+    "validated_properties": {
+      "category": "inversion",
+      "level": "beginner",
+      "hold_time_seconds": "300-900",
+      "breath_pattern": "natural breathing"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "may_aggravate": [],
+      "mechanism": "By promoting relaxation and reducing stress, Viparita Karani helps in calming the nervous system, which is beneficial for balancing Vata. The cooling nature of the pose also helps in pacifying Pitta."
+    },
+    "benefits": [
+      "Improves circulation",
+      "Reduces stress and anxiety",
+      "Relieves tired legs and feet",
+      "Aids in digestion",
+      "Promotes relaxation"
+    ],
+    "contraindications": [
+      "Glaucoma",
+      "Serious neck or back problems",
+      "Pregnancy (without guidance)",
+      "High blood pressure (without support)"
+    ],
+    "preparatory_poses": [
+      "Supta Baddha Konasana",
+      "Setu Bandhasana"
+    ],
+    "follow_up_poses": [
+      "Savasana",
+      "Supta Matsyendrasana"
+    ],
+    "chakra_activation": [
+      "Sahasrara",
+      "Ajna"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 3",
+        "context": "Describes inversions and their benefits for energy flow and rejuvenation."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Dosha Balancing Practices",
+        "context": "Discusses the calming effects of inversions on Vata and Pitta."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a bolster or folded blanket under the hips for support, especially for beginners or those with lower back issues.",
+    "original": {
+      "name": "viparita_karani",
+      "category": "inversion",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015aav\u0101sana (\u0936\u0935\u093e\u0938\u0928)",
+    "english_name": "Corpse Pose",
+    "validated_properties": {
+      "category": "restorative",
+      "level": "beginner",
+      "hold_time_seconds": "300-900",
+      "breath_pattern": "natural breathing, no specific synchronization"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata"
+      ],
+      "may_aggravate": [],
+      "mechanism": "\u015aav\u0101sana promotes deep relaxation and stillness, which helps to ground the restless and mobile qualities of Vata. It allows prana to flow evenly throughout the body, calming the nervous system and reducing stress."
+    },
+    "benefits": [
+      "Reduces stress and anxiety",
+      "Promotes relaxation and mental clarity",
+      "Lowers blood pressure",
+      "Improves sleep quality",
+      "Enhances body awareness"
+    ],
+    "contraindications": [
+      "Severe depression (may need guidance)",
+      "Back injury (modify with support)"
+    ],
+    "preparatory_poses": [
+      "Adho Mukha Svanasana (Downward-Facing Dog)",
+      "Balasana (Child's Pose)"
+    ],
+    "follow_up_poses": [
+      "Sukhasana (Easy Pose)",
+      "Tadasana (Mountain Pose)"
+    ],
+    "chakra_activation": [
+      "Sahasrara (Crown Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1, Verse 32",
+        "context": "Describes the importance of relaxation and the calming effects of \u015aav\u0101sana."
+      }
+    ],
+    "confidence": 0.95,
+    "modifications": "Use a bolster under the knees for lower back support or a blanket under the head for neck support.",
+    "original": {
+      "name": "shavasana",
+      "category": "restorative",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0100p\u0101n\u0101sana",
+    "english_name": "Knees to Chest Pose",
+    "validated_properties": {
+      "category": "supine",
+      "level": "beginner",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "exhale while drawing knees to chest, inhale while releasing"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata"
+      ],
+      "may_aggravate": [],
+      "mechanism": "\u0100p\u0101n\u0101sana helps to ground the body and mind, promoting the downward flow of energy (apana vayu), which is beneficial for balancing Vata dosha, often associated with movement and instability."
+    },
+    "benefits": [
+      "Relieves lower back tension",
+      "Aids digestion and elimination",
+      "Calms the mind",
+      "Reduces stress and anxiety",
+      "Improves circulation in the pelvic region"
+    ],
+    "contraindications": [
+      "Recent abdominal surgery",
+      "Severe knee or hip issues",
+      "Pregnancy (consult a healthcare provider)"
+    ],
+    "preparatory_poses": [
+      "Savasana (Corpse Pose)",
+      "Supta Tadasana (Reclined Mountain Pose)"
+    ],
+    "follow_up_poses": [
+      "Setu Bandhasana (Bridge Pose)",
+      "Supta Matsyendrasana (Reclined Spinal Twist)"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Vata Dosha Management",
+        "context": "Discusses the grounding effects of poses that promote apana vayu."
+      }
+    ],
+    "confidence": 0.85,
+    "modifications": "Use a strap around the shins if reaching the knees is difficult; place a folded blanket under the head for neck support.",
+    "original": {
+      "name": "apanasana",
+      "category": "supine",
+      "pacifies": "vata",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Supta P\u0101d\u0101\u1e45gu\u1e63\u1e6dh\u0101sana",
+    "english_name": "Reclining Hand-to-Big-Toe Pose",
+    "validated_properties": {
+      "category": "supine",
+      "level": "intermediate",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale to prepare, exhale to extend the leg"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata"
+      ],
+      "may_aggravate": [],
+      "mechanism": "This asana involves grounding and stretching, which helps in stabilizing and calming the erratic nature of Vata dosha by enhancing circulation and calming the nervous system."
+    },
+    "benefits": [
+      "Stretches the hamstrings and calves",
+      "Improves flexibility in the hips",
+      "Relieves backache",
+      "Calms the mind",
+      "Improves digestion"
+    ],
+    "contraindications": [
+      "Hamstring injuries",
+      "Lower back issues",
+      "Pregnancy (without modifications)"
+    ],
+    "preparatory_poses": [
+      "Supta Tadasana",
+      "Adho Mukha Svanasana"
+    ],
+    "follow_up_poses": [
+      "Anantasana",
+      "Janu Sirsasana"
+    ],
+    "chakra_activation": [
+      "Muladhara",
+      "Svadhisthana"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "While not explicitly mentioned, the principles of grounding and stretching align with the practices described for calming Vata."
+      }
+    ],
+    "confidence": 0.85,
+    "modifications": "Use a strap around the foot for those with tight hamstrings or limited flexibility.",
+    "original": {
+      "name": "supta_padangusthasana",
+      "category": "supine",
+      "pacifies": "vata",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ardha Candr\u0101sana",
+    "english_name": "Half Moon Pose",
+    "validated_properties": {
+      "category": "standing",
+      "level": "intermediate",
+      "hold_time_seconds": "15-30",
+      "breath_pattern": "inhale to extend, exhale to deepen the pose"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta"
+      ],
+      "may_aggravate": [
+        "vata"
+      ],
+      "mechanism": "Ardha Chandr\u0101sana opens the chest and promotes balance, which can help cool and stabilize the fiery nature of pitta. However, the balancing aspect may increase vata if not performed with stability and grounding."
+    },
+    "benefits": [
+      "Improves balance and coordination",
+      "Strengthens the legs, ankles, and core",
+      "Opens the chest and shoulders",
+      "Enhances concentration and focus",
+      "Stretches the hamstrings and groin"
+    ],
+    "contraindications": [
+      "Low blood pressure",
+      "Headaches",
+      "Insomnia",
+      "Neck or shoulder injuries"
+    ],
+    "preparatory_poses": [
+      "Utthita Trikonasana (Extended Triangle Pose)",
+      "Parsvottanasana (Intense Side Stretch Pose)"
+    ],
+    "follow_up_poses": [
+      "Virabhadrasana II (Warrior II Pose)",
+      "Utthita Parsvakonasana (Extended Side Angle Pose)"
+    ],
+    "chakra_activation": [
+      "Anahata (Heart Chakra)",
+      "Manipura (Solar Plexus Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Discusses the benefits of standing poses and their effects on balance and concentration."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Chapter on Yoga and Doshas",
+        "context": "Explains how certain poses can balance doshas, particularly pitta."
+      }
+    ],
+    "confidence": 0.85,
+    "modifications": "Use a block under the bottom hand for support if balance is challenging. Keep the gaze downwards to maintain stability.",
+    "original": {
+      "name": "ardha_chandrasana",
+      "category": "standing",
+      "pacifies": "pitta",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0924\u094d\u0930\u093f\u0915\u094b\u0923\u093e\u0938\u0928 (triko\u1e47\u0101sana)",
+    "english_name": "Triangle Pose",
+    "validated_properties": {
+      "category": "standing",
+      "level": "beginner",
+      "hold_time_seconds": "15-30",
+      "breath_pattern": "inhale to extend, exhale to move into the pose"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "may_aggravate": [
+        "vata"
+      ],
+      "mechanism": "Trikonasana helps in balancing the heat and intensity associated with pitta by promoting a sense of stability and grounding, which also helps reduce kapha. However, the expansive nature of the pose can sometimes increase vata if not performed with proper grounding."
+    },
+    "benefits": [
+      "Stretches and strengthens the legs, hips, and spine",
+      "Improves balance and stability",
+      "Stimulates abdominal organs",
+      "Relieves stress",
+      "Enhances digestion"
+    ],
+    "contraindications": [
+      "Low blood pressure",
+      "Migraine",
+      "Diarrhea",
+      "Neck injuries (avoid turning the head)"
+    ],
+    "preparatory_poses": [
+      "Tadasana (Mountain Pose)",
+      "Utthita Parsvakonasana (Extended Side Angle Pose)"
+    ],
+    "follow_up_poses": [
+      "Parsvottanasana (Intense Side Stretch Pose)",
+      "Ardha Chandrasana (Half Moon Pose)"
+    ],
+    "chakra_activation": [
+      "Manipura (Solar Plexus Chakra)",
+      "Anahata (Heart Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "While not explicitly mentioned, the principles of balance and stability are foundational."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "General principles of dosha balancing",
+        "context": "Discusses the impact of physical postures on dosha balance."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a block under the hand for support if reaching the floor is difficult. Keep the gaze forward instead of up if there are neck issues.",
+    "original": {
+      "name": "trikonasana",
+      "category": "standing",
+      "pacifies": "pitta",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Bhujang\u0101sana",
+    "english_name": "Cobra Pose",
+    "validated_properties": {
+      "category": "backbend",
+      "level": "beginner",
+      "hold_time_seconds": "15-30",
+      "breath_pattern": "inhale while lifting the chest, exhale while lowering"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "pitta"
+      ],
+      "mechanism": "Bhujangasana opens the chest and stimulates the digestive fire, which can balance kapha by reducing stagnation and lethargy. However, it may increase heat in the body, potentially aggravating pitta if held too long or practiced excessively."
+    },
+    "benefits": [
+      "Strengthens the spine",
+      "Stretches the chest, lungs, shoulders, and abdomen",
+      "Improves posture",
+      "Stimulates abdominal organs",
+      "Relieves stress and fatigue"
+    ],
+    "contraindications": [
+      "Pregnancy",
+      "Carpal tunnel syndrome",
+      "Recent abdominal surgery",
+      "Back injury"
+    ],
+    "preparatory_poses": [
+      "Salabhasana",
+      "Setu Bandhasana"
+    ],
+    "follow_up_poses": [
+      "Adho Mukha Svanasana",
+      "Balasana"
+    ],
+    "chakra_activation": [
+      "Manipura",
+      "Anahata"
+    ],
+    "citations": [
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2",
+        "context": "Describes the practice and benefits of Bhujangasana"
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "For beginners or those with back pain, keep the elbows slightly bent and do not lift the chest too high. Use a folded blanket under the pelvis for support.",
+    "original": {
+      "name": "bhujangasana",
+      "category": "backbend",
+      "pacifies": "pitta",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Matsy\u0101sana",
+    "english_name": "Fish Pose",
+    "validated_properties": {
+      "category": "supine",
+      "level": "intermediate",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale to lift chest, exhale to deepen"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "vata"
+      ],
+      "may_aggravate": [
+        "kapha"
+      ],
+      "mechanism": "Matsy\u0101sana opens the chest and throat, promoting circulation and cooling, which helps balance pitta. The gentle backbend and chest expansion can also stimulate vata, while the active nature of the pose may not be ideal for kapha if held too long."
+    },
+    "benefits": [
+      "Stretches the chest and throat",
+      "Improves posture",
+      "Relieves tension in the neck and shoulders",
+      "Stimulates the thyroid gland",
+      "Enhances lung capacity"
+    ],
+    "contraindications": [
+      "High or low blood pressure",
+      "Migraine",
+      "Serious neck or back injury"
+    ],
+    "preparatory_poses": [
+      "Bhujangasana",
+      "Setu Bandhasana"
+    ],
+    "follow_up_poses": [
+      "Sarvangasana",
+      "Halasana"
+    ],
+    "chakra_activation": [
+      "Anahata (Heart Chakra)",
+      "Vishuddha (Throat Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Matsy\u0101sana is described as a pose that helps to balance the body's energies and is beneficial for the throat and chest."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2",
+        "context": "The text mentions Matsy\u0101sana as a beneficial posture for respiratory health and energy flow."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a bolster or blanket under the back for support if experiencing discomfort in the neck or lower back.",
+    "original": {
+      "name": "matsyasana",
+      "category": "backbend",
+      "pacifies": "pitta",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Setu Bandh\u0101sana",
+    "english_name": "Bridge Pose",
+    "validated_properties": {
+      "category": "backbend",
+      "level": "beginner",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale to lift, exhale to release"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "vata"
+      ],
+      "may_aggravate": [
+        "kapha"
+      ],
+      "mechanism": "Setu Bandh\u0101sana opens the chest and heart area, which helps to release excess heat and tension associated with pitta. It also promotes grounding and stability, which can help balance vata. However, the pose's potential to increase heaviness and stagnation may aggravate kapha if held for too long or practiced excessively."
+    },
+    "benefits": [
+      "Strengthens the back muscles",
+      "Opens the chest and improves lung capacity",
+      "Stimulates the thyroid gland",
+      "Reduces anxiety and stress",
+      "Improves digestion"
+    ],
+    "contraindications": [
+      "Neck injuries",
+      "Recent back surgery",
+      "Shoulder injuries"
+    ],
+    "preparatory_poses": [
+      "Supta Baddha Konasana",
+      "Supta Padangusthasana"
+    ],
+    "follow_up_poses": [
+      "Matsyasana",
+      "Paschimottanasana"
+    ],
+    "chakra_activation": [
+      "Anahata (Heart Chakra)",
+      "Vishuddha (Throat Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 2",
+        "context": "Discusses the benefits of backbends and their effects on the spine and energy flow."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Chapter on Yoga and Doshas",
+        "context": "Explains how yoga poses can balance doshas through physical and energetic alignment."
+      }
+    ],
+    "confidence": 0.85,
+    "modifications": "Use a block or bolster under the sacrum for support if there is discomfort in the lower back.",
+    "original": {
+      "name": "setu_bandhasana",
+      "category": "backbend",
+      "pacifies": "pitta",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "J\u0101nu \u015a\u012br\u1e63\u0101sana",
+    "english_name": "Head-to-Knee Pose",
+    "validated_properties": {
+      "category": "seated",
+      "level": "beginner",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "exhale as you fold forward, inhale to lengthen the spine"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "vata"
+      ],
+      "may_aggravate": [
+        "kapha"
+      ],
+      "mechanism": "This asana promotes a calming effect on the nervous system, reducing heat and stress associated with pitta. The forward bend encourages introspection and grounding, which can balance vata. However, the static nature of the pose may increase kapha if held for too long without dynamic movement."
+    },
+    "benefits": [
+      "Stretches the spine, shoulders, hamstrings, and groins",
+      "Calms the mind and helps relieve mild depression",
+      "Improves digestion",
+      "Stimulates the liver and kidneys",
+      "Relieves anxiety, fatigue, headache, menstrual discomfort"
+    ],
+    "contraindications": [
+      "Asthma",
+      "Diarrhea",
+      "Knee injuries"
+    ],
+    "preparatory_poses": [
+      "Baddha Konasana",
+      "Paschimottanasana"
+    ],
+    "follow_up_poses": [
+      "Ardha Matsyendrasana",
+      "Paschimottanasana"
+    ],
+    "chakra_activation": [
+      "Svadhisthana",
+      "Manipura"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1, Verse 30",
+        "context": "Describes the benefits and practice of seated forward bends."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2, Verse 24",
+        "context": "Mentions the calming effects of forward bends."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a strap around the foot for tight hamstrings or sit on a folded blanket to elevate the hips.",
+    "original": {
+      "name": "janu_sirsasana",
+      "category": "forward_bend",
+      "pacifies": "pitta",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Supta V\u012br\u0101sana",
+    "english_name": "Reclining Hero Pose",
+    "validated_properties": {
+      "category": "supine",
+      "level": "intermediate",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "natural breathing, focus on deep exhalation"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta"
+      ],
+      "may_aggravate": [
+        "kapha"
+      ],
+      "mechanism": "Supta V\u012br\u0101sana opens the chest and abdomen, promoting cooling and calming effects which help balance the heat and intensity of pitta. However, due to its calming nature, it may increase stagnation in kapha if held too long or practiced excessively."
+    },
+    "benefits": [
+      "Stretches the abdomen and thighs",
+      "Opens the chest and improves respiratory function",
+      "Reduces fatigue and stress",
+      "Improves digestion",
+      "Relieves menstrual discomfort"
+    ],
+    "contraindications": [
+      "Knee or ankle injuries",
+      "Lower back pain",
+      "Pregnancy (without modifications)"
+    ],
+    "preparatory_poses": [
+      "V\u012br\u0101sana",
+      "B\u0101l\u0101sana",
+      "Supta Baddha Ko\u1e47\u0101sana"
+    ],
+    "follow_up_poses": [
+      "Adho Mukha \u015av\u0101n\u0101sana",
+      "Utt\u0101n\u0101sana",
+      "Setu Bandh\u0101sana"
+    ],
+    "chakra_activation": [
+      "An\u0101hata (Heart Chakra)",
+      "Sv\u0101dhi\u1e63\u1e6dh\u0101na (Sacral Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Discusses the benefits of seated and supine poses for calming the mind and balancing doshas."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Chapter on Pitta Dosha",
+        "context": "Explains how cooling and calming practices can help balance pitta."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a bolster or blanket under the back for support, or keep the knees together for less strain on the ankles and knees.",
+    "original": {
+      "name": "supta_virasana",
+      "category": "restorative",
+      "pacifies": "pitta",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015a\u012btal\u012b Pr\u0101\u1e47\u0101y\u0101ma",
+    "english_name": "Cooling Breath",
+    "validated_properties": {
+      "category": "pranayama",
+      "level": "beginner",
+      "hold_time_seconds": "typically practiced for 2-5 minutes",
+      "breath_pattern": "inhale through rolled tongue, exhale through nostrils"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta"
+      ],
+      "may_aggravate": [
+        "Kapha"
+      ],
+      "mechanism": "\u015a\u012btal\u012b Pr\u0101\u1e47\u0101y\u0101ma cools the body and mind, reducing internal heat and calming the fiery nature of Pitta. It increases the moisture and coolness, which can potentially increase Kapha if practiced excessively."
+    },
+    "benefits": [
+      "Reduces body heat",
+      "Calms the mind",
+      "Alleviates stress",
+      "Improves focus",
+      "Balances emotions"
+    ],
+    "contraindications": [
+      "Low blood pressure",
+      "Respiratory disorders like asthma",
+      "Chronic cold or congestion"
+    ],
+    "preparatory_poses": [
+      "Sukhasana (Easy Pose)",
+      "Tadasana (Mountain Pose)"
+    ],
+    "follow_up_poses": [
+      "Nadi Shodhana Pranayama (Alternate Nostril Breathing)",
+      "Shavasana (Corpse Pose)"
+    ],
+    "chakra_activation": [
+      "Vishuddha (Throat Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 2",
+        "context": "\u015a\u012btal\u012b is described as a cooling breath technique that balances internal heat."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 5",
+        "context": "Discusses the effects of various pr\u0101\u1e47\u0101y\u0101ma techniques, including cooling practices."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "If rolling the tongue is difficult, practice with pursed lips to simulate the cooling effect.",
+    "original": {
+      "name": "sitali_pranayama",
+      "category": "pranayama",
+      "pacifies": "pitta",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Chandra Bhedana Pr\u0101\u1e47\u0101y\u0101ma",
+    "english_name": "Moon Piercing Breath",
+    "validated_properties": {
+      "category": "pranayama",
+      "level": "intermediate",
+      "hold_time_seconds": "5-10 minutes",
+      "breath_pattern": "inhale through left nostril, exhale through right nostril"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta"
+      ],
+      "may_aggravate": [
+        "Kapha"
+      ],
+      "mechanism": "Chandra Bhedana Pr\u0101\u1e47\u0101y\u0101ma cools the body and calms the mind, which helps to balance the fiery nature of Pitta. It may increase Kapha due to its cooling and calming effects, which can lead to lethargy if overdone."
+    },
+    "benefits": [
+      "Calms the nervous system",
+      "Reduces stress and anxiety",
+      "Balances body temperature",
+      "Enhances mental clarity",
+      "Improves focus and concentration"
+    ],
+    "contraindications": [
+      "Cold or sinus congestion",
+      "Low blood pressure",
+      "Kapha imbalance"
+    ],
+    "preparatory_poses": [
+      "Nadi Shodhana Pranayama",
+      "Sukhasana (Easy Pose)"
+    ],
+    "follow_up_poses": [
+      "Surya Bhedana Pranayama",
+      "Savasana (Corpse Pose)"
+    ],
+    "chakra_activation": [
+      "Ajna (Third Eye Chakra)",
+      "Sahasrara (Crown Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 2",
+        "context": "Describes various pranayama techniques and their effects on the body and mind."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Pranayama and Dosha Balancing",
+        "context": "Explains the impact of different pranayama practices on the doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "For beginners, practice for shorter durations and ensure a comfortable seated position to maintain focus on the breath.",
+    "original": {
+      "name": "chandra_bhedana",
+      "category": "pranayama",
+      "pacifies": "pitta",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Salamba Sarvangasana",
+    "english_name": "Supported Shoulderstand",
+    "validated_properties": {
+      "category": "inversion",
+      "level": "intermediate",
+      "hold_time_seconds": "30-300",
+      "breath_pattern": "steady, slow breathing; typically inhale to lift, exhale to hold"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "vata"
+      ],
+      "may_aggravate": [
+        "kapha"
+      ],
+      "mechanism": "Inversions like Salamba Sarvangasana help cool the body and calm the mind, reducing excess heat and activity associated with pitta. They also promote circulation and lymphatic drainage, which can balance vata. However, the pressure on the neck and the inverted position can potentially increase kapha if held for too long or practiced excessively."
+    },
+    "benefits": [
+      "Improves circulation",
+      "Calms the nervous system",
+      "Stimulates the thyroid gland",
+      "Enhances concentration",
+      "Relieves stress and mild depression"
+    ],
+    "contraindications": [
+      "Neck injury",
+      "High blood pressure",
+      "Pregnancy",
+      "Menstruation",
+      "Glaucoma"
+    ],
+    "preparatory_poses": [
+      "Setu Bandhasana (Bridge Pose)",
+      "Halasana (Plow Pose)",
+      "Viparita Karani (Legs-Up-the-Wall Pose)"
+    ],
+    "follow_up_poses": [
+      "Matsyasana (Fish Pose)",
+      "Paschimottanasana (Seated Forward Bend)",
+      "Balasana (Child's Pose)"
+    ],
+    "chakra_activation": [
+      "Vishuddha (Throat Chakra)",
+      "Sahasrara (Crown Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 3",
+        "context": "Describes the benefits and technique of inversions, including shoulderstand."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 3",
+        "context": "Discusses the importance of inversions for health and vitality."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a folded blanket under the shoulders to protect the neck; practice against a wall for additional support.",
+    "original": {
+      "name": "supported_shoulderstand",
+      "category": "inversion",
+      "pacifies": "pitta",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "S\u016brya Namask\u0101ra",
+    "english_name": "Sun Salutation",
+    "validated_properties": {
+      "category": "sequence",
+      "level": "beginner",
+      "hold_time_seconds": "dynamic flow, typically not held",
+      "breath_pattern": "inhale and exhale synchronized with movement"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "pitta"
+      ],
+      "mechanism": "S\u016brya Namask\u0101ra generates heat and stimulates circulation, which helps to balance kapha by reducing stagnation and lethargy. However, excessive practice may increase pitta due to its heating nature."
+    },
+    "benefits": [
+      "Improves cardiovascular health",
+      "Enhances flexibility and strength",
+      "Boosts energy and reduces fatigue",
+      "Promotes mental clarity and focus",
+      "Aids in detoxification through increased circulation"
+    ],
+    "contraindications": [
+      "High blood pressure",
+      "Heart conditions",
+      "Recent surgery",
+      "Severe back pain or injury"
+    ],
+    "preparatory_poses": [
+      "T\u0101\u1e0d\u0101sana (Mountain Pose)",
+      "Adho Mukha \u015av\u0101n\u0101sana (Downward-Facing Dog)"
+    ],
+    "follow_up_poses": [
+      "\u015aav\u0101sana (Corpse Pose)",
+      "V\u1e5bk\u1e63\u0101sana (Tree Pose)"
+    ],
+    "chakra_activation": [
+      "Manip\u016bra (Solar Plexus Chakra)",
+      "An\u0101hata (Heart Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Not explicitly mentioned as a sequence, but elements are found in various asanas",
+        "context": "The sequence is a modern development, but its components are rooted in classical asanas."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "General principles of balancing doshas through physical activity",
+        "context": "Exercise and movement are recommended to balance kapha dosha."
+      }
+    ],
+    "confidence": 0.85,
+    "modifications": "For beginners, use blocks for support in forward bends or step back instead of jumping to reduce impact.",
+    "original": {
+      "name": "surya_namaskar",
+      "category": "sequence",
+      "pacifies": "kapha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "V\u012brabhadr\u0101sana I",
+    "english_name": "Warrior Pose I",
+    "validated_properties": {
+      "category": "standing",
+      "level": "beginner",
+      "hold_time_seconds": "15-30",
+      "breath_pattern": "inhale to raise arms, exhale to deepen the pose"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "pitta"
+      ],
+      "mechanism": "This asana invigorates and energizes the body, promoting circulation and warmth, which can help balance the heavy and sluggish qualities of kapha. However, its heating nature may increase pitta if held for too long or practiced excessively."
+    },
+    "benefits": [
+      "Strengthens the legs, arms, and back",
+      "Improves focus and balance",
+      "Opens the chest and lungs",
+      "Enhances stamina and endurance",
+      "Promotes grounding and stability"
+    ],
+    "contraindications": [
+      "High blood pressure",
+      "Heart conditions",
+      "Shoulder or neck injuries",
+      "Knee problems"
+    ],
+    "preparatory_poses": [
+      "Tadasana",
+      "Adho Mukha Svanasana"
+    ],
+    "follow_up_poses": [
+      "V\u012brabhadr\u0101sana II",
+      "Utthita Trikonasana"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)",
+      "Anahata (Heart Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "While V\u012brabhadr\u0101sana I is not explicitly mentioned, standing poses are discussed in the context of building strength and stability."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Tridosha theory",
+        "context": "Balancing doshas through physical activity and breath work."
+      }
+    ],
+    "confidence": 0.85,
+    "modifications": "Use a chair or wall for support if balance is an issue; shorten the stance to reduce strain on the knees.",
+    "original": {
+      "name": "virabhadrasana_i",
+      "category": "standing",
+      "pacifies": "kapha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "V\u012brabhadr\u0101sana II",
+    "english_name": "Warrior II Pose",
+    "validated_properties": {
+      "category": "standing",
+      "level": "beginner",
+      "hold_time_seconds": "15-60",
+      "breath_pattern": "inhale to enter, exhale to hold"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "vata"
+      ],
+      "mechanism": "This asana opens the chest and encourages deep breathing, which helps to stimulate circulation and invigorate the body, counteracting kapha's tendency towards stagnation. The grounding nature of the pose can stabilize kapha, while the dynamic stance can potentially increase vata if not balanced with calmness."
+    },
+    "benefits": [
+      "Strengthens legs and arms",
+      "Improves balance and stability",
+      "Enhances focus and concentration",
+      "Opens the hips and chest",
+      "Increases stamina"
+    ],
+    "contraindications": [
+      "High blood pressure",
+      "Shoulder or neck injuries",
+      "Knee problems"
+    ],
+    "preparatory_poses": [
+      "Tadasana",
+      "Utthita Trikonasana"
+    ],
+    "follow_up_poses": [
+      "V\u012brabhadr\u0101sana I",
+      "V\u012brabhadr\u0101sana III"
+    ],
+    "chakra_activation": [
+      "Anahata (Heart Chakra)",
+      "Manipura (Solar Plexus Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Not specifically mentioned",
+        "context": "Standing poses are generally not detailed in classical texts but are integral to modern practice."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "General principles of dosha balancing",
+        "context": "Standing poses can invigorate kapha and stabilize vata."
+      }
+    ],
+    "confidence": 0.8,
+    "modifications": "Use a chair for support if balance is challenging or if there are knee issues.",
+    "original": {
+      "name": "virabhadrasana_ii",
+      "category": "standing",
+      "pacifies": "kapha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "V\u012brabhadr\u0101sana III",
+    "english_name": "Warrior Pose III",
+    "validated_properties": {
+      "category": "standing",
+      "level": "intermediate",
+      "hold_time_seconds": "15-30",
+      "breath_pattern": "inhale to lift, exhale to stabilize"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "vata"
+      ],
+      "mechanism": "This asana requires balance and focus, which helps in reducing kapha by increasing energy and reducing lethargy. However, the balancing aspect can potentially aggravate vata if not practiced with stability and grounding."
+    },
+    "benefits": [
+      "Improves balance and coordination",
+      "Strengthens legs, core, and back",
+      "Enhances concentration and focus",
+      "Increases stamina and endurance",
+      "Promotes a sense of grounding and stability"
+    ],
+    "contraindications": [
+      "High blood pressure",
+      "Recent or chronic injury to the legs, hips, back, or shoulders",
+      "Balance disorders"
+    ],
+    "preparatory_poses": [
+      "V\u012brabhadr\u0101sana I (Warrior I)",
+      "V\u012brabhadr\u0101sana II (Warrior II)",
+      "Utthita Trikon\u0101sana (Extended Triangle Pose)"
+    ],
+    "follow_up_poses": [
+      "Adho Mukha Svan\u0101sana (Downward-Facing Dog)",
+      "T\u0101d\u0101sana (Mountain Pose)",
+      "B\u0101l\u0101sana (Child's Pose)"
+    ],
+    "chakra_activation": [
+      "Manipura (Solar Plexus Chakra)",
+      "Anahata (Heart Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "While V\u012brabhadr\u0101sana III is not directly mentioned, standing poses are discussed in terms of their grounding and energizing effects."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Chapter on Dosha Balancing",
+        "context": "Discusses how physical activity and balance can reduce kapha and potentially increase vata."
+      }
+    ],
+    "confidence": 0.85,
+    "modifications": "Use a wall or chair for support to maintain balance if needed.",
+    "original": {
+      "name": "virabhadrasana_iii",
+      "category": "standing",
+      "pacifies": "kapha",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Utka\u1e6d\u0101sana",
+    "english_name": "Chair Pose",
+    "validated_properties": {
+      "category": "standing",
+      "level": "beginner",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale to enter, exhale to hold, inhale to release"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "pitta"
+      ],
+      "mechanism": "Utka\u1e6d\u0101sana generates heat and stimulates circulation, which can help balance kapha by reducing stagnation and lethargy. However, the heat generated may aggravate pitta if held for too long or practiced excessively."
+    },
+    "benefits": [
+      "Strengthens thighs, calves, and spine",
+      "Improves balance and stability",
+      "Enhances focus and concentration",
+      "Stimulates the heart and diaphragm",
+      "Increases endurance and stamina"
+    ],
+    "contraindications": [
+      "Recent knee or hip injury",
+      "Low blood pressure",
+      "Headache or migraine",
+      "Insomnia"
+    ],
+    "preparatory_poses": [
+      "T\u0101\u1e0d\u0101sana (Mountain Pose)",
+      "V\u1e5bk\u1e63\u0101sana (Tree Pose)"
+    ],
+    "follow_up_poses": [
+      "Standing Forward Bend (Utt\u0101n\u0101sana)",
+      "Downward-Facing Dog (Adho Mukha \u015av\u0101n\u0101sana)"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)",
+      "Svadhisthana (Sacral Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Standing postures and their effects on physical stability and energy"
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Dosha Balancing Practices",
+        "context": "Exercise and postures to balance kapha"
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a wall for support or place a block between the thighs for alignment.",
+    "original": {
+      "name": "utkatasana",
+      "category": "standing",
+      "pacifies": "kapha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "N\u0101vasana",
+    "english_name": "Boat Pose",
+    "validated_properties": {
+      "category": "core",
+      "level": "intermediate",
+      "hold_time_seconds": "15-30",
+      "breath_pattern": "inhale to lift, exhale to hold"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha"
+      ],
+      "may_aggravate": [
+        "Vata"
+      ],
+      "mechanism": "N\u0101vasana strengthens the core and stimulates the digestive fire (Agni), which helps in balancing Kapha by reducing lethargy and heaviness. However, the intense engagement and balancing aspect may increase Vata if not practiced with control."
+    },
+    "benefits": [
+      "Strengthens the core muscles",
+      "Improves balance and concentration",
+      "Stimulates digestion",
+      "Enhances spinal health",
+      "Increases stamina"
+    ],
+    "contraindications": [
+      "Lower back pain",
+      "Hernia",
+      "Pregnancy",
+      "Recent abdominal surgery"
+    ],
+    "preparatory_poses": [
+      "Ardha Navasana",
+      "Setu Bandhasana",
+      "Supta Padangusthasana"
+    ],
+    "follow_up_poses": [
+      "Paschimottanasana",
+      "Baddha Konasana",
+      "Balasana"
+    ],
+    "chakra_activation": [
+      "Manipura Chakra"
+    ],
+    "citations": [
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2",
+        "context": "N\u0101vasana is described as a posture that enhances balance and core strength, which aligns with the principles of stimulating the digestive fire and balancing Kapha."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "For beginners or those with lower back issues, practice with bent knees or support the back with a wall.",
+    "original": {
+      "name": "navasana",
+      "category": "core",
+      "pacifies": "kapha",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "U\u1e63\u1e6dr\u0101sana",
+    "english_name": "Camel Pose",
+    "validated_properties": {
+      "category": "backbend",
+      "level": "intermediate",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale while arching back, exhale while returning"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "pitta"
+      ],
+      "mechanism": "U\u1e63\u1e6dr\u0101sana opens the chest and stimulates the heart chakra, promoting circulation and energy flow, which can help balance kapha by reducing stagnation. However, the intensity and heat generated in the pose may aggravate pitta if held for too long or practiced excessively."
+    },
+    "benefits": [
+      "Improves spinal flexibility",
+      "Opens the chest and shoulders",
+      "Strengthens the back muscles",
+      "Stimulates the respiratory system",
+      "Enhances digestion"
+    ],
+    "contraindications": [
+      "Back or neck injury",
+      "High blood pressure",
+      "Migraine",
+      "Insomnia"
+    ],
+    "preparatory_poses": [
+      "Bhujangasana",
+      "Setu Bandhasana",
+      "Virabhadrasana I"
+    ],
+    "follow_up_poses": [
+      "Balasana",
+      "Adho Mukha Svanasana",
+      "Supta Baddha Konasana"
+    ],
+    "chakra_activation": [
+      "Anahata (Heart Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Discusses the benefits of backbends and their effects on energy flow"
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Kapha Dosha Management",
+        "context": "Explains how certain postures can balance kapha by enhancing circulation and reducing stagnation"
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a yoga block or cushion under the hands for support if reaching the heels is challenging.",
+    "original": {
+      "name": "ustrasana",
+      "category": "backbend",
+      "pacifies": "kapha",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Dhanur\u0101sana",
+    "english_name": "Bow Pose",
+    "validated_properties": {
+      "category": "backbend",
+      "level": "intermediate",
+      "hold_time_seconds": "20-30",
+      "breath_pattern": "inhale while lifting, hold the breath during the pose, exhale while releasing"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "vata",
+        "pitta"
+      ],
+      "mechanism": "Dhanur\u0101sana opens the chest and stimulates the digestive fire (Agni), which can help reduce kapha. However, the intense backbend and stimulation can increase heat and movement, potentially aggravating pitta and vata if not balanced with calming practices."
+    },
+    "benefits": [
+      "Strengthens the back and abdominal muscles",
+      "Improves posture and spinal flexibility",
+      "Stimulates the digestive organs",
+      "Opens the chest and shoulders",
+      "Relieves stress and fatigue"
+    ],
+    "contraindications": [
+      "Pregnancy",
+      "Recent abdominal surgery",
+      "Hernia",
+      "Severe back pain or injury",
+      "High blood pressure"
+    ],
+    "preparatory_poses": [
+      "Bhujangasana (Cobra Pose)",
+      "Salabhasana (Locust Pose)",
+      "Setu Bandhasana (Bridge Pose)"
+    ],
+    "follow_up_poses": [
+      "Adho Mukha Svanasana (Downward-Facing Dog)",
+      "Balasana (Child's Pose)",
+      "Paschimottanasana (Seated Forward Bend)"
+    ],
+    "chakra_activation": [
+      "Manipura (Solar Plexus Chakra)",
+      "Anahata (Heart Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2",
+        "context": "Describes the practice and benefits of Dhanur\u0101sana as a backbend that enhances strength and flexibility."
+      },
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Mentions the benefits of backbends for stimulating prana and balancing doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a strap around the ankles if reaching the feet is difficult; place a blanket under the thighs for additional support.",
+    "original": {
+      "name": "dhanurasana",
+      "category": "backbend",
+      "pacifies": "kapha",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": false,
+    "original": {
+      "name": "kapalbhati",
+      "category": "pranayama",
+      "pacifies": "kapha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Bhastrik\u0101",
+    "english_name": "Bellows Breath",
+    "validated_properties": {
+      "category": "pranayama",
+      "level": "intermediate",
+      "hold_time_seconds": "not applicable",
+      "breath_pattern": "rapid and forceful inhalation and exhalation"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha"
+      ],
+      "may_aggravate": [
+        "pitta"
+      ],
+      "mechanism": "Bhastrik\u0101 increases internal heat and stimulates the digestive fire (agni), which helps in reducing kapha-related sluggishness and congestion. However, its heating nature can potentially aggravate pitta if practiced excessively."
+    },
+    "benefits": [
+      "Increases lung capacity and respiratory efficiency",
+      "Energizes and invigorates the body",
+      "Enhances mental clarity and focus",
+      "Stimulates the digestive system",
+      "Clears nasal passages"
+    ],
+    "contraindications": [
+      "High blood pressure",
+      "Heart conditions",
+      "Pregnancy",
+      "Recent abdominal surgery",
+      "Vertigo or dizziness"
+    ],
+    "preparatory_poses": [
+      "Nadi Shodhana Pranayama",
+      "Ujjayi Pranayama"
+    ],
+    "follow_up_poses": [
+      "Nadi Shodhana Pranayama",
+      "Savasana"
+    ],
+    "chakra_activation": [
+      "Manipura Chakra"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 2",
+        "context": "Bhastrik\u0101 is described as a powerful breathing technique that increases internal heat and purifies the nadis."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 5",
+        "context": "Bhastrik\u0101 is mentioned as a cleansing practice that energizes the body and mind."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Beginners can start with slower and gentler breaths to build up capacity and avoid dizziness.",
+    "original": {
+      "name": "bhastrika",
+      "category": "pranayama",
+      "pacifies": "kapha",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Si\u1e41h\u0101sana",
+    "english_name": "Lion Pose",
+    "validated_properties": {
+      "category": "seated",
+      "level": "beginner",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale through the nose, exhale forcefully through the mouth with a roar"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "vata"
+      ],
+      "may_aggravate": [
+        "pitta"
+      ],
+      "mechanism": "Si\u1e41h\u0101sana helps release tension in the throat and chest, promoting free flow of prana and reducing kapha stagnation. The forceful exhalation can help clear excess kapha and stimulate the throat chakra, which is associated with vata balance."
+    },
+    "benefits": [
+      "Relieves tension in the face and chest",
+      "Stimulates the throat and respiratory system",
+      "Promotes clear communication and expression",
+      "Reduces stress and anxiety",
+      "Improves circulation in the face and throat"
+    ],
+    "contraindications": [
+      "Recent or chronic knee injury",
+      "Severe throat infection",
+      "Hyperthyroidism"
+    ],
+    "preparatory_poses": [
+      "Vajrasana",
+      "Sukhasana"
+    ],
+    "follow_up_poses": [
+      "Balasana",
+      "Adho Mukha Svanasana"
+    ],
+    "chakra_activation": [
+      "Vishuddha (Throat Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1, Verse 50",
+        "context": "Describes the technique and benefits of Si\u1e41h\u0101sana"
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2, Verse 51",
+        "context": "Mentions the pose and its effects on the throat and facial muscles"
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "For beginners or those with knee discomfort, practice with a folded blanket under the knees or perform the pose seated in a chair.",
+    "original": {
+      "name": "simhasana",
+      "category": "seated",
+      "pacifies": "kapha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "May\u016br\u0101sana",
+    "english_name": "Peacock Pose",
+    "validated_properties": {
+      "category": "arm_balance",
+      "level": "advanced",
+      "hold_time_seconds": "5-30",
+      "breath_pattern": "steady breathing, focus on maintaining balance"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha"
+      ],
+      "may_aggravate": [
+        "Vata"
+      ],
+      "mechanism": "May\u016br\u0101sana is said to stimulate the digestive fire (Agni) and help in detoxifying the body, which can balance Kapha by reducing heaviness and lethargy. However, due to its intense nature and the requirement for balance, it might increase Vata if not performed with stability and calmness."
+    },
+    "benefits": [
+      "Strengthens arms, wrists, and core muscles",
+      "Improves digestion and stimulates the digestive organs",
+      "Enhances concentration and mental focus",
+      "Detoxifies the body by stimulating the digestive fire",
+      "Balances the nervous system"
+    ],
+    "contraindications": [
+      "Wrist or shoulder injuries",
+      "High blood pressure",
+      "Hernia",
+      "Pregnancy"
+    ],
+    "preparatory_poses": [
+      "Chaturanga Dandasana",
+      "Bhujangasana",
+      "Adho Mukha Svanasana"
+    ],
+    "follow_up_poses": [
+      "Balasana",
+      "Adho Mukha Svanasana",
+      "Dandasana"
+    ],
+    "chakra_activation": [
+      "Manipura"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1, Verse 30",
+        "context": "Describes May\u016br\u0101sana as a pose that increases digestive fire and balances the doshas."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2, Verse 29",
+        "context": "Mentions the benefits of May\u016br\u0101sana in terms of detoxification and strengthening."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "For beginners, practice with hands on blocks or use a wall for support to build strength and balance gradually.",
+    "original": {
+      "name": "mayurasana",
+      "category": "arm_balance",
+      "pacifies": "kapha",
+      "level": "advanced"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Sukh\u0101sana",
+    "english_name": "Easy Pose",
+    "validated_properties": {
+      "category": "seated",
+      "level": "beginner",
+      "hold_time_seconds": "60-300",
+      "breath_pattern": "natural breathing, focus on deep inhalation and exhalation"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta",
+        "Kapha"
+      ],
+      "may_aggravate": [],
+      "mechanism": "Sukh\u0101sana promotes a calm and steady mind, which helps balance Vata by reducing anxiety and restlessness. The posture encourages a relaxed state, cooling Pitta, and its grounding nature helps stabilize Kapha."
+    },
+    "benefits": [
+      "Promotes relaxation and calmness",
+      "Improves posture and spinal alignment",
+      "Enhances focus and concentration",
+      "Facilitates meditation and pranayama practice",
+      "Reduces stress and anxiety"
+    ],
+    "contraindications": [
+      "Severe knee or hip injuries",
+      "Chronic lower back pain without proper support"
+    ],
+    "preparatory_poses": [
+      "Dandasana",
+      "Baddha Konasana"
+    ],
+    "follow_up_poses": [
+      "Padmasana",
+      "Anulom Vilom Pranayama"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)",
+      "Sahasrara (Crown Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Sukh\u0101sana is mentioned as a comfortable seated posture suitable for meditation."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Tridosha Theory",
+        "context": "Discussion on how calming practices can balance all three doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a cushion or folded blanket under the hips for added comfort and support, especially for those with tight hips or lower back issues.",
+    "original": {
+      "name": "sukhasana",
+      "category": "seated",
+      "pacifies": "tridosha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Padm\u0101sana",
+    "english_name": "Lotus Pose",
+    "validated_properties": {
+      "category": "seated",
+      "level": "intermediate",
+      "hold_time_seconds": "60-300",
+      "breath_pattern": "natural breathing"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta",
+        "Kapha"
+      ],
+      "may_aggravate": [],
+      "mechanism": "Padm\u0101sana stabilizes the body and mind, promoting a balanced flow of prana, which helps in harmonizing the tridosha. The grounding nature of the pose is particularly effective in calming Vata, while the meditative aspect helps soothe Pitta and Kapha."
+    },
+    "benefits": [
+      "Improves concentration and focus",
+      "Calms the mind and reduces stress",
+      "Enhances flexibility of the hips and knees",
+      "Promotes proper posture and spinal alignment",
+      "Facilitates deep meditation and pranayama practice"
+    ],
+    "contraindications": [
+      "Knee or ankle injuries",
+      "Severe sciatica",
+      "Hip issues or recent surgery"
+    ],
+    "preparatory_poses": [
+      "Baddha Konasana",
+      "Janu Sirsasana",
+      "Ardha Matsyendrasana"
+    ],
+    "follow_up_poses": [
+      "Paschimottanasana",
+      "Savasana",
+      "Meditative Pranayama"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)",
+      "Sahasrara (Crown Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1, Verse 46",
+        "context": "Describes Padm\u0101sana as a meditative posture that stabilizes the mind and body."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2, Verse 8",
+        "context": "Mentions Padm\u0101sana as a key asana for meditation and pranayama."
+      }
+    ],
+    "confidence": 0.95,
+    "modifications": "Use a cushion or folded blanket under the hips for support; practice Ardha Padm\u0101sana (Half Lotus) if full Lotus is inaccessible.",
+    "original": {
+      "name": "padmasana",
+      "category": "seated",
+      "pacifies": "tridosha",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Vajr\u0101sana",
+    "english_name": "Thunderbolt Pose",
+    "validated_properties": {
+      "category": "seated",
+      "level": "beginner",
+      "hold_time_seconds": "30-120",
+      "breath_pattern": "natural breathing, focus on deep and steady breaths"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "may_aggravate": [
+        "Kapha"
+      ],
+      "mechanism": "Vajr\u0101sana helps in stabilizing the body and mind, promoting digestion and calming the nervous system, which balances Vata and Pitta. However, prolonged sitting may increase Kapha if not balanced with movement."
+    },
+    "benefits": [
+      "Improves digestion",
+      "Strengthens pelvic muscles",
+      "Calms the mind",
+      "Enhances concentration",
+      "Promotes proper posture"
+    ],
+    "contraindications": [
+      "Severe knee issues",
+      "Ankle injuries",
+      "Recent surgery in the legs or lower back"
+    ],
+    "preparatory_poses": [
+      "Sukhasana",
+      "Dandasana"
+    ],
+    "follow_up_poses": [
+      "Balasana",
+      "Adho Mukha Svanasana"
+    ],
+    "chakra_activation": [
+      "Muladhara",
+      "Svadisthana"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Vajr\u0101sana is mentioned as a meditative pose that aids in digestion and stabilizes the mind."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2",
+        "context": "Described as a pose that strengthens the body and is suitable for meditation."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a cushion or folded blanket under the hips for knee support; practice against a wall for back support.",
+    "original": {
+      "name": "vajrasana",
+      "category": "seated",
+      "pacifies": "tridosha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "N\u0101\u1e0d\u012b \u015aodhana",
+    "english_name": "Alternate Nostril Breathing",
+    "validated_properties": {
+      "category": "pranayama",
+      "level": "beginner",
+      "hold_time_seconds": "5-10 minutes",
+      "breath_pattern": "inhale through one nostril, exhale through the other, alternating"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta",
+        "Kapha"
+      ],
+      "may_aggravate": [],
+      "mechanism": "N\u0101\u1e0d\u012b \u015aodhana balances the flow of prana, harmonizing the left and right energy channels (Ida and Pingala), which helps in balancing all three doshas."
+    },
+    "benefits": [
+      "Calms the mind and reduces stress",
+      "Balances the left and right hemispheres of the brain",
+      "Improves respiratory function",
+      "Enhances concentration and mental clarity",
+      "Promotes overall emotional stability"
+    ],
+    "contraindications": [
+      "Severe nasal congestion",
+      "Acute respiratory infections"
+    ],
+    "preparatory_poses": [
+      "Sukhasana",
+      "Vajrasana"
+    ],
+    "follow_up_poses": [
+      "Shavasana",
+      "Meditation"
+    ],
+    "chakra_activation": [
+      "Ajna (Third Eye Chakra)",
+      "Sahasrara (Crown Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 2",
+        "context": "N\u0101\u1e0d\u012b \u015aodhana is described as a practice to purify the n\u0101\u1e0d\u012bs and balance prana."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 5",
+        "context": "Pranayama techniques including N\u0101\u1e0d\u012b \u015aodhana are detailed for purification and balance."
+      }
+    ],
+    "confidence": 0.95,
+    "modifications": "Use a tissue or handkerchief if nasal passages are slightly blocked. Beginners can start with shorter durations and gradually increase.",
+    "original": {
+      "name": "nadi_shodhana",
+      "category": "pranayama",
+      "pacifies": "tridosha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0909\u091c\u094d\u091c\u093e\u092f\u0940 \u092a\u094d\u0930\u093e\u0923\u093e\u092f\u093e\u092e (ujj\u0101y\u012b pr\u0101\u1e47\u0101y\u0101ma)",
+    "english_name": "Victorious Breath",
+    "validated_properties": {
+      "category": "pranayama",
+      "level": "beginner",
+      "hold_time_seconds": "5-15 minutes",
+      "breath_pattern": "slow, deep inhalation and exhalation through the nose with a slight constriction in the throat"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta",
+        "Kapha"
+      ],
+      "may_aggravate": [],
+      "mechanism": "Ujjayi Pranayama balances the tridosha by calming the nervous system, cooling the body, and promoting mental clarity. The gentle constriction of the throat helps regulate the flow of prana, harmonizing the body's energy."
+    },
+    "benefits": [
+      "Calms the mind and reduces stress",
+      "Improves concentration and focus",
+      "Enhances lung capacity and respiratory efficiency",
+      "Balances the nervous system",
+      "Promotes mental clarity"
+    ],
+    "contraindications": [
+      "Severe respiratory conditions",
+      "High blood pressure (without guidance)",
+      "Recent surgery in the throat or neck area"
+    ],
+    "preparatory_poses": [
+      "Sukhasana (Easy Pose)",
+      "Tadasana (Mountain Pose)"
+    ],
+    "follow_up_poses": [
+      "Nadi Shodhana Pranayama (Alternate Nostril Breathing)",
+      "Savasana (Corpse Pose)"
+    ],
+    "chakra_activation": [
+      "Vishuddha (Throat Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 2",
+        "context": "Ujjayi Pranayama is described as a calming breath technique that balances the doshas and enhances prana flow."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 5",
+        "context": "Discusses the benefits of pranayama practices, including Ujjayi, for mental and physical health."
+      }
+    ],
+    "confidence": 0.95,
+    "modifications": "Beginners can practice Ujjayi Pranayama by focusing on the sound of the breath and maintaining a comfortable sitting position. If throat constriction is challenging, practice with a slightly open mouth to understand the sensation before transitioning to nasal breathing.",
+    "original": {
+      "name": "ujjayi_pranayama",
+      "category": "pranayama",
+      "pacifies": "tridosha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Adho Mukha \u015av\u0101n\u0101sana",
+    "english_name": "Downward-Facing Dog Pose",
+    "validated_properties": {
+      "category": "inversion",
+      "level": "beginner",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale to prepare, exhale to move into the pose, steady breathing while holding"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "may_aggravate": [
+        "Kapha"
+      ],
+      "mechanism": "This asana helps in grounding and stabilizing the body, which can calm Vata. It also provides a cooling effect, beneficial for Pitta. However, its energizing nature can sometimes increase Kapha if not balanced with other practices."
+    },
+    "benefits": [
+      "Strengthens the arms, shoulders, and legs",
+      "Stretches the hamstrings, calves, and spine",
+      "Improves circulation and energizes the body",
+      "Calms the mind and relieves stress",
+      "Enhances overall body awareness and alignment"
+    ],
+    "contraindications": [
+      "Carpal tunnel syndrome",
+      "High blood pressure",
+      "Detached retina or recent eye surgery",
+      "Pregnancy (especially in later stages)"
+    ],
+    "preparatory_poses": [
+      "Uttanasana (Standing Forward Bend)",
+      "Phalakasana (Plank Pose)"
+    ],
+    "follow_up_poses": [
+      "Bhujangasana (Cobra Pose)",
+      "Uttanasana (Standing Forward Bend)"
+    ],
+    "chakra_activation": [
+      "Muladhara (Root Chakra)",
+      "Svadhisthana (Sacral Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Discusses the benefits of inversions and their effects on the body and mind."
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Tridosha Theory",
+        "context": "Explains how different postures can balance or aggravate the doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a yoga block under the hands or a strap around the elbows to maintain alignment and reduce strain on wrists.",
+    "original": {
+      "name": "adho_mukha_svanasana",
+      "category": "standing",
+      "pacifies": "tridosha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "M\u0101rj\u0101ry\u0101sana-Bitil\u0101sana",
+    "english_name": "Cat-Cow Pose",
+    "validated_properties": {
+      "category": "sequence",
+      "level": "beginner",
+      "hold_time_seconds": "5-10 seconds per cycle",
+      "breath_pattern": "inhale during Bitil\u0101sana (Cow), exhale during M\u0101rj\u0101ry\u0101sana (Cat)"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "may_aggravate": [],
+      "mechanism": "This sequence involves gentle spinal flexion and extension, promoting the flow of prana and balancing the nervous system, which helps in stabilizing Vata. The rhythmic movement and breath synchronization can also help in reducing Kapha stagnation."
+    },
+    "benefits": [
+      "Improves spinal flexibility",
+      "Enhances coordination and balance",
+      "Promotes relaxation and stress relief",
+      "Stimulates digestive organs",
+      "Encourages mindful breathing"
+    ],
+    "contraindications": [
+      "Recent or chronic injury to the back or neck",
+      "Severe wrist issues"
+    ],
+    "preparatory_poses": [
+      "Balasana (Child's Pose)",
+      "Adho Mukha Svanasana (Downward-Facing Dog)"
+    ],
+    "follow_up_poses": [
+      "Adho Mukha Svanasana (Downward-Facing Dog)",
+      "Tadasana (Mountain Pose)"
+    ],
+    "chakra_activation": [
+      "Svadhisthana (Sacral Chakra)",
+      "Manipura (Solar Plexus Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "General principles of asana practice and spinal health"
+      },
+      {
+        "source": "ayurvedic_text",
+        "chapter": "Tridosha theory",
+        "context": "Balancing Vata and Kapha through movement and breath"
+      }
+    ],
+    "confidence": 0.85,
+    "modifications": "For wrist discomfort, perform the sequence on fists or with wrists slightly forward of the shoulders.",
+    "original": {
+      "name": "marjaryasana_bitilasana",
+      "category": "kneeling",
+      "pacifies": "tridosha",
+      "level": "beginner"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0905\u0930\u094d\u0927\u092e\u0924\u094d\u0938\u094d\u092f\u0947\u0928\u094d\u0926\u094d\u0930\u093e\u0938\u0928 (Ardha Matsyendr\u0101sana)",
+    "english_name": "Half Lord of the Fishes Pose",
+    "validated_properties": {
+      "category": "twist",
+      "level": "intermediate",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale to lengthen spine, exhale to twist deeper"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "may_aggravate": [
+        "Kapha"
+      ],
+      "mechanism": "The twisting motion helps to stimulate the digestive fire (Agni), aiding in detoxification and balancing Vata and Pitta. However, excessive twisting or holding for too long may aggravate Kapha due to potential strain or congestion."
+    },
+    "benefits": [
+      "Improves spinal flexibility",
+      "Stimulates digestion",
+      "Enhances detoxification",
+      "Relieves tension in the back and shoulders",
+      "Balances energy flow"
+    ],
+    "contraindications": [
+      "Pregnancy",
+      "Recent or chronic back injury",
+      "Hernia",
+      "Severe spinal issues"
+    ],
+    "preparatory_poses": [
+      "Marjaryasana-Bitilasana (Cat-Cow Pose)",
+      "Bharadvajasana (Bharadvaja's Twist)"
+    ],
+    "follow_up_poses": [
+      "Paschimottanasana (Seated Forward Bend)",
+      "Savasana (Corpse Pose)"
+    ],
+    "chakra_activation": [
+      "Manipura (Solar Plexus Chakra)",
+      "Anahata (Heart Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1, Verse 27",
+        "context": "Describes the benefits and practice of twisting postures."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2, Verse 22",
+        "context": "Mentions the significance of spinal twists for purification."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a blanket under the hips for support or keep the bottom leg extended if there is discomfort in the knees or hips.",
+    "original": {
+      "name": "ardha_matsyendrasana",
+      "category": "twist",
+      "pacifies": "tridosha",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Mar\u012bcy\u0101sana",
+    "english_name": "Marichi's Pose",
+    "validated_properties": {
+      "category": "twist",
+      "level": "intermediate",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "inhale to lengthen the spine, exhale to twist deeper"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "may_aggravate": [],
+      "mechanism": "The twisting motion helps in massaging the abdominal organs, promoting digestion and elimination, which balances Vata. The calming nature of the pose can help in reducing excess heat, thus pacifying Pitta."
+    },
+    "benefits": [
+      "Improves digestion",
+      "Stimulates abdominal organs",
+      "Increases spinal flexibility",
+      "Calms the mind",
+      "Relieves backache"
+    ],
+    "contraindications": [
+      "Pregnancy",
+      "Recent or chronic injury to the knees, hips, or spine",
+      "Herniated disc"
+    ],
+    "preparatory_poses": [
+      "Adho Mukha Svanasana",
+      "Baddha Konasana",
+      "Paschimottanasana"
+    ],
+    "follow_up_poses": [
+      "Paschimottanasana",
+      "Ardha Matsyendrasana",
+      "Savasana"
+    ],
+    "chakra_activation": [
+      "Manipura (Solar Plexus Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Discusses the benefits of twisting postures for internal purification and balance"
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a strap to bind if hands do not reach, or sit on a folded blanket to elevate hips for better alignment",
+    "original": {
+      "name": "marichyasana",
+      "category": "twist",
+      "pacifies": "tridosha",
+      "level": "intermediate"
+    }
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Gomukh\u0101sana",
+    "english_name": "Cow Face Pose",
+    "validated_properties": {
+      "category": "seated",
+      "level": "intermediate",
+      "hold_time_seconds": "30-60",
+      "breath_pattern": "steady breathing, maintain normal inhalation and exhalation"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "may_aggravate": [
+        "Kapha"
+      ],
+      "mechanism": "Gomukh\u0101sana opens the hips and shoulders, promoting circulation and reducing tension, which helps balance Vata and Pitta. The grounding nature of the pose can help stabilize Vata, while the cooling effect of the stretch can soothe Pitta. However, the seated nature may not be stimulating enough for Kapha."
+    },
+    "benefits": [
+      "Stretches the hips, thighs, and ankles",
+      "Opens the chest and shoulders",
+      "Improves posture and alignment",
+      "Enhances focus and concentration",
+      "Calms the mind and reduces stress"
+    ],
+    "contraindications": [
+      "Severe knee or shoulder injuries",
+      "Hip replacements",
+      "Acute back pain"
+    ],
+    "preparatory_poses": [
+      "Sukhasana",
+      "Baddha Konasana",
+      "Garudasana"
+    ],
+    "follow_up_poses": [
+      "Paschimottanasana",
+      "Ardha Matsyendrasana",
+      "Shavasana"
+    ],
+    "chakra_activation": [
+      "Anahata (Heart Chakra)",
+      "Muladhara (Root Chakra)"
+    ],
+    "citations": [
+      {
+        "source": "hatha_yoga_pradipika",
+        "chapter": "Chapter 1",
+        "context": "Discusses seated postures and their benefits for meditation and calming the mind."
+      },
+      {
+        "source": "gheranda_samhita",
+        "chapter": "Chapter 2",
+        "context": "Describes various asanas and their effects on the body and mind."
+      }
+    ],
+    "confidence": 0.9,
+    "modifications": "Use a strap for the hands if they do not reach each other behind the back. Sit on a folded blanket to elevate the hips if there is discomfort in the knees.",
+    "original": {
+      "name": "gomukhasana",
+      "category": "seated",
+      "pacifies": "tridosha",
+      "level": "intermediate"
+    }
+  }
+]

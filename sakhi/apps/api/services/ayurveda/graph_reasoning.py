@@ -81,10 +81,14 @@ async def query_foods_for_dosha(
         dosha: 'vata', 'pitta', or 'kapha'
         relation: 'PACIFIES' or 'AGGRAVATES'
         limit: Max number of results
+
+    Returns:
+        List of foods with Ayurvedic properties and citations from classical texts
     """
     results = await dbfetch(
         """
-        SELECT n.name, n.attrs, e.weight
+        SELECT n.name, n.name_sanskrit, n.display_name, n.attrs, n.citations,
+               n.confidence, e.weight
         FROM ay_nodes n
         JOIN ay_edges e ON n.id = e.src
         JOIN ay_nodes d ON e.dst = d.id
@@ -105,12 +109,23 @@ async def query_foods_for_dosha(
         attrs = r.get("attrs") or {}
         if isinstance(attrs, str):
             attrs = json.loads(attrs)
+
+        citations = r.get("citations") or []
+        if isinstance(citations, str):
+            citations = json.loads(citations)
+
         foods.append({
             "name": r["name"],
+            "name_sanskrit": r.get("name_sanskrit"),
+            "display_name": r.get("display_name") or r["name"].replace("_", " ").title(),
             "weight": float(r.get("weight") or 0.8),
+            "confidence": float(r.get("confidence") or 0.8),
             "rasa": attrs.get("rasa"),
             "virya": attrs.get("virya"),
+            "vipaka": attrs.get("vipaka"),
+            "guna": attrs.get("guna"),
             "season": attrs.get("season"),
+            "citations": citations[:2] if citations else [],  # Top 2 citations
         })
     return foods
 
@@ -119,10 +134,16 @@ async def query_practices_for_dosha(
     dosha: str,
     limit: int = 15,
 ) -> List[Dict[str, Any]]:
-    """Query practices that pacify a specific dosha."""
+    """
+    Query practices that pacify a specific dosha.
+
+    Returns:
+        List of practices with Ayurvedic properties and citations from classical texts
+    """
     results = await dbfetch(
         """
-        SELECT n.name, n.attrs, e.weight
+        SELECT n.name, n.name_sanskrit, n.display_name, n.attrs, n.citations,
+               n.confidence, e.weight
         FROM ay_nodes n
         JOIN ay_edges e ON n.id = e.src
         JOIN ay_nodes d ON e.dst = d.id
@@ -142,22 +163,38 @@ async def query_practices_for_dosha(
         attrs = r.get("attrs") or {}
         if isinstance(attrs, str):
             attrs = json.loads(attrs)
+
+        citations = r.get("citations") or []
+        if isinstance(citations, str):
+            citations = json.loads(citations)
+
         practices.append({
             "name": r["name"],
+            "name_sanskrit": r.get("name_sanskrit"),
+            "display_name": r.get("display_name") or r["name"].replace("_", " ").title(),
             "weight": float(r.get("weight") or 0.85),
+            "confidence": float(r.get("confidence") or 0.8),
             "type": attrs.get("type"),
             "intensity": attrs.get("intensity"),
             "duration_min": attrs.get("duration_min"),
             "time": attrs.get("time"),
+            "benefits": attrs.get("benefits", []),
+            "citations": citations[:2] if citations else [],  # Top 2 citations
         })
     return practices
 
 
 async def query_symptoms_for_dosha(dosha: str, limit: int = 20) -> List[Dict[str, Any]]:
-    """Query symptoms that indicate a dosha imbalance."""
+    """
+    Query symptoms that indicate a dosha imbalance.
+
+    Returns:
+        List of symptoms with Ayurvedic context and citations from classical texts
+    """
     results = await dbfetch(
         """
-        SELECT n.name, n.attrs, e.weight
+        SELECT n.name, n.name_sanskrit, n.display_name, n.attrs, n.citations,
+               n.confidence, e.weight
         FROM ay_nodes n
         JOIN ay_edges e ON n.id = e.src
         JOIN ay_nodes d ON e.dst = d.id
@@ -177,13 +214,91 @@ async def query_symptoms_for_dosha(dosha: str, limit: int = 20) -> List[Dict[str
         attrs = r.get("attrs") or {}
         if isinstance(attrs, str):
             attrs = json.loads(attrs)
+
+        citations = r.get("citations") or []
+        if isinstance(citations, str):
+            citations = json.loads(citations)
+
         symptoms.append({
             "name": r["name"],
+            "name_sanskrit": r.get("name_sanskrit"),
+            "display_name": r.get("display_name") or r["name"].replace("_", " ").title(),
             "weight": float(r.get("weight") or 0.8),
+            "confidence": float(r.get("confidence") or 0.8),
             "severity": attrs.get("severity"),
             "category": attrs.get("category"),
+            "description": attrs.get("description"),
+            "citations": citations[:1] if citations else [],  # Top citation
         })
     return symptoms
+
+
+async def query_asanas_for_dosha(
+    dosha: str,
+    level: Optional[str] = None,
+    limit: int = 15,
+) -> List[Dict[str, Any]]:
+    """
+    Query yoga asanas that pacify a specific dosha.
+
+    Args:
+        dosha: 'vata', 'pitta', or 'kapha'
+        level: Optional filter by 'beginner', 'intermediate', or 'advanced'
+        limit: Max number of results
+
+    Returns:
+        List of asanas with benefits, contraindications, and citations
+    """
+    query = """
+        SELECT n.name, n.name_sanskrit, n.display_name, n.attrs, n.citations,
+               n.confidence, e.weight
+        FROM ay_nodes n
+        JOIN ay_edges e ON n.id = e.src
+        JOIN ay_nodes d ON e.dst = d.id
+        WHERE n.kind = 'asana'
+          AND d.kind = 'dosha'
+          AND d.name = $1
+          AND e.rel = 'PACIFIES'
+        ORDER BY e.weight DESC
+        LIMIT $2
+    """
+
+    results = await dbfetch(query, dosha, limit)
+
+    asanas = []
+    for r in results or []:
+        attrs = r.get("attrs") or {}
+        if isinstance(attrs, str):
+            attrs = json.loads(attrs)
+
+        citations = r.get("citations") or []
+        if isinstance(citations, str):
+            citations = json.loads(citations)
+
+        asana_level = attrs.get("level", "beginner")
+
+        # Filter by level if specified
+        if level and asana_level != level:
+            continue
+
+        asanas.append({
+            "name": r["name"],
+            "name_sanskrit": r.get("name_sanskrit"),
+            "display_name": r.get("display_name") or attrs.get("english_name") or r["name"].replace("_", " ").title(),
+            "weight": float(r.get("weight") or 0.8),
+            "confidence": float(r.get("confidence") or 0.8),
+            "category": attrs.get("category"),
+            "level": asana_level,
+            "hold_time_seconds": attrs.get("hold_time_seconds"),
+            "breath_pattern": attrs.get("breath_pattern"),
+            "benefits": attrs.get("benefits", []),
+            "contraindications": attrs.get("contraindications", []),
+            "chakra_activation": attrs.get("chakra_activation", []),
+            "modifications": attrs.get("modifications"),
+            "citations": citations[:1] if citations else [],
+        })
+
+    return asanas
 
 
 async def get_seasonal_amplification(dosha: str) -> float:
@@ -414,19 +529,42 @@ def _score_recommendations(
 
 
 def _generate_why(item: Dict[str, Any], item_type: str, context_match: float) -> str:
-    """Generate explanation for why this is recommended."""
-    name = item.get("name", "").replace("_", " ").title()
+    """Generate explanation for why this is recommended, including Ayurvedic reasoning."""
+    name = item.get("display_name") or item.get("name", "").replace("_", " ").title()
+    sanskrit = item.get("name_sanskrit")
+    citations = item.get("citations", [])
 
     if item_type == "food":
         rasa = item.get("rasa", "balanced")
         virya = item.get("virya", "neutral")
-        return f"{rasa.title()} taste, {virya} energy"
+        vipaka = item.get("vipaka")
+
+        # Build explanation with Ayurvedic terminology
+        explanation = f"{rasa.title()} taste (rasa), {virya} energy (virya)"
+        if vipaka:
+            explanation += f", {vipaka} post-digestive effect (vipaka)"
+
+        # Add citation reference if available
+        if citations and isinstance(citations, list) and citations[0]:
+            first_cite = citations[0]
+            if isinstance(first_cite, dict):
+                source = first_cite.get("source", "").replace("_", " ").title()
+                if source:
+                    explanation += f" — {source}"
+
+        return explanation
 
     elif item_type == "practice":
         practice_type = item.get("type", "practice")
         intensity = item.get("intensity", "gentle")
         duration = item.get("duration_min", 10)
-        return f"{intensity.title()} {practice_type}, {duration} min"
+        benefits = item.get("benefits", [])
+
+        explanation = f"{intensity.title()} {practice_type}, {duration} min"
+        if benefits and isinstance(benefits, list):
+            explanation += f" — {benefits[0]}" if benefits else ""
+
+        return explanation
 
     return "Balancing for your current state"
 
@@ -500,6 +638,7 @@ __all__ = [
     "query_foods_for_dosha",
     "query_practices_for_dosha",
     "query_symptoms_for_dosha",
+    "query_asanas_for_dosha",
     "get_seasonal_amplification",
     "get_graph_stats",
     "get_current_season",

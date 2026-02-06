@@ -191,11 +191,17 @@ async def get_ayurvedic_causes_for_symptom(
     symptom: str,
     dosha: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Query Ayurvedic knowledge graph for causes of a symptom."""
+    """
+    Query Ayurvedic knowledge graph for causes of a symptom.
+
+    Returns causes with citations from classical Ayurvedic texts when available.
+    """
+    import json as json_module
+
     # First, try to find the symptom in the graph
     symptom_node = await dbfetch(
         """
-        SELECT id, name, attrs FROM ay_nodes
+        SELECT id, name, name_sanskrit, attrs, citations FROM ay_nodes
         WHERE kind = 'symptom' AND name ILIKE $1
         """,
         f"%{symptom}%",
@@ -218,7 +224,7 @@ async def get_ayurvedic_causes_for_symptom(
     # Find what AGGRAVATES this symptom (behaviors/foods that worsen it)
     causes = await dbfetch(
         """
-        SELECT n.name, n.kind, n.attrs, e.weight
+        SELECT n.name, n.name_sanskrit, n.kind, n.attrs, n.citations, e.weight
         FROM ay_nodes n
         JOIN ay_edges e ON n.id = e.src
         WHERE e.dst = $1
@@ -229,7 +235,47 @@ async def get_ayurvedic_causes_for_symptom(
         symptom_node["id"],
     )
 
-    return list(causes) if causes else []
+    # Process results to include citations
+    result = []
+    for r in causes or []:
+        citations = r.get("citations") or []
+        if isinstance(citations, str):
+            citations = json_module.loads(citations)
+
+        attrs = r.get("attrs") or {}
+        if isinstance(attrs, str):
+            attrs = json_module.loads(attrs)
+
+        result.append({
+            "name": r["name"],
+            "name_sanskrit": r.get("name_sanskrit"),
+            "kind": r["kind"],
+            "weight": float(r.get("weight") or 0.7),
+            "attrs": attrs,
+            "citations": citations[:2] if citations else [],
+            "ayurvedic_source": _format_citation_reference(citations),
+        })
+
+    return result
+
+
+def _format_citation_reference(citations: List[Any]) -> Optional[str]:
+    """Format citation as a readable reference."""
+    if not citations or not isinstance(citations, list):
+        return None
+
+    cite = citations[0] if citations else None
+    if not cite or not isinstance(cite, dict):
+        return None
+
+    source = cite.get("source", "").replace("_", " ").title()
+    chapter = cite.get("chapter", "")
+
+    if source and chapter:
+        return f"{source}, {chapter}"
+    elif source:
+        return source
+    return None
 
 
 # =============================================================================

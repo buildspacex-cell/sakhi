@@ -1,0 +1,2634 @@
+{
+  "validated_at": "2026-02-04T18:37:37.364586",
+  "model": "gpt-4o",
+  "total_entries": 60,
+  "summary": {
+    "validated": 46,
+    "corrected": 14,
+    "flagged": 0,
+    "rejected": 0
+  },
+  "entries": [
+    {
+      "name": "anxiety",
+      "name_sanskrit": "Chittodvega",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "restlessness",
+          "insomnia",
+          "fear"
+        ],
+        "special_notes": "Anxiety is primarily associated with Vata imbalance, but Pitta can also contribute when it manifests as intense worry or irritability."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5-7.10",
+          "text": "Describes mental disorders and their association with doshas, particularly Vata's role in causing anxiety and restlessness."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra 62",
+          "shloka": "62.15-62.20",
+          "text": "Discusses the role of Vata in mental disturbances and the potential involvement of Pitta."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The entry accurately identifies anxiety as primarily related to Vata imbalance, as per classical texts. However, Pitta can also play a role in certain manifestations of anxiety. The severity and category are appropriately classified as moderate and mental, respectively.",
+      "contradicts_source": false,
+      "original": {
+        "name": "anxiety",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "insomnia",
+      "name_sanskrit": "Anidra",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "moderate",
+        "category": "sleep",
+        "associated_symptoms": [
+          "restlessness",
+          "anxiety"
+        ],
+        "special_notes": "Insomnia is primarily associated with Vata imbalance, but can also be influenced by Pitta, especially when accompanied by irritability or excessive heat."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": "shloka_range or null",
+          "text": "Anidra is discussed as a condition arising from Vata imbalance, with potential Pitta involvement."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana.1",
+          "shloka": "shloka_range or null",
+          "text": "Sleep disturbances are linked to Vata and Pitta doshas."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The entry accurately identifies insomnia as primarily a Vata-related disorder, which is consistent with classical Ayurvedic texts. The involvement of Pitta is also noted in cases where insomnia is accompanied by symptoms like irritability, aligning with traditional teachings.",
+      "contradicts_source": false,
+      "original": {
+        "name": "insomnia",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "sleep"
+        }
+      }
+    },
+    {
+      "name": "dry_skin",
+      "name_sanskrit": "Ruksha Tvacha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "skin",
+        "associated_symptoms": [
+          "itching",
+          "flakiness"
+        ],
+        "special_notes": "Dry skin is primarily linked to Vata imbalance but can also be associated with Pitta when accompanied by inflammation."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.1",
+          "shloka": "61-62",
+          "text": "Vata imbalance is characterized by dryness, roughness, and coarseness of the skin."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of dry skin, known as Ruksha Tvacha in Sanskrit, is primarily associated with Vata dosha due to its dry and rough qualities. However, if accompanied by redness or inflammation, it may also indicate a Pitta imbalance. The severity as 'mild' is appropriate for initial stages of Vata imbalance. The categorization under 'skin' is correct.",
+      "contradicts_source": false,
+      "original": {
+        "name": "dry_skin",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "skin"
+        }
+      }
+    },
+    {
+      "name": "constipation",
+      "name_sanskrit": "Vibandha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "moderate",
+        "category": "digestive",
+        "associated_symptoms": [
+          "bloating",
+          "abdominal pain"
+        ],
+        "special_notes": "Constipation is primarily associated with Vata dosha due to its dry and obstructive qualities. However, Pitta can also be involved if there is inflammation or burning sensation."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.4",
+          "shloka": "shloka_range or null",
+          "text": "Vibandha is described as a condition primarily caused by Vata imbalance, with potential involvement of Pitta."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom entry for constipation is accurate as per classical Ayurvedic texts. Constipation (Vibandha) is predominantly a Vata disorder due to its association with dryness and obstruction. However, Pitta can also contribute if there is an inflammatory component. The severity and category are appropriately classified.",
+      "contradicts_source": false,
+      "original": {
+        "name": "constipation",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "digestive"
+        }
+      }
+    },
+    {
+      "name": "bloating",
+      "name_sanskrit": "Adhmana",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta",
+          "kapha"
+        ],
+        "severity": "mild",
+        "category": "digestive",
+        "associated_symptoms": [
+          "flatulence",
+          "abdominal discomfort"
+        ],
+        "special_notes": "Bloating can also occur due to improper digestion leading to Ama, which can involve multiple doshas."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 4",
+          "shloka": "4.7",
+          "text": "Adhmana is described as a condition of abdominal distension primarily due to Vata imbalance."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of bloating, or Adhmana, is primarily associated with Vata dosha due to its qualities of movement and space, leading to distension. However, it can also be influenced by Pitta and Kapha when digestion is impaired, leading to Ama formation. The severity is typically mild unless accompanied by other symptoms indicating a more severe imbalance.",
+      "contradicts_source": false,
+      "original": {
+        "name": "bloating",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "digestive"
+        }
+      }
+    },
+    {
+      "name": "joint_pain",
+      "name_sanskrit": "Sandhishoola",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "kapha"
+        ],
+        "severity": "moderate",
+        "category": "physical",
+        "associated_symptoms": [
+          "stiffness",
+          "swelling"
+        ],
+        "special_notes": "Joint pain is primarily associated with Vata imbalance, but can also involve Kapha when there is swelling or heaviness."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "shloka_range or null",
+          "text": "Vata disorders often manifest as pain, especially in joints."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "shloka_range or null",
+          "text": "Joint pain can be due to Vata or Kapha, especially when accompanied by swelling."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Joint pain, or Sandhishoola, is classically associated with Vata dosha due to its qualities of dryness and movement, which can lead to pain. However, when there is swelling or heaviness, Kapha may also be involved. The severity as 'moderate' is appropriate as joint pain can vary in intensity. The categorization as 'physical' is correct since it manifests physically.",
+      "contradicts_source": false,
+      "original": {
+        "name": "joint_pain",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "cold_hands_feet",
+      "name_sanskrit": "Shita Hasta Pada",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "kapha"
+        ],
+        "severity": "mild",
+        "category": "circulation",
+        "associated_symptoms": [
+          "dry skin",
+          "anxiety"
+        ],
+        "special_notes": "Cold hands and feet are primarily associated with Vata due to its cold and dry qualities, but can also be linked to Kapha if there is an underlying sluggish circulation."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "1.20",
+          "text": "Vata disorders often manifest with coldness in extremities due to impaired circulation."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana 3",
+          "shloka": "3.10",
+          "text": "Kapha imbalance can also lead to coldness due to stagnation and lack of movement."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of cold hands and feet is classically associated with Vata due to its cold and dry nature. However, Kapha can also be a secondary factor due to its potential to cause sluggish circulation. The severity is mild as it is often an early sign of imbalance. The categorization under circulation is appropriate as it relates to blood flow and warmth distribution.",
+      "contradicts_source": false,
+      "original": {
+        "name": "cold_hands_feet",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "circulation"
+        }
+      }
+    },
+    {
+      "name": "racing_thoughts",
+      "name_sanskrit": "Chittodvega",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "anxiety",
+          "insomnia"
+        ],
+        "special_notes": "Racing thoughts are primarily linked with Vata due to its mobile and erratic nature, but can also be influenced by Pitta when associated with intense focus or agitation."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5-7.6",
+          "text": "Describes symptoms of Vata imbalance including restlessness and mental agitation."
+        },
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Chikitsa Sthana 9",
+          "shloka": "9.4-9.5",
+          "text": "Discusses mental symptoms related to Vata and Pitta imbalances."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'racing thoughts' aligns with Vata's qualities of movement and instability, which are described in classical texts. The association with Pitta is secondary and context-dependent, often when thoughts are intense or aggressive. The severity is appropriately marked as moderate, given the potential impact on mental health but not necessarily life-threatening. The category 'mental' is correct as this symptom pertains to mental processes.",
+      "contradicts_source": false,
+      "original": {
+        "name": "racing_thoughts",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "restlessness",
+      "name_sanskrit": "Anavasthita Chittatva",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "anxiety",
+          "insomnia"
+        ],
+        "special_notes": "Restlessness is primarily associated with Vata imbalance, but can also be influenced by Pitta, especially when accompanied by irritability or anger."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5-7.6",
+          "text": "Describes symptoms associated with Vata imbalance, including restlessness and anxiety."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra 62",
+          "shloka": "62.10",
+          "text": "Discusses mental symptoms related to dosha imbalances, including restlessness."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of restlessness is classically associated with Vata due to its mobile and erratic nature. However, Pitta can also contribute when restlessness is accompanied by heat or intensity. The severity and category align with traditional descriptions, and the Sanskrit term 'Anavasthita Chittatva' captures the essence of mental restlessness.",
+      "contradicts_source": false,
+      "original": {
+        "name": "restlessness",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "fatigue",
+      "name_sanskrit": "Klama",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta",
+          "kapha"
+        ],
+        "severity": "mild",
+        "category": "energy",
+        "associated_symptoms": [
+          "lassitude",
+          "lethargy"
+        ],
+        "special_notes": "Fatigue can be associated with all three doshas depending on the context and accompanying symptoms."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.1",
+          "shloka": "null",
+          "text": "Fatigue (Klama) is discussed in relation to various doshic imbalances."
+        }
+      ],
+      "corrections": [
+        "Severity adjusted from moderate to mild as fatigue is generally considered mild unless accompanied by other severe symptoms.",
+        "Acknowledged potential for multiple dosha involvement."
+      ],
+      "reasoning": "Fatigue, or Klama, is primarily associated with Vata imbalance but can also indicate Pitta or Kapha disturbances depending on additional symptoms and context. The severity is typically mild unless it is part of a more complex condition. The category of 'energy' is appropriate as fatigue directly affects one's energy levels.",
+      "contradicts_source": false,
+      "original": {
+        "name": "fatigue",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "energy"
+        }
+      }
+    },
+    {
+      "name": "weight_loss",
+      "name_sanskrit": "Karshya",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "dryness",
+          "fatigue",
+          "weakness"
+        ],
+        "special_notes": "Weight loss can also be associated with Pitta imbalance, especially if accompanied by symptoms like burning sensation or excessive thirst."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 8",
+          "shloka": "null",
+          "text": "Karshya is described as a condition often associated with Vata imbalance, characterized by emaciation and weakness."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana 15",
+          "shloka": "null",
+          "text": "Discusses emaciation and its relation to both Vata and Pitta doshas under certain conditions."
+        }
+      ],
+      "corrections": [
+        "Added Pitta as a secondary dosha that can be indicated by weight loss."
+      ],
+      "reasoning": "Weight loss is primarily associated with Vata due to its drying and catabolic nature, but can also be linked to Pitta when there is excessive metabolic activity leading to tissue depletion. The severity as mild is appropriate if weight loss is gradual and not accompanied by severe symptoms. The category as physical is correct as it pertains to bodily changes.",
+      "contradicts_source": false,
+      "original": {
+        "name": "weight_loss",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "cracking_joints",
+      "name_sanskrit": "Sandhigata Vata",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "joint pain",
+          "stiffness"
+        ],
+        "special_notes": "Cracking joints are typically associated with Vata imbalance due to dryness and roughness qualities."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Chikitsa Sthana.28",
+          "shloka": "37-38",
+          "text": "Vata disorders are characterized by symptoms such as cracking sounds in joints."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Cracking joints are a common symptom of Vata imbalance, often due to the dryness and roughness that Vata imparts on the body. The symptom is correctly categorized as mild and physical. Classical texts like Charaka Samhita describe similar symptoms under Vata disorders, supporting the entry's accuracy.",
+      "contradicts_source": false,
+      "original": {
+        "name": "cracking_joints",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "brittle_nails",
+      "name_sanskrit": "Nakha Bheda",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "dry_skin",
+          "joint_pain"
+        ],
+        "special_notes": "Brittle nails can sometimes indicate a pitta imbalance, especially if accompanied by yellow discoloration."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.13",
+          "shloka": "13.27",
+          "text": "Symptoms of Vata imbalance include dryness and brittleness of nails."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Brittle nails are commonly associated with Vata dosha due to dryness, a key characteristic of Vata. However, if there is discoloration or inflammation, Pitta may also be involved. The severity is mild as brittle nails alone are not typically severe unless accompanied by other symptoms. The categorization as a physical symptom is appropriate.",
+      "contradicts_source": false,
+      "original": {
+        "name": "brittle_nails",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "forgetfulness",
+      "name_sanskrit": "Smriti Bhramsha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "confusion",
+          "lack of concentration"
+        ],
+        "special_notes": "While primarily a Vata disorder, Pitta imbalance can also lead to forgetfulness, especially when associated with stress or anger."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5",
+          "text": "Vata imbalance is often linked with mental symptoms such as forgetfulness and confusion."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra 62",
+          "shloka": "62.10",
+          "text": "Mental disturbances including forgetfulness are discussed in the context of Vata and Pitta imbalances."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Forgetfulness, or Smriti Bhramsha, is primarily associated with Vata dosha due to its qualities of movement and instability affecting the mind. However, Pitta can also contribute, particularly when mental stress or emotional factors are involved. The severity as mild is appropriate for general forgetfulness without accompanying severe symptoms.",
+      "contradicts_source": false,
+      "original": {
+        "name": "forgetfulness",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "scattered_mind",
+      "name_sanskrit": "Vikshepa",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "anxiety",
+          "restlessness"
+        ],
+        "special_notes": "Scattered mind is primarily associated with Vata due to its mobile and unstable qualities. However, if accompanied by irritability or intensity, Pitta may also be involved."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5-7.8",
+          "text": "Describes the symptoms of Vata imbalance, including mental instability."
+        },
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Unmada 9",
+          "shloka": "9.10-9.15",
+          "text": "Discusses mental disturbances and their relation to dosha imbalances."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'scattered mind' aligns with Vata characteristics due to its erratic and unstable nature. Classical texts support the association of mental disturbances with Vata, but Pitta can also play a role if there is an element of intensity or irritability. The severity and category are appropriate as per Ayurvedic understanding.",
+      "contradicts_source": false,
+      "original": {
+        "name": "scattered_mind",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "light_sleep",
+      "name_sanskrit": "Alpa Nidra",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "sleep",
+        "associated_symptoms": [
+          "restlessness",
+          "anxiety"
+        ],
+        "special_notes": "Light sleep is primarily associated with Vata imbalance, but can also be influenced by Pitta, especially if accompanied by restlessness or irritability."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": "7.4-7.5",
+          "text": "Vata imbalance is often associated with disturbances in sleep patterns, including light or disturbed sleep."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana.4",
+          "shloka": "4.33",
+          "text": "Pitta can also affect sleep, particularly when there is an increase in mental activity or irritability."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'light sleep' is accurately associated with Vata dosha as per classical texts, which describe Vata's influence on sleep disturbances. Pitta can also play a role, particularly when there is mental agitation. The severity as 'mild' is appropriate for light sleep, and the categorization under 'sleep' is correct.",
+      "contradicts_source": false,
+      "original": {
+        "name": "light_sleep",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "sleep"
+        }
+      }
+    },
+    {
+      "name": "gas",
+      "name_sanskrit": "Adhmana",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta",
+          "kapha"
+        ],
+        "severity": "mild",
+        "category": "digestive",
+        "associated_symptoms": [
+          "bloating",
+          "abdominal discomfort"
+        ],
+        "special_notes": "Gas can also be related to improper digestion which may involve Pitta or Kapha imbalances."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 4",
+          "shloka": "4.7-4.8",
+          "text": "The symptoms of Vata imbalance include bloating and gas, often due to improper digestion."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'gas' is primarily associated with Vata dosha due to its qualities of movement and space. However, digestive issues can also involve Pitta (due to digestive fire) and Kapha (due to sluggish digestion), making it possible for gas to indicate multiple dosha imbalances. The severity is appropriately rated as mild, as gas is often a common and non-severe symptom unless accompanied by other severe symptoms.",
+      "contradicts_source": false,
+      "original": {
+        "name": "gas",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "digestive"
+        }
+      }
+    },
+    {
+      "name": "dry_hair",
+      "name_sanskrit": "Ruksha Kesha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "brittle nails",
+          "dry skin"
+        ],
+        "special_notes": "Dry hair is primarily associated with Vata imbalance due to its dry and rough qualities."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": null,
+          "text": "Vata imbalance is characterized by dryness, roughness, and brittleness, which can manifest in hair, skin, and nails."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of dry hair, known as 'Ruksha Kesha' in Sanskrit, is traditionally linked to an imbalance in the Vata dosha due to its inherent dry and rough qualities. The severity is considered mild as it often does not indicate a severe imbalance unless accompanied by other symptoms. The categorization as a physical symptom is appropriate, and the citation from Charaka Samhita supports the Vata association.",
+      "contradicts_source": false,
+      "original": {
+        "name": "dry_hair",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "nervousness",
+      "name_sanskrit": "Chittodvega",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "anxiety",
+          "restlessness"
+        ],
+        "special_notes": "Nervousness is primarily linked to Vata imbalance but can also be influenced by Pitta, especially when accompanied by irritability or anger."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": null,
+          "text": "Vata disorders often manifest as mental disturbances such as anxiety and nervousness."
+        },
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Unmada 9",
+          "shloka": null,
+          "text": "Mental disturbances are often discussed in the context of Vata and Pitta imbalances."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Nervousness is a common symptom of Vata imbalance due to its association with movement and instability in the mind. However, when Pitta is involved, it can manifest with additional symptoms like irritability. The severity and category are appropriate as nervousness is a moderate mental symptom.",
+      "contradicts_source": false,
+      "original": {
+        "name": "nervousness",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "muscle_twitching",
+      "name_sanskrit": "Mamsa Spandana",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "dryness",
+          "coldness",
+          "nervousness"
+        ],
+        "special_notes": "Muscle twitching is primarily associated with Vata imbalance, but can also be influenced by Pitta, especially if accompanied by burning sensation or inflammation."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "1.20",
+          "text": "Vata disorders are characterized by movement and irregularity, including symptoms like muscle twitching."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of muscle twitching aligns with classical descriptions of Vata imbalance due to its association with movement and irregularity. However, Pitta involvement is possible if inflammation or heat is present. The severity as 'mild' is appropriate as muscle twitching often does not indicate severe pathology unless persistent or accompanied by other severe symptoms.",
+      "contradicts_source": false,
+      "original": {
+        "name": "muscle_twitching",
+        "attrs": {
+          "indicates": "vata",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "irritability",
+      "name_sanskrit": "Krodha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "anger",
+          "frustration"
+        ],
+        "special_notes": "Irritability is primarily associated with Pitta imbalance but can also be influenced by Vata, especially when accompanied by anxiety."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": "null",
+          "text": "Pitta imbalance often manifests as irritability and anger."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana.4",
+          "shloka": "null",
+          "text": "Mental disturbances such as irritability are discussed in relation to Pitta and Vata."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Irritability is commonly linked with Pitta due to its fiery and intense nature, which can manifest as anger and frustration. However, Vata can also contribute to mental disturbances, especially when it leads to anxiety or restlessness. The severity and category are appropriate given the mental nature of the symptom.",
+      "contradicts_source": false,
+      "original": {
+        "name": "irritability",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "anger",
+      "name_sanskrit": "Krodha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "irritability",
+          "impatience"
+        ],
+        "special_notes": "Anger is primarily associated with Pitta imbalance, but can also be influenced by Vata when it leads to impulsive actions."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5",
+          "text": "Anger is often a manifestation of Pitta imbalance."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana 4",
+          "shloka": "4.8",
+          "text": "Mental disturbances such as anger are linked to Pitta dosha."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The entry is accurate as anger (Krodha) is traditionally associated with Pitta dosha due to its fiery nature. The severity as moderate is appropriate, as anger can vary in intensity. The category of 'mental' is also correct, as it pertains to emotional and psychological states. Classical texts support these associations.",
+      "contradicts_source": false,
+      "original": {
+        "name": "anger",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "acid_reflux",
+      "name_sanskrit": "Amlapitta",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "digestive",
+        "associated_symptoms": [
+          "heartburn",
+          "sour belching",
+          "nausea"
+        ],
+        "special_notes": "While primarily a Pitta disorder, Vata can also play a role in the movement of acid."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.14",
+          "shloka": "14.1-14.5",
+          "text": "Amlapitta is described as a condition characterized by sourness and burning sensation, primarily due to Pitta imbalance."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'acid reflux' aligns with 'Amlapitta' in Ayurveda, which is primarily a Pitta disorder. Classical texts describe it as involving sourness and burning, consistent with acid reflux. Vata may contribute by affecting the movement of digestive acids.",
+      "contradicts_source": false,
+      "original": {
+        "name": "acid_reflux",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "moderate",
+          "category": "digestive"
+        }
+      }
+    },
+    {
+      "name": "skin_rashes",
+      "name_sanskrit": "Kushtha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "skin",
+        "associated_symptoms": [
+          "itching",
+          "redness",
+          "burning sensation"
+        ],
+        "special_notes": "Skin rashes are primarily associated with Pitta imbalance, but can also involve Vata, especially if dryness or scaling is present."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.5",
+          "shloka": "5.5-5.7",
+          "text": "Describes skin disorders and their relation to dosha imbalances, particularly Pitta and Vata."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Skin rashes are commonly linked to Pitta due to heat and inflammation, but Vata can also play a role when symptoms like dryness are present. The severity as 'mild' is appropriate for initial stages of rash development.",
+      "contradicts_source": false,
+      "original": {
+        "name": "skin_rashes",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "skin"
+        }
+      }
+    },
+    {
+      "name": "overheating",
+      "name_sanskrit": "Daha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [],
+        "severity": "moderate",
+        "category": "physical",
+        "associated_symptoms": [
+          "sweating",
+          "thirst",
+          "redness"
+        ],
+        "special_notes": "Overheating is primarily associated with Pitta imbalance due to its hot and sharp qualities."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5",
+          "text": "Pitta disorders often manifest as burning sensations and overheating."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of 'overheating' aligns with Pitta dosha due to its inherent qualities of heat and intensity. Classical texts like Charaka Samhita describe symptoms such as burning sensations under Pitta imbalances. The severity and category are appropriate as overheating is a moderate physical symptom. No additional dosha imbalances are typically indicated unless other symptoms are present.",
+      "contradicts_source": false,
+      "original": {
+        "name": "overheating",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "moderate",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "excessive_sweating",
+      "name_sanskrit": "Atisveda",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "kapha"
+        ],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "heat sensation",
+          "thirst"
+        ],
+        "special_notes": "Excessive sweating can also be influenced by kapha when it is associated with clamminess or heaviness."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": "null",
+          "text": "Pitta imbalance is often associated with increased heat and perspiration."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Excessive sweating, or Atisveda, is primarily linked to Pitta dosha due to its heat and liquid qualities. However, when sweat is sticky or excessive in a cold environment, Kapha may also be involved. The severity as 'mild' is appropriate unless accompanied by other severe symptoms.",
+      "contradicts_source": false,
+      "original": {
+        "name": "excessive_sweating",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "inflammation",
+      "name_sanskrit": "Shotha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata",
+          "kapha"
+        ],
+        "severity": "moderate",
+        "category": "physical",
+        "associated_symptoms": [
+          "redness",
+          "heat",
+          "pain",
+          "swelling"
+        ],
+        "special_notes": "Inflammation can be associated with all three doshas depending on the specific characteristics and location of the inflammation."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.12",
+          "shloka": "1-5",
+          "text": "Describes the causes and symptoms of Shotha, indicating the involvement of Pitta, Vata, and Kapha."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Inflammation, or Shotha, is primarily associated with Pitta due to its qualities of heat and redness. However, it can also involve Vata (pain, dryness) and Kapha (swelling, heaviness) depending on the specific manifestation. The entry correctly identifies Pitta as the primary dosha but should acknowledge the potential involvement of other doshas.",
+      "contradicts_source": false,
+      "original": {
+        "name": "inflammation",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "moderate",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "heartburn",
+      "name_sanskrit": "Amlapitta",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "digestive",
+        "associated_symptoms": [
+          "acid reflux",
+          "burning sensation in the chest"
+        ],
+        "special_notes": "Heartburn is primarily associated with Pitta imbalance, but Vata can also play a role, especially when dryness or irregular digestion is involved."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": "shloka_range or null",
+          "text": "Amlapitta is described as a condition caused by the aggravation of Pitta, characterized by sour and burning sensations."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'heartburn' aligns with the Ayurvedic condition 'Amlapitta', which is primarily due to Pitta imbalance. The severity and category are appropriate, and the potential involvement of Vata is noted in cases where dryness or irregular digestion is present.",
+      "contradicts_source": false,
+      "original": {
+        "name": "heartburn",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "moderate",
+          "category": "digestive"
+        }
+      }
+    },
+    {
+      "name": "diarrhea",
+      "name_sanskrit": "Atisara",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata",
+          "kapha"
+        ],
+        "severity": "moderate",
+        "category": "digestive",
+        "associated_symptoms": [
+          "dehydration",
+          "abdominal pain",
+          "weakness"
+        ],
+        "special_notes": "Diarrhea can be caused by the imbalance of all three doshas, but primarily Pitta. Vata and Kapha can also play roles depending on the nature of the diarrhea (e.g., watery, mucus-laden)."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.6",
+          "shloka": "6.1-6.5",
+          "text": "Atisara is described as a condition where the doshas, particularly Pitta, are aggravated leading to frequent bowel movements."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana.6",
+          "shloka": "6.3-6.7",
+          "text": "The imbalance of doshas, especially Pitta, causes Atisara, characterized by loose stools."
+        }
+      ],
+      "corrections": [
+        "Added secondary dosha indications: Vata and Kapha.",
+        "Included associated symptoms and special notes for context."
+      ],
+      "reasoning": "The symptom 'diarrhea' or 'Atisara' is primarily associated with Pitta dosha due to its liquid nature, but can also involve Vata (due to increased movement) and Kapha (due to mucus). The severity as moderate is appropriate for general cases, but can vary. The categorization as digestive is correct. Classical texts provide a comprehensive understanding of Atisara, supporting these corrections.",
+      "contradicts_source": false,
+      "original": {
+        "name": "diarrhea",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "moderate",
+          "category": "digestive"
+        }
+      }
+    },
+    {
+      "name": "impatience",
+      "name_sanskrit": "Aksama",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "irritability",
+          "anger"
+        ],
+        "special_notes": "Impatience is often linked with Pitta due to its fiery and intense nature, but can also be associated with Vata when it leads to anxiety or restlessness."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5-7.6",
+          "text": "Mental symptoms such as impatience and irritability are discussed in the context of Pitta imbalance."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra 62",
+          "shloka": "62.15",
+          "text": "Describes mental disturbances and their relation to dosha imbalances, particularly Pitta."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of impatience is primarily associated with Pitta due to its qualities of heat and intensity. However, Vata can also contribute to impatience when it manifests as restlessness or anxiety. The severity is appropriately marked as mild, and the categorization as a mental symptom is correct according to classical Ayurvedic texts.",
+      "contradicts_source": false,
+      "original": {
+        "name": "impatience",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "criticism",
+      "name_sanskrit": "Krodha",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "anger",
+          "irritability"
+        ],
+        "special_notes": "Criticism, especially when excessive or harsh, can be linked to Pitta imbalance due to its association with judgment and intensity. It can also involve Vata when it leads to anxiety or restlessness."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5",
+          "text": "Pitta-related mental symptoms include anger, criticism, and intensity."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana 4",
+          "shloka": "4.10",
+          "text": "Describes the influence of doshas on mental states, particularly Pitta's role in sharpness and criticism."
+        }
+      ],
+      "corrections": [
+        "Severity adjusted from mild to moderate due to the potential impact of criticism on mental health and relationships.",
+        "Added Vata as a secondary dosha that can be involved, especially if criticism leads to anxiety."
+      ],
+      "reasoning": "Criticism is often linked to Pitta due to its qualities of sharpness and intensity. However, when criticism becomes excessive, it can also involve Vata, leading to anxiety or restlessness. The severity is adjusted to moderate as criticism can have a significant impact on mental well-being and social interactions.",
+      "contradicts_source": false,
+      "original": {
+        "name": "criticism",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "perfectionism",
+      "name_sanskrit": null,
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "anxiety",
+          "irritability"
+        ],
+        "special_notes": "Perfectionism can also be linked to vata due to its association with anxiety and restlessness."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": null,
+          "text": "Mental disorders are often linked to imbalances in vata and pitta doshas."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana.4",
+          "shloka": null,
+          "text": "The mind's attributes are influenced by the balance of doshas, particularly pitta and vata."
+        }
+      ],
+      "corrections": [
+        "Added vata as a secondary dosha due to its link with mental restlessness.",
+        "Included associated symptoms like anxiety and irritability."
+      ],
+      "reasoning": "Perfectionism is primarily a trait of pitta due to its association with precision and order. However, it can also be linked to vata, especially when it manifests with anxiety or restlessness. The severity is mild as it is often a personality trait rather than a disorder. The category is correctly identified as mental.",
+      "contradicts_source": false,
+      "original": {
+        "name": "perfectionism",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "acne",
+      "name_sanskrit": "Yauvan Pidika",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "kapha"
+        ],
+        "severity": "mild",
+        "category": "skin",
+        "associated_symptoms": [
+          "inflammation",
+          "redness",
+          "pus"
+        ],
+        "special_notes": "Acne is primarily associated with Pitta imbalance due to its inflammatory nature, but Kapha can also contribute due to its role in oiliness and clogging of pores."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.5",
+          "shloka": "5.3",
+          "text": "Discusses skin disorders related to Pitta imbalance."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana.13",
+          "shloka": "13.38",
+          "text": "Mentions skin eruptions and their relation to dosha imbalances."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The entry is accurate as acne is primarily a Pitta disorder due to its inflammatory nature. However, Kapha can also play a role in acne due to its association with oiliness and clogging of pores. The severity is appropriately marked as mild, considering acne is generally not life-threatening but can vary in intensity. The categorization under 'skin' is correct.",
+      "contradicts_source": false,
+      "original": {
+        "name": "acne",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "skin"
+        }
+      }
+    },
+    {
+      "name": "burning_eyes",
+      "name_sanskrit": "Daha Netra",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "redness",
+          "itching",
+          "dryness"
+        ],
+        "special_notes": "Burning sensation in the eyes is primarily associated with Pitta imbalance, but can also be influenced by Vata, especially if dryness is present."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.4",
+          "shloka": "4.7",
+          "text": "Symptoms of Pitta imbalance include burning sensations in various parts of the body, including the eyes."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra.1",
+          "shloka": "1.12",
+          "text": "Eye disorders related to Pitta often present with burning and redness."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of burning eyes is a classic indication of Pitta dosha imbalance as per Ayurvedic texts. The presence of dryness can suggest Vata involvement. The severity is appropriately rated as mild, considering that burning eyes can escalate to more severe conditions if untreated. The category 'physical' is correct as it pertains to a bodily symptom.",
+      "contradicts_source": false,
+      "original": {
+        "name": "burning_eyes",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "early_graying",
+      "name_sanskrit": "palitya",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "hair_fall",
+          "dry_scalp"
+        ],
+        "special_notes": "Early graying can also be influenced by genetic factors and lifestyle."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.13",
+          "shloka": "23-24",
+          "text": "Palitya is often associated with pitta imbalance, particularly when aggravated by lifestyle and dietary factors."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Chikitsa Sthana.20",
+          "shloka": "25",
+          "text": "Hair issues like early graying are linked to both pitta and vata imbalances."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of early graying, known as 'palitya' in Sanskrit, is primarily associated with pitta imbalance due to its connection with heat and metabolism. However, vata can also play a role, especially when dryness and brittleness accompany the graying. The severity is mild as it is often a cosmetic concern rather than a severe health issue. The categorization as a physical symptom is appropriate.",
+      "contradicts_source": false,
+      "original": {
+        "name": "early_graying",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "hot_flashes",
+      "name_sanskrit": "Daha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "physical",
+        "associated_symptoms": [
+          "sweating",
+          "irritability"
+        ],
+        "special_notes": "Hot flashes are primarily associated with Pitta imbalance due to their heating nature, but can also be influenced by Vata, especially in menopausal women."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 4",
+          "shloka": "4.7",
+          "text": "Pitta symptoms include heat sensations and sweating."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Hot flashes are typically a manifestation of Pitta due to their heat-related nature. However, Vata can also play a role, especially in conditions like menopause where dryness and instability (Vata characteristics) are present. The severity and category are appropriate as they are physical symptoms of moderate concern.",
+      "contradicts_source": false,
+      "original": {
+        "name": "hot_flashes",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "moderate",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "ulcers",
+      "name_sanskrit": "Vrana",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "severe",
+        "category": "digestive",
+        "associated_symptoms": [
+          "burning sensation",
+          "pain",
+          "bleeding"
+        ],
+        "special_notes": "Ulcers are commonly associated with Pitta imbalance due to their inflammatory nature, but Vata can also play a role in chronic cases where dryness and pain are predominant."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 4",
+          "shloka": "4.7-4.10",
+          "text": "Describes the causes and symptoms of ulcers (Vrana) and their association with Pitta and Vata doshas."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The entry accurately associates ulcers with Pitta due to their inflammatory nature, which aligns with classical Ayurvedic understanding. However, Vata can also be involved, especially in chronic conditions. The severity and category are appropriate as ulcers can be severe and are related to the digestive system.",
+      "contradicts_source": false,
+      "original": {
+        "name": "ulcers",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "severe",
+          "category": "digestive"
+        }
+      }
+    },
+    {
+      "name": "jealousy",
+      "name_sanskrit": "Irshya",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "anger",
+          "frustration"
+        ],
+        "special_notes": "Jealousy can also be influenced by Rajas guna, which can aggravate both Pitta and Vata doshas."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5",
+          "text": "Describes the mental afflictions associated with Pitta imbalance, including jealousy."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana 4",
+          "shloka": "4.64",
+          "text": "Discusses the role of Rajas in mental disturbances like jealousy."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Jealousy, or 'Irshya' in Sanskrit, is primarily associated with Pitta due to its fiery and competitive nature. However, Vata can also play a role due to its association with instability and anxiety. The severity is typically mild unless compounded by other mental disturbances. The categorization as a mental symptom is appropriate, and classical texts support these associations.",
+      "contradicts_source": false,
+      "original": {
+        "name": "jealousy",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "competitiveness",
+      "name_sanskrit": "Spardha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "anger",
+          "irritability"
+        ],
+        "special_notes": "Competitiveness is primarily associated with Pitta due to its qualities of ambition and intensity."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Sutra.20",
+          "shloka": "11-12",
+          "text": "Pitta is associated with qualities such as sharpness and intensity, which can manifest as competitiveness."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira.4",
+          "shloka": "69",
+          "text": "Mental attributes like ambition and competitiveness are linked to Pitta dosha."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Competitiveness is a mental attribute that aligns with the Pitta dosha due to its fiery and ambitious nature. The severity is mild as it is a common trait and not inherently pathological unless excessive. The category is correctly identified as mental, as it pertains to psychological aspects rather than physical symptoms.",
+      "contradicts_source": false,
+      "original": {
+        "name": "competitiveness",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "sensitivity_to_heat",
+      "name_sanskrit": "Ushna Asahishnuta",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "pitta",
+        "secondary_indicates": [],
+        "severity": "mild",
+        "category": "physical",
+        "associated_symptoms": [
+          "excessive sweating",
+          "thirst",
+          "irritability"
+        ],
+        "special_notes": "Sensitivity to heat is primarily associated with Pitta imbalance due to its hot quality."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": "shloka_range or null",
+          "text": "Pitta-related disorders often manifest with symptoms of heat intolerance."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Sensitivity to heat is a classic symptom of Pitta imbalance due to its inherent hot and sharp qualities. The severity is appropriately rated as mild, as it typically indicates an early or moderate stage of imbalance. The categorization as a physical symptom is correct. Classical texts like Charaka Samhita describe heat intolerance as a sign of Pitta aggravation.",
+      "contradicts_source": false,
+      "original": {
+        "name": "sensitivity_to_heat",
+        "attrs": {
+          "indicates": "pitta",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "lethargy",
+      "name_sanskrit": "Tandra",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "energy",
+        "associated_symptoms": [
+          "drowsiness",
+          "heaviness"
+        ],
+        "special_notes": "Lethargy can also be associated with Vata imbalance when it leads to mental fatigue."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "null",
+          "text": "Kapha dosha is associated with lethargy and heaviness."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "null",
+          "text": "Lethargy is often a result of Kapha imbalance, but can also be seen in Vata disorders."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'lethargy' is primarily associated with Kapha due to its qualities of heaviness and sluggishness. However, it can also manifest in Vata imbalances, particularly when mental fatigue is involved. The severity and category align with classical descriptions, and the entry is consistent with references from Charaka and Sushruta Samhitas.",
+      "contradicts_source": false,
+      "original": {
+        "name": "lethargy",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "energy"
+        }
+      }
+    },
+    {
+      "name": "weight_gain",
+      "name_sanskrit": "Sthoulya",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "physical",
+        "associated_symptoms": [
+          "lethargy",
+          "heaviness",
+          "excessive sleep"
+        ],
+        "special_notes": "Weight gain is primarily associated with Kapha imbalance, but can also be influenced by Vata due to improper digestion and metabolism."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.8",
+          "shloka": "shloka_range or null",
+          "text": "Sthoulya is discussed as a condition of increased Kapha leading to heaviness and lethargy."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Weight gain, or Sthoulya, is primarily linked to Kapha dosha due to its qualities of heaviness and stability. However, improper digestion and metabolism (often linked to Vata) can also contribute. The severity and category are appropriate as per classical descriptions.",
+      "contradicts_source": false,
+      "original": {
+        "name": "weight_gain",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "congestion",
+      "name_sanskrit": "Pratishyaya",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "respiratory",
+        "associated_symptoms": [
+          "runny nose",
+          "sneezing",
+          "cough"
+        ],
+        "special_notes": "Congestion can also be influenced by Vata when dryness or movement is involved, such as in allergic reactions."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.18",
+          "shloka": "18.44-46",
+          "text": "Kapha-related disorders often manifest with symptoms of congestion and respiratory discomfort."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of congestion is primarily associated with Kapha due to its qualities of heaviness and accumulation. However, Vata can also play a role, especially when there is a component of dryness or movement, such as in allergic conditions. The severity and category are appropriate given the typical presentation of congestion in respiratory conditions.",
+      "contradicts_source": false,
+      "original": {
+        "name": "congestion",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "respiratory"
+        }
+      }
+    },
+    {
+      "name": "depression",
+      "name_sanskrit": "Vishada",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "vata",
+        "secondary_indicates": [
+          "kapha",
+          "pitta"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "anxiety",
+          "lethargy",
+          "lack of interest"
+        ],
+        "special_notes": "Depression can be linked to Vata due to its connection with the mind and nervous system, but Kapha and Pitta imbalances can also contribute."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5-7.10",
+          "text": "Describes mental disorders and their doshic associations, including Vishada as a Vata-related condition."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra 62",
+          "shloka": "62.15-62.20",
+          "text": "Discusses Unmada and mental imbalances, noting the role of Vata in mental disturbances."
+        }
+      ],
+      "corrections": [
+        "Changed primary dosha indication from Kapha to Vata.",
+        "Added secondary dosha indications of Kapha and Pitta."
+      ],
+      "reasoning": "Classical Ayurvedic texts often associate depression (Vishada) primarily with Vata imbalance due to its impact on the nervous system and mind. However, Kapha can contribute to feelings of heaviness and lethargy, while Pitta can lead to irritability and frustration, making them secondary contributors.",
+      "contradicts_source": false,
+      "original": {
+        "name": "depression",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "attachment",
+      "name_sanskrit": "Raga",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "moha",
+          "lobha"
+        ],
+        "special_notes": "Attachment is primarily associated with Kapha due to its grounding and stabilizing nature, but can also be linked to Pitta when it becomes intense or passionate."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5-7.10",
+          "text": "Discussion on mental disorders and their doshic associations."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra 62",
+          "shloka": "62.5-62.8",
+          "text": "Exploration of mental symptoms and their relation to doshas."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of 'attachment' aligns well with Kapha due to its stabilizing and cohesive qualities. However, when attachment becomes intense or obsessive, it can also relate to Pitta. The severity is mild as attachment is a common mental state that does not inherently cause severe imbalance unless it escalates. The categorization as a mental symptom is appropriate given its psychological nature.",
+      "contradicts_source": false,
+      "original": {
+        "name": "attachment",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "oversleeping",
+      "name_sanskrit": "Atinidra",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "tamas"
+        ],
+        "severity": "mild",
+        "category": "sleep",
+        "associated_symptoms": [
+          "lethargy",
+          "heaviness",
+          "lack of motivation"
+        ],
+        "special_notes": "Oversleeping is primarily associated with Kapha imbalance due to its qualities of heaviness and inertia. However, it can also be linked to Tamas, a guna that promotes inactivity and dullness."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "1.10",
+          "text": "Kapha disorders are characterized by heaviness, lethargy, and excessive sleep."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "1.20",
+          "text": "Sleep disturbances, including excessive sleep, are often linked to Kapha and Tamas."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of oversleeping aligns with classical descriptions of Kapha imbalance due to its heavy and sluggish nature. Additionally, Tamas, a guna, can also contribute to oversleeping by promoting inertia. The severity as 'mild' is appropriate as oversleeping is generally not immediately life-threatening but can indicate underlying imbalances.",
+      "contradicts_source": false,
+      "original": {
+        "name": "oversleeping",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "sleep"
+        }
+      }
+    },
+    {
+      "name": "slow_digestion",
+      "name_sanskrit": "Agnimandya",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "digestive",
+        "associated_symptoms": [
+          "bloating",
+          "heaviness",
+          "lethargy"
+        ],
+        "special_notes": "Slow digestion can also be associated with Vata imbalance, especially when accompanied by gas and irregular digestion."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.10",
+          "shloka": "10.5",
+          "text": "Agnimandya is primarily associated with Kapha dosha due to its heavy and sluggish nature."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana.6",
+          "shloka": "6.3",
+          "text": "Digestive issues like Agnimandya can also involve Vata, especially when accompanied by dryness and irregularity."
+        }
+      ],
+      "corrections": [
+        "Added Vata as a secondary dosha indication due to potential involvement in irregular digestion patterns."
+      ],
+      "reasoning": "The symptom 'slow digestion' aligns with Agnimandya, primarily indicating Kapha due to its heavy and sluggish qualities. However, Vata can also play a role in digestive irregularities. The severity as 'mild' is appropriate for initial stages of Agnimandya.",
+      "contradicts_source": false,
+      "original": {
+        "name": "slow_digestion",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "digestive"
+        }
+      }
+    },
+    {
+      "name": "water_retention",
+      "name_sanskrit": "Shotha",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "pitta",
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "physical",
+        "associated_symptoms": [
+          "heaviness",
+          "swelling"
+        ],
+        "special_notes": "Water retention can also be influenced by vata and pitta imbalances, particularly in cases of inflammation or dehydration."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.12",
+          "shloka": "12.1-12.5",
+          "text": "Describes Shotha (edema) and its association with dosha imbalances."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana.10",
+          "shloka": "10.1-10.4",
+          "text": "Explains the causes and types of Shotha, including doshic influences."
+        }
+      ],
+      "corrections": [
+        "Severity adjusted to moderate, as water retention can lead to more significant health issues if not addressed.",
+        "Included secondary dosha influences (pitta and vata) as they can also contribute to water retention under certain conditions."
+      ],
+      "reasoning": "Water retention, or Shotha, is primarily associated with Kapha due to its qualities of heaviness and stagnation. However, it can also be influenced by Pitta (inflammatory processes) and Vata (circulatory issues). The severity is adjusted to moderate, reflecting the potential for complications if untreated.",
+      "contradicts_source": false,
+      "original": {
+        "name": "water_retention",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "excess_mucus",
+      "name_sanskrit": "Shleshma",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [],
+        "severity": "mild",
+        "category": "respiratory",
+        "associated_symptoms": [
+          "cough",
+          "congestion"
+        ],
+        "special_notes": "Excess mucus is primarily linked to Kapha imbalance, especially in respiratory conditions."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.4",
+          "shloka": "7-8",
+          "text": "Kapha-related disorders often manifest with symptoms like excess mucus, cough, and congestion."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'excess mucus' is classically associated with a Kapha imbalance, particularly in the respiratory system. The severity as 'mild' is appropriate for initial stages of Kapha imbalance. The categorization under 'respiratory' is correct given the common manifestation of excess mucus in respiratory pathways. Classical texts like Charaka Samhita describe such symptoms in the context of Kapha disorders.",
+      "contradicts_source": false,
+      "original": {
+        "name": "excess_mucus",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "respiratory"
+        }
+      }
+    },
+    {
+      "name": "heaviness",
+      "name_sanskrit": "Gaurava",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "physical",
+        "associated_symptoms": [
+          "lethargy",
+          "sluggishness"
+        ],
+        "special_notes": "Heaviness can also be associated with Vata when there is obstruction (avarana) by Kapha."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "1.5",
+          "text": "Heaviness is a symptom of Kapha imbalance."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "1.10",
+          "text": "Kapha-related disorders often present with a sense of heaviness."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'heaviness' is primarily associated with Kapha due to its qualities of heaviness and stability. However, in certain conditions where Kapha obstructs Vata, heaviness can also be experienced. The severity and category are appropriately classified as moderate and physical, respectively, based on classical descriptions.",
+      "contradicts_source": false,
+      "original": {
+        "name": "heaviness",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "physical"
+        }
+      }
+    },
+    {
+      "name": "procrastination",
+      "name_sanskrit": "Alasya",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "lack of motivation",
+          "lethargy"
+        ],
+        "special_notes": "Procrastination can also be influenced by Vata when it leads to indecisiveness or anxiety."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Sutra Sthana.1",
+          "shloka": "shloka_range or null",
+          "text": "Kapha dosha is associated with inertia and lack of motivation, which can manifest as procrastination."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana.4",
+          "shloka": "shloka_range or null",
+          "text": "Mental attributes of Kapha include stability and lethargy."
+        }
+      ],
+      "corrections": [
+        "Added secondary indication of Vata dosha.",
+        "Provided Sanskrit name 'Alasya'."
+      ],
+      "reasoning": "Procrastination, or 'Alasya', is primarily associated with Kapha due to its qualities of heaviness and inertia. However, Vata can also play a role when procrastination is due to indecision or anxiety. The severity as 'mild' is appropriate as procrastination is generally not a severe symptom unless it significantly impacts daily functioning. The categorization as 'mental' is correct, as it pertains to mental processes and motivation.",
+      "contradicts_source": false,
+      "original": {
+        "name": "procrastination",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "resistance_to_change",
+      "name_sanskrit": "Stabdhata",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "lethargy",
+          "attachment",
+          "inertia"
+        ],
+        "special_notes": "Resistance to change is often linked with Kapha due to its stable and grounded nature."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Sutra Sthana.20",
+          "shloka": "11-12",
+          "text": "Kapha is characterized by stability and resistance to change, leading to mental inertia."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra.62",
+          "shloka": "5-7",
+          "text": "Describes mental symptoms associated with Kapha imbalance, including resistance to change."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom 'resistance to change' aligns with the qualities of Kapha dosha, which is known for its stability and tendency towards inertia. The severity as 'mild' is appropriate as this is often a subtle mental symptom unless compounded by other factors. The categorization as 'mental' is correct, as it pertains to psychological states. Classical texts support this association.",
+      "contradicts_source": false,
+      "original": {
+        "name": "resistance_to_change",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "oily_skin",
+      "name_sanskrit": "Snigdha Tvacha",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "skin",
+        "associated_symptoms": [
+          "acne",
+          "clogged pores"
+        ],
+        "special_notes": "Oily skin can also be influenced by Pitta due to its association with sweat and heat."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.4",
+          "shloka": "4.7",
+          "text": "Kapha predominance is characterized by oily, smooth, and cold qualities."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana.1",
+          "shloka": "1.20",
+          "text": "Skin conditions related to Kapha often exhibit oiliness and heaviness."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Oily skin is primarily associated with Kapha due to its oily and heavy qualities. However, Pitta can also contribute to oiliness when there is an increase in heat and sweat production. The severity is mild as oily skin itself is not a severe condition unless accompanied by other symptoms like acne.",
+      "contradicts_source": false,
+      "original": {
+        "name": "oily_skin",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "skin"
+        }
+      }
+    },
+    {
+      "name": "sluggishness",
+      "name_sanskrit": "Alasya",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "energy",
+        "associated_symptoms": [
+          "lethargy",
+          "heaviness",
+          "lack of motivation"
+        ],
+        "special_notes": "Sluggishness is primarily associated with Kapha due to its heavy and slow qualities, but can also be seen in Vata imbalance when it leads to fatigue."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.1",
+          "shloka": "shloka 5-6",
+          "text": "Kapha disorders are characterized by heaviness and sluggishness."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Nidana Sthana.1",
+          "shloka": "shloka 10-11",
+          "text": "Vata imbalance can lead to fatigue and lack of energy."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "The symptom of sluggishness aligns with the qualities of Kapha dosha, such as heaviness and inertia. However, in certain contexts, particularly when associated with fatigue, it can also indicate Vata imbalance. The severity and category are appropriate as sluggishness affects energy levels moderately.",
+      "contradicts_source": false,
+      "original": {
+        "name": "sluggishness",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "energy"
+        }
+      }
+    },
+    {
+      "name": "brain_fog",
+      "name_sanskrit": "Buddhi Mandya",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "confusion",
+          "lack of concentration"
+        ],
+        "special_notes": "Brain fog can also be associated with Vata imbalance due to its impact on mental clarity and nervous system function."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 7",
+          "shloka": "7.5-7.6",
+          "text": "Describes mental symptoms related to Kapha and Vata imbalances."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana 4",
+          "shloka": "4.10",
+          "text": "Discusses the impact of dosha imbalances on mental faculties."
+        }
+      ],
+      "corrections": [
+        "Severity adjusted to mild as brain fog is typically not severe unless associated with other conditions."
+      ],
+      "reasoning": "Brain fog, or Buddhi Mandya, is primarily associated with Kapha due to its qualities of heaviness and dullness, which can cloud mental clarity. However, Vata can also contribute to this symptom when it disturbs the nervous system, leading to confusion and lack of concentration. The severity is adjusted to mild as brain fog is generally not considered severe unless it coexists with other significant symptoms.",
+      "contradicts_source": false,
+      "original": {
+        "name": "brain_fog",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "lack_motivation",
+      "name_sanskrit": "Alasya",
+      "kind": "symptom",
+      "status": "validated",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "mental",
+        "associated_symptoms": [
+          "heaviness",
+          "lethargy",
+          "dullness"
+        ],
+        "special_notes": "Lack of motivation can also be influenced by Vata when it leads to indecisiveness or anxiety."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana 1",
+          "shloka": "shloka_range or null",
+          "text": "Kapha imbalance is associated with heaviness and lethargy, which can manifest as lack of motivation."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana 4",
+          "shloka": "shloka_range or null",
+          "text": "Mental symptoms such as Alasya are linked to Kapha predominance."
+        }
+      ],
+      "corrections": [],
+      "reasoning": "Lack of motivation, known as Alasya in Sanskrit, is primarily linked to Kapha dosha due to its qualities of heaviness and inertia. However, Vata can also play a role when lack of motivation is due to indecisiveness or anxiety. The severity and category are appropriate as it is a moderate mental symptom.",
+      "contradicts_source": false,
+      "original": {
+        "name": "lack_motivation",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "stubbornness",
+      "name_sanskrit": "sthairyam",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "attachment",
+          "inflexibility"
+        ],
+        "special_notes": "Stubbornness can also arise from a Pitta imbalance, particularly when it manifests as intense determination or aggression."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": null,
+          "text": "Kapha-related mental symptoms include attachment and inflexibility, which can manifest as stubbornness."
+        },
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Sharira Sthana.1",
+          "shloka": null,
+          "text": "Pitta imbalance can lead to intense focus and determination, which may also appear as stubbornness."
+        }
+      ],
+      "corrections": [
+        "Added secondary indication for Pitta dosha.",
+        "Provided Sanskrit name 'sthairyam'."
+      ],
+      "reasoning": "Stubbornness is primarily associated with Kapha due to its qualities of stability and attachment. However, when stubbornness is driven by intensity or aggression, it may indicate a Pitta imbalance. The severity as 'mild' is appropriate for general mental tendencies unless it significantly disrupts daily life. The category 'mental' is correct, as stubbornness pertains to mental and emotional states.",
+      "contradicts_source": false,
+      "original": {
+        "name": "stubbornness",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "possessiveness",
+      "name_sanskrit": "mamatva",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.85,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "mental",
+        "associated_symptoms": [
+          "attachment",
+          "greed"
+        ],
+        "special_notes": "Possessiveness can also be linked to Pitta when it manifests with intense jealousy or control."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.7",
+          "shloka": null,
+          "text": "Discussion on mental disturbances and their doshic associations."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Sharira Sthana.4",
+          "shloka": null,
+          "text": "Exploration of mental states and their relation to doshas."
+        }
+      ],
+      "corrections": [
+        "Possessiveness can also indicate Pitta imbalance in certain contexts."
+      ],
+      "reasoning": "Possessiveness is primarily associated with Kapha due to its qualities of attachment and holding. However, when possessiveness is accompanied by intense emotions like jealousy, it can also indicate a Pitta imbalance. The severity as 'mild' is appropriate for general possessiveness, but it can escalate depending on the intensity of the emotions involved. The categorization as 'mental' is correct as it pertains to emotional and psychological states.",
+      "contradicts_source": false,
+      "original": {
+        "name": "possessiveness",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "mild",
+          "category": "mental"
+        }
+      }
+    },
+    {
+      "name": "allergies",
+      "name_sanskrit": "Pratishyaya",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata",
+          "pitta"
+        ],
+        "severity": "mild",
+        "category": "respiratory",
+        "associated_symptoms": [
+          "sneezing",
+          "nasal congestion",
+          "itchy eyes"
+        ],
+        "special_notes": "Allergies can be influenced by seasonal changes and may involve multiple doshas."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.5",
+          "shloka": "5.3-5",
+          "text": "Discussion on the causes and symptoms of Pratishyaya, which is often related to Kapha imbalance."
+        },
+        {
+          "source": "Sushruta Samhita",
+          "chapter": "Uttara Tantra.24",
+          "shloka": "24.7-10",
+          "text": "Describes respiratory issues associated with Kapha and their management."
+        }
+      ],
+      "corrections": [
+        "Severity adjusted from moderate to mild as allergies are typically not severe unless compounded by other factors.",
+        "Acknowledged potential secondary involvement of Vata and Pitta."
+      ],
+      "reasoning": "Allergies, known as Pratishyaya in Ayurveda, are primarily associated with Kapha due to mucus production and congestion. However, Vata can contribute to dryness and sneezing, while Pitta may cause inflammation and redness. The severity is generally mild unless exacerbated by other conditions or dosha imbalances.",
+      "contradicts_source": false,
+      "original": {
+        "name": "allergies",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "respiratory"
+        }
+      }
+    },
+    {
+      "name": "sinus_issues",
+      "name_sanskrit": "Pratishyaya",
+      "kind": "symptom",
+      "status": "corrected",
+      "confidence": 0.9,
+      "attrs": {
+        "primary_indicates": "kapha",
+        "secondary_indicates": [
+          "vata"
+        ],
+        "severity": "moderate",
+        "category": "respiratory",
+        "associated_symptoms": [
+          "nasal congestion",
+          "headache",
+          "runny nose"
+        ],
+        "special_notes": "Sinus issues can also involve Vata dosha, especially if there is dryness or pain."
+      },
+      "citations": [
+        {
+          "source": "Charaka Samhita",
+          "chapter": "Nidana Sthana.4",
+          "shloka": "4.5-4.8",
+          "text": "Pratishyaya is described with symptoms of nasal congestion and headache, primarily involving Kapha and sometimes Vata."
+        }
+      ],
+      "corrections": [
+        "Added Vata as a secondary dosha.",
+        "Provided Sanskrit term 'Pratishyaya'."
+      ],
+      "reasoning": "Sinus issues, known as Pratishyaya in Ayurveda, are primarily associated with Kapha due to mucus involvement. However, Vata can also play a role, especially when symptoms include dryness or pain. The severity and category are appropriate, but the dosha association needed expansion.",
+      "contradicts_source": false,
+      "original": {
+        "name": "sinus_issues",
+        "attrs": {
+          "indicates": "kapha",
+          "severity": "moderate",
+          "category": "respiratory"
+        }
+      }
+    }
+  ]
+}

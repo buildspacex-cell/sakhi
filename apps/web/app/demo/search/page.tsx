@@ -1147,13 +1147,13 @@ const matchBadgeStyle = (level: string): React.CSSProperties => ({
   display: "inline-flex",
   alignItems: "center",
   gap: 8,
-  padding: "6px 10px",
+  padding: "6px 12px",
   borderRadius: 8,
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 500,
   background: level === "perfect" ? palette.successDim : palette.accentDim,
   color: level === "perfect" ? palette.success : palette.accent,
-  marginBottom: 10,
+  marginBottom: 12,
 });
 
 const styles: Record<string, React.CSSProperties> = {
@@ -1166,10 +1166,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   header: {
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 600,
     marginBottom: 8,
   },
@@ -1183,7 +1183,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "flex-start",
     gap: 24,
     marginBottom: 40,
-    flexWrap: "wrap",
   },
   // Preferences Panel
   preferencesPanel: {

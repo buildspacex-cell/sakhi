@@ -1,0 +1,4170 @@
+[
+  {
+    "validated": true,
+    "name_sanskrit": "A\u015bvagandh\u0101",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "balya (strengthening)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Enhances strength and vitality",
+      "Supports stress management",
+      "Improves sleep quality",
+      "Boosts immune function",
+      "Supports reproductive health"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Described as a Rasayana for promoting longevity and vitality."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Detailed description of its properties and uses."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Ashwagandha is generally safe but may increase Pitta if used excessively. It's advisable to consult a practitioner for personalized advice.",
+    "original_name": "ashwagandha"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Brahm\u012b",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "medhya (enhances intellect)",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Enhances memory and cognitive function",
+      "Reduces anxiety and stress",
+      "Supports healthy skin",
+      "Promotes restful sleep",
+      "Balances the nervous system"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Brahmi is mentioned as a medhya rasayana, beneficial for enhancing intellect and memory."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Bhavaprakasha Nighantu",
+        "context": "Detailed description of Brahmi's properties and uses."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Brahmi is generally safe for most people, but it should be used with caution in individuals with a cold constitution due to its shita virya. It is also important to ensure proper identification of the herb, as Brahmi is sometimes confused with other herbs like Gotu Kola (Centella asiatica).",
+    "original_name": "brahmi"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Tulasi",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "krimighna (antimicrobial)",
+      "part_used": "leaf",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders",
+      "Fever",
+      "Digestive issues",
+      "Stress relief",
+      "Skin disorders"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Kalpa Sthana",
+        "context": "Tulsi is mentioned for its use in respiratory and digestive disorders."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes the properties and uses of Tulsi, emphasizing its antimicrobial and adaptogenic effects."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Tulsi is widely used in Ayurveda for its adaptogenic and antimicrobial properties. It should be used with caution in individuals with high Pitta due to its ushna virya.",
+    "original_name": "tulsi"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Triphala",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "rejuvenative",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Digestive health",
+      "Detoxification",
+      "Eye health",
+      "Rejuvenation",
+      "Immune support"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsasthana",
+        "context": "Triphala is mentioned as a key formulation for balancing all three doshas and promoting overall health."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Uttarasthana",
+        "context": "Describes the use of Triphala in eye health and its rejuvenative properties."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Details the individual properties of the three fruits that make up Triphala."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Triphala is generally considered safe for regular use, but excessive consumption may lead to digestive disturbances. It is important to use under the guidance of a qualified practitioner.",
+    "original_name": "triphala"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015aat\u0101var\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "rasayana",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "pitta"
+      ],
+      "aggravates": [
+        "kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "rejuvenative tonic",
+      "supports female reproductive health",
+      "boosts immune system",
+      "anti-inflammatory",
+      "enhances lactation"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Described as a rejuvenative and beneficial for women's health"
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Uttara Sthana",
+        "context": "Mentioned for its nourishing and cooling properties"
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Listed for its use in enhancing lactation and as a tonic"
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Shatavari is generally safe for most individuals, but those with high kapha or congestion should use it cautiously. It is particularly revered for its benefits to the female reproductive system and as a general tonic.",
+    "original_name": "shatavari"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Gu\u1e0d\u016bc\u012b",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "jvaraghna (antipyretic)",
+      "part_used": "stem",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Immunomodulator",
+      "Antipyretic",
+      "Anti-inflammatory",
+      "Detoxification",
+      "Liver protection"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Gu\u1e0d\u016bc\u012b is mentioned as a potent herb for treating fever and enhancing immunity."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Dravya Guna Vijnana",
+        "context": "Describes the properties and uses of Gu\u1e0d\u016bc\u012b in various treatments."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Guduchi Varga",
+        "context": "Lists Gu\u1e0d\u016bc\u012b's properties, uses, and its role in balancing doshas."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Gu\u1e0d\u016bc\u012b is generally safe but should be used with caution in individuals with low blood sugar as it may have hypoglycemic effects.",
+    "original_name": "guduchi"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Nimba",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "krimighna (antimicrobial)",
+      "part_used": "leaf",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "antimicrobial and antiseptic",
+      "skin disorders",
+      "blood purification",
+      "fever",
+      "anti-inflammatory"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana",
+        "context": "Neem is mentioned for its bitter taste and its ability to pacify pitta and kapha doshas."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Chikitsasthana",
+        "context": "Used in formulations for skin diseases and as an antiseptic."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Nighantu",
+        "context": "Detailed description of neem's properties and uses."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Neem is highly regarded in Ayurveda for its broad spectrum of therapeutic uses. However, due to its bitter taste and cold potency, it should be used cautiously in individuals with vata imbalance.",
+    "original_name": "neem"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Haridr\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "ruksha",
+        "laghu"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "rhizome",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Anti-inflammatory",
+      "Antioxidant",
+      "Improves skin complexion",
+      "Aids digestion",
+      "Supports joint health"
+    ],
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutrasthana",
+        "context": "Listed as a key herb for its anti-inflammatory properties."
+      },
+      {
+        "source": "Sushruta Samhita",
+        "chapter": "Chikitsasthana",
+        "context": "Used in formulations for skin conditions."
+      },
+      {
+        "source": "Bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes its uses in digestive and skin health."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Turmeric is widely used in Ayurveda for its broad therapeutic benefits. However, excessive use can aggravate Pitta due to its ushna virya.",
+    "original_name": "turmeric"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u0100malak\u012b",
+    "validated_properties": {
+      "rasa": "amla",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "rasayana",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "enhances digestion",
+      "boosts immunity",
+      "improves skin health",
+      "supports liver function",
+      "acts as a rejuvenative"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsasthana",
+        "context": "\u0100malak\u012b is mentioned as a key ingredient in various formulations for its rejuvenative properties."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Sutrasthana",
+        "context": "Described for its ability to balance doshas and enhance longevity."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Chikitsasthana",
+        "context": "Used in the treatment of various pitta-related disorders."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "\u0100malak\u012b is generally safe but should be used with caution in individuals with a predominant vata constitution due to its potential to aggravate vata in excess.",
+    "original_name": "amalaki"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Har\u012btak\u012b",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "tridoshahara",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Digestive aid",
+      "Laxative",
+      "Rejuvenative",
+      "Respiratory health",
+      "Antioxidant"
+    ],
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutrasthana",
+        "context": "Haritaki is described as a powerful rejuvenative and digestive aid."
+      },
+      {
+        "source": "Ashtanga Hridaya",
+        "chapter": "Sutrasthana",
+        "context": "Mentioned for its tridoshahara properties and use in various formulations."
+      },
+      {
+        "source": "Bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Detailed description of its properties and therapeutic uses."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Haritaki is considered a highly revered herb in Ayurveda, often used in formulations like Triphala. It should be used with caution in individuals with severe dehydration or emaciation due to its ruksha (dry) quality.",
+    "original_name": "haritaki"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Vibh\u012btak\u012b",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "Not specifically mentioned",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "pitta"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders",
+      "Digestive issues",
+      "Liver health",
+      "Eye disorders",
+      "Hair health"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Mentioned in the context of Triphala for its therapeutic benefits."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Sutrasthana",
+        "context": "Described as part of Triphala, highlighting its properties and uses."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Detailed description of its properties and therapeutic applications."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Bibhitaki is commonly used in combination with Haritaki and Amalaki as part of Triphala. It should be used with caution in individuals with a predominant Vata constitution due to its potential to aggravate Vata when used in excess.",
+    "original_name": "bibhitaki"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Guggulu",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "resin",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "kapha"
+      ],
+      "aggravates": [
+        "pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "anti-inflammatory",
+      "weight management",
+      "arthritis",
+      "cholesterol management",
+      "wound healing"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsasthana",
+        "context": "Guggulu is mentioned for its use in treating inflammatory conditions and as a rejuvenative."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Chikitsasthana",
+        "context": "Discussed in the context of its use in wound healing and management of obesity."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Guggulu Varga",
+        "context": "Detailed description of the properties and uses of Guggulu."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Guggulu should be used with caution in individuals with high pitta conditions due to its ushna virya. It is also important to ensure the source of Guggulu is sustainable, as overharvesting can lead to ecological concerns.",
+    "original_name": "guggulu"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015ail\u0101jatu",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "yogavahi (enhances the properties of other substances)",
+      "part_used": "exudate",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Rasayana (rejuvenative)",
+      "Diabetes management",
+      "Enhancing strength and stamina",
+      "Urinary disorders",
+      "Anti-inflammatory"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Described as a potent rasayana and used in various treatments."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Dravya Guna Vijnana",
+        "context": "Mentioned for its rejuvenative and therapeutic properties."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Detailed description of its properties and uses."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Shilajit should be used with caution in individuals with high Pitta conditions due to its ushna virya. It is important to ensure the purity of shilajit as adulteration is common.",
+    "original_name": "shilajit"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Arjuna",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "hridya (cardiotonic)",
+      "part_used": "bark",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "cardiovascular health",
+      "wound healing",
+      "asthma",
+      "hypertension",
+      "dysentery"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Arjuna Varga",
+        "context": "Describes the properties and uses of Arjuna bark, emphasizing its cardioprotective effects."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Arjuna is primarily used for its beneficial effects on the heart. It should be used with caution in individuals with predominant Vata dosha due to its ruksha (dry) quality.",
+    "original_name": "arjuna"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "B\u0101l\u0101",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "balya (strengthening)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Strengthening and rejuvenating",
+      "Nervine tonic",
+      "Anti-inflammatory",
+      "Improves immunity",
+      "Supports respiratory health"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana",
+        "context": "Bala is mentioned as a strengthening herb with cooling properties."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Dravyaguna Vijnana",
+        "context": "Describes the properties and uses of Bala in pacifying Vata and Pitta."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Lists Bala as a rejuvenative and tonic herb."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Bala is generally safe but should be used with caution in individuals with Kapha dominance due to its sweet and heavy nature.",
+    "original_name": "bala"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Vid\u0101ri",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "rasayana",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Rejuvenative and anti-aging",
+      "Enhances strength and vitality",
+      "Improves lactation",
+      "Nourishes and strengthens tissues",
+      "Useful in urinary disorders"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhura Skandha",
+        "context": "Vidari is described as a rejuvenative herb with sweet taste and cooling properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Vidari is often used in formulations for its nourishing and strengthening properties. It is generally safe but should be used in moderation to avoid excessive Kapha increase.",
+    "original_name": "vidari"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Pu\u1e47arnav\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "diuretic",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Diuretic and helps in managing edema",
+      "Useful in treating jaundice and liver disorders",
+      "Aids in managing urinary disorders",
+      "Helps in reducing inflammation",
+      "Beneficial in treating respiratory conditions like asthma"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Pu\u1e47arnav\u0101, emphasizing its diuretic action and utility in managing edema and liver disorders."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Pu\u1e47arnav\u0101 is highly regarded for its ability to reduce swelling and manage fluid retention. It should be used with caution in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "punarnava"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "ma\u00f1ji\u1e63\u1e6dh\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "ruksha"
+      ],
+      "prabhava": "rakta shodhaka (blood purifier)",
+      "part_used": "root",
+      "dosage_form": "churna, kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Blood purification",
+      "Skin disorders",
+      "Menstrual disorders",
+      "Anti-inflammatory",
+      "Detoxification"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of ma\u00f1ji\u1e63\u1e6dh\u0101"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Ma\u00f1ji\u1e63\u1e6dh\u0101 is well-regarded for its blood-purifying properties and is commonly used in skin-related therapies. It should be used with caution in individuals with predominant Vata dosha due to its ruksha (dry) and guru (heavy) qualities.",
+    "original_name": "manjistha"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ku\u1e6dk\u012b",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "hepatoprotective",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Liver disorders",
+      "Digestive issues",
+      "Fever",
+      "Skin diseases",
+      "Respiratory ailments"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Ku\u1e6dk\u012b is described for its bitter taste and cooling potency, beneficial for liver and digestive health."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Kutki is known for its strong action on the liver and should be used with caution in individuals with high vata dosha.",
+    "original_name": "kutki"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Pippal\u012b",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "Deepana (enhances digestive fire)",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Enhances digestion",
+      "Respiratory disorders",
+      "Rejuvenative",
+      "Improves metabolism",
+      "Treats cough and cold"
+    ],
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Pippali is mentioned as a key herb for enhancing digestion and treating respiratory disorders."
+      },
+      {
+        "source": "Ashtanga Hridaya",
+        "chapter": "Dravyaguna Vijnana",
+        "context": "Describes the properties and uses of Pippali, emphasizing its role in pacifying Vata and Kapha."
+      },
+      {
+        "source": "Bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Lists Pippali as a rejuvenative and its effects on metabolism."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Pippali should be used cautiously in individuals with high Pitta conditions due to its ushna virya. It is often used in formulations with other herbs to balance its effects.",
+    "original_name": "pippali"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Trika\u1e6du",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "Deepana (digestive stimulant)",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Enhances digestion",
+      "Relieves respiratory issues",
+      "Promotes metabolism",
+      "Reduces Ama (toxins)",
+      "Supports weight management"
+    ],
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Cikitsasthana",
+        "context": "Trika\u1e6du is mentioned as a digestive stimulant and used in formulations for respiratory and digestive disorders."
+      },
+      {
+        "source": "Bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Trika\u1e6du in balancing Kapha and Vata doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Trika\u1e6du is a combination of three pungent herbs: Pippali (Piper longum), Maricha (Piper nigrum), and Shunthi (Zingiber officinale). It should be used with caution in individuals with high Pitta or sensitive stomachs due to its heating properties.",
+    "original_name": "trikatu"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Citraka",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "deepana (digestive stimulant)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Improves digestion",
+      "Treats skin diseases",
+      "Manages respiratory disorders",
+      "Reduces inflammation",
+      "Alleviates pain"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Citraka is mentioned as a potent herb for digestive issues and balancing Kapha and Vata doshas."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes Citraka's properties and uses in treating skin conditions and respiratory ailments."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Citraka should be used with caution in individuals with high Pitta or sensitive stomachs due to its ushna virya and katu rasa.",
+    "original_name": "chitrak"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Vac\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "tikshna"
+      ],
+      "prabhava": "medhya (enhances intellect)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Improves cognitive function",
+      "Alleviates respiratory disorders",
+      "Promotes digestion",
+      "Reduces inflammation",
+      "Supports mental clarity"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Describes the properties and uses of Vac\u0101 in treating various disorders."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Dravya Guna Vijnana",
+        "context": "Discusses the pharmacological actions and applications of Vac\u0101."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Lists Vac\u0101 as a medhya rasayana and its benefits for mental health."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Vac\u0101 should be used with caution in individuals with high Pitta or those prone to ulcers due to its ushna virya and tikshna guna.",
+    "original_name": "vacha"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Jat\u0101m\u0101\u1e41s\u012b",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "medhya (enhances intellect)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Promotes mental health and clarity",
+      "Reduces stress and anxiety",
+      "Supports healthy sleep patterns",
+      "Acts as a brain tonic",
+      "Helps in managing skin conditions"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Jatamansi is mentioned for its medhya (intellect-enhancing) properties."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhya Khanda",
+        "context": "Discusses the use of Jatamansi in mental health and its calming effects."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Jatamansi is generally considered safe in recommended doses, but excessive use may aggravate Vata dosha. It is often used in formulations for mental health and is known for its calming effects.",
+    "original_name": "jatamansi"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015aa\u1e45khapu\u1e63p\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "medhya (enhances intellect)",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Enhances memory and cognitive function",
+      "Reduces stress and anxiety",
+      "Acts as a nervine tonic",
+      "Improves sleep quality",
+      "Supports brain health"
+    ],
+    "citations": [
+      {
+        "source": "Bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of \u015aa\u1e45khapu\u1e63p\u012b as a medhya rasayana (intellect-enhancing herb)."
+      },
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Mentioned in the context of herbs used for mental health and cognitive enhancement."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "\u015aa\u1e45khapu\u1e63p\u012b is generally considered safe, but it should be used with caution in individuals with very low Kapha levels due to its Kapha-increasing properties. Always consult an Ayurvedic practitioner before use.",
+    "original_name": "shankhpushpi"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Gok\u1e63ura",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "diuretic",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "pitta"
+      ],
+      "aggravates": [
+        "kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "urinary disorders",
+      "renal calculi",
+      "aphrodisiac",
+      "anti-inflammatory",
+      "cardioprotective"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Gokshura is mentioned for its use in treating urinary disorders and as a diuretic."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Uttara Tantra",
+        "context": "Referenced for its benefits in treating renal calculi and as an aphrodisiac."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Gokshura in various conditions."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Gokshura is generally safe, but excessive use may aggravate kapha due to its snigdha (unctuous) nature. It is widely used in formulations for urinary health.",
+    "original_name": "gokshura"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Kapikacchu",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "vrishya (aphrodisiac)",
+      "part_used": "seed",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata"
+      ],
+      "aggravates": [
+        "pitta",
+        "kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "aphrodisiac",
+      "nervine tonic",
+      "management of Parkinson's disease",
+      "improves fertility",
+      "enhances muscle strength"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhya Kanda",
+        "context": "Describes the properties and uses of Kapikacchu as an aphrodisiac and nervine tonic."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Kapikacchu is known for its aphrodisiac properties and is used in various formulations for enhancing reproductive health. It should be used with caution in individuals with high pitta or kapha conditions due to its ushna virya and guru guna.",
+    "original_name": "kapikacchu"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ya\u1e63\u1e6dimadhu",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "balya (strengthening)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": [
+        "Kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders like cough and asthma",
+      "Gastric ulcers and hyperacidity",
+      "Anti-inflammatory and soothing agent",
+      "Rejuvenative and tonic",
+      "Skin disorders"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana",
+        "context": "Ya\u1e63\u1e6dimadhu is mentioned as a rejuvenative and tonic herb."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Dravyaguna Vijnana",
+        "context": "Describes the properties and uses of Ya\u1e63\u1e6dimadhu."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhura Varga",
+        "context": "Lists Ya\u1e63\u1e6dimadhu under sweet-tasting herbs with therapeutic benefits."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Ya\u1e63\u1e6dimadhu is generally safe but may increase Kapha if used in excess. It is contraindicated in conditions of high Kapha and water retention.",
+    "original_name": "yashtimadhu"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Mu\u1e63\u1e6d\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "digestive aid",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Digestive disorders",
+      "Fever management",
+      "Skin diseases",
+      "Dysmenorrhea",
+      "Diarrhea"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana, Chapter 25",
+        "context": "Mu\u1e63\u1e6d\u0101 is mentioned as a useful herb for digestive disorders and fever."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Sutra Sthana, Chapter 6",
+        "context": "Describes the properties of Mu\u1e63\u1e6d\u0101 and its effects on doshas."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Lists Mu\u1e63\u1e6d\u0101 under herbs beneficial for skin diseases and digestive issues."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Mu\u1e63\u1e6d\u0101 is generally safe but may aggravate Vata if used in excess due to its ruksha (dry) quality. It is commonly used in formulations for digestive health and fever management.",
+    "original_name": "musta"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Haridr\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "ruksha",
+        "laghu"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "rhizome",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Pitta"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "anti-inflammatory",
+      "antioxidant",
+      "wound healing",
+      "digestive aid",
+      "skin disorders"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana",
+        "context": "Described as an important herb for its anti-inflammatory properties."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Chikitsasthana",
+        "context": "Used in formulations for skin disorders and wound healing."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Detailed description of its uses and properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Haridra is widely used in Ayurveda for its versatile therapeutic properties. It is generally safe but should be used with caution in individuals with Vata imbalance due to its ruksha (dry) quality.",
+    "original_name": "haridra"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ela",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "hridya (cardiotonic)",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "vata"
+      ],
+      "aggravates": [
+        "pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Improves digestion",
+      "Alleviates respiratory disorders",
+      "Enhances flavor and aroma in culinary uses",
+      "Acts as a mouth freshener",
+      "Supports cardiovascular health"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Ela is described for its digestive and aromatic properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Ela is commonly used in culinary applications and should be used in moderation to avoid aggravating pitta. It is generally safe but should be used cautiously in individuals with pitta-related disorders.",
+    "original_name": "ela"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Tvak",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "krimighna (antimicrobial)",
+      "part_used": "bark",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "kapha"
+      ],
+      "aggravates": [
+        "pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Digestive aid",
+      "Respiratory support",
+      "Antimicrobial properties",
+      "Improves circulation",
+      "Relieves pain"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Tvak is mentioned as a spice with digestive and antimicrobial properties."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Tvak is described for its warming and digestive properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Tvak, commonly known as cinnamon, is widely used in Ayurveda for its warming and digestive properties. It should be used with caution in individuals with high pitta or heat-related conditions.",
+    "original_name": "tvak"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Lava\u1e45ga",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "krimighna (antimicrobial)",
+      "part_used": "flower bud",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "kapha"
+      ],
+      "aggravates": [
+        "pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Dental care (toothache)",
+      "Digestive aid",
+      "Respiratory disorders",
+      "Anti-inflammatory",
+      "Antimicrobial"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Lava\u1e45ga is described for its properties and uses, particularly in dental care and as an antimicrobial."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Lava\u1e45ga should be used with caution in individuals with high pitta conditions due to its ushna virya.",
+    "original_name": "lavanga"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "J\u012braka",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "deepana",
+      "part_used": "seed",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Improves digestion",
+      "Relieves bloating and gas",
+      "Enhances appetite",
+      "Alleviates colic pain",
+      "Supports respiratory health"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "J\u012braka is mentioned as a digestive and carminative herb."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Detailed properties and uses of J\u012braka are described."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "J\u012braka should be used with caution in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "jeeraka"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Dh\u0101nyaka",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "deepana",
+      "part_used": "seed",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Improves digestion",
+      "Relieves flatulence",
+      "Reduces fever",
+      "Alleviates cough",
+      "Acts as a diuretic"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana",
+        "context": "Dhanyaka is mentioned for its digestive and carminative properties."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Listed under herbs beneficial for Pitta and Kapha disorders."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Dhanyaka, commonly known as coriander, is generally safe but should be used with caution in individuals with Vata imbalance due to its ruksha (dry) quality.",
+    "original_name": "dhanyaka"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Methika",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "shukrala (enhances reproductive health)",
+      "part_used": "seed",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "kapha"
+      ],
+      "aggravates": [
+        "pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Improves digestion",
+      "Enhances lactation",
+      "Reduces inflammation",
+      "Manages diabetes",
+      "Improves skin health"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes the properties and uses of Methika"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Methi seeds are generally safe but can increase pitta if consumed in excess. It is recommended to use with caution in individuals with high pitta conditions.",
+    "original_name": "methi"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ajagandh\u0101",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "deepana (digestive stimulant)",
+      "part_used": "seed",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Improves digestion",
+      "Relieves bloating and gas",
+      "Treats respiratory disorders",
+      "Alleviates menstrual pain",
+      "Acts as an anti-inflammatory"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Ajwain is described for its digestive and carminative properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Ajwain should be used cautiously in individuals with high Pitta due to its ushna virya.",
+    "original_name": "ajwain"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015aatapu\u1e63p\u0101",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "deepana (appetizer)",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": [
+        "Kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "Improves digestion",
+      "Relieves bloating and gas",
+      "Enhances appetite",
+      "Reduces colic pain",
+      "Promotes lactation"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes the properties and uses of \u015aatapu\u1e63p\u0101 (Fennel)"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Fennel seeds are generally safe but should be used in moderation as excessive use may aggravate Kapha due to its sweet taste and heavy nature.",
+    "original_name": "saunf"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Hi\u1e45gu",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "tikshna",
+        "ruksha"
+      ],
+      "prabhava": "deepana (digestive stimulant)",
+      "part_used": "gum resin",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Digestive issues such as bloating and gas",
+      "Respiratory conditions like asthma and bronchitis",
+      "Menstrual pain relief",
+      "Antimicrobial and anti-inflammatory effects",
+      "Appetite stimulant"
+    ],
+    "citations": [
+      {
+        "source": "Charaka Samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Described as a digestive stimulant and useful in Vata disorders"
+      },
+      {
+        "source": "Bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Detailed properties and uses of Hi\u1e45gu"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Hing should be used with caution in individuals with high Pitta or those with sensitive stomachs due to its hot potency. It is also contraindicated in pregnancy.",
+    "original_name": "hing"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Kr\u0325\u1e63\u1e47aj\u012braka",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "deepana (digestive stimulant)",
+      "part_used": "seed",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Digestive disorders",
+      "Respiratory issues",
+      "Skin conditions",
+      "Anti-inflammatory",
+      "Antioxidant"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Kr\u0325\u1e63\u1e47aj\u012braka Varga",
+        "context": "Describes the properties and uses of Kr\u0325\u1e63\u1e47aj\u012braka (kalaunji)"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Kalaunji should be used with caution in individuals with Pitta imbalance due to its ushna virya.",
+    "original_name": "kalaunji"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Bh\u1e5b\u1e45gar\u0101ja",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "keshya (promotes hair growth)",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "vata"
+      ],
+      "aggravates": [
+        "pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Promotes hair growth and prevents hair fall",
+      "Supports liver health",
+      "Improves skin conditions",
+      "Aids in treating respiratory disorders",
+      "Enhances memory and cognitive function"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes the properties and uses of Bh\u1e5b\u1e45gar\u0101ja, emphasizing its effect on hair and liver health."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Bh\u1e5b\u1e45gar\u0101ja is highly regarded for its benefits on hair health, but excessive use may aggravate pitta due to its ushna virya.",
+    "original_name": "bhringaraj"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Kum\u0101r\u012b",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "vrana ropana (wound healing)",
+      "part_used": "leaf",
+      "dosage_form": "svarasa (juice)"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Wound healing",
+      "Skin disorders",
+      "Digestive issues",
+      "Anti-inflammatory",
+      "Laxative"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Kumari in various conditions."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Kumari is commonly known as Aloe Vera. It is widely used in both internal and external applications. Caution is advised in individuals with high Vata conditions due to its potential to aggravate Vata when used excessively.",
+    "original_name": "kumari"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Era\u1e47\u1e0da",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "virechana (purgative)",
+      "part_used": "seed oil",
+      "dosage_form": "taila"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata"
+      ],
+      "aggravates": [
+        "pitta",
+        "kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "Purgative for constipation",
+      "Relieves joint pain",
+      "Alleviates vata disorders",
+      "Used in the treatment of arthritis",
+      "Beneficial in skin diseases"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Siddhisthana",
+        "context": "Era\u1e47\u1e0da is mentioned as a potent purgative and vata-pacifying herb."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Chikitsasthana",
+        "context": "Describes the use of Era\u1e47\u1e0da taila in treating vata disorders and joint pain."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Era\u1e47\u1e0da taila should be used cautiously in individuals with high pitta or kapha due to its ushna virya and snigdha guna. It is primarily used for its purgative action and vata-pacifying properties.",
+    "original_name": "eranda"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Devad\u0101ru",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "heartwood",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders",
+      "Arthritis and joint pain",
+      "Skin diseases",
+      "Digestive issues",
+      "Urinary tract disorders"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Devadaru is mentioned as an effective herb for pacifying Vata and Kapha doshas."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Devadaru is used in formulations for treating skin diseases and respiratory conditions."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhya Khanda",
+        "context": "Detailed properties and uses of Devadaru are described, emphasizing its anti-inflammatory effects."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Devadaru should be used with caution in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "devadaru"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "N\u0101gakesara",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "hemostatic",
+      "part_used": "flower",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Bleeding disorders",
+      "Diarrhea",
+      "Digestive issues",
+      "Skin diseases",
+      "Fever"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of N\u0101gakesara in treating bleeding disorders and digestive issues."
+      },
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Mentions N\u0101gakesara in the context of its hemostatic properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "N\u0101gakesara should be used with caution in individuals with vata imbalance due to its ruksha (dry) quality. It is primarily used in the form of churna for its hemostatic and digestive benefits.",
+    "original_name": "nagakesara"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "B\u0101kuc\u012b",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "ruksha",
+        "laghu"
+      ],
+      "prabhava": "useful in skin disorders",
+      "part_used": "seed",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Vitiligo and other skin disorders",
+      "Leprosy",
+      "Worm infestation",
+      "Respiratory disorders",
+      "Digestive issues"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes the properties and uses of B\u0101kuc\u012b in treating skin disorders and other conditions."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "B\u0101kuc\u012b is primarily used for its effectiveness in treating skin conditions like vitiligo. It should be used with caution in individuals with high Pitta as it may aggravate Pitta dosha.",
+    "original_name": "bakuchi"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ap\u0101m\u0101rga",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "krimighna (anthelmintic)",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "vata"
+      ],
+      "aggravates": [
+        "pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in the treatment of cough and respiratory disorders",
+      "Effective in managing skin diseases",
+      "Helps in the treatment of piles",
+      "Used for its anthelmintic properties",
+      "Beneficial in treating urinary disorders"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Ap\u0101m\u0101rga is mentioned for its use in treating various disorders including skin diseases and respiratory issues."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Kalpa Sthana",
+        "context": "Discussed for its anthelmintic properties and usage in detoxification therapies."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Ap\u0101m\u0101rga in detail, highlighting its effects on doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Ap\u0101m\u0101rga should be used cautiously in individuals with high pitta conditions due to its ushna virya. It is a versatile herb with a broad range of applications in Ayurvedic medicine.",
+    "original_name": "apamarga"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ka\u1e6duk\u012b",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "hepatoprotective",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Liver disorders",
+      "Digestive issues",
+      "Fever",
+      "Skin diseases",
+      "Detoxification"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Ka\u1e6duk\u012b in treating liver disorders and other ailments."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Ka\u1e6duk\u012b is highly regarded for its liver-protective properties. It should be used cautiously in individuals with a predominant Vata constitution due to its ruksha (dry) and laghu (light) qualities.",
+    "original_name": "katuki"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "P\u0101\u1e6dh\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "krimighna (anthelmintic)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Anthelmintic (expels worms)",
+      "Digestive disorders",
+      "Anti-inflammatory",
+      "Fever",
+      "Skin diseases"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Used in the treatment of digestive disorders and as an anthelmintic."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Listed among herbs with tikta rasa and used for skin diseases."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes its use in fever and digestive issues."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "P\u0101\u1e6dh\u0101 should be used with caution in individuals with high Pitta due to its ushna virya.",
+    "original_name": "patha"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Kantak\u0101r\u012b",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "useful in respiratory disorders",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders like asthma and cough",
+      "Digestive issues such as bloating and indigestion",
+      "Fever",
+      "Skin disorders",
+      "Pain relief"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Kantakari is mentioned as a key herb in managing respiratory disorders."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Uttara Tantra",
+        "context": "Described for its use in treating respiratory ailments and fever."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Elaborates on its properties and uses in various disorders."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Kantakari is particularly effective in managing respiratory disorders. However, it should be used with caution in individuals with Pitta imbalance due to its ushna virya.",
+    "original_name": "kantakari"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "V\u0101sa",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "effective in respiratory disorders",
+      "part_used": "leaf",
+      "dosage_form": "kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders like asthma and bronchitis",
+      "Cough and cold",
+      "Bleeding disorders",
+      "Fever",
+      "Skin diseases"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Vasa is mentioned in the context of treating respiratory disorders and bleeding conditions."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Uttara Tantra",
+        "context": "Vasa is recommended for its effectiveness in treating cough and respiratory ailments."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Vasa is described with its properties and uses in respiratory and bleeding disorders."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Vasa is highly regarded for its effectiveness in treating respiratory conditions. It should be used cautiously in individuals with vata dominance due to its ruksha (dry) and laghu (light) qualities, which may aggravate vata.",
+    "original_name": "vasa"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015a\u0101riv\u0101",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "rakta-prasadana (blood purifier)",
+      "part_used": "root",
+      "dosage_form": "churna, kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Vata"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Blood purification",
+      "Skin disorders",
+      "Burning sensation",
+      "Fever",
+      "Urinary disorders"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhura Varga",
+        "context": "\u015a\u0101riv\u0101 is described for its cooling properties and use in blood purification."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Sariva is generally considered safe, but excessive use might lead to cold-related symptoms due to its shita virya.",
+    "original_name": "sariva"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "U\u015b\u012bra",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "cooling effect",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in treating burning sensations",
+      "Beneficial in skin disorders",
+      "Helps in managing fever",
+      "Useful in urinary disorders",
+      "Acts as a diuretic"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana",
+        "context": "U\u015b\u012bra is mentioned for its cooling properties and its use in pacifying Pitta and Kapha."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Detailed description of U\u015b\u012bra's properties and uses, particularly in skin and urinary disorders."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "U\u015b\u012bra is generally safe but may aggravate Vata if used excessively. It is important to use it in recommended doses.",
+    "original_name": "ushira"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Candana",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "vrana ropana (wound healing)",
+      "part_used": "heartwood",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Cooling and soothing agent",
+      "Used in skin disorders",
+      "Antipyretic (reduces fever)",
+      "Used in urinary tract infections",
+      "Aids in wound healing"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana",
+        "context": "Candana is mentioned as a cooling and soothing agent."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Chikitsasthana",
+        "context": "Used in the treatment of skin disorders and wounds."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Candana in detail."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Candana is highly valued for its cooling properties and is often used in formulations for skin care and fever reduction. It should be used with caution in individuals with a pronounced Vata imbalance.",
+    "original_name": "chandana"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Aguru",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "vishaghna (anti-toxic)",
+      "part_used": "heartwood",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta (in excess)"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in the treatment of skin disorders",
+      "Beneficial for respiratory conditions",
+      "Used as an anti-inflammatory agent",
+      "Helps in managing digestive issues",
+      "Used in the treatment of fever"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Aguru is mentioned as a herb with tikta rasa and ushna virya, useful in balancing Vata and Kapha."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Aguru is described for its therapeutic uses in skin and respiratory conditions."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Aguru should be used with caution in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "agaru"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Karp\u016bra",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "hridya (cardiac tonic)",
+      "part_used": "exudate",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in respiratory disorders",
+      "Acts as a cardiac tonic",
+      "Used in skin disorders",
+      "Relieves headaches",
+      "Antiseptic properties"
+    ],
+    "citations": [
+      {
+        "source": "Bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes the properties and uses of Karpura"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Karpura should be used with caution in individuals with Vata imbalance due to its ruksha and shita properties. Overuse can lead to Vata aggravation.",
+    "original_name": "karpura"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Tagara",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "sedative",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Insomnia",
+      "Anxiety",
+      "Nervous disorders",
+      "Digestive issues",
+      "Muscle spasms"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Tagara is described for its sedative and calming properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Tagara is often used for its calming effects on the nervous system. It should be used cautiously in individuals with high Pitta due to its ushna virya.",
+    "original_name": "tagara"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Priya\u1e45gu",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "useful in bleeding disorders",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in the treatment of bleeding disorders",
+      "Beneficial in fever",
+      "Helps in skin disorders",
+      "Useful in diarrhea",
+      "Aids in managing excessive thirst"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana",
+        "context": "Priya\u1e45gu is mentioned in the context of its properties and uses in various disorders."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and therapeutic uses of Priya\u1e45gu."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Priya\u1e45gu is generally safe when used appropriately. However, excessive use may aggravate Vata due to its ruksha (dry) quality.",
+    "original_name": "priyangu"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Lodhra",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "useful in bleeding disorders",
+      "part_used": "bark",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "treats bleeding disorders",
+      "useful in skin diseases",
+      "helps in managing obesity",
+      "beneficial in gynecological disorders",
+      "aids in wound healing"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Lodhra is described for its hemostatic and anti-inflammatory properties."
+      },
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Mentioned in the context of treating bleeding disorders and skin diseases."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Lodhra is particularly effective in managing conditions involving excess bleeding and inflammation. It should be used cautiously in individuals with vata imbalance due to its ruksha (dry) quality.",
+    "original_name": "lodhra"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Dh\u0101tak\u012b",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "useful in stopping bleeding",
+      "part_used": "flower",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in the treatment of diarrhea and dysentery",
+      "Helps in managing bleeding disorders",
+      "Used as a coagulant in various formulations",
+      "Beneficial in skin diseases",
+      "Used in the preparation of Asava and Arishta"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Mentioned in the context of formulations for treating diarrhea and bleeding disorders"
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "Referenced for its hemostatic properties"
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Described for its use in Asava and Arishta preparations"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Dh\u0101tak\u012b is commonly used in Ayurvedic formulations for its hemostatic and astringent properties. It is important to use it in appropriate dosages to avoid aggravating vata.",
+    "original_name": "dhataki"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "N\u0101gabala",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "balya (strengthening)",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Strengthening and nourishing",
+      "Useful in conditions of debility",
+      "Promotes tissue regeneration",
+      "Anti-inflammatory properties",
+      "Beneficial in respiratory disorders"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "N\u0101gabala is described for its nourishing and strengthening properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "N\u0101gabala is generally considered safe, but should be used with caution in individuals with Kapha dominance due to its sweet and nourishing properties.",
+    "original_name": "nagbala"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Atibal\u0101",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "balya (strengthening)",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Strengthens the body",
+      "Alleviates Vata disorders",
+      "Promotes healing of wounds",
+      "Used in the treatment of fever",
+      "Beneficial in respiratory disorders"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Discusses the properties and uses of Atibal\u0101 in detail."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Atibal\u0101 is often used in formulations for its strengthening and nourishing properties. It is generally considered safe, but as with any herb, it should be used under the guidance of a qualified practitioner.",
+    "original_name": "atibala"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Vid\u0101r\u012bkanda",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "rasayana",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Nourishes and strengthens the body",
+      "Acts as an aphrodisiac",
+      "Improves lactation",
+      "Used in urinary disorders",
+      "Promotes weight gain"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhura Varga",
+        "context": "Vid\u0101r\u012bkanda is mentioned as a nourishing and rejuvenating herb with sweet taste and cooling potency."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Vid\u0101r\u012bkanda is often used in formulations for its rejuvenating and nourishing properties. It is generally safe but should be used with caution in individuals with Kapha dominance due to its heavy and unctuous qualities.",
+    "original_name": "vidarikanda"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "A\u015boka",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "useful in gynecological disorders",
+      "part_used": "bark",
+      "dosage_form": "kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "kapha"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Menorrhagia",
+      "Dysmenorrhea",
+      "Leucorrhea",
+      "Hemorrhoids",
+      "Skin disorders"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of A\u015boka, especially in gynecological conditions."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "A\u015boka is renowned for its effectiveness in treating female reproductive system disorders. It is important to use the correct part of the plant, primarily the bark, for therapeutic purposes.",
+    "original_name": "ashoka"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "D\u0101ruharidr\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "ruksha",
+        "laghu"
+      ],
+      "prabhava": "krimighna (antimicrobial)",
+      "part_used": "stem",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "pitta"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "treats skin disorders",
+      "manages diabetes",
+      "acts as an antimicrobial",
+      "reduces inflammation",
+      "aids in liver disorders"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes the properties and uses of D\u0101ruharidr\u0101."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "D\u0101ruharidr\u0101 is often used in formulations for skin and liver disorders. It should be used with caution in individuals with predominant Vata dosha due to its ruksha (dry) quality.",
+    "original_name": "daruharidra"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Kir\u0101tatikta",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "shita",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "antipyretic",
+      "part_used": "whole plant",
+      "dosage_form": "kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "fever",
+      "skin disorders",
+      "digestive issues",
+      "liver disorders",
+      "blood purification"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Kir\u0101tatikta"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Chirata is known for its bitter taste and cooling properties. It is widely used in Ayurvedic formulations for treating fevers and skin conditions. It should be used cautiously in individuals with Vata imbalance due to its ruksha (dry) nature.",
+    "original_name": "chirata"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ni\u015botha",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "purgative",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "pitta"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "Laxative",
+      "Treats constipation",
+      "Detoxifies the body",
+      "Reduces inflammation",
+      "Manages skin disorders"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Ni\u015botha as a purgative herb."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Ni\u015botha should be used with caution in individuals with a predominant Vata constitution due to its potential to aggravate Vata. It is primarily used for its strong purgative action.",
+    "original_name": "nishoth"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Triv\u1e5bt",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "virechana (purgative action)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "pitta"
+      ],
+      "aggravates": [
+        "vata"
+      ]
+    },
+    "therapeutic_uses": [
+      "purgative for constipation",
+      "treatment of skin disorders",
+      "management of obesity",
+      "removal of toxins (ama) from the body",
+      "support in liver disorders"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutrasthana, Chapter 4",
+        "context": "Triv\u1e5bt is mentioned as a potent purgative herb."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Chikitsasthana, Chapter 33",
+        "context": "Used in the treatment of skin diseases and as a detoxifying agent."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Triv\u1e5bt in various conditions."
+      }
+    ],
+    "confidence": 0.95,
+    "notes": "Triv\u1e5bt should be used with caution in individuals with a predominance of Vata dosha due to its purgative nature. It is important to use the correct dosage to avoid excessive purgation.",
+    "original_name": "trivrit"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Danti",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "tikshna"
+      ],
+      "prabhava": "bhedana (purgative action)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "vata"
+      ],
+      "aggravates": [
+        "pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Purgative action for constipation",
+      "Management of ascites",
+      "Treatment of skin diseases",
+      "Reduction of abdominal distension",
+      "Alleviation of edema"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Danti is described as a potent purgative and is used in the treatment of various conditions related to kapha and vata doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Danti is a strong purgative and should be used with caution. It is contraindicated in individuals with weak digestion or those with a predominance of pitta dosha.",
+    "original_name": "danti"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Jatiphala",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "tikshna"
+      ],
+      "prabhava": "shoolahara (pain-relieving)",
+      "part_used": "seed",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Digestive issues like indigestion and diarrhea",
+      "Respiratory conditions like cough and asthma",
+      "Pain relief in conditions like arthritis"
+    ],
+    "citations": [
+      {
+        "source": "Bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Description of Jatiphala and its properties"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Jaiphal should be used with caution in individuals with Pitta dominance due to its ushna virya. Excessive use can lead to Pitta aggravation.",
+    "original_name": "jaiphal"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "J\u0101t\u012bpatr\u012b",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "tikshna"
+      ],
+      "prabhava": "none specifically noted",
+      "part_used": "aril (mace)",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "kapha"
+      ],
+      "aggravates": [
+        "pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "digestive aid",
+      "carminative",
+      "enhances appetite",
+      "relieves flatulence",
+      "antispasmodic"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Describes the properties and uses of Javitri (mace) in detail."
+      }
+    ],
+    "confidence": 0.85,
+    "notes": "Javitri should be used with caution in individuals with high pitta due to its ushna virya and katu rasa.",
+    "original_name": "javitri"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Ke\u015bara",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "varnya (enhances complexion)",
+      "part_used": "stigma",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Enhances complexion and skin health",
+      "Improves digestion",
+      "Acts as an aphrodisiac",
+      "Relieves respiratory issues",
+      "Reduces inflammation"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Ke\u015bara is described for its complexion-enhancing properties and other therapeutic uses."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Ke\u015bara, commonly known as saffron, should be used in moderation due to its potent nature. Excessive use may aggravate Pitta dosha.",
+    "original_name": "keshar"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Tagara",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "sedative",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Insomnia",
+      "Anxiety",
+      "Nervous disorders",
+      "Digestive issues",
+      "Muscle spasms"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Tagara is described for its sedative and calming properties, useful in managing Vata disorders."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Tagara is often used for its calming effects on the nervous system. It should be used with caution in individuals with high Pitta due to its ushna virya.",
+    "original_name": "tagar"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Pu\u1e63karam\u016bla",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "useful in respiratory disorders",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders",
+      "Cough",
+      "Asthma",
+      "Digestive issues",
+      "Cardiac disorders"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Pushkarmooladi Varga",
+        "context": "Describes the properties and uses of Pu\u1e63karam\u016bla in treating respiratory and cardiac conditions."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Pu\u1e63karam\u016bla is potent and should be used with caution in individuals with Pitta dominance or conditions aggravated by heat.",
+    "original_name": "pushkarmool"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Rasn\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Relieves joint pain",
+      "Reduces inflammation",
+      "Treats arthritis",
+      "Alleviates muscle spasms",
+      "Supports respiratory health"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Rasna is mentioned in the context of treating joint disorders and Vata-related conditions."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Described for its use in managing inflammation and pain."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Rasna is particularly effective in managing Vata disorders. It should be used with caution in individuals with Pitta dominance due to its ushna virya.",
+    "original_name": "rasna"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Nirgund\u012b",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "leaf",
+      "dosage_form": "kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Anti-inflammatory",
+      "Analgesic",
+      "Antipyretic",
+      "Anticonvulsant",
+      "Antimicrobial"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Haritakyadi Varga",
+        "context": "Nirgundi is described for its anti-inflammatory and analgesic properties."
+      },
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Used in the treatment of Vata disorders."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Nirgundi is generally safe but should be used with caution in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "nirgundi"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Agnimantha",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "root",
+      "dosage_form": "kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Relieves joint pain and inflammation",
+      "Improves digestion",
+      "Treats respiratory disorders",
+      "Helps in managing fever",
+      "Aids in weight management"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Agnimantha is mentioned as a useful herb for treating Vata disorders and inflammation."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Dravyaguna Vijnana",
+        "context": "Describes the properties and uses of Agnimantha in managing Kapha and Vata disorders."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Agnimantha should be used with caution in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "agnimantha"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Bilva",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "Shoolaghna (pain-relieving)",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Digestive disorders",
+      "Diarrhea",
+      "Dysentery",
+      "Anti-inflammatory",
+      "Antimicrobial"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Bilva is mentioned for its digestive and anti-diarrheal properties."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Dravyaguna Vijnana",
+        "context": "Bilva is described with its properties and effects on doshas."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Bilva is listed with its therapeutic uses and properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Bilva is highly regarded for its digestive benefits and is commonly used in formulations for gastrointestinal issues. It should be used with caution in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "bilva"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Gambh\u0101r\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "none specifically noted",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Vata"
+      ],
+      "aggravates": [
+        "Kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in the treatment of fever",
+      "Beneficial for digestive disorders",
+      "Helps in managing respiratory conditions",
+      "Used in skin disorders",
+      "Supports the immune system"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Gambh\u0101r\u012b is described as a fruit with sweet taste, cooling potency, and beneficial for Pitta and Vata doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Gambh\u0101r\u012b is generally safe when used in appropriate doses. However, due to its guru (heavy) quality, it may not be suitable for individuals with high Kapha or those prone to obesity.",
+    "original_name": "gambhari"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "P\u0101\u1e6dal\u0101",
+    "validated_properties": {
+      "rasa": "tikta",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "root",
+      "dosage_form": "kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Kapha",
+        "Vata"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Anti-inflammatory",
+      "Digestive aid",
+      "Respiratory disorders",
+      "Skin diseases",
+      "Fever"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "P\u0101\u1e6dal\u0101 is mentioned for its utility in treating fever and inflammation."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of P\u0101\u1e6dal\u0101 in various disorders."
+      }
+    ],
+    "confidence": 0.85,
+    "notes": "P\u0101\u1e6dal\u0101 should be used with caution in individuals with high Pitta due to its ushna virya.",
+    "original_name": "patala"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015ayon\u0101ka",
+    "validated_properties": {
+      "rasa": "kashaya",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "root",
+      "dosage_form": "kwatha"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "kapha",
+        "vata"
+      ],
+      "aggravates": [
+        "pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders",
+      "Digestive issues",
+      "Anti-inflammatory",
+      "Fever management",
+      "Pain relief"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Sutra Sthana",
+        "context": "\u015ayon\u0101ka is mentioned in the context of its therapeutic uses and properties."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Detailed description of \u015ayon\u0101ka's properties and uses."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "\u015ayon\u0101ka is often used in formulations for respiratory and digestive health. It should be used cautiously in individuals with high pitta conditions due to its ushna virya.",
+    "original_name": "shyonaka"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Gambh\u0101r\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "balya (strengthening)",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Rasayana (rejuvenative)",
+      "Improves strength and immunity",
+      "Useful in fever",
+      "Beneficial in burning sensation",
+      "Supports respiratory health"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of Gambh\u0101r\u012b"
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Gambh\u0101r\u012b is often used in combination with other herbs in formulations. It is generally safe but should be used with caution in individuals with Kapha dominance due to its sweet and nourishing properties.",
+    "original_name": "gmelina"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "B\u1e5bhat\u012b",
+    "validated_properties": {
+      "rasa": "katu",
+      "virya": "ushna",
+      "vipaka": "katu",
+      "guna": [
+        "laghu",
+        "ruksha"
+      ],
+      "prabhava": "useful in respiratory disorders",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "kapha"
+      ],
+      "aggravates": [
+        "pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders",
+      "Fever",
+      "Digestive issues",
+      "Cough",
+      "Asthma"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "B\u1e5bhat\u012b is mentioned as part of the Dashamoola group, used in treating respiratory and digestive disorders."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Sutrasthana",
+        "context": "B\u1e5bhat\u012b is described for its properties and therapeutic uses, particularly in respiratory ailments."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "B\u1e5bhat\u012b is part of the Dashamoola group, which is highly regarded for its effectiveness in treating respiratory and digestive disorders. It should be used with caution in individuals with high pitta conditions due to its ushna virya.",
+    "original_name": "brihati"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "K\u0101\u015bmar\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "none specifically noted",
+      "part_used": "fruit",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Pitta",
+        "Vata"
+      ],
+      "aggravates": [
+        "Kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in treating fever",
+      "Beneficial in digestive disorders",
+      "Helps in managing respiratory conditions",
+      "Useful in urinary tract disorders",
+      "Acts as a general tonic"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "K\u0101\u015bmar\u012b is mentioned as part of formulations for treating fever and digestive disorders."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhya Khanda",
+        "context": "Describes the properties and uses of K\u0101\u015bmar\u012b in various health conditions."
+      }
+    ],
+    "confidence": 0.85,
+    "notes": "K\u0101\u015bmar\u012b is generally safe when used in recommended doses. Excessive use may aggravate Kapha due to its sweet and cooling properties.",
+    "original_name": "kashmari"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "\u015a\u0101lapar\u1e47\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Used in the treatment of fever",
+      "Beneficial in respiratory disorders",
+      "Helps in digestive issues",
+      "Used in the management of inflammation",
+      "Supports the immune system"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "\u015a\u0101lapar\u1e47\u012b is mentioned as part of the Dashamoola group, used for treating various conditions including fever and inflammation."
+      },
+      {
+        "source": "ashtanga_hridaya",
+        "chapter": "Sutra Sthana",
+        "context": "Listed among herbs beneficial for respiratory and digestive health."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "\u015a\u0101lapar\u1e47\u012b is a key component of the Dashamoola group, known for its balancing effects on Vata and Kapha doshas. Caution is advised in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "shalaparni"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "P\u1e5b\u015bnapar\u1e47\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "ushna",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Kapha"
+      ],
+      "aggravates": [
+        "Pitta"
+      ]
+    },
+    "therapeutic_uses": [
+      "Respiratory disorders",
+      "Anti-inflammatory",
+      "Diuretic",
+      "Fever",
+      "Digestive issues"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Used in formulations for respiratory and inflammatory conditions."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Sutrasthana",
+        "context": "Mentioned in the context of its diuretic properties."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes its use in fever and digestive issues."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "P\u1e5b\u015bnapar\u1e47\u012b is often used in combination with other herbs for enhanced efficacy. Caution is advised in individuals with high Pitta conditions due to its ushna virya.",
+    "original_name": "prishnaparni"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "Mudgapar\u1e47\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "anti-inflammatory",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "pitta",
+        "vata"
+      ],
+      "aggravates": [
+        "kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "anti-inflammatory",
+      "digestive aid",
+      "febrifuge",
+      "diuretic",
+      "nourishing tonic"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Mentioned in the context of managing inflammatory conditions and balancing doshas."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Described for its nourishing and cooling properties."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "Mudgaparni is generally safe but should be used with caution in individuals with high kapha conditions due to its snigdha (unctuous) nature.",
+    "original_name": "mudgaparni"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "M\u0101\u1e63apar\u1e47\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "balya (strengthening)",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "pitta"
+      ],
+      "aggravates": [
+        "kapha"
+      ]
+    },
+    "therapeutic_uses": [
+      "Promotes strength and vitality",
+      "Used in the treatment of fever",
+      "Beneficial in respiratory disorders",
+      "Helps in improving digestion",
+      "Used in the management of emaciation"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "M\u0101\u1e63apar\u1e47\u012b is mentioned in the context of strengthening and improving vitality."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of M\u0101\u1e63apar\u1e47\u012b in various disorders."
+      }
+    ],
+    "confidence": 0.85,
+    "notes": "M\u0101\u1e63apar\u1e47\u012b is generally safe when used in recommended doses. However, due to its kapha-aggravating properties, it should be used cautiously in individuals with kapha dominance.",
+    "original_name": "mashaparni"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "J\u012bvant\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "laghu",
+        "snigdha"
+      ],
+      "prabhava": "rasayana (rejuvenative)",
+      "part_used": "whole plant",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "vata",
+        "pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Enhances vision",
+      "Improves vitality",
+      "Acts as a rejuvenative",
+      "Supports respiratory health",
+      "Promotes lactation"
+    ],
+    "citations": [
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhyama Khanda",
+        "context": "Describes the properties and uses of J\u012bvant\u012b as a rejuvenative and its effects on doshas."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "J\u012bvant\u012b is often used in formulations aimed at enhancing vitality and vision. It is generally considered safe, but as with any herb, it should be used under the guidance of a qualified practitioner.",
+    "original_name": "jivanti"
+  },
+  {
+    "validated": true,
+    "name_sanskrit": "K\u0101kol\u012b",
+    "validated_properties": {
+      "rasa": "madhura",
+      "virya": "shita",
+      "vipaka": "madhura",
+      "guna": [
+        "guru",
+        "snigdha"
+      ],
+      "prabhava": "rasayana",
+      "part_used": "root",
+      "dosage_form": "churna"
+    },
+    "dosha_effects": {
+      "pacifies": [
+        "Vata",
+        "Pitta"
+      ],
+      "aggravates": []
+    },
+    "therapeutic_uses": [
+      "Enhances vitality and strength",
+      "Acts as a rejuvenative (rasayana)",
+      "Improves immunity",
+      "Supports respiratory health",
+      "Promotes digestive health"
+    ],
+    "citations": [
+      {
+        "source": "charaka_samhita",
+        "chapter": "Chikitsa Sthana",
+        "context": "Mentioned in the context of Jivaniya Gana, a group of herbs known for their life-promoting properties."
+      },
+      {
+        "source": "sushruta_samhita",
+        "chapter": "Dravya Guna Vijnana",
+        "context": "Listed among the herbs with rejuvenative properties."
+      },
+      {
+        "source": "bhavaprakasha",
+        "chapter": "Madhya Khanda",
+        "context": "Described in the context of its nourishing and strengthening effects."
+      }
+    ],
+    "confidence": 0.9,
+    "notes": "K\u0101kol\u012b is considered a potent rejuvenative and is often used in formulations aimed at enhancing vitality and strength. It is important to ensure proper identification and sourcing, as there are several plants referred to as K\u0101kol\u012b in different regions.",
+    "original_name": "kakoli"
+  }
+]

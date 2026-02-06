@@ -1,9 +1,6 @@
-"use client";
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
-import { useEffect, useState } from "react";
-import { normalizeSoulState, summarizeSoul } from "@ui/soulViewModel";
+import { normalizeSoulState, summarizeSoul } from "../../lib/soulViewModel";
 import { VictoryPie, VictoryTheme } from "victory-native";
 
 export default function SoulHomeScreen() {

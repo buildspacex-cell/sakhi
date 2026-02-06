@@ -1,6 +1,6 @@
 # Test Status Tracking
 
-> Last Updated: 2026-02-03
+> Last Updated: 2026-02-05
 >
 > Run `make test-coverage` to regenerate this report.
 
@@ -10,7 +10,7 @@
 
 | Category | Total | Tested | Coverage |
 |----------|-------|--------|----------|
-| Workers | 71 | 40 | 56% |
+| Workers | 71 | 48 | 68% |
 | Routes | 78 | 47 | 60% |
 | Services | TBD | TBD | TBD |
 
@@ -57,21 +57,21 @@ sakhi/tests/
 
 | Worker | Status | Test File | Notes |
 |--------|--------|-----------|-------|
-| `update_conversation_state.py` | ⬜ | - | Needs test |
-| `update_emotional_context.py` | ⬜ | - | Needs test |
-| `update_prompt_profile.py` | ⬜ | - | Needs test |
-| `update_relationship_arcs.py` | ⬜ | - | Needs test |
-| `update_theme_rhythm_links.py` | ⬜ | - | Needs test |
+| `update_conversation_state.py` | ✅ | `unit/workers/test_state_update_workers.py` | 9 tests |
+| `update_emotional_context.py` | ✅ | `unit/workers/test_state_update_workers.py` | 3 tests |
+| `update_prompt_profile.py` | ✅ | `unit/workers/test_state_update_workers.py` | 5 tests |
+| `update_relationship_arcs.py` | ✅ | `unit/workers/test_state_update_workers.py` | 5 tests |
+| `update_theme_rhythm_links.py` | ✅ | `unit/workers/test_state_update_workers.py` | 5 tests |
 
 ### Priority 3: Reflection Workers (Should Have)
 
 | Worker | Status | Test File | Notes |
 |--------|--------|-----------|-------|
 | `daily_reflection.py` | ✅ | `all_workers_test.py` | |
-| `reflect_morning_presence.py` | ⬜ | - | Needs test |
-| `reflect_person_memory.py` | ⬜ | - | Needs test |
-| `reflect_value_alignment.py` | ⬜ | - | Needs test |
-| `reflective_loop.py` | ⬜ | - | Needs test |
+| `reflect_morning_presence.py` | ✅ | `unit/workers/test_reflection_workers_impl.py` | 6 tests |
+| `reflect_person_memory.py` | ⬜ | - | Complex deps, needs integration test |
+| `reflect_value_alignment.py` | ✅ | `unit/workers/test_reflection_workers_impl.py` | 7 tests |
+| `reflective_loop.py` | ✅ | `unit/workers/test_reflection_workers_impl.py` | 1 test (shim) |
 
 ### Priority 4: Memory Workers (Should Have)
 

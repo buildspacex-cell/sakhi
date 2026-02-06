@@ -11,6 +11,8 @@
 #   - Redis installed (brew install redis)
 #   - Python environment with dependencies
 #   - Node.js with pnpm
+#
+# For mobile development, run separately: cd apps/mobile && pnpm start
 # =============================================================================
 
 set -e
@@ -187,6 +189,9 @@ echo ""
 echo -e "${CYAN}Queue Status:${NC}"
 echo "  redis-cli LLEN turn_updates    # Check pending jobs"
 echo "  redis-cli KEYS 'rq:job:*'      # List all jobs"
+echo ""
+echo -e "${CYAN}Mobile Development:${NC}"
+echo "  Run separately: cd apps/mobile && pnpm start"
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
 echo ""

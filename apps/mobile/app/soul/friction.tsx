@@ -1,10 +1,7 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryBar, VictoryChart, VictoryTheme, VictoryAxis } from "victory-native";
-import { timelineSeries } from "@ui/soulViewModel";
-import { useMemo } from "react";
+import { timelineSeries } from "../../lib/soulViewModel";
 
 export default function SoulFrictionScreen() {
   const [friction, setFriction] = useState<string | null>(null);

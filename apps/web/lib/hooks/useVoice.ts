@@ -30,7 +30,10 @@ export interface UseVoiceOptions {
   onResponse?: (response: VoiceResponse) => void;
   onError?: (error: Error) => void;
   onStateChange?: (state: VoiceState) => void;
+  onInterrupt?: () => void;             // Called when user interrupts playback
   autoPlayResponse?: boolean;
+  voice?: "nova" | "shimmer" | "alloy"; // Voice selection
+  speed?: number;                        // Speech speed (0.25 - 4.0)
 }
 
 export interface UseVoiceReturn {
@@ -46,6 +49,7 @@ export interface UseVoiceReturn {
   cancelRecording: () => void;
   playResponse: () => Promise<void>;
   stopPlayback: () => void;
+  interrupt: () => void;                 // Interrupt current speech and start listening
 }
 
 // =============================================================================
@@ -59,7 +63,10 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
     onResponse,
     onError,
     onStateChange,
+    onInterrupt,
     autoPlayResponse = true,
+    voice = "nova",
+    speed = 1.0,
   } = options;
 
   // State
@@ -322,11 +329,15 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
 
     updateState("speaking");
     try {
-      // Generate TTS for current response
+      // Generate TTS for current response with voice settings
       const res = await fetch("/api/voice/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: response }),
+        body: JSON.stringify({
+          text: response,
+          voice: voice,
+          speed: speed,
+        }),
       });
 
       if (!res.ok) {
@@ -342,7 +353,7 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
     } finally {
       updateState("idle");
     }
-  }, [response, updateState, playAudioFromUrl]);
+  }, [response, updateState, playAudioFromUrl, voice, speed]);
 
   // Stop playback
   const stopPlayback = useCallback(() => {
@@ -357,6 +368,28 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
     updateState("idle");
   }, [updateState]);
 
+  // Interrupt current speech and optionally start listening
+  const interrupt = useCallback(async () => {
+    // Stop any current playback
+    if (audioSourceRef.current) {
+      try {
+        audioSourceRef.current.stop();
+      } catch {
+        // Ignore
+      }
+      audioSourceRef.current = null;
+    }
+
+    // Notify that interruption happened
+    onInterrupt?.();
+
+    // Transition to recording
+    updateState("idle");
+
+    // Start recording immediately after interruption
+    await startRecording();
+  }, [updateState, onInterrupt, startRecording]);
+
   return {
     state,
     isRecording: state === "recording",
@@ -370,6 +403,7 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
     cancelRecording,
     playResponse,
     stopPlayback,
+    interrupt,
   };
 }
 

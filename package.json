@@ -6,19 +6,23 @@
   ],
   "scripts": {
     "dev:mobile": "cd apps/mobile && expo start --web",
-    "dev:web": "pnpm --filter web dev"
+    "dev:web": "pnpm --filter web dev",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
-    "expo-av": "~16.0.7"
+    "expo-av": "~16.0.7",
+    "expo": "~54.0.33",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   },
   "pnpm": {
     "overrides": {
       "@babel/core": "^7.23.9",
       "@babel/plugin-transform-react-jsx": "^7.23.4",
-      "@babel/preset-typescript": "^7.24.7",
-      "react": "18.2.0",
-      "react-dom": "18.2.0"
+      "@babel/preset-typescript": "^7.24.7"
     }
-  }
+  },
+  "version": "1.0.0"
 }

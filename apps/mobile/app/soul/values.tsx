@@ -1,9 +1,7 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryPie, VictoryTheme, VictoryBar, VictoryChart, VictoryAxis } from "victory-native";
-import { normalizeSoulState } from "@ui/soulViewModel";
+import { normalizeSoulState } from "../../lib/soulViewModel";
 
 export default function SoulValuesScreen() {
   const [state, setState] = useState<any>({});

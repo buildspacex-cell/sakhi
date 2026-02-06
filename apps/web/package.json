@@ -9,8 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@sakhi/api": "workspace:*",
-    "@sakhi/ui": "workspace:*",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "dev": "^0.1.3",

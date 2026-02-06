@@ -183,6 +183,10 @@ Generated from production database on 2026-02-03
 | created_at | timestamptz | NOT NULL |  |
 | last_sign_in_at | timestamptz | NULL |  |
 | onboarding_completed_at | timestamptz | NULL |  |
+| onboarding_phase | text | NULL | Mobile onboarding phase: phase1, phase2a, phase2b, full |
+| phase1_completed_at | timestamptz | NULL | When Phase 1 (3 mandatory questions) was completed |
+| phase2a_completed_at | timestamptz | NULL | When Phase 2a (energy/recovery questions) was completed |
+| phase2b_completed_at | timestamptz | NULL | When Phase 2b (life context questions) was completed |
 | deleted_at | timestamptz | NULL |  |
 
 ## behavior_log
@@ -1785,6 +1789,11 @@ Generated from production database on 2026-02-03
 | operating_system | jsonb | NULL |  |
 | life_context | jsonb | NULL |  |
 | decision_profile | jsonb | NULL |  |
+| onboarding_source | text | NULL | Source of onboarding: web or mobile |
+| onboarding_phase | text | NULL | Last completed phase: phase1, phase2a, phase2b, full |
+| phase1_completed_at | timestamptz | NULL | When Phase 1 was completed (mobile flow) |
+| phase2a_completed_at | timestamptz | NULL | When Phase 2a was completed (mobile flow) |
+| phase2b_completed_at | timestamptz | NULL | When Phase 2b was completed (mobile flow) |
 
 ## personal_model_elemental
 
@@ -2757,3 +2766,111 @@ Generated from production database on 2026-02-03
 | emotion | jsonb | NULL |  |
 | energy | jsonb | NULL |  |
 | updated_at | timestamptz | NULL |  |
+
+---
+
+# Ayurvedic Knowledge Graph Tables
+
+These tables store the Ayurvedic knowledge graph with citations from classical texts.
+
+## ay_nodes
+
+Stores nodes in the Ayurvedic knowledge graph (doshas, foods, herbs, practices, symptoms, etc.)
+
+| Column | Type | Nullable | Constraints |
+|--------|------|----------|-------------|
+| id | bigserial | NOT NULL | PK |
+| kind | text | NOT NULL | UNIQUE (with name) |
+| name | text | NOT NULL | UNIQUE (with kind) |
+| name_sanskrit | text | NULL | Sanskrit name in IAST |
+| display_name | text | NULL | User-facing name |
+| attrs | jsonb | NULL | Kind-specific attributes |
+| citations | jsonb | NULL | Array of citations from texts |
+| confidence | float | NULL | 1.0=direct quote, 0.8=inference |
+| extraction_method | text | NULL | manual, llm_validated, etc |
+| validated_at | timestamptz | NULL |  |
+| validated_by | text | NULL | llm:model or human:name |
+| created_at | timestamptz | NULL |  |
+| updated_at | timestamptz | NULL |  |
+
+**Node kinds (as of 2026-02-05):**
+- `dosha` (3): vata, pitta, kapha
+- `food` (100): foods with rasa, virya, vipaka properties
+- `herb` (40): medicinal herbs with therapeutic uses
+- `rasayana` (12): rejuvenative formulations
+- `practice` (80): yoga, pranayama, routines
+- `symptom` (60): symptoms indicating dosha imbalance
+- `behavior` (29): lifestyle factors that affect doshas
+- `quality` (20): gunas like snigdha, ruksha
+- `season` (6): seasonal contexts
+- `time_window` (6): time-of-day contexts
+
+## ay_edges
+
+Stores relationships between nodes in the knowledge graph.
+
+| Column | Type | Nullable | Constraints |
+|--------|------|----------|-------------|
+| id | bigserial | NOT NULL | PK |
+| src | bigint | NOT NULL | FK → ay_nodes.id |
+| dst | bigint | NOT NULL | FK → ay_nodes.id |
+| rel | text | NOT NULL | Relationship type |
+| weight | float | NULL | Relationship strength |
+| context | jsonb | NULL | Conditional context |
+| citations | jsonb | NULL | Source citations |
+| confidence | float | NULL |  |
+| extraction_method | text | NULL |  |
+| created_at | timestamptz | NULL |  |
+
+**Relationship types:**
+- `PACIFIES`: food/herb/practice pacifies dosha
+- `AGGRAVATES`: behavior aggravates dosha
+- `INDICATES`: symptom indicates dosha imbalance
+- `CAUSES`: behavior causes symptom
+- `AMPLIFIES`: season amplifies dosha
+- `OPTIMAL_TIME`: time window for practice
+- `CONTRAINDICATED_WITH`: food/herb combinations to avoid
+
+## ay_sources
+
+Registry of Ayurvedic source texts for citations.
+
+| Column | Type | Nullable | Constraints |
+|--------|------|----------|-------------|
+| id | serial | NOT NULL | PK |
+| code | text | NOT NULL | UNIQUE |
+| title | text | NOT NULL |  |
+| title_sanskrit | text | NULL |  |
+| author | text | NULL |  |
+| period | text | NULL | Historical period |
+| sections | jsonb | NULL | Text structure |
+| translation_used | text | NULL |  |
+| notes | text | NULL |  |
+| created_at | timestamptz | NULL |  |
+
+**Registered sources:**
+- `charaka_samhita`: Charaka Samhita (~200 BCE - 200 CE)
+- `ashtanga_hridaya`: Ashtanga Hridaya (~600 CE)
+- `sushruta_samhita`: Sushruta Samhita (~600 BCE)
+- `bhavaprakasha`: Bhavaprakasha (~1550 CE)
+
+## ay_validation_log
+
+Tracks LLM and human validation of knowledge graph entries.
+
+| Column | Type | Nullable | Constraints |
+|--------|------|----------|-------------|
+| id | bigserial | NOT NULL | PK |
+| node_id | bigint | NULL | FK → ay_nodes.id |
+| edge_id | bigint | NULL | FK → ay_edges.id |
+| status | text | NOT NULL | validated, corrected, flagged |
+| original_data | jsonb | NULL |  |
+| corrected_data | jsonb | NULL |  |
+| llm_reasoning | text | NULL |  |
+| citations_found | jsonb | NULL |  |
+| confidence_score | float | NULL |  |
+| contradicts_source | bool | NULL |  |
+| needs_review | bool | NULL |  |
+| review_notes | text | NULL |  |
+| validated_at | timestamptz | NULL |  |
+| validated_by | text | NULL |  |

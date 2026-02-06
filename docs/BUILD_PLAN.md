@@ -2,11 +2,11 @@
 
 > Living document tracking all planned work. Update checkboxes as items are completed.
 >
-> Last Updated: 2026-02-03 (Reorganization - Verified implementation status against codebase)
+> Last Updated: 2026-02-05
 >
 > **Coverage**: 100% — All demo capabilities have paths to become REAL (not just simulated)
 >
-> **Latest**: Integration Testing COMPLETE - Browser automation connected to preference engine for personalized product search
+> **Latest**: Phase B (Voice) and Phase C (Dashboard) COMPLETE. Mobile apps now TOP PRIORITY.
 
 ---
 
@@ -20,7 +20,7 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 - Sakhi handles the friction
 - You live your life — health, joy, connection
 
-**Strategy**: Web + API first → Mobile conversion last
+**Strategy**: Web + API foundation ✅ → **Mobile Apps NOW** → Desktop Agent polish
 
 ---
 
@@ -78,60 +78,38 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           SAKHI BUILD SEQUENCE                               │
 │                                                                              │
-│  PHASE A: Demo Build (Week 1-2)           ← CURRENT FOCUS                   │
-│  ├── 🎯 PRIORITY 1: Simulation Personalization (Maya vs Diya)               │
-│  ├── Foundation: Hybrid Search                                              │
-│  ├── Cap 1: Vision Loop polish                                              │
-│  ├── Cap 2: Mesh UI (split-screen)                                          │
-│  ├── Cap 3: Personalization Engine                                          │
-│  ├── Cap 4: Reflective Intelligence polish                                  │
-│  ├── Cap 5: Demo UI Framework                                               │
-│  ├── Cap 6: Mesh Communication (REAL inter-Sakhi)                           │
-│  ├── Cap 7: Learning Pipeline (REAL pattern learning)                       │
-│  └── Cap 8: Preference Feedback Loop                                        │
+│  🎯 PHASE M: MOBILE APPS (NOW)            ← TOP PRIORITY                    │
+│  ├── M.1 React Native + Expo setup                                          │
+│  ├── M.2 Core screens (Voice, Dashboard, Reflection)                        │
+│  ├── M.3 Ayurvedic intelligence UI (dosha state, recommendations)           │
+│  ├── M.4 iOS App Store submission                                           │
+│  └── M.5 Android Play Store submission                                      │
 │                                                                              │
-│  PHASE B: Voice Interface (Week 3-4)                                        │
-│  ├── Speech-to-Text input                                                   │
-│  ├── Text-to-Speech output                                                  │
-│  └── Voice conversation mode                                                │
+│  PHASE A: Demo Build ✅ MOSTLY COMPLETE                                     │
+│  ├── ✅ Simulation Personalization (Maya vs Diya)                           │
+│  ├── ✅ Personalization Engine                                              │
+│  ├── ✅ Reflective Intelligence                                             │
+│  └── ✅ Demo UI Framework                                                   │
 │                                                                              │
-│  PHASE C: Personal Dashboard (Week 5-6)                                     │
-│  ├── Unified glanceable view                                                │
-│  ├── Widget system                                                          │
-│  └── Customization                                                          │
+│  PHASE B: Voice Interface ✅ COMPLETE                                       │
+│  ├── ✅ Speech-to-Text input                                                │
+│  ├── ✅ Text-to-Speech output                                               │
+│  └── ✅ Voice conversation mode                                             │
 │                                                                              │
-│  PHASE D: Proactive Intelligence (Week 7-8)                                 │
+│  PHASE C: Personal Dashboard ✅ COMPLETE                                    │
+│  ├── ✅ Unified glanceable view                                             │
+│  ├── ✅ Widget system                                                       │
+│  └── ✅ Customization (partial)                                             │
+│                                                                              │
+│  PHASE D: Proactive Intelligence (After Mobile)                             │
 │  ├── Morning Briefing                                                       │
 │  ├── Relationship Nudges                                                    │
-│  ├── Birthday/Anniversary tracking                                          │
 │  └── Focus Protection                                                       │
 │                                                                              │
-│  PHASE E: Bridge Skills (Week 9-10)                                         │
+│  PHASE E: Bridge Skills (After Mobile)                                      │
 │  ├── Google Calendar Sync                                                   │
 │  ├── Apple Calendar Sync                                                    │
 │  └── Gmail Bridge                                                           │
-│                                                                              │
-│  PHASE F: Data Sovereignty (Week 11-12)                                     │
-│  ├── Data Export                                                            │
-│  ├── Privacy Controls                                                       │
-│  └── Self-hosting docs                                                      │
-│                                                                              │
-│  PHASE G: Mobile (Week 13+)                                                 │
-│  ├── PWA conversion                                                         │
-│  ├── Push notifications                                                     │
-│  └── Offline support                                                        │
-│                                                                              │
-│  PHASE H: Long-Running Tasks - Life Missions (Week 14-16)                   │
-│  ├── Mission Orchestrator (decomposition, approval gates)                   │
-│  ├── Scheduling System (RQ bridge, cron worker)                             │
-│  ├── Adaptation Engine (weekly review, plan adjustment)                     │
-│  └── Metrics & Progress (collector, milestones, trends)                     │
-│                                                                              │
-│  PHASE I: Life Dashboard (Week 17-18)                                       │
-│  ├── Unified LifeGoal model (health + missions)                             │
-│  ├── Today's Focus aggregation                                              │
-│  ├── Health Goals + Life Missions sections                                  │
-│  └── Sakhi Insights (patterns, correlations)                                │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -622,7 +600,7 @@ Conversation                    Learning Pipeline
 
 ---
 
-## PHASE B: Voice Interface (Week 3-4) - PARTIALLY COMPLETE
+## PHASE B: Voice Interface (Week 3-4) - COMPLETE
 
 ### B.1 Speech-to-Text Input
 
@@ -630,7 +608,7 @@ Conversation                    Learning Pipeline
 |--------|------|-------------|-------|---------------|
 | ✅ | Whisper STT | OpenAI Whisper transcription | `apps/web/app/api/voice/turn/route.ts` | Audio → Whisper → text |
 | ✅ | Voice Input UI | useVoice hook with recording | `apps/web/lib/hooks/useVoice.ts` | Visual feedback while recording |
-| ⬜ | Continuous Listening | Optional always-on mode | `apps/web/lib/voice/continuous.ts` | Detects wake word or push-to-talk |
+| ✅ | Continuous Listening | Optional always-on mode in voice page | `apps/web/app/experience/voice/page.tsx` | Continuous mode with auto-restart |
 
 **Test**: Say "What's my day look like?" → correctly transcribed and processed. ✅
 
@@ -640,10 +618,10 @@ Conversation                    Learning Pipeline
 |--------|------|-------------|-------|---------------|
 | ✅ | OpenAI TTS | High quality voice (nova) | `apps/web/app/api/voice/turn/route.ts` | Reads responses naturally |
 | ✅ | TTS API | Standalone TTS endpoint | `apps/web/app/api/voice/tts/route.ts` | Text-to-speech on demand |
-| ⬜ | Voice Selection | Choose voice persona | `apps/web/components/VoiceSettings.tsx` | User can pick preferred voice |
-| ⬜ | Streaming TTS | Start speaking before full response | `services/voice/stream.py` | < 1s latency to first audio |
+| ✅ | Voice Selection | Choose voice persona | `apps/web/components/VoiceSettings.tsx` | User can pick nova/shimmer/alloy voice |
+| ⬜ | Streaming TTS | Start speaking before full response | `services/voice/stream.py` | < 1s latency to first audio (deferred) |
 
-**Test**: Sakhi reads responses aloud with OpenAI nova voice. ✅
+**Test**: Sakhi reads responses aloud with user-selected voice. ✅
 
 ### B.3 Voice Conversation Mode
 
@@ -651,52 +629,161 @@ Conversation                    Learning Pipeline
 |--------|------|-------------|-------|---------------|
 | ✅ | Voice Turn Pipeline | Audio → STT → Sakhi → TTS → Audio | `apps/web/app/api/voice/turn/route.ts` | Full pipeline implemented |
 | ✅ | useVoice Hook | State machine: idle → recording → processing → speaking | `apps/web/lib/hooks/useVoice.ts` | States managed correctly |
-| ⬜ | Voice-First UI | Full-screen voice mode | `apps/web/app/experience/voice/page.tsx` | Clean interface for voice |
-| ⬜ | Interruption Handling | User can interrupt Sakhi | `apps/web/lib/voice/interrupt.ts` | Stops speaking, listens |
+| ✅ | Voice-First UI | Full-screen voice mode | `apps/web/app/experience/voice/page.tsx` | Clean interface for voice |
+| ✅ | Interruption Handling | User can interrupt Sakhi | `apps/web/lib/hooks/useVoice.ts` | `interrupt()` stops speaking and starts listening |
 
-**Test**: Voice conversation works via useVoice hook. ✅ UI polish pending.
+**Test**: Voice conversation works end-to-end with voice selection and interruption. ✅
 
 ---
 
-## PHASE C: Personal Dashboard (Week 5-6)
+## PHASE C: Personal Dashboard (Week 5-6) — ✅ COMPLETE
 
 ### C.1 Unified Dashboard
 
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
-| ⬜ | Dashboard Page | Glanceable overview | `apps/web/app/experience/dashboard/page.tsx` | All key info visible at once |
-| ⬜ | Today Section | Calendar + tasks + energy | `apps/web/components/dashboard/Today.tsx` | Shows day at a glance |
-| ⬜ | Relationships Section | People to connect with | `apps/web/components/dashboard/Relationships.tsx` | Shows who needs attention |
-| ⬜ | Energy/State Section | Current dosha, operating mode | `apps/web/components/dashboard/Energy.tsx` | Shows current state |
+| ✅ | Dashboard Page | Glanceable overview | `apps/web/app/experience/dashboard/page.tsx` | All key info visible at once |
+| ✅ | Today Section | Calendar + tasks + energy | Integrated in dashboard page | Shows day at a glance |
+| ✅ | Relationships Section | People to connect with | Integrated in dashboard page | Shows who needs attention |
+| ✅ | Energy/State Section | Current dosha, operating mode | Integrated in dashboard page | Shows current state |
 
-**Test**: Open dashboard → see today's events, tasks, energy, relationship nudges in < 3s.
+**Test**: Open dashboard → see today's events, tasks, energy, relationship nudges in < 3s. ✅
 
 ### C.2 Widget System
 
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
-| ⬜ | Widget Framework | Pluggable widget architecture | `apps/web/lib/widgets/` | Easy to add new widgets |
-| ⬜ | Calendar Widget | Upcoming events | `apps/web/components/widgets/Calendar.tsx` | Shows next 3-5 events |
-| ⬜ | Tasks Widget | Today's tasks | `apps/web/components/widgets/Tasks.tsx` | Shows pending tasks |
-| ⬜ | Energy Widget | Current state visualization | `apps/web/components/widgets/Energy.tsx` | Visual energy indicator |
-| ⬜ | Relationships Widget | Connection reminders | `apps/web/components/widgets/Relationships.tsx` | Who to reach out to |
+| ✅ | Widget Framework | Pluggable widget architecture | `apps/web/app/experience/dashboard/page.tsx` (WidgetCard) | Easy to add new widgets |
+| ✅ | Calendar Widget | Upcoming events | Integrated in dashboard page (CalendarWidget) | Shows next 3-5 events |
+| ⬜ | Tasks Widget | Today's tasks | Deferred - requires task system | Shows pending tasks |
+| ✅ | Energy Widget | Current state visualization | Integrated in dashboard page (EnergyWidget) | Visual energy indicator |
+| ✅ | Relationships Widget | Connection reminders | Integrated in dashboard page (RelationshipsWidget) | Who to reach out to |
 
-**Test**: All widgets load and update independently.
+**Test**: All widgets load and update independently. ✅
 
 ### C.3 Customization
 
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
-| ⬜ | Widget Arrangement | Drag-and-drop layout | `apps/web/components/dashboard/WidgetGrid.tsx` | User can rearrange |
-| ⬜ | Widget Toggle | Show/hide widgets | `apps/web/components/dashboard/Settings.tsx` | User controls what shows |
-| ⬜ | Theme Options | Light/dark/custom | `apps/web/lib/theme.ts` | Respects user preference |
-| ⬜ | Layout Persistence | Save arrangement | `services/preferences/dashboard.py` | Remembers layout |
+| ⬜ | Widget Arrangement | Drag-and-drop layout | Deferred - using static order for now | User can rearrange |
+| ✅ | Widget Toggle | Show/hide widgets | `apps/web/app/experience/dashboard/page.tsx` (SettingsPanel) | User controls what shows |
+| ⬜ | Theme Options | Light/dark/custom | Deferred - dark mode only for now | Respects user preference |
+| ✅ | Layout Persistence | Save arrangement | localStorage (sakhi_dashboard_config) | Remembers layout |
 
-**Test**: Rearrange dashboard → refresh → layout persists.
+**Test**: Toggle widgets → refresh → configuration persists. ✅
+
+### API Routes Created
+- `apps/web/app/api/calendar/[personId]/today/route.ts` - Today's events
+- `apps/web/app/api/calendar/[personId]/events/route.ts` - Upcoming events
+- `apps/web/app/api/friction/state/friction/[personId]/route.ts` - Friction state
+- `apps/web/app/api/relationships/[personId]/needing-attention/route.ts` - Relationships needing attention
 
 ---
 
-## PHASE D: Proactive Intelligence (Week 7-8)
+## 🎯 PHASE M: MOBILE APPS — TOP PRIORITY
+
+> **Why Now**: Web foundation complete (Voice, Dashboard, Ayurvedic intelligence). Time to put Sakhi in users' pockets. Focus on reflective, ayurvedic intelligence as the core differentiator.
+
+### Development Approach
+
+1. **Design Phase**: Use v0.dev or similar to rapidly prototype UI screens
+2. **Build Phase**: Port designs to React Native (Expo) in `apps/mobile/`
+3. **Integration**: Connect to existing FastAPI backend (same APIs as web)
+4. **Launch**: iOS App Store + Android Play Store
+
+### M.1 Project Setup
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Expo Init | Initialize React Native + Expo project | `apps/mobile/` | `npx expo start` works |
+| ⬜ | Navigation | React Navigation setup | `apps/mobile/navigation/` | Tab + stack navigation |
+| ⬜ | Theming | Dark mode, brand colors | `apps/mobile/theme/` | Consistent with web |
+| ⬜ | API Client | Shared API calls | `apps/mobile/lib/api.ts` | Auth + endpoints work |
+| ⬜ | Auth Flow | Login/signup screens | `apps/mobile/screens/auth/` | User can authenticate |
+
+**Test**: App launches, user can log in, sees home screen.
+
+### M.2 Core Screens
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Home/Dashboard | Glanceable today view | `apps/mobile/screens/Home.tsx` | Shows energy, events, nudges |
+| ⬜ | Voice Conversation | Voice-first chat with Sakhi | `apps/mobile/screens/Voice.tsx` | Push-to-talk + auto-listen |
+| ⬜ | Text Conversation | Text chat fallback | `apps/mobile/screens/Chat.tsx` | Standard messaging UI |
+| ⬜ | Reflection/Journal | Daily check-in | `apps/mobile/screens/Reflection.tsx` | Quick mood + energy entry |
+| ⬜ | Profile/Settings | User preferences | `apps/mobile/screens/Settings.tsx` | Voice, notifications, etc. |
+
+**Test**: User can navigate all core screens, voice conversation works.
+
+### M.3 Ayurvedic Intelligence UI
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Dosha State Display | Current Vata/Pitta/Kapha state | `apps/mobile/components/DoshaState.tsx` | Visual indicator of imbalance |
+| ⬜ | Friction State | Chaos/Intensity/Stagnation view | `apps/mobile/components/FrictionState.tsx` | Shows current state + drift |
+| ⬜ | Recommendations | Personalized suggestions | `apps/mobile/components/Recommendations.tsx` | Food, activity, rest suggestions |
+| ✅ | Onboarding API | Phased onboarding endpoint | `sakhi/apps/api/routes/friction_framework.py` | `POST /onboarding/submit` with phase1/2a/2b/full |
+| ⬜ | Onboarding Flow | Prakruti assessment UI | `apps/mobile/screens/Onboarding.tsx` | 10-15 questions → constitution |
+| ⬜ | Energy Timeline | Daily energy pattern | `apps/mobile/components/EnergyTimeline.tsx` | Circadian rhythm awareness |
+
+**Test**: User completes onboarding → sees personalized dosha state → gets relevant recommendations.
+
+### M.4 Voice Features (Mobile-specific)
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Native Recording | expo-av audio recording | `apps/mobile/lib/audio.ts` | High-quality audio capture |
+| ⬜ | Push-to-Talk | Hold button to speak | `apps/mobile/components/VoiceButton.tsx` | Intuitive UX |
+| ⬜ | Background Audio | TTS plays in background | `apps/mobile/lib/audio.ts` | User can listen while multitasking |
+| ⬜ | Wake Word (stretch) | "Hey Sakhi" activation | Future | Hands-free activation |
+
+**Test**: Record voice → get Sakhi response → hear TTS playback.
+
+### M.5 App Store Submission
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | iOS Build | EAS Build for iOS | `apps/mobile/eas.json` | IPA builds successfully |
+| ⬜ | Android Build | EAS Build for Android | `apps/mobile/eas.json` | APK/AAB builds successfully |
+| ⬜ | App Icons | iOS + Android icons | `apps/mobile/assets/` | All sizes generated |
+| ⬜ | Screenshots | Store listing screenshots | `docs/mobile/screenshots/` | 5-8 screens per platform |
+| ⬜ | App Store Connect | iOS submission | Apple Developer account | App approved |
+| ⬜ | Play Console | Android submission | Google Play account | App approved |
+
+**Test**: Apps available in stores, users can download and use.
+
+### Key Screens to Design (v0.dev or Figma)
+
+1. **Voice Conversation Screen**
+   - Large voice orb (like web `/experience/voice`)
+   - Transcript display
+   - State indicators (listening, processing, speaking)
+
+2. **Home Dashboard**
+   - Greeting + date
+   - Energy/dosha state card
+   - Today's events (compact)
+   - Quick action buttons
+
+3. **Reflection/Check-in**
+   - "How are you feeling?" prompt
+   - Energy slider
+   - Quick mood tags
+   - Optional journal entry
+
+4. **Onboarding/Prakruti Assessment**
+   - Question cards (swipe or tap)
+   - Progress indicator
+   - Results screen with dosha breakdown
+
+5. **Settings**
+   - Voice selection
+   - Notification preferences
+   - Account management
+
+---
+
+## PHASE D: Proactive Intelligence (After Mobile Launch)
 
 ### D.1 Morning Briefing
 
