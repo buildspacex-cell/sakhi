@@ -45,6 +45,7 @@ def _build_queues(connection: Redis) -> List[Queue]:
         "turn_updates": os.getenv("TURN_JOBS_QUEUE", "turn_updates"),
         "focus": os.getenv("FOCUS_QUEUE", "focus"),
         "environment": os.getenv("ENVIRONMENT_QUEUE", "environment"),
+        "email_sync": os.getenv("EMAIL_SYNC_QUEUE", "email_sync"),
     }
 
     queues = []

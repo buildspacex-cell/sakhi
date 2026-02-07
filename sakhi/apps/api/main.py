@@ -158,6 +158,7 @@ from sakhi.apps.api.routes.dev import router as dev_router
 from sakhi.apps.api.routes.demo import router as demo_router
 from sakhi.apps.api.routes.learning import router as learning_router
 from sakhi.apps.api.routes.missions import router as missions_router
+from sakhi.apps.api.routes.email import router as email_router
 from sakhi.apps.api.routers import person as person_router
 from sakhi.apps.api.routers import person_edit as person_edit_router
 from sakhi.apps.api.core.llm import set_router as set_llm_router
@@ -1381,6 +1382,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         job_queues["embeddings"] = Queue("embeddings", connection=redis_client)
         job_queues["salience"] = Queue("salience", connection=redis_client)
         job_queues["reflection"] = Queue("reflection", connection=redis_client)
+        job_queues["email_sync"] = Queue("email_sync", connection=redis_client)
+        job_queues["email_digest"] = Queue("email_digest", connection=redis_client)
     except Exception:  # pragma: no cover - optional infrastructure
         redis_client = None
 
@@ -1509,6 +1512,7 @@ app.include_router(dev_router)
 app.include_router(demo_router)
 app.include_router(learning_router)
 app.include_router(missions_router)
+app.include_router(email_router)
 
 # Startup route dump was for debugging; disable to reduce noise in logs.
 # LOGGER.info("Printing registered routes (startup debug)")

@@ -3,6 +3,14 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+// Add keyframe animation for loader
+const spinKeyframes = `
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+`;
+
 // ─────────────────────────────────────────────────────────────
 // Inline SVG Icons
 // ─────────────────────────────────────────────────────────────
@@ -75,6 +83,32 @@ const IconChevronDown = ({ size = 18 }: { size?: number }) => (
 const IconChevronUp = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="18 15 12 9 6 15" />
+  </svg>
+);
+
+const IconMail = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
+);
+
+const IconLink = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
+const IconCheck = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const IconLoader = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 1s linear infinite" }}>
+    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
   </svg>
 );
 
@@ -169,13 +203,95 @@ interface WeeklyState {
   insight?: string;
 }
 
+interface EmailSignals {
+  status: string;
+  extracted_at?: string;
+  subscriptions: Array<{
+    sender_email: string;
+    sender_name?: string;
+    category?: string;
+    is_marketing?: boolean;
+    cadence?: string;
+    total_received?: number;
+  }>;
+  avoidance: Array<{
+    thread_id: string;
+    subject: string;
+    sender_email: string;
+    duration_days: number;
+    severity: string;
+    follow_up_count?: number;
+    suggested_action?: string;
+  }>;
+  boundary: {
+    erosion_score: number;
+    after_hours_pct: number;
+    weekend_pct: number;
+    trend: string;
+    friction_impact?: string;
+  } | null;
+  cognitive_load: {
+    active_threads: number;
+    heavy_threads: number;
+    load_score: number;
+    overwhelm_risk: string;
+  } | null;
+}
+
+interface EmailStatus {
+  connected: boolean;
+  status: string;
+  email?: string;
+  last_sync_at?: string;
+  messages_synced?: number;
+}
+
+interface EmailCommitmentItem {
+  id?: string;
+  commitment: string;
+  deadline?: string;
+  subject: string;
+  recipient: string;
+  commitment_type?: string;
+  extracted_at?: string;
+  status?: string;
+}
+
+interface EmailDigest {
+  status: string;
+  triage_counts?: { needs_action: number; fyi: number; noise: number };
+  action_items?: Array<{
+    message_id: string;
+    subject: string;
+    sender: string;
+    sender_name?: string;
+    action_summary?: string;
+    deadline?: string;
+    priority: string;
+    draft_reply?: string;
+  }>;
+  fyi_items?: Array<{
+    message_id: string;
+    subject: string;
+    sender: string;
+    sender_name?: string;
+    one_line_summary?: string;
+  }>;
+  noise_summary?: { count: number; categories: Record<string, number> };
+  commitments?: EmailCommitmentItem[];
+  subscriptions?: EmailCommitmentItem[];
+  emails_analyzed?: number;
+  created_at?: string;
+  error_message?: string;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────
 export default function MePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const userId = searchParams.get("user") || "a";
+  const [userId, setUserId] = useState(searchParams.get("user") || "");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,11 +303,33 @@ export default function MePageContent() {
   const [memoryDetails, setMemoryDetails] = useState<MemoryDetails | null>(null);
   const [recommendations, setRecommendations] = useState<PersonalizedRecommendations | null>(null);
   const [weeklyState, setWeeklyState] = useState<WeeklyState | null>(null);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null);
+  const [emailSignals, setEmailSignals] = useState<EmailSignals | null>(null);
+  const [emailDigest, setEmailDigest] = useState<EmailDigest | null>(null);
+  const [digestLoading, setDigestLoading] = useState(false);
 
   // UI states
   const [osExpanded, setOsExpanded] = useState(true);
+  const [emailConnecting, setEmailConnecting] = useState(false);
+
+  // Resolve person_id from server-side auth
+  useEffect(() => {
+    if (userId) return; // Already have it from query param
+    async function resolveUser() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.person_id) setUserId(data.person_id);
+        }
+      } catch {}
+    }
+    resolveUser();
+  }, [userId]);
 
   useEffect(() => {
+    if (!userId) return;
+
     async function fetchData() {
       setLoading(true);
       setError(null);
@@ -204,6 +342,7 @@ export default function MePageContent() {
           memoryDetailsRes,
           recommendationsRes,
           weeklyStateRes,
+          emailStatusRes,
         ] = await Promise.all([
           fetch(`/api/friction/state/current?user=${userId}`).catch(() => null),
           fetch(`/api/profile/operating-system?user=${userId}`).catch(() => null),
@@ -211,6 +350,7 @@ export default function MePageContent() {
           fetch(`/api/lab/memory-details?person_id=${userId}`).catch(() => null),
           fetch(`/api/friction/recommendations?user=${userId}`).catch(() => null),
           fetch(`/api/friction/state/weekly?user=${userId}`).catch(() => null),
+          fetch(`/api/email/status`).catch(() => null),
         ]);
 
         if (currentStateRes?.ok) {
@@ -243,6 +383,12 @@ export default function MePageContent() {
           const data = await weeklyStateRes.json();
           setWeeklyState(data);
         }
+        if (emailStatusRes?.ok) {
+          const data = await emailStatusRes.json();
+          setEmailStatus(data);
+        } else {
+          setEmailStatus({ connected: false, status: "not_connected" });
+        }
       } catch (err) {
         setError("Failed to load data");
         console.error(err);
@@ -254,6 +400,92 @@ export default function MePageContent() {
     fetchData();
   }, [userId]);
 
+  // Gmail connection handlers
+  const handleConnectGmail = async () => {
+    setEmailConnecting(true);
+    try {
+      const response = await fetch("/api/email/connect/gmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          app_redirect_uri: `${window.location.origin}/experience/me?email_connected=1`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to initiate Gmail connection");
+      }
+
+      const data = await response.json();
+      if (data.auth_url) {
+        // Redirect to Google OAuth
+        window.location.href = data.auth_url;
+      }
+    } catch (err) {
+      console.error("Failed to connect Gmail:", err);
+      setEmailConnecting(false);
+    }
+  };
+
+  const handleDisconnectGmail = async () => {
+    if (!confirm("Disconnect Gmail? This will remove all email insights.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/email/disconnect", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        setEmailStatus({ connected: false, status: "not_connected" });
+      }
+    } catch (err) {
+      console.error("Failed to disconnect Gmail:", err);
+    }
+  };
+
+  // Fetch email signals and digest when connected
+  useEffect(() => {
+    if (emailStatus?.connected) {
+      fetch("/api/email/signals")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.status !== "error") {
+            setEmailSignals(data);
+          }
+        })
+        .catch(() => {});
+
+      // Fetch digest
+      fetch("/api/email/digest")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            setEmailDigest(data);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setEmailSignals(null);
+      setEmailDigest(null);
+    }
+  }, [emailStatus]);
+
+  // Check for email connection callback
+  useEffect(() => {
+    const emailConnected = searchParams.get("email_connected");
+    if (emailConnected === "1") {
+      // Refresh email status after OAuth callback
+      fetch("/api/email/status")
+        .then((res) => res.json())
+        .then((data) => setEmailStatus(data))
+        .catch(() => {});
+      // Clean up URL
+      router.replace("/experience/me");
+    }
+  }, [searchParams, router]);
+
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: palette.bg, display: "flex", alignItems: "center", justifyContent: "center", color: palette.muted }}>
@@ -264,6 +496,9 @@ export default function MePageContent() {
 
   return (
     <div style={{ minHeight: "100vh", background: palette.bg, color: palette.fg, padding: "1rem", maxWidth: 480, margin: "0 auto" }}>
+      {/* Inject keyframe animation */}
+      <style dangerouslySetInnerHTML={{ __html: spinKeyframes }} />
+
       {/* Header */}
       <header style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
         <button
@@ -305,6 +540,32 @@ export default function MePageContent() {
 
       {/* Weekly Rhythm Card */}
       <WeeklyRhythmCard weekly={weeklyState} />
+
+      {/* Email Digest Card */}
+      <EmailDigestCard
+        digest={emailDigest}
+        signals={emailSignals}
+        connected={emailStatus?.connected === true}
+        loading={digestLoading}
+        onRefresh={() => {
+          setDigestLoading(true);
+          fetch("/api/email/digest", { method: "POST" })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data) setEmailDigest(data);
+            })
+            .catch(() => {})
+            .finally(() => setDigestLoading(false));
+        }}
+      />
+
+      {/* Connections Card */}
+      <ConnectionsCard
+        emailStatus={emailStatus}
+        connecting={emailConnecting}
+        onConnectGmail={handleConnectGmail}
+        onDisconnectGmail={handleDisconnectGmail}
+      />
     </div>
   );
 }
@@ -871,5 +1132,1179 @@ function SoulPill({ text, type }: { text: string; type: "light" | "shadow" }) {
     <span style={{ background: bg, color, padding: "0.25rem 0.5rem", borderRadius: 12, fontSize: "0.75rem" }}>
       {text}
     </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Email Peek Modal (focused email view with context + reply)
+// ─────────────────────────────────────────────────────────────
+interface EmailDetail {
+  message_id: string;
+  provider_message_id?: string;
+  subject: string;
+  sender_email: string;
+  sender_name?: string;
+  direction?: string;
+  timestamp?: string;
+  body?: string | null;
+  gmail_url?: string | null;
+}
+
+function EmailPeekModal({
+  item,
+  onClose,
+}: {
+  item: {
+    message_id: string;
+    subject: string;
+    sender: string;
+    sender_name?: string;
+    action_summary?: string;
+    priority: string;
+    draft_reply?: string;
+    deadline?: string;
+  };
+  onClose: () => void;
+}) {
+  const [detail, setDetail] = useState<EmailDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(true);
+  const [draftText, setDraftText] = useState(item.draft_reply || "");
+  const [sendState, setSendState] = useState<"idle" | "confirm" | "sending" | "sent" | "error">("idle");
+  const [sendError, setSendError] = useState("");
+
+  useEffect(() => {
+    setLoadingDetail(true);
+    fetch(`/api/email/message/${encodeURIComponent(item.message_id)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setDetail(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingDetail(false));
+  }, [item.message_id]);
+
+  const handleSendClick = () => {
+    if (sendState === "idle") {
+      setSendState("confirm");
+    }
+  };
+
+  const handleConfirmSend = async () => {
+    setSendState("sending");
+    setSendError("");
+    try {
+      const res = await fetch(
+        `/api/email/message/${encodeURIComponent(item.message_id)}/reply`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: draftText }),
+        }
+      );
+      if (res.ok) {
+        setSendState("sent");
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setSendError(errData.error || "Failed to send");
+        setSendState("error");
+      }
+    } catch {
+      setSendError("Network error");
+      setSendState("error");
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    setSendState("idle");
+  };
+
+  const priorityColor = (p: string) => {
+    switch (p) {
+      case "high": return palette.intensity;
+      case "medium": return palette.chaos;
+      default: return palette.muted;
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        display: "flex",
+        flexDirection: "column",
+        background: palette.bg,
+      }}
+    >
+      {/* Header bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          padding: "0.75rem 1rem",
+          borderBottom: `1px solid ${palette.border}`,
+          flexShrink: 0,
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            color: palette.muted,
+            cursor: "pointer",
+            padding: "0.25rem",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <IconArrowLeft size={20} />
+        </button>
+        <span style={{ fontSize: "0.875rem", color: palette.fg, fontWeight: 500 }}>
+          Email Detail
+        </span>
+        <div style={{ flex: 1 }} />
+        <span
+          style={{
+            fontSize: "0.6rem",
+            background: `${priorityColor(item.priority)}22`,
+            color: priorityColor(item.priority),
+            padding: "0.125rem 0.4rem",
+            borderRadius: 10,
+            textTransform: "uppercase",
+          }}
+        >
+          {item.priority}
+        </span>
+      </div>
+
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
+        {/* Sender + subject */}
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: "1rem", fontWeight: 600, color: palette.fg, marginBottom: "0.25rem" }}>
+            {item.sender_name || item.sender}
+          </div>
+          {item.sender_name && (
+            <div style={{ fontSize: "0.75rem", color: palette.muted, marginBottom: "0.5rem" }}>
+              {item.sender}
+            </div>
+          )}
+          <div style={{ fontSize: "0.875rem", color: palette.fg }}>
+            {item.subject}
+          </div>
+          {detail?.timestamp && (
+            <div style={{ fontSize: "0.7rem", color: palette.muted, marginTop: "0.25rem" }}>
+              {new Date(detail.timestamp).toLocaleString()}
+            </div>
+          )}
+        </div>
+
+        {/* Why Sakhi surfaced this */}
+        {item.action_summary && (
+          <div
+            style={{
+              background: `${palette.accent}11`,
+              borderLeft: `3px solid ${palette.accent}`,
+              borderRadius: 6,
+              padding: "0.6rem 0.75rem",
+              marginBottom: "1rem",
+            }}
+          >
+            <div style={{ fontSize: "0.625rem", color: palette.accent, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>
+              Why Sakhi surfaced this
+            </div>
+            <div style={{ fontSize: "0.8rem", color: palette.fg, lineHeight: 1.4 }}>
+              {item.action_summary}
+              {item.deadline && (
+                <span style={{ color: palette.chaos }}> (deadline: {item.deadline})</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Email body */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <div style={{ fontSize: "0.625rem", color: palette.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>
+            Email Content
+          </div>
+          {loadingDetail ? (
+            <div style={{ color: palette.muted, fontSize: "0.8rem", padding: "1rem 0" }}>
+              Loading email...
+            </div>
+          ) : detail?.body ? (
+            <div
+              style={{
+                background: palette.cardBg,
+                border: `1px solid ${palette.border}`,
+                borderRadius: 8,
+                padding: "0.75rem",
+                fontSize: "0.8rem",
+                color: palette.fg,
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                maxHeight: 300,
+                overflowY: "auto",
+              }}
+            >
+              {detail.body}
+            </div>
+          ) : (
+            <div style={{ color: palette.muted, fontSize: "0.8rem", fontStyle: "italic" }}>
+              Could not load email body
+            </div>
+          )}
+        </div>
+
+        {/* Draft reply editor */}
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: "0.625rem", color: palette.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>
+            Draft Reply
+          </div>
+          <textarea
+            value={draftText}
+            onChange={(e) => { setDraftText(e.target.value); if (sendState === "confirm") setSendState("idle"); }}
+            placeholder="Write your reply here..."
+            disabled={sendState === "sending" || sendState === "sent"}
+            style={{
+              width: "100%",
+              minHeight: 100,
+              background: palette.cardBg,
+              border: `1px solid ${palette.border}`,
+              borderRadius: 8,
+              padding: "0.75rem",
+              fontSize: "0.8rem",
+              color: palette.fg,
+              lineHeight: 1.5,
+              resize: "vertical",
+              fontFamily: "inherit",
+              outline: "none",
+              opacity: sendState === "sent" ? 0.5 : 1,
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = palette.accent;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = palette.border;
+            }}
+          />
+          <div style={{ fontSize: "0.65rem", color: palette.muted, marginTop: "0.25rem" }}>
+            Sakhi drafted this for you — edit it, then send when ready
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky CTA footer */}
+      <div
+        style={{
+          padding: "0.75rem 1rem",
+          borderTop: `1px solid ${palette.border}`,
+          flexShrink: 0,
+          background: palette.bg,
+        }}
+      >
+        {/* Confirmation bar */}
+        {sendState === "confirm" && (
+          <div
+            style={{
+              background: `${palette.chaos}15`,
+              border: `1px solid ${palette.chaos}44`,
+              borderRadius: 8,
+              padding: "0.6rem 0.75rem",
+              marginBottom: "0.5rem",
+              fontSize: "0.75rem",
+              color: palette.fg,
+              lineHeight: 1.4,
+            }}
+          >
+            This will send the reply above from your Gmail to <strong>{item.sender_name || item.sender}</strong>. Are you sure?
+          </div>
+        )}
+
+        {/* Error message */}
+        {sendState === "error" && (
+          <div
+            style={{
+              background: `${palette.intensity}15`,
+              border: `1px solid ${palette.intensity}44`,
+              borderRadius: 8,
+              padding: "0.5rem 0.75rem",
+              marginBottom: "0.5rem",
+              fontSize: "0.75rem",
+              color: palette.intensity,
+            }}
+          >
+            {sendError || "Failed to send"}
+          </div>
+        )}
+
+        {/* Success message */}
+        {sendState === "sent" && (
+          <div
+            style={{
+              background: `${palette.balanced}15`,
+              border: `1px solid ${palette.balanced}44`,
+              borderRadius: 8,
+              padding: "0.6rem 0.75rem",
+              marginBottom: "0.5rem",
+              fontSize: "0.8rem",
+              color: palette.balanced,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+            }}
+          >
+            <IconCheck size={16} />
+            Reply sent successfully
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          {sendState === "confirm" ? (
+            <>
+              <button
+                onClick={handleCancelConfirm}
+                style={{
+                  flex: 1,
+                  background: palette.cardBg,
+                  color: palette.muted,
+                  border: `1px solid ${palette.border}`,
+                  borderRadius: 8,
+                  padding: "0.7rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSend}
+                style={{
+                  flex: 1,
+                  background: palette.accent,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "0.7rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.4rem",
+                }}
+              >
+                <IconMail size={14} />
+                Confirm & Send
+              </button>
+            </>
+          ) : sendState === "sent" ? (
+            <button
+              onClick={onClose}
+              style={{
+                flex: 1,
+                background: palette.cardBg,
+                color: palette.fg,
+                border: `1px solid ${palette.border}`,
+                borderRadius: 8,
+                padding: "0.7rem",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Done
+            </button>
+          ) : (
+            <button
+              onClick={sendState === "error" ? handleConfirmSend : handleSendClick}
+              disabled={!draftText.trim() || sendState === "sending"}
+              style={{
+                flex: 1,
+                background: palette.accent,
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "0.7rem",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                cursor: !draftText.trim() || sendState === "sending" ? "not-allowed" : "pointer",
+                opacity: !draftText.trim() || sendState === "sending" ? 0.5 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.4rem",
+              }}
+            >
+              {sendState === "sending" ? (
+                <>
+                  <IconLoader size={14} />
+                  Sending...
+                </>
+              ) : sendState === "error" ? (
+                <>
+                  <IconMail size={14} />
+                  Retry Send
+                </>
+              ) : (
+                <>
+                  <IconMail size={14} />
+                  Send via Sakhi
+                </>
+              )}
+            </button>
+          )}
+        </div>
+        {/* Open in Gmail fallback */}
+        {detail?.gmail_url && sendState !== "sent" && (
+          <div style={{ textAlign: "center", marginTop: "0.4rem" }}>
+            <a
+              href={detail.gmail_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: "0.65rem",
+                color: palette.muted,
+                textDecoration: "none",
+              }}
+            >
+              Need attachments or formatting? Open in Gmail
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Email Digest Card (LLM-powered cognitive offload)
+// ─────────────────────────────────────────────────────────────
+function EmailDigestCard({
+  digest,
+  signals,
+  connected,
+  loading,
+  onRefresh,
+}: {
+  digest: EmailDigest | null;
+  signals: EmailSignals | null;
+  connected: boolean;
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
+  const [showNoise, setShowNoise] = useState(false);
+  const [showFyi, setShowFyi] = useState(false);
+  const [hiddenCommitments, setHiddenCommitments] = useState<Set<string>>(new Set());
+  const [hiddenActions, setHiddenActions] = useState<Set<string>>(new Set());
+  const [hiddenSubscriptions, setHiddenSubscriptions] = useState<Set<string>>(new Set());
+  const [peekItem, setPeekItem] = useState<{
+    message_id: string;
+    subject: string;
+    sender: string;
+    sender_name?: string;
+    action_summary?: string;
+    priority: string;
+    draft_reply?: string;
+    deadline?: string;
+  } | null>(null);
+
+  if (!connected) return null;
+
+  const hasDigest = digest && digest.status === "complete" && digest.triage_counts;
+
+  // Priority color helper
+  const priorityColor = (p: string) => {
+    switch (p) {
+      case "high": return palette.intensity;
+      case "medium": return palette.chaos;
+      default: return palette.muted;
+    }
+  };
+
+  // Time ago helper
+  const timeAgo = (isoStr?: string) => {
+    if (!isoStr) return "";
+    const diff = Date.now() - new Date(isoStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  };
+
+  // Generating state
+  if (digest && digest.status === "generating") {
+    return (
+      <Card title="Email Digest" icon={<IconMail size={18} />}>
+        <div style={{ textAlign: "center", padding: "1.5rem 0", color: palette.muted }}>
+          <div style={{ marginBottom: "0.5rem", fontSize: "0.875rem" }}>Reading your emails...</div>
+          <div style={{ fontSize: "0.75rem" }}>Sakhi is analyzing your inbox to find what matters</div>
+        </div>
+      </Card>
+    );
+  }
+
+  // No digest yet - show fallback with signals data
+  if (!hasDigest) {
+    // Show a generate button if connected but no digest
+    if (connected) {
+      return (
+        <Card title="Email Digest" icon={<IconMail size={18} />}>
+          <div style={{ textAlign: "center", padding: "1rem 0" }}>
+            <div style={{ fontSize: "0.875rem", color: palette.fg, marginBottom: "0.5rem" }}>
+              Let Sakhi read your emails for you
+            </div>
+            <div style={{ fontSize: "0.75rem", color: palette.muted, marginBottom: "1rem" }}>
+              Get a smart summary of what needs your attention
+            </div>
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              style={{
+                background: palette.accent,
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "0.5rem 1.25rem",
+                fontSize: "0.8rem",
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? "Generating..." : "Generate Digest"}
+            </button>
+          </div>
+        </Card>
+      );
+    }
+    return null;
+  }
+
+  const { triage_counts, action_items = [], fyi_items = [], noise_summary, commitments = [], subscriptions = [] } = digest;
+
+  return (
+    <Card
+      title="Email Digest"
+      icon={<IconMail size={18} />}
+      headerRight={
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          style={{
+            background: "transparent",
+            border: `1px solid ${palette.border}`,
+            color: palette.muted,
+            borderRadius: 6,
+            padding: "0.25rem 0.5rem",
+            fontSize: "0.625rem",
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.6 : 1,
+          }}
+        >
+          {loading ? "..." : "Refresh"}
+        </button>
+      }
+    >
+      {/* Triage Summary Header */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+        {triage_counts!.needs_action > 0 && (
+          <div style={{
+            flex: 1,
+            background: `${palette.intensity}15`,
+            border: `1px solid ${palette.intensity}33`,
+            borderRadius: 8,
+            padding: "0.6rem",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: palette.intensity }}>
+              {triage_counts!.needs_action}
+            </div>
+            <div style={{ fontSize: "0.625rem", color: palette.intensity, opacity: 0.8 }}>need you</div>
+          </div>
+        )}
+        {triage_counts!.fyi > 0 && (
+          <div style={{
+            flex: 1,
+            background: `${palette.accent}15`,
+            border: `1px solid ${palette.accent}33`,
+            borderRadius: 8,
+            padding: "0.6rem",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: palette.accent }}>
+              {triage_counts!.fyi}
+            </div>
+            <div style={{ fontSize: "0.625rem", color: palette.accent, opacity: 0.8 }}>FYI</div>
+          </div>
+        )}
+        {triage_counts!.noise > 0 && (
+          <div style={{
+            flex: 1,
+            background: `${palette.muted}15`,
+            border: `1px solid ${palette.muted}33`,
+            borderRadius: 8,
+            padding: "0.6rem",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: palette.muted }}>
+              {triage_counts!.noise}
+            </div>
+            <div style={{ fontSize: "0.625rem", color: palette.muted, opacity: 0.8 }}>noise</div>
+          </div>
+        )}
+      </div>
+
+      {/* Action Items */}
+      {action_items.filter((a) => !hiddenActions.has(a.message_id)).length > 0 && (
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: "0.625rem", color: palette.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
+            Needs Your Attention
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {action_items
+              .filter((a) => !hiddenActions.has(a.message_id))
+              .slice(0, 5)
+              .map((item, i) => {
+                const handleDismissAction = () => {
+                  setHiddenActions((prev) => { const next = new Set(prev); next.add(item.message_id); return next; });
+                  fetch("/api/email/actions/dismiss", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message_id: item.message_id }),
+                  }).catch(() => {
+                    setHiddenActions((prev) => { const next = new Set(prev); next.delete(item.message_id); return next; });
+                  });
+                };
+
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      background: palette.bg,
+                      borderRadius: 8,
+                      padding: "0.75rem",
+                      borderLeft: `3px solid ${priorityColor(item.priority)}`,
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setPeekItem(item)}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: "0.8rem", color: palette.fg, fontWeight: 500, marginBottom: "0.2rem" }}>
+                          {item.sender_name || item.sender}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: palette.muted, marginBottom: "0.3rem" }}>
+                          {item.subject && item.subject.length > 50
+                            ? item.subject.slice(0, 50) + "..."
+                            : item.subject}
+                        </div>
+                        {item.action_summary && (
+                          <div style={{ fontSize: "0.8rem", color: palette.fg }}>
+                            {item.action_summary}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem", flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                          <span style={{
+                            fontSize: "0.6rem",
+                            background: `${priorityColor(item.priority)}22`,
+                            color: priorityColor(item.priority),
+                            padding: "0.125rem 0.4rem",
+                            borderRadius: 10,
+                            textTransform: "uppercase",
+                          }}>
+                            {item.priority}
+                          </span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDismissAction(); }}
+                            title="Dismiss"
+                            style={{
+                              background: `${palette.muted}15`,
+                              border: `1px solid ${palette.muted}33`,
+                              color: palette.muted,
+                              borderRadius: 4,
+                              width: 20,
+                              height: 20,
+                              fontSize: "0.6rem",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: 0,
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        {item.deadline && (
+                          <span style={{ fontSize: "0.625rem", color: palette.chaos }}>
+                            {item.deadline}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tap hint */}
+                    <div style={{ fontSize: "0.6rem", color: palette.muted, marginTop: "0.4rem", opacity: 0.7 }}>
+                      Tap to view & reply
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Commitments (people only) */}
+      {commitments.filter((c) => !hiddenCommitments.has(c.id || "")).length > 0 && (
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: "0.625rem", color: palette.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
+            Your Commitments
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {commitments
+              .filter((c) => !hiddenCommitments.has(c.id || ""))
+              .map((c, i) => {
+                const ageMs = c.extracted_at
+                  ? Date.now() - new Date(c.extracted_at).getTime()
+                  : 0;
+                const ageDays = Math.floor(ageMs / 86400000);
+                const isStale = ageDays > 14;
+
+                const handleAction = (status: "done" | "dismissed") => {
+                  if (!c.id) return;
+                  setHiddenCommitments((prev) => { const next = new Set(prev); next.add(c.id!); return next; });
+                  fetch(`/api/email/commitments/${c.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status }),
+                  }).catch(() => {
+                    setHiddenCommitments((prev) => {
+                      const next = new Set(prev);
+                      next.delete(c.id!);
+                      return next;
+                    });
+                  });
+                };
+
+                return (
+                  <div
+                    key={c.id || i}
+                    style={{
+                      background: palette.bg,
+                      borderRadius: 6,
+                      padding: "0.5rem 0.6rem",
+                      borderLeft: `3px solid ${isStale ? palette.chaos : palette.balanced}`,
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0, paddingTop: "0.1rem" }}>
+                      <button
+                        onClick={() => handleAction("done")}
+                        title="Mark done"
+                        style={{
+                          background: `${palette.balanced}22`,
+                          border: `1px solid ${palette.balanced}44`,
+                          color: palette.balanced,
+                          borderRadius: 4,
+                          width: 22,
+                          height: 22,
+                          fontSize: "0.7rem",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: 0,
+                        }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => handleAction("dismissed")}
+                        title="Dismiss"
+                        style={{
+                          background: `${palette.muted}15`,
+                          border: `1px solid ${palette.muted}33`,
+                          color: palette.muted,
+                          borderRadius: 4,
+                          width: 22,
+                          height: 22,
+                          fontSize: "0.65rem",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: 0,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: "0.8rem", color: palette.fg }}>{c.commitment}</div>
+                      <div style={{ fontSize: "0.65rem", color: palette.muted, marginTop: "0.15rem" }}>
+                        to {c.recipient}
+                        {c.deadline && (
+                          <span style={{ color: palette.chaos }}> · {c.deadline}</span>
+                        )}
+                        {isStale && (
+                          <span
+                            style={{
+                              marginLeft: "0.35rem",
+                              background: `${palette.chaos}22`,
+                              color: palette.chaos,
+                              padding: "0.05rem 0.3rem",
+                              borderRadius: 8,
+                              fontSize: "0.575rem",
+                            }}
+                          >
+                            {ageDays}d ago
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Subscriptions & Renewals (separate from people commitments) */}
+      {subscriptions.filter((s) => !hiddenSubscriptions.has(s.id || "")).length > 0 && (
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: "0.625rem", color: palette.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
+            Subscriptions & Renewals
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {subscriptions
+              .filter((s) => !hiddenSubscriptions.has(s.id || ""))
+              .map((s, i) => {
+                const handleSubAction = (status: "done" | "dismissed") => {
+                  if (!s.id) return;
+                  setHiddenSubscriptions((prev) => { const next = new Set(prev); next.add(s.id!); return next; });
+                  fetch(`/api/email/subscriptions/${s.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status }),
+                  }).catch(() => {
+                    setHiddenSubscriptions((prev) => {
+                      const next = new Set(prev);
+                      next.delete(s.id!);
+                      return next;
+                    });
+                  });
+                };
+
+                return (
+                  <div
+                    key={s.id || i}
+                    style={{
+                      background: palette.bg,
+                      borderRadius: 6,
+                      padding: "0.5rem 0.6rem",
+                      borderLeft: `3px solid ${palette.accent}`,
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0, paddingTop: "0.1rem" }}>
+                      <button
+                        onClick={() => handleSubAction("done")}
+                        title="Renewed / Handled"
+                        style={{
+                          background: `${palette.balanced}22`,
+                          border: `1px solid ${palette.balanced}44`,
+                          color: palette.balanced,
+                          borderRadius: 4,
+                          width: 22,
+                          height: 22,
+                          fontSize: "0.7rem",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: 0,
+                        }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => handleSubAction("dismissed")}
+                        title="Dismiss"
+                        style={{
+                          background: `${palette.muted}15`,
+                          border: `1px solid ${palette.muted}33`,
+                          color: palette.muted,
+                          borderRadius: 4,
+                          width: 22,
+                          height: 22,
+                          fontSize: "0.65rem",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: 0,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: "0.8rem", color: palette.fg }}>{s.commitment}</div>
+                      <div style={{ fontSize: "0.65rem", color: palette.muted, marginTop: "0.15rem" }}>
+                        {s.subject && (
+                          <span>{s.subject.length > 40 ? s.subject.slice(0, 40) + "..." : s.subject}</span>
+                        )}
+                        {s.deadline && (
+                          <span style={{ color: palette.chaos }}> · {s.deadline}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* FYI Items (collapsible) */}
+      {fyi_items.length > 0 && (
+        <div style={{ marginBottom: "0.75rem" }}>
+          <button
+            onClick={() => setShowFyi(!showFyi)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: palette.accent,
+              fontSize: "0.75rem",
+              cursor: "pointer",
+              padding: 0,
+              marginBottom: showFyi ? "0.5rem" : 0,
+            }}
+          >
+            {showFyi ? "Hide" : "Show"} {fyi_items.length} FYI items
+          </button>
+          {showFyi && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+              {fyi_items.map((item, i) => (
+                <div key={i} style={{
+                  background: palette.bg,
+                  borderRadius: 6,
+                  padding: "0.5rem 0.6rem",
+                }}>
+                  <div style={{ fontSize: "0.75rem", color: palette.fg }}>
+                    <span style={{ fontWeight: 500 }}>{item.sender_name || item.sender}</span>
+                    {" — "}
+                    {item.one_line_summary || item.subject}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Noise Summary (collapsible) */}
+      {noise_summary && noise_summary.count > 0 && (
+        <div style={{ marginBottom: "0.75rem" }}>
+          <button
+            onClick={() => setShowNoise(!showNoise)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: palette.muted,
+              fontSize: "0.75rem",
+              cursor: "pointer",
+              padding: 0,
+              marginBottom: showNoise ? "0.5rem" : 0,
+            }}
+          >
+            {noise_summary.count} routine emails {showNoise ? "(hide)" : "(details)"}
+          </button>
+          {showNoise && noise_summary.categories && (
+            <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+              {Object.entries(noise_summary.categories).map(([cat, count]) => (
+                <span key={cat} style={{
+                  background: `${palette.muted}15`,
+                  color: palette.muted,
+                  padding: "0.2rem 0.5rem",
+                  borderRadius: 10,
+                  fontSize: "0.65rem",
+                }}>
+                  {cat}: {count}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div style={{ fontSize: "0.625rem", color: palette.muted, textAlign: "center", paddingTop: "0.25rem", borderTop: `1px solid ${palette.border}` }}>
+        {digest.emails_analyzed} emails analyzed · Updated {timeAgo(digest.created_at)}
+      </div>
+
+      {/* Email Peek Modal */}
+      {peekItem && (
+        <EmailPeekModal
+          item={peekItem}
+          onClose={() => setPeekItem(null)}
+        />
+      )}
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Connections Card
+// ─────────────────────────────────────────────────────────────
+function ConnectionsCard({
+  emailStatus,
+  connecting,
+  onConnectGmail,
+  onDisconnectGmail,
+}: {
+  emailStatus: EmailStatus | null;
+  connecting: boolean;
+  onConnectGmail: () => void;
+  onDisconnectGmail: () => void;
+}) {
+  const isConnected = emailStatus?.connected === true;
+
+  return (
+    <Card title="Connections" icon={<IconLink size={18} />}>
+      {/* Gmail Connection */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0.75rem",
+          background: palette.bg,
+          borderRadius: 8,
+          marginBottom: "0.5rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 8,
+              background: isConnected ? `${palette.balanced}22` : `${palette.muted}22`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <IconMail size={20} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 500, color: palette.fg }}>Gmail</div>
+            <div style={{ fontSize: "0.75rem", color: palette.muted }}>
+              {isConnected
+                ? emailStatus?.email || "Connected"
+                : "Connect for email insights"}
+            </div>
+          </div>
+        </div>
+
+        {isConnected ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                color: palette.balanced,
+                fontSize: "0.75rem",
+              }}
+            >
+              <IconCheck size={14} />
+              Connected
+            </span>
+            <button
+              onClick={onDisconnectGmail}
+              style={{
+                background: "none",
+                border: "none",
+                color: palette.muted,
+                cursor: "pointer",
+                padding: "0.25rem",
+                fontSize: "0.75rem",
+              }}
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onConnectGmail}
+            disabled={connecting}
+            style={{
+              background: palette.accent,
+              border: "none",
+              borderRadius: 6,
+              color: palette.fg,
+              padding: "0.5rem 1rem",
+              fontSize: "0.875rem",
+              fontWeight: 500,
+              cursor: connecting ? "not-allowed" : "pointer",
+              opacity: connecting ? 0.7 : 1,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            {connecting ? (
+              <>
+                <IconLoader size={14} />
+                Connecting...
+              </>
+            ) : (
+              "Connect"
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Sync status info */}
+      {isConnected && emailStatus?.messages_synced !== undefined && (
+        <div style={{ fontSize: "0.75rem", color: palette.muted, paddingLeft: "0.75rem" }}>
+          {emailStatus.messages_synced} emails analyzed
+          {emailStatus.last_sync_at && (
+            <> · Last sync: {new Date(emailStatus.last_sync_at).toLocaleDateString()}</>
+          )}
+        </div>
+      )}
+
+      {/* Privacy note */}
+      <div
+        style={{
+          marginTop: "1rem",
+          padding: "0.75rem",
+          background: `${palette.accent}11`,
+          borderRadius: 8,
+          fontSize: "0.75rem",
+          color: palette.muted,
+        }}
+      >
+        <strong style={{ color: palette.fg }}>Privacy:</strong> Sakhi reads email metadata
+        (senders, timestamps) to detect patterns. Email content is never stored.
+      </div>
+    </Card>
   );
 }

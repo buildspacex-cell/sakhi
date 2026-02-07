@@ -141,6 +141,21 @@ User Message
 | `/lab/run-worker` | Test individual workers |
 | `/lab/live-turn` | Test turn with debug output |
 
+### Email Intelligence
+| Route | Purpose |
+|-------|---------|
+| `POST /email/connect/gmail` | Start Gmail OAuth flow |
+| `GET /email/connect/gmail/callback` | OAuth callback (redirects to app) |
+| `GET /email/status` | Sync status |
+| `POST /email/sync` | Trigger sync |
+| `GET /email/signals` | Get all extracted signals |
+| `GET /email/signals/avoidance` | Threads awaiting reply |
+| `GET /email/signals/subscriptions` | Detected newsletters |
+| `GET /email/signals/boundary` | Boundary erosion score |
+| `GET /email/insight` | Surfaceable insight for conversation |
+| `GET /email/context` | Email context for conversation engine |
+| `POST /email/disconnect` | Disconnect and delete data |
+
 ---
 
 ## Memory System

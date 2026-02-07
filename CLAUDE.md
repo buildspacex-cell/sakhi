@@ -214,6 +214,7 @@ make docs-schema
 | `services/calendar/` | Calendar and scheduling |
 | `services/learning/` | Intervention plans, feedback, preference updates |
 | `services/conversation_v2/` | Conversation engine |
+| `services/email/` | Email intelligence (Gmail integration, signals, patterns) |
 
 ### Database access pattern
 ```python

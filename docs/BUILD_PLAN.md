@@ -855,16 +855,52 @@ Conversation                    Learning Pipeline
 
 **Test**: Import iCal file → events appear in Sakhi calendar.
 
-### E.3 Gmail Bridge
+### E.3 Gmail Intelligence
 
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
-| ⬜ | Gmail OAuth | Google OAuth for Gmail | `services/integrations/google/gmail_oauth.py` | User can authorize |
-| ⬜ | Email Read | Fetch and display emails | `services/integrations/google/gmail_read.py` | Show inbox in Sakhi |
-| ⬜ | Email Send | Send via user's Gmail | `services/integrations/google/gmail_send.py` | Compose and send |
-| ⬜ | Email Summarization | AI summary of long emails | `services/integrations/google/gmail_summary.py` | Quick email digests |
+| ✅ | Gmail OAuth | Google OAuth for Gmail (read + send) | `services/email/adapters/gmail.py`, `routes/email.py` | User can authorize |
+| ✅ | Email Metadata Sync | Fetch email headers (no body) | `services/email/sync.py` | Sync 365 days of metadata |
+| ✅ | Subscription Detection | Detect newsletters/marketing | `services/email/signals/subscription.py` | List detected subscriptions |
+| ✅ | Avoidance Patterns | Threads awaiting reply | `services/email/signals/avoidance.py` | Surface avoided threads |
+| ✅ | Boundary Erosion | Work/life boundary analysis | `services/email/signals/boundary.py` | Score and trend |
+| ✅ | Cognitive Load | Email overwhelm detection | `services/email/signals/cognitive_load.py` | Load score, risk level |
+| ✅ | Conversation Context | Email context for Sakhi | `services/email/integration.py` | Context in conversation |
+| ✅ | Email Cognitive Offload | LLM-powered digest: triage, action items, commitments | `services/email/digest.py` | `GET /email/digest` returns structured triage |
+| ✅ | Email Send | Reply via user's Gmail (threaded, 2-step confirm) | `services/email/adapters/gmail.py` | Send reply from peek modal |
+| ✅ | Email Peek & Reply | Tap action item → full email + draft reply + send | `client.tsx`, `routes/email.py` | Peek modal with send flow |
+| ✅ | Verification Filtering | Filter OTP/password reset emails from digest | `services/email/digest.py` | Verification emails excluded |
+| ✅ | Persistent Commitments | Commitments survive digest regeneration, done/dismiss | `email_commitments` table | Mark done, dismiss, stale badge |
+| ✅ | Dismissed Actions | Dismiss action items, persist across digests | `email_dismissed_actions` table | Dismissed items hidden |
 
-**Test**: Connect Gmail → see inbox summary → send reply via Sakhi.
+**Test**: Connect Gmail → `/email/signals` returns patterns → insight shows in conversation.
+
+**Email Cognitive Offload** (LLM Digest):
+- Bodies fetched transiently via Gmail API (never stored)
+- GPT-4o-mini triages into action/fyi/noise with summaries and draft replies
+- Extracts commitments from sent emails (people vs subscription types)
+- `GET /email/digest` → auto-generates if missing, cached 6h
+- `POST /email/digest/generate` → force regenerate
+- EmailDigestCard on Me page with tappable action items, commitments, subscriptions
+- Email Peek Modal: tap action item → full email body + context + editable draft reply
+- Send via Sakhi: Gmail API send with proper threading (In-Reply-To, References, threadId)
+- 2-step send confirmation (tap → confirm bar → send), editing draft cancels confirmation
+- "Open in Gmail" fallback for attachments, CC/BCC, formatting
+- Cost: ~$0.02 per digest via gpt-4o-mini
+
+**Principle**: Email is a signal generator, not a content store. Bodies are transient; only structured insights persist.
+
+**Email Intelligence V2** (future):
+
+| Status | Item | Description | Notes |
+|--------|------|-------------|-------|
+| ⬜ | Attachment Support | Add file attachments to replies | Multipart MIME, file upload UI, drag-and-drop |
+| ⬜ | CC/BCC on Replies | Add recipients beyond original sender | Recipient picker UI |
+| ⬜ | Rich Text Replies | HTML formatting in reply editor | Toolbar, contentEditable or Tiptap |
+| ⬜ | HTML Body Rendering | Render rich HTML emails in peek view | Sanitized HTML renderer, currently plain text |
+| ⬜ | Send Rate Limiting | App-level rate limit on sends | Prevent accidental spam, Gmail has 100/day limit |
+| ⬜ | Unit Tests for Send/Peek | Test coverage for send_reply, fetch_email_detail | Mock Gmail API responses |
+| ⬜ | OAuth Scope Re-auth UX | Smooth upgrade flow when gmail.send scope added | Currently Google handles via re-consent prompt |
 
 ---
 
@@ -1217,6 +1253,191 @@ class LifeGoal:
 
 ---
 
+## PHASE J: Skill-Based Agent Architecture (Week 19-20)
+
+> **Why**: As Sakhi gains more capabilities (email, calendar, health, missions, finance), the conversational agent needs a scalable way to discover and invoke them. Inspired by OpenClaw's skills system, but adapted for Sakhi's architecture: **deterministic pipelines for data processing, skills for agent reasoning**.
+>
+> **Reference**: OpenClaw source at `/Users/fanantics/Downloads/openclaw-main/` — `src/agents/skills/`
+
+### The Two-Layer Model
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  SKILL LAYER (Conversational Agent)                                  │
+│                                                                      │
+│  Sakhi's LLM sees a list of available skills, each with:            │
+│  - When to invoke (trigger conditions)                               │
+│  - What data it provides (outputs)                                   │
+│  - How to present results to the user                                │
+│                                                                      │
+│  The agent CHOOSES which skills to invoke based on conversation      │
+│  context, user state, and proactive triggers.                        │
+│                                                                      │
+│  Skills are instruction sets, NOT execution logic.                   │
+└──────────────────────┬──────────────────────────────────────────────┘
+                       │ API calls to deterministic backends
+                       ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  PIPELINE LAYER (Deterministic Backend)                              │
+│                                                                      │
+│  Email pipeline (digest.py, sync.py, integration.py)                │
+│  Calendar service (calendar.py, scheduling.py)                       │
+│  Health/Ayurveda (prakruti.py, intervention_plans.py)                │
+│  Life Missions (missions orchestrator, scheduling)                   │
+│  Memory system (recall.py, episodic.py)                              │
+│                                                                      │
+│  Each pipeline: reliable, cost-effective, privacy-safe.              │
+│  Runs on schedule or trigger. Maintains persistent state.            │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key insight**: OpenClaw skills are SKILL.md files — markdown instructions injected into the LLM's system prompt. The LLM reads them and decides which tools to use. Sakhi adopts this pattern for capability discovery, while keeping the actual execution in Python pipelines.
+
+### J.1 Skill Definition Format
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Skill Schema | Define `SakhiSkill` model (name, triggers, API, output format) | `sakhi/libs/skills/schema.py` | Skills are typed and validated |
+| ⬜ | Skill Registry | Auto-discover skills from `skills/` directory | `sakhi/libs/skills/registry.py` | `list_skills()` returns all registered |
+| ⬜ | Skill Loader | Load skill definitions into agent system prompt | `sakhi/libs/skills/loader.py` | Skills appear in LLM context |
+| ⬜ | Eligibility Gating | Skills only shown when prerequisites are met | `sakhi/libs/skills/gating.py` | Email skill hidden if Gmail not connected |
+
+**Skill Definition Example** (`skills/email_digest.yaml`):
+
+```yaml
+name: email_digest
+description: "Email triage and action items from connected Gmail"
+emoji: "📧"
+version: "1.0"
+
+# When should the agent consider this skill?
+triggers:
+  - user_asks_about: ["email", "inbox", "messages", "what do I need to do"]
+  - proactive: "morning_briefing"           # Include in morning summary
+  - proactive: "user_seems_overwhelmed"     # Cognitive load detected
+  - schedule: "every_6h"                    # Background refresh
+
+# Prerequisites — skill is hidden from agent if unmet
+requires:
+  connection: "gmail"                       # email_sync_state.status != 'not_connected'
+  tables: ["email_events", "email_digests"]
+
+# What API endpoints does this skill call?
+api:
+  get_digest:
+    endpoint: "GET /email/digest?person_id={person_id}"
+    description: "Returns triage counts, action items, FYI, noise, commitments"
+  get_commitments:
+    endpoint: "GET /email/commitments?person_id={person_id}"
+    description: "Returns active commitments (persistent across digests)"
+  mark_commitment:
+    endpoint: "PATCH /email/commitments/{id}?person_id={person_id}"
+    body: '{"status": "done|dismissed"}'
+    description: "Mark a commitment as done or dismissed"
+  refresh:
+    endpoint: "POST /email/digest/generate?person_id={person_id}&background=true"
+    description: "Force regenerate the digest"
+
+# How to present results conversationally
+presentation:
+  summary: |
+    Summarize the digest naturally: "{needs_action} emails need attention,
+    {fyi} are FYI, {noise} filtered as noise."
+  action_items: |
+    For each action item, tell the user: who it's from, what it's about,
+    and what they should do. Offer to show the draft reply if available.
+  commitments: |
+    Remind the user of active commitments. If stale (>14 days), gently
+    ask if they should mark it done or dismiss it.
+  proactive: |
+    When surfacing proactively, be brief: "You have 3 emails that need
+    attention — want me to walk you through them?"
+```
+
+### J.2 Built-in Skills (Day 1)
+
+| Status | Item | Skill Name | Backed By | Triggers |
+|--------|------|------------|-----------|----------|
+| ⬜ | Email Digest | `email_digest` | `digest.py`, `integration.py` | "what emails", morning briefing, overwhelm detection |
+| ⬜ | Email Signals | `email_signals` | `integration.py`, `signals/` | "am I avoiding emails", "email patterns" |
+| ⬜ | Calendar | `calendar` | `calendar.py`, `scheduling.py` | "what's my day", "schedule a meeting", time-aware |
+| ⬜ | Memory Recall | `memory_recall` | `recall.py`, `episodic.py` | "last time I...", "what did I say about..." |
+| ⬜ | Health/Ayurveda | `ayurveda` | `prakruti.py`, `vikriti.py` | "why am I anxious", "my dosha", health check-in |
+| ⬜ | Relationships | `relationships` | `relationships/` | "how's my relationship with...", nudge triggers |
+| ⬜ | Life Missions | `life_missions` | `missions/` | "how's my progress", "what should I focus on" |
+| ⬜ | Commitments | `commitments` | `digest.py` (commitments) | "what did I promise", "my to-dos" |
+
+### J.3 Agent Skill Orchestration
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Skill Prompt Builder | Inject eligible skills as structured context into system prompt | `sakhi/apps/api/services/conversation_v2/skills.py` | Agent sees available skills |
+| ⬜ | Skill Invocation Parser | Detect when agent wants to invoke a skill, route to API | `sakhi/apps/api/services/conversation_v2/skill_router.py` | Agent calls correct endpoint |
+| ⬜ | Multi-Skill Composition | Agent can invoke multiple skills in one turn ("what's my day" = calendar + email + missions) | `sakhi/apps/api/services/conversation_v2/composer.py` | Morning briefing pulls from 3+ skills |
+| ⬜ | Proactive Skill Triggers | Background process evaluates triggers, surfaces relevant skills | `sakhi/apps/worker/tasks/proactive_triggers.py` | "You have 3 emails needing attention" surfaces unprompted |
+| ⬜ | Skill Result Cache | Cache recent skill results to avoid redundant API calls within a turn | `sakhi/libs/skills/cache.py` | Same skill called twice in one turn = 1 API call |
+
+**Agent System Prompt (with skills)**:
+
+```
+You are Sakhi, a personal AI companion. You have access to the following skills
+based on the user's connected services and current state:
+
+<skills>
+  <skill name="email_digest" emoji="📧">
+    Email triage and action items from connected Gmail.
+    Call GET /email/digest to get: action items, FYI, noise count, commitments.
+    Invoke when: user asks about email/inbox, morning briefing, user seems overwhelmed.
+  </skill>
+  <skill name="calendar" emoji="📅">
+    Calendar events, scheduling, availability.
+    Call GET /calendar/events to get today's schedule.
+    Invoke when: user asks about their day, scheduling, meetings.
+  </skill>
+  <!-- more skills based on what's connected -->
+</skills>
+
+When deciding what to discuss:
+1. Check if user's message matches any skill trigger
+2. Invoke relevant skill(s) via their API endpoints
+3. Present results using the skill's presentation guidelines
+4. If no skill matches, use general conversation
+```
+
+### J.4 Custom User Skills (Future)
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Custom Skill UI | Users can create simple skills via the Settings page | `apps/web/app/settings/skills/` | User creates "check weather" skill |
+| ⬜ | Webhook Skills | Skills that call external webhooks (IFTTT, Zapier, custom) | `sakhi/libs/skills/webhook.py` | Custom skill calls external API |
+| ⬜ | Skill Marketplace | Browse and install community skills (like OpenClaw's ClawdHub) | `apps/web/app/settings/skills/marketplace/` | User installs a skill with one click |
+
+### Why NOT Full OpenClaw-Style Skills
+
+| Aspect | OpenClaw | Sakhi | Reasoning |
+|--------|----------|-------|-----------|
+| **Skill format** | SKILL.md (markdown for LLM) | YAML + Python pipeline | Sakhi skills point to existing APIs, not raw tool instructions |
+| **Execution** | LLM follows instructions, runs bash/tools | Deterministic Python pipelines | Reliability, cost, privacy — email bodies can't be in LLM tool loop |
+| **Gating** | Binary checks, env vars, config | Connection status, user state, time-of-day | Sakhi gating is richer (is Gmail connected? is user's cognitive load high?) |
+| **Discovery** | Filesystem scan of SKILL.md files | Registry from Python classes + YAML configs | Sakhi skills are tightly coupled to tested backend services |
+| **Invocation** | Model reads markdown, uses tools | Model selects skill, system routes to API | Controlled invocation prevents prompt injection via email content |
+| **State** | Stateless (each run fresh) | Stateful (pipelines maintain DB state across runs) | Email digest caches 6h, commitments persist indefinitely |
+
+**Bottom line**: OpenClaw skills are great for ad-hoc tool use (generate image, search web). Sakhi skills are wrappers around **persistent, recurring, stateful backend services** — the skill teaches the agent WHEN and HOW to access them, not how to BUILD them.
+
+### Implementation Order
+
+```
+Phase J.1 → Schema + Registry + Loader (foundation)
+Phase J.2 → Email + Calendar + Memory skills (convert existing integration.py)
+Phase J.3 → Agent orchestration in conversation_v2 (replace hard-coded context injection)
+Phase J.4 → User custom skills + marketplace (long-term)
+```
+
+**Test**: User says "What should I focus on today?" → Agent invokes `email_digest` + `calendar` + `life_missions` skills → responds with unified morning briefing pulling from 3+ data sources.
+
+---
+
 ## Production Readiness (Ongoing)
 
 | Status | Item | Description | Files | Test Criteria |
@@ -1296,6 +1517,14 @@ class LifeGoal:
 | Push notifications | Morning briefing delivered |
 | Offline | View calendar offline |
 
+### Week 19-20: Skill-Based Agent Architecture
+| Task | Test |
+|------|------|
+| Skill schema + registry | Skills auto-discovered, typed, gated |
+| Built-in skills (email, calendar, memory) | Agent invokes skills via API |
+| Multi-skill composition | "What's my day?" pulls from 3+ sources |
+| Proactive triggers | Unprompted skill invocation from background signals |
+
 ---
 
 ## Architecture Decisions
@@ -1336,6 +1565,105 @@ User ends up → All data lives in Sakhi ecosystem
 | Timeout Clamping | ✅ | ✅ | At par |
 | Session Locking | File-based | PostgreSQL | Better |
 | State Persistence | JSON files | PostgreSQL | Better |
+
+### Skills Architecture (Pipelines + Skills Hybrid)
+
+OpenClaw uses SKILL.md files — markdown instructions injected into the LLM prompt that teach the agent how to use tools. This is elegant for ad-hoc tool use but insufficient for Sakhi's recurring, stateful data pipelines (email digest, calendar sync, health tracking).
+
+**Sakhi's approach**: Two-layer model.
+
+```
+Skills (agent reasoning layer)       Pipelines (execution layer)
+┌─────────────────────┐              ┌────────────────────────┐
+│ email_digest skill   │──API call──→│ digest.py pipeline      │
+│ calendar skill       │──API call──→│ calendar.py service     │
+│ ayurveda skill       │──API call──→│ prakruti.py + vikriti   │
+│ memory_recall skill  │──API call──→│ recall.py + episodic    │
+└─────────────────────┘              └────────────────────────┘
+Agent decides WHAT to invoke         Pipeline handles HOW to execute
+(LLM reasoning, context-aware)      (deterministic, reliable, private)
+```
+
+**Why not pure OpenClaw-style**: Email bodies must be transient (privacy). Commitment tracking requires DB state across runs. Calendar sync needs idempotent reconciliation. These are infrastructure concerns, not LLM orchestration problems. Skills tell the agent what's available; pipelines do the work.
+
+See **Phase J** for full implementation plan.
+
+### Unified Messaging Pipeline (Email → WhatsApp → SMS → ...)
+
+> **Decision**: When we add the second messaging channel (WhatsApp, SMS, Telegram, etc.), do NOT duplicate the email pipeline. Instead, generalize into a unified messaging layer.
+
+**What's reusable from the email pipeline (70%+):**
+
+| Component | Email-Specific? | Reusable? |
+|-----------|----------------|-----------|
+| Adapter (Gmail API, WhatsApp Business API) | Yes — each channel needs its own | No |
+| Sync protocol (OAuth, webhooks, polling) | Yes — different per channel | No |
+| `message_events` table schema | Mostly — add `channel` column | **Yes** |
+| Selection tiers (recent, unanswered, starred) | Concepts apply everywhere | **Yes** |
+| LLM triage prompt (action/fyi/noise) | Channel-agnostic | **Yes, identical** |
+| Commitment extraction | Channel-agnostic | **Yes, identical** |
+| Cross-batch dedup (sender, fuzzy hash) | Channel-agnostic | **Yes, identical** |
+| Signal detection (avoidance, boundary, load) | Concepts apply everywhere | **Yes** |
+| Frontend card (triage counts, action items) | Channel-agnostic | **Yes, identical** |
+| Commitment management (done/dismiss) | Channel-agnostic | **Yes, identical** |
+
+**Target architecture for channel 2+:**
+
+```
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│  Gmail   │  │ WhatsApp │  │ Telegram │  │ Outlook  │
+│ Adapter  │  │ Adapter  │  │ Adapter  │  │ Adapter  │
+└────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘
+     │              │              │              │
+     ▼              ▼              ▼              ▼
+┌────────────────────────────────────────────────────────┐
+│  message_events (unified table)                         │
+│  channel: email | whatsapp | telegram | sms             │
+│  Same columns: sender, body, thread_id, timestamp,      │
+│  direction, is_automated, is_group                       │
+└──────────────────────────┬─────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│  Unified Triage Pipeline                                │
+│                                                         │
+│  select_messages()  → channel-aware tier queries         │
+│  fetch_bodies()     → adapter.fetch_body(channel, id)   │
+│  analyze_batch()    → SAME LLM prompt for all channels  │
+│  _upsert_commits()  → SAME commitment table             │
+│  dedup + assemble   → SAME post-processing              │
+│                                                         │
+│  Channel-specific only: pre-filters, selection tiers    │
+└──────────────────────────┬─────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│  Unified Digest                                         │
+│  "3 messages need you (2 email, 1 WhatsApp)"           │
+│  Action items show channel badge: 📧 / 💬 / 📱          │
+│  One commitment table across all channels               │
+│  One frontend card: MessageDigestCard                   │
+└────────────────────────────────────────────────────────┘
+```
+
+**When to generalize (not before):**
+
+- Do NOT pre-generalize now. The email pipeline works and is tested.
+- When building channel 2 (WhatsApp): refactor `email_events` → `message_events` with `channel` column, extract the adapter interface, make `digest.py` channel-aware.
+- The LLM prompt, commitment tracking, dedup, and frontend card need zero changes.
+
+**WhatsApp-specific considerations:**
+
+| Aspect | Email | WhatsApp | Impact |
+|--------|-------|----------|--------|
+| Threading | Thread ID from Gmail | Conversation = implicit thread | Selection queries differ |
+| Subject line | Present | Not present (use first message as context) | LLM prompt minor tweak |
+| Body access | Gmail API fetch (OAuth) | Already in message body (webhook payload) | `fetch_bodies()` simpler |
+| Groups | Rare (CC/BCC) | Common (group chats) | Need `is_group` filter, group noise is higher |
+| Media | Attachments (skip for now) | Images, voice notes, documents | LLM can't triage media — metadata only |
+| Rate limits | Gmail API quotas | WhatsApp Business API rate limits | Different throttling |
+| Real-time | Polling/push | Webhooks (real-time) | Can generate digests more frequently |
+| Draft reply | "Reply to this email" | "Send this WhatsApp message" | Same concept, different action |
+
+**The skills layer then provides a `unified_inbox` skill** that the conversational agent invokes without knowing which channels are connected. See Phase J.
 
 ---
 
@@ -1382,6 +1710,17 @@ User ends up → All data lives in Sakhi ecosystem
 | Unified View | User sees all life goals in one place, not separate systems |
 | Sakhi Insights | Auto-surfaces "walks reduce your anxiety by 40%" from correlation |
 | Check-in Flow | Complete 5 daily actions in < 30 seconds via quick actions |
+
+### Skill-Based Agent Success (Phase J)
+
+| Capability | Success Metric |
+|------------|----------------|
+| Skill Discovery | Agent only sees skills for connected services (Gmail not connected = no email skill) |
+| Single-Skill Invoke | "Any important emails?" → Agent calls email_digest skill → natural response in < 3s |
+| Multi-Skill Compose | "What's my day?" → calendar + email + missions → unified briefing in < 5s |
+| Proactive Trigger | Background detects high cognitive load → Agent surfaces email digest unprompted |
+| No Regressions | Existing pipelines (digest, sync, signals) work exactly as before — skills are a wrapper, not a rewrite |
+| Custom Skills | User creates "check weather" webhook skill → Agent invokes it when asked about weather |
 
 ---
 
