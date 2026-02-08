@@ -94,7 +94,7 @@ export default function ExperienceRecordPage() {
 
 function ExperiencePageContent() {
   const searchParams = useSearchParams();
-  const fallbackUser = searchParams.get("user");
+  const fallbackUser = searchParams?.get("user") ?? null;
   const [authUser, setAuthUser] = useState<{ person_id: string; full_name?: string | null } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

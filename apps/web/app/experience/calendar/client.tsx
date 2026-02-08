@@ -123,7 +123,7 @@ interface WeekSummary {
 export default function CalendarPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const userId = searchParams.get("user") || "test-user";
+  const userId = searchParams?.get("user") || "test-user";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

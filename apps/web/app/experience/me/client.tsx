@@ -291,7 +291,7 @@ interface EmailDigest {
 export default function MePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [userId, setUserId] = useState(searchParams.get("user") || "");
+  const [userId, setUserId] = useState(searchParams?.get("user") || "");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -474,7 +474,7 @@ export default function MePageContent() {
 
   // Check for email connection callback
   useEffect(() => {
-    const emailConnected = searchParams.get("email_connected");
+    const emailConnected = searchParams?.get("email_connected");
     if (emailConnected === "1") {
       // Refresh email status after OAuth callback
       fetch("/api/email/status")

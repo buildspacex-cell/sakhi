@@ -14,7 +14,7 @@ interface LinkResult {
 function LinkDeviceContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const codeFromUrl = searchParams.get('code') || ''
+  const codeFromUrl = searchParams?.get('code') || ''
 
   const [code, setCode] = useState(codeFromUrl)
   const [status, setStatus] = useState<'input' | 'loading' | 'success' | 'error'>('input')

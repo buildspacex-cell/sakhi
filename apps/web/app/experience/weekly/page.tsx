@@ -368,7 +368,7 @@ function ExperienceWeeklyPageContent() {
     }),
     []
   );
-  const searchUser = searchParams.get("user");
+  const searchUser = searchParams?.get("user") ?? null;
   const initialUser: "a" | "b" = searchUser === "b" ? "b" : "a";
   const [devUser, setDevUser] = useState<"a" | "b">(initialUser);
 

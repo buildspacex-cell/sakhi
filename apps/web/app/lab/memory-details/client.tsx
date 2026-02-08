@@ -156,8 +156,8 @@ function MemoryDetailsClient() {
     return raw;
   }, [data]);
 
-  const personId = params.get("person_id") || "";
-  const entryId = params.get("entry_id") || "";
+  const personId = params?.get("person_id") || "";
+  const entryId = params?.get("entry_id") || "";
 
   const loadData = async () => {
     if (!personId || loading) return;

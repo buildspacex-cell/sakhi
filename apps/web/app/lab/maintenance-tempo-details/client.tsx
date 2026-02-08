@@ -24,7 +24,7 @@ function MaintenanceTempoDetailsClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const personId = params.get("person_id") || "";
+  const personId = params?.get("person_id") || "";
 
   useEffect(() => {
     if (!personId) return;
