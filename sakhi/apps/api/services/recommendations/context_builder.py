@@ -21,6 +21,8 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from sakhi.apps.api.core.db import q as dbfetch
+from sakhi.apps.api.services.body.state_engine import get_body_state
+from sakhi.apps.api.services.body.health_trends import compute_health_trends
 from sakhi.apps.api.services.ayurveda.vikriti import (
     compute_current_vikriti,
     compute_baseline_drift,
@@ -93,6 +95,21 @@ class HistoricalEffectiveness(BaseModel):
     ineffective_or_avoided: List[str] = Field(default_factory=list)
 
 
+class BodyStateContext(BaseModel):
+    """Physical body state from health data (HealthKit / wearables)."""
+    sleep_quality: Optional[str] = None
+    sleep_duration_hours: Optional[float] = None
+    resting_hr: Optional[float] = None
+    hrv_sdnn: Optional[float] = None
+    energy_level: Optional[str] = None
+    dosha_body_state: Optional[str] = None
+    agni_state: Optional[str] = None
+    ojas_level: Optional[float] = None
+    sleep_trend: Optional[str] = None
+    hrv_trend: Optional[str] = None
+    energy_trend: Optional[str] = None
+
+
 class RecommendationContext(BaseModel):
     """
     Complete context for making personalized recommendations.
@@ -108,6 +125,7 @@ class RecommendationContext(BaseModel):
     historical_effectiveness: HistoricalEffectiveness = Field(
         default_factory=HistoricalEffectiveness
     )
+    body_state: Optional[BodyStateContext] = None
 
     # Computed fields
     urgency_level: str = Field(
@@ -326,6 +344,38 @@ async def get_historical_effectiveness(person_id: str) -> HistoricalEffectivenes
     )
 
 
+async def get_body_state_context(person_id: str) -> Optional[BodyStateContext]:
+    """Get body state with health trends for recommendation context."""
+    try:
+        body_state = await get_body_state(person_id)
+        if not body_state:
+            return None
+
+        trends = await compute_health_trends(person_id, window_days=14)
+
+        sleep = body_state.get("sleep", {})
+        vitals = body_state.get("vitals", {})
+        energy = body_state.get("energy", {})
+        dosha = body_state.get("dosha", {})
+
+        return BodyStateContext(
+            sleep_quality=sleep.get("quality"),
+            sleep_duration_hours=sleep.get("duration_hours"),
+            resting_hr=vitals.get("resting_hr"),
+            hrv_sdnn=vitals.get("hrv_sdnn"),
+            energy_level=energy.get("level"),
+            dosha_body_state=dosha.get("dominant"),
+            agni_state=body_state.get("agni", {}).get("state"),
+            ojas_level=body_state.get("ojas", {}).get("level"),
+            sleep_trend=trends.get("sleep_trend"),
+            hrv_trend=trends.get("dosha_trajectory", {}).get("vata"),
+            energy_trend=trends.get("energy_trend"),
+        )
+    except Exception as e:
+        logger.warning("[ContextBuilder] Failed to get body state: %s", e)
+        return None
+
+
 def compute_urgency_level(current_state: CurrentStateContext) -> str:
     """Determine how urgent intervention is needed."""
     drift = current_state.drift_percentage
@@ -344,6 +394,7 @@ def compute_personalization_confidence(
     patterns: List[PersonalPattern],
     activities: List[RecentActivity],
     historical: HistoricalEffectiveness,
+    body_state: Optional[BodyStateContext] = None,
 ) -> float:
     """Compute how confident we can be in personalization."""
     # More data = more confidence
@@ -356,6 +407,10 @@ def compute_personalization_confidence(
 
     # Weighted average
     confidence = (pattern_score * 0.4 + activity_score * 0.3 + feedback_score * 0.3)
+
+    # Body data boosts confidence (physiological signals are objective)
+    if body_state is not None:
+        confidence += 0.1
 
     # Minimum confidence of 0.3 (we always have Ayurvedic knowledge)
     return max(0.3, min(0.95, confidence))
@@ -390,17 +445,23 @@ async def build_recommendation_context(person_id: str) -> RecommendationContext:
     # Get historical effectiveness
     historical = await get_historical_effectiveness(person_id)
 
+    # Get body state with trends
+    body_ctx = await get_body_state_context(person_id)
+
     # Compute derived fields
     urgency = compute_urgency_level(current_state)
-    confidence = compute_personalization_confidence(patterns, activities, historical)
+    confidence = compute_personalization_confidence(
+        patterns, activities, historical, body_ctx,
+    )
 
     logger.info(
-        "[ContextBuilder] person=%s friction=%s urgency=%s confidence=%.2f patterns=%d",
+        "[ContextBuilder] person=%s friction=%s urgency=%s confidence=%.2f patterns=%d body=%s",
         person_id,
         current_state.friction_state,
         urgency,
         confidence,
         len(patterns),
+        "yes" if body_ctx else "no",
     )
 
     return RecommendationContext(
@@ -411,6 +472,7 @@ async def build_recommendation_context(person_id: str) -> RecommendationContext:
         personal_patterns=patterns,
         recent_activities=activities,
         historical_effectiveness=historical,
+        body_state=body_ctx,
         urgency_level=urgency,
         personalization_confidence=confidence,
     )
@@ -425,4 +487,5 @@ __all__ = [
     "PersonalPattern",
     "RecentActivity",
     "HistoricalEffectiveness",
+    "BodyStateContext",
 ]

@@ -103,6 +103,18 @@ from sakhi.apps.api.services.vision.context import (
     get_relevant_media_for_context,
     add_to_visual_context,
 )
+from sakhi.apps.api.services.context_router import route_context
+from sakhi.apps.api.services.email.integration import (
+    get_email_context_for_conversation,
+    get_email_friction_contribution,
+)
+from sakhi.apps.api.services.ayurveda.causal_reasoning import (
+    explain_friction_state as explain_friction,
+)
+from sakhi.apps.api.services.email.contact_preferences import (
+    get_preferences as get_contact_preferences,
+    format_preferences_for_llm,
+)
 from sakhi.apps.api.services.vision.processor import (
     process_image,
     analyze_screenshot,
@@ -150,6 +162,11 @@ from sakhi.apps.api.services.agent.chat_bridge import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v2", tags=["conversation-v2"])
+
+
+class _SkipModule(Exception):
+    """Raised to skip a gated module block when the context router didn't activate it."""
+    pass
 
 _UNIFIED_INGEST_SCHEMA_OK: bool | None = None
 
@@ -691,6 +708,19 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
 
     internal_state = await _load_internal_state(user_id)
 
+    # --- Context Router: determine which modules to activate ---
+    active_modules = await route_context(
+        text=body.text,
+        intents=stored_intents,
+        topics=topics,
+        emotion=(emotion or {}).get("label", "neutral") if isinstance(emotion, dict) else str(emotion or "neutral"),
+        hour=datetime.datetime.utcnow().hour,
+        has_image=bool(getattr(body, "image_data", None) or getattr(body, "media_ids", None)),
+        has_pending_task=bool(pending_agent_task) if "pending_agent_task" in locals() else False,
+    )
+    logger.info("[turn_v2] Context router: active_modules=%s", active_modules)
+
+    # --- Tier 1: Always-compute (cheap, feeds 360° context scan) ---
     fast_narrative = compute_fast_narrative([], brain_state.get("soul_state") or {})
     alignment = compute_alignment(
         None,
@@ -720,12 +750,24 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         brain_state.get("rhythm_state") or {},
         brain_state.get("identity_momentum_state") or {},
     )
-    try:
-        inner_dialogue = await inner_dialogue_engine.compute_inner_dialogue(
-            user_id, body.text, {"triage": triage_local, "behavior_profile": behavior_profile}
-        )
-    except Exception:
+    # --- Tier 2 gating: emotional_depth (inner_dialogue + nudge_state are LLM/DB calls) ---
+    if "emotional_depth" in active_modules:
+        try:
+            inner_dialogue = await inner_dialogue_engine.compute_inner_dialogue(
+                user_id, body.text, {"triage": triage_local, "behavior_profile": behavior_profile}
+            )
+        except Exception:
+            inner_dialogue = {}
+        try:
+            nudge_row = await q("SELECT nudge_state FROM personal_model WHERE person_id = $1", user_id, one=True) or {}
+            nudge_state = nudge_row.get("nudge_state") or {}
+        except Exception:
+            nudge_state = {}
+    else:
         inner_dialogue = {}
+        nudge_state = {}
+
+    # Always compute — DB side effects (writes to personal_model)
     try:
         microreg_state = await compute_microreg(user_id, body.text)
     except Exception:
@@ -734,11 +776,6 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         tone_state = await compute_tone(user_id)
     except Exception:
         tone_state = {}
-    try:
-        nudge_row = await q("SELECT nudge_state FROM personal_model WHERE person_id = $1", user_id, one=True) or {}
-        nudge_state = nudge_row.get("nudge_state") or {}
-    except Exception:
-        nudge_state = {}
     try:
         empathy_state = await compute_empathy(user_id, body.text)
     except Exception:
@@ -918,7 +955,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         text_lower = (body.text or "").lower()
         focus_patterns = ["help me focus", "where do i start", "work on", "help me begin", "focus on"]
         trigger_focus = any(p in text_lower for p in focus_patterns)
-        if trigger_focus:
+        if trigger_focus and "micro_flow" in active_modules:
             path = await generate_focus_path(user_id, intent_text=body.text)
             await persist_focus_path(user_id, path)
             focus_path = path
@@ -938,7 +975,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     try:
         flow_patterns = ["short routine", "start flow", "10 minute", "focus for 10", "give me a short routine"]
         flow_trigger = any(p in (body.text or "").lower() for p in flow_patterns)
-        if flow_trigger:
+        if flow_trigger and "micro_flow" in active_modules:
             flow = await generate_mini_flow(user_id)
             await persist_mini_flow(user_id, flow)
             mini_flow = flow
@@ -1017,33 +1054,40 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         )
     except Exception:
         moment_model = {}
-    try:
-        evidence_pack = await select_evidence_anchors(user_id)
-    except Exception:
+    # --- Tier 2 gating: moment (evidence_pack + deliberation are expensive) ---
+    if "moment" in active_modules:
+        try:
+            evidence_pack = await select_evidence_anchors(user_id)
+        except Exception:
+            evidence_pack = {}
+        try:
+            deliberation_scaffold = compute_deliberation_scaffold(
+                moment_model=moment_model,
+                evidence_pack=evidence_pack,
+                conflict_state=state_row.get("conflict_state") or {},
+                alignment_state=state_row.get("alignment_state") or {},
+                identity_state=state_row.get("identity_state") or {},
+                forecast_state=state_row.get("forecast_state") or {},
+                continuity_state=continuity_state or {},
+            )
+        except Exception:
+            deliberation_scaffold = None
+        # Reflection trace (has DB side effects — only when evidence_pack computed)
+        try:
+            reflection_trace_payload = build_reflection_trace(
+                person_id=user_id,
+                turn_id=turn_id,
+                session_id=user_id,
+                moment_model=moment_model or {},
+                evidence_pack=evidence_pack or {},
+                deliberation_scaffold=deliberation_scaffold,
+            )
+            await persist_reflection_trace(dbexec, reflection_trace_payload)
+        except Exception:
+            reflection_trace_payload = None
+    else:
         evidence_pack = {}
-    try:
-        deliberation_scaffold = compute_deliberation_scaffold(
-            moment_model=moment_model,
-            evidence_pack=evidence_pack,
-            conflict_state=state_row.get("conflict_state") or {},
-            alignment_state=state_row.get("alignment_state") or {},
-            identity_state=state_row.get("identity_state") or {},
-            forecast_state=state_row.get("forecast_state") or {},
-            continuity_state=continuity_state or {},
-        )
-    except Exception:
         deliberation_scaffold = None
-    try:
-        reflection_trace_payload = build_reflection_trace(
-            person_id=user_id,
-            turn_id=turn_id,
-            session_id=user_id,
-            moment_model=moment_model or {},
-            evidence_pack=evidence_pack or {},
-            deliberation_scaffold=deliberation_scaffold,
-        )
-        await persist_reflection_trace(dbexec, reflection_trace_payload)
-    except Exception:
         reflection_trace_payload = None
 
     # ==========================================================================
@@ -1103,8 +1147,8 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         elif 15 <= drift_percentage <= 25:
             recommendation_trigger = "nudge"  # Gentle suggestion
 
-        # Generate recommendations if triggered
-        if recommendation_trigger:
+        # Generate recommendations if triggered AND router allows (or high drift overrides)
+        if recommendation_trigger and ("recommendations" in active_modules or drift_percentage > 25):
             try:
                 rec_context = await build_recommendation_context(user_id)
                 recs = await generate_personalized_recommendations(
@@ -1149,7 +1193,75 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     )
 
     # ==========================================================================
-    # Scheduling Integration
+    # Email & Signal Context Integration (OpenClaw approach — reactive only)
+    # Email friction feeds internal state silently; email context only surfaces
+    # when the user asks about email/inbox.
+    # ==========================================================================
+
+    # 1. Merge email friction into friction state (silent — enriches recommendations)
+    try:
+        email_friction = await get_email_friction_contribution(user_id)
+        if email_friction and friction_state_computed:
+            friction_state_computed["email_contribution"] = email_friction
+    except Exception:
+        pass
+
+    # --- Tier 2 gating: causal reasoning (LLM call) ---
+    causal_explanation = None
+    if "causal" in active_modules or (drift_percentage > 15 and friction_state_computed.get("state", "Balanced") != "Balanced"):
+        try:
+            if drift_percentage > 15 and friction_state_computed.get("state", "Balanced") != "Balanced":
+                explanation = await explain_friction(
+                    person_id=user_id,
+                    friction_state=friction_state_computed.get("state", ""),
+                )
+                causal_explanation = {
+                    "symptom": explanation.symptom,
+                    "dosha_context": explanation.dosha_context,
+                    "primary_causes": [c.model_dump() for c in explanation.primary_causes[:2]],
+                    "contributing_factors": [c.model_dump() for c in explanation.contributing_factors[:2]],
+                    "seasonal_influence": explanation.seasonal_influence,
+                    "explanation_text": explanation.explanation_text,
+                }
+        except Exception as causal_exc:
+            logger.warning("[turn_v2] Causal reasoning failed: %s", causal_exc)
+
+    # --- Always compute: body_state (cheap DB read from personal_model) ---
+    body_state = {}
+    try:
+        from sakhi.apps.api.services.body.state_engine import get_body_state
+        body_state = await get_body_state(user_id)
+    except Exception:
+        pass
+
+    # --- Tier 2 gating: health trends (only when body module active) ---
+    health_trends = {}
+    if "body" in active_modules:
+        try:
+            from sakhi.apps.api.services.body.health_trends import compute_health_trends
+            health_trends = await compute_health_trends(user_id, window_days=14)
+        except Exception:
+            pass
+
+    # --- Tier 2 gating: email context (DB reads) ---
+    email_context = None
+    contact_prefs_context = None
+    if "email" in active_modules:
+        try:
+            email_context = await get_email_context_for_conversation(
+                user_id, include_details=True,
+            )
+        except Exception:
+            pass
+        try:
+            prefs = await get_contact_preferences(user_id)
+            if prefs:
+                contact_prefs_context = format_preferences_for_llm(prefs)
+        except Exception:
+            pass
+
+    # ==========================================================================
+    # Scheduling Integration (gated by router)
     # Surfaces scheduling suggestions based on: explicit requests, journal hints,
     # relationship nudges, and calendar queries. User ALWAYS confirms before action.
     # ==========================================================================
@@ -1161,6 +1273,8 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     scheduling_confirmation_result = None  # Set if user confirmed a pending request
 
     try:
+        if "scheduling" not in active_modules:
+            raise _SkipModule("scheduling")
         text_lower = (body.text or "").lower()
 
         # 0. CHECK FOR CONFIRMATION: Did user confirm a pending scheduling request?
@@ -1378,6 +1492,8 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
                 len(relationship_nudges),
             )
 
+    except _SkipModule:
+        pass  # Router skipped this module
     except Exception as sched_exc:
         logger.warning("[turn_v2] Scheduling context loading failed: %s", sched_exc)
         scheduling_context = {}
@@ -1559,6 +1675,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     )
 
     metadata_payload = {
+        "active_modules": sorted(active_modules),  # Context router — tells conversation_reasoner which tier 2 sections to build
         "entry_id": entry_id,
         "topics": topics,
         "emotion": emotion,
@@ -1647,6 +1764,13 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "conversation_history": conversation_history,
         "session_summary": session_summary,  # Compressed older context
         "total_turns": total_turns,
+        # Email & Signal Context (reactive only — injected when user asks about email)
+        "email_context": email_context,
+        "causal_explanation": causal_explanation,
+        "contact_preferences": contact_prefs_context,
+        # Body & Health Context (longitudinal — always in scan, deep when body module active)
+        "body_state": body_state,
+        "health_trends": health_trends,
     }
 
     # background task routing refresh when new task intent might be present

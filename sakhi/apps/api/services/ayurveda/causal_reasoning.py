@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from sakhi.apps.api.core.db import q as dbfetch
 from sakhi.apps.api.core.llm import call_llm
+from sakhi.apps.api.services.body.state_engine import get_body_state
 from sakhi.apps.api.services.ayurveda.graph_reasoning import (
     query_symptoms_for_dosha,
     get_current_season,
@@ -355,7 +356,16 @@ async def explain_symptom(
             )
             contributing_factors.append(cause)
 
-    # 4. Check seasonal influence
+    # 4. Check body state for physical evidence
+    try:
+        body_state = await get_body_state(person_id)
+        if body_state:
+            body_factors = _extract_body_causal_factors(body_state, dosha)
+            contributing_factors.extend(body_factors)
+    except Exception as e:
+        logger.debug("[CausalReasoning] body_state fetch failed: %s", e)
+
+    # 5. Check seasonal influence
     season = get_current_season()
     seasonal_influence = None
 
@@ -371,7 +381,7 @@ async def explain_symptom(
                 related_dosha=dosha,
             ))
 
-    # 5. Get general Ayurvedic causes if we don't have personal data
+    # 6. Get general Ayurvedic causes if we don't have personal data
     if not primary_causes and not contributing_factors:
         ayurvedic_causes = await get_ayurvedic_causes_for_symptom(symptom, dosha)
         for cause_data in ayurvedic_causes[:3]:
@@ -384,7 +394,7 @@ async def explain_symptom(
                     related_dosha=dosha,
                 ))
 
-    # 6. Generate natural language explanation
+    # 7. Generate natural language explanation
     explanation_text = await _generate_explanation(
         symptom=symptom,
         dosha=dosha,
@@ -459,6 +469,69 @@ def _get_dosha_explanation(dosha: str, symptom: str) -> str:
                  "like water becoming stagnant.",
     }
     return explanations.get(dosha, f"{symptom.title()} may indicate a dosha imbalance.")
+
+
+def _extract_body_causal_factors(
+    body_state: Dict[str, Any],
+    target_dosha: Optional[str] = None,
+) -> List[CausalFactor]:
+    """Extract causal factors from body state that support or explain symptoms."""
+    factors: List[CausalFactor] = []
+
+    sleep = body_state.get("sleep", {})
+    vitals = body_state.get("vitals", {})
+    energy = body_state.get("energy", {})
+
+    # Poor sleep → vata aggravation
+    duration = sleep.get("duration_hours")
+    if isinstance(duration, (int, float)) and duration < 6:
+        factors.append(CausalFactor(
+            factor_type="body",
+            description=f"Poor sleep ({duration:.1f}h) — insufficient rest destabilizes Vata",
+            confidence=0.7,
+            ayurvedic_link="Sleep deprivation aggravates Vata, causing scattered and anxious energy",
+            related_dosha="vata",
+        ))
+
+    # Elevated HR → pitta
+    rhr = vitals.get("resting_hr")
+    if isinstance(rhr, (int, float)) and rhr > 80:
+        factors.append(CausalFactor(
+            factor_type="body",
+            description=f"Elevated resting heart rate ({rhr:.0f} bpm)",
+            confidence=0.6,
+            ayurvedic_link="Elevated heart rate indicates Pitta heat accumulation",
+            related_dosha="pitta",
+        ))
+
+    # Low HRV → vata / stress
+    hrv = vitals.get("hrv_sdnn")
+    if isinstance(hrv, (int, float)) and hrv < 30:
+        factors.append(CausalFactor(
+            factor_type="body",
+            description=f"Low heart rate variability ({hrv:.0f}ms) — autonomic stress",
+            confidence=0.65,
+            ayurvedic_link="Low HRV reflects Vata-type nervous system dysregulation",
+            related_dosha="vata",
+        ))
+
+    # Low energy → kapha
+    energy_level = energy.get("level")
+    if energy_level == "low" or (isinstance(energy_level, (int, float)) and energy_level < 0.3):
+        factors.append(CausalFactor(
+            factor_type="body",
+            description="Low physical energy from health data",
+            confidence=0.6,
+            ayurvedic_link="Low energy suggests Kapha accumulation or depleted Agni",
+            related_dosha="kapha",
+        ))
+
+    # Filter to relevant dosha if provided
+    if target_dosha:
+        relevant = [f for f in factors if f.related_dosha == target_dosha]
+        return relevant if relevant else factors[:1]
+
+    return factors
 
 
 def _format_behavior(behavior: str) -> str:
@@ -615,35 +688,39 @@ async def find_similar_episodes(
     if len(episodes) < limit:
         episodic_rows = await dbfetch(
             """
-            SELECT id, summary, themes, emotion, created_at, metadata
+            SELECT id, text, context_tags, emotional_state, created_at, record
             FROM memory_episodic
             WHERE user_id = $1
               AND (
-                summary ILIKE $2
-                OR themes::text ILIKE $2
-                OR $3 = ANY(themes)
+                text ILIKE $2
+                OR context_tags::text ILIKE $2
               )
             ORDER BY created_at DESC
-            LIMIT $4
+            LIMIT $3
             """,
             person_id,
             f"%{symptom}%",
-            symptom_key,
             limit - len(episodes),
         )
 
         for row in episodic_rows or []:
-            metadata = row.get("metadata") or {}
+            record = row.get("record") or {}
+            if isinstance(record, str):
+                import json as _json
+                try:
+                    record = _json.loads(record)
+                except Exception:
+                    record = {}
 
             episodes.append(LastTimeEpisode(
                 episode_id=str(row.get("id", "")),
                 occurred_at=row.get("created_at", datetime.now()),
                 symptom=symptom,
                 severity=0.5,
-                duration_hours=metadata.get("duration_hours"),
-                what_helped=metadata.get("interventions", []),
+                duration_hours=record.get("duration_hours"),
+                what_helped=record.get("interventions", []),
                 what_didnt_help=[],
-                resolution_summary=row.get("summary"),
+                resolution_summary=row.get("text"),
                 similarity_score=0.6,  # Semantic match
             ))
 

@@ -119,7 +119,10 @@ export default function OnboardingResultScreen() {
   }, [params.result]);
 
   const handleContinue = () => {
-    router.replace("/voice" as never);
+    router.push({
+      pathname: "/onboarding/health-connect" as never,
+      params: { personId: params.personId as string },
+    });
   };
 
   if (!result) {

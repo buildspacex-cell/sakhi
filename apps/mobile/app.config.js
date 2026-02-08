@@ -12,7 +12,7 @@ module.exports = {
     icon: "./assets/images/icon.png",
     scheme: "sakhi",
     userInterfaceStyle: "automatic",
-    newArchEnabled: false,
+    newArchEnabled: true,
     splash: {
       image: "./assets/images/splash-icon.png",
       resizeMode: "contain",
@@ -28,6 +28,8 @@ module.exports = {
             CFBundleURLSchemes: ["sakhi"],
           },
         ],
+        NSHealthShareUsageDescription:
+          "Sakhi uses your health data (sleep, heart rate, activity) to provide personalized Ayurvedic wellness guidance. Your data stays on your device and is never sold.",
       },
     },
     android: {
@@ -60,9 +62,11 @@ module.exports = {
     },
     plugins: [
       "expo-router",
+      "expo-dev-client",
       "expo-secure-store",
       "expo-apple-authentication",
       "expo-web-browser",
+      ["@kingstinct/react-native-healthkit", { background: false }],
     ],
     experiments: {
       typedRoutes: true,
@@ -72,6 +76,9 @@ module.exports = {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL,
+      eas: {
+        projectId: "065334a1-741a-47fe-8796-63b9d91faa66",
+      },
     },
   },
 };

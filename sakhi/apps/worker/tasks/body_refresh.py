@@ -38,6 +38,19 @@ async def run_body_refresh(person_id: str) -> Dict[str, Any]:
     try:
         body_state = await update_body_state_from_health_data(person_id)
 
+        # Run pattern detection to correlate journal behaviors with health outcomes
+        patterns_detected = []
+        try:
+            from sakhi.apps.api.services.ayurveda.pattern_learning import detect_patterns
+            patterns_detected = await detect_patterns(person_id, lookback_days=14)
+            if patterns_detected:
+                logger.info(
+                    f"[body_refresh] Detected {len(patterns_detected)} patterns "
+                    f"for person_id={person_id}"
+                )
+        except Exception as pat_exc:
+            logger.warning(f"[body_refresh] Pattern detection failed: {pat_exc}")
+
         summary = body_state.get("summary", {})
         logger.info(
             f"[body_refresh] Completed for person_id={person_id}: "
@@ -52,6 +65,7 @@ async def run_body_refresh(person_id: str) -> Dict[str, Any]:
             "overall_score": summary.get("overall_score"),
             "primary_need": summary.get("primary_need"),
             "dosha_imbalance": body_state.get("dosha_body", {}).get("dominant_imbalance"),
+            "patterns_detected": len(patterns_detected),
         }
 
     except Exception as e:

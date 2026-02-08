@@ -102,8 +102,76 @@ User Message
 | Purpose | File |
 |---------|------|
 | Turn endpoint | `sakhi/apps/api/routes/turn_v2.py` |
+| Context router | `sakhi/apps/api/services/context_router.py` |
+| Prompt builder | `sakhi/apps/api/services/conversation_v2/conversation_reasoner.py` |
 | Context loader | `sakhi/apps/api/services/turn/deterministic_context_loader.py` |
 | Worker runner | `sakhi/apps/worker/pipelines/turn_updates/runner.py` |
+
+---
+
+## Context Router — Tiered Context Intelligence
+
+The Context Router ensures the LLM always has 360-degree awareness while keeping prompts focused and computation costs low.
+
+```
+User Message
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  CONTEXT ROUTER                                                  │
+│  ├── Deterministic keyword/pattern classifier (13 modules)      │
+│  ├── Intent-based routing (from extracted intents)              │
+│  ├── Time-based routing (morning/evening rituals)               │
+│  └── LLM fallback (GPT-4o-mini) when confidence < 0.5          │
+│  Output: Set of active modules                                   │
+└─────────────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  TIER 1: 360° Context Scan (always present)                      │
+│  One-liner per module from cheap/always-computed data:           │
+│  Identity momentum, emotional state, moment mode, friction,     │
+│  morning/evening/micro cache, reflection status                 │
+│  Cost: ~0ms (pure functions + cache reads)                       │
+└─────────────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  TIER 2: Deep Context Sections (router-gated)                    │
+│  Full detailed sections only for active modules:                │
+│  Identity & Growth, Emotional Attunement, Moment Intelligence,  │
+│  Morning/Evening Ritual, Micro Flow, Daily Reflection           │
+│  Cost: LLM calls + DB queries, only when needed                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 13 Context Modules
+
+| Module | Tier 1 (always) | Tier 2 (router-gated) |
+|--------|-----------------|----------------------|
+| identity | Fast frames (pure functions) | Full narrative + alignment detail |
+| emotional_depth | Empathy + microreg (DB side effects) | Inner dialogue (LLM), nudge state |
+| moment | Moment model (pure function) | Evidence pack (DB/LLM), deliberation |
+| recommendations | Friction state (cheap) | Full recommendation generation (LLM) |
+| scheduling | — | Calendar queries, nudges |
+| email | — | Email context, contact prefs |
+| causal | — | Causal reasoning (LLM) |
+| morning_ritual | Cache reads | Already in tier 1 |
+| evening_ritual | Cache reads | Already in tier 1 |
+| micro_flow | Cache reads | Focus path / mini flow generation (LLM) |
+| reflection | Cache reads | Already in tier 1 |
+| vision | — | Image processing pipeline |
+| agentic | — | Web search, agent tasks |
+
+### Key Files
+
+| Purpose | File |
+|---------|------|
+| Router | `sakhi/apps/api/services/context_router.py` |
+| Context scan + Tier 2 builders | `sakhi/apps/api/services/conversation_v2/conversation_reasoner.py` |
+| Router integration | `sakhi/apps/api/routes/turn_v2.py` |
+
+See [features/context-routing.md](features/context-routing.md) for full details.
 
 ---
 
@@ -375,4 +443,5 @@ Name: Vidhya
 | [DATABASE_MIGRATIONS.md](DATABASE_MIGRATIONS.md) | Migration instructions |
 | [features/friction-framework.md](features/friction-framework.md) | Friction Framework API |
 | [features/adaptive-response.md](features/adaptive-response.md) | Response pipeline details |
+| [features/context-routing.md](features/context-routing.md) | Context Router & tiered intelligence |
 | [guides/getting-started.md](guides/getting-started.md) | Setup instructions |

@@ -135,6 +135,40 @@ async def compute_current_vikriti(
             weighted_totals["kapha"] += dosha.get("kapha", 0.34) * weight
             total_weight += weight
 
+        # Integrate body dosha from body_state_history (HealthKit data)
+        # Body dosha scores get 40% weight relative to journal-derived scores
+        has_body = False
+        try:
+            body_rows = await dbfetch(
+                """
+                SELECT vata_score, pitta_score, kapha_score, computed_at
+                FROM body_state_history
+                WHERE person_id = $1
+                  AND computed_at > NOW() - INTERVAL '%s days'
+                  AND vata_score IS NOT NULL
+                ORDER BY computed_at DESC
+                """ % window_days,
+                person_id,
+            )
+            for brow in (body_rows or []):
+                b_vata = brow.get("vata_score")
+                b_pitta = brow.get("pitta_score")
+                b_kapha = brow.get("kapha_score")
+                b_created = brow.get("computed_at")
+                if b_vata is None or b_pitta is None or b_kapha is None or not b_created:
+                    continue
+                if isinstance(b_created, str):
+                    b_created = datetime.fromisoformat(b_created.replace("Z", "+00:00"))
+                b_days_ago = (now - b_created).total_seconds() / 86400
+                b_weight = math.exp(-decay_lambda * b_days_ago) * 0.4  # 40% body weight
+                weighted_totals["vata"] += float(b_vata) * b_weight
+                weighted_totals["pitta"] += float(b_pitta) * b_weight
+                weighted_totals["kapha"] += float(b_kapha) * b_weight
+                total_weight += b_weight
+                has_body = True
+        except Exception as body_exc:
+            LOGGER.debug("[Vikriti] body_state_history fetch failed: %s", body_exc)
+
         if total_weight == 0:
             return {
                 "current_dosha": {"vata": 0.33, "pitta": 0.33, "kapha": 0.34},
@@ -156,14 +190,17 @@ async def compute_current_vikriti(
         adjustment = 1.0 - sum(current_dosha.values())
         current_dosha["kapha"] = round(current_dosha["kapha"] + adjustment, 3)
 
-        # Confidence based on episode count and recency
+        # Confidence based on episode count, recency, and body data availability
         confidence = min(0.9, 0.3 + len(rows) * 0.1)
+        if has_body:
+            confidence = min(0.95, confidence + 0.15)
 
         return {
             "current_dosha": current_dosha,
             "confidence": round(confidence, 2),
             "computed_from": f"last_{window_days}_days",
             "episode_count": len(rows),
+            "has_body_data": has_body,
             "computed_at": datetime.now(timezone.utc).isoformat(),
         }
 

@@ -76,7 +76,91 @@ async def _fetch_journals(user_id: str, start: datetime, end: datetime) -> list[
     return [dict(row) for row in rows]
 
 
-async def _summarize_day(journals: Sequence[Dict[str, Any]], window_start: datetime) -> str:
+async def _fetch_health_context_for_window(
+    user_id: str,
+    window_start: datetime,
+    window_end: datetime,
+) -> str:
+    """Fetch body_state_history for the episode window to include in summary."""
+    try:
+        rows = await dbfetch(
+            """
+            SELECT body_state
+            FROM body_state_history
+            WHERE person_id = $1
+              AND computed_at >= $2 AND computed_at < $3
+            ORDER BY computed_at DESC
+            LIMIT 1
+            """,
+            user_id,
+            window_start,
+            window_end,
+        )
+        if not rows:
+            return ""
+        bs = rows[0].get("body_state") or {}
+        if isinstance(bs, str):
+            bs = json.loads(bs)
+        parts = []
+        sleep = bs.get("sleep", {})
+        if sleep.get("duration_hours"):
+            parts.append(f"Sleep: {sleep['duration_hours']:.1f}h ({sleep.get('quality', 'unknown')} quality)")
+        vitals = bs.get("vitals", {})
+        rhr = vitals.get("resting_heart_rate") or vitals.get("resting_hr")
+        hrv = vitals.get("heart_rate_variability") or vitals.get("hrv_sdnn")
+        if rhr:
+            parts.append(f"Resting HR: {rhr} bpm")
+        if hrv:
+            parts.append(f"HRV: {hrv}ms")
+        activity = bs.get("activity", {})
+        if activity.get("steps"):
+            parts.append(f"Steps: {activity['steps']}")
+        if not parts:
+            return ""
+        return "\n[Health data for this day: " + ", ".join(parts) + "]"
+    except Exception:
+        return ""
+
+
+async def _fetch_body_dosha_for_window(
+    user_id: str,
+    window_start: datetime,
+    window_end: datetime,
+) -> Dict[str, float]:
+    """Fetch body dosha scores from body_state_history for blending into state_vector."""
+    try:
+        rows = await dbfetch(
+            """
+            SELECT vata_score, pitta_score, kapha_score
+            FROM body_state_history
+            WHERE person_id = $1
+              AND computed_at >= $2 AND computed_at < $3
+              AND vata_score IS NOT NULL
+            ORDER BY computed_at DESC
+            LIMIT 1
+            """,
+            user_id,
+            window_start,
+            window_end,
+        )
+        if not rows:
+            return {}
+        row = rows[0]
+        vata = row.get("vata_score")
+        pitta = row.get("pitta_score")
+        kapha = row.get("kapha_score")
+        if vata is None or pitta is None or kapha is None:
+            return {}
+        return {"vata": float(vata), "pitta": float(pitta), "kapha": float(kapha)}
+    except Exception:
+        return {}
+
+
+async def _summarize_day(
+    journals: Sequence[Dict[str, Any]],
+    window_start: datetime,
+    health_context: str = "",
+) -> str:
     # Concatenate journal texts in chronological order
     corpus_parts: List[str] = []
     for j in journals:
@@ -84,12 +168,16 @@ async def _summarize_day(journals: Sequence[Dict[str, Any]], window_start: datet
         if text:
             corpus_parts.append(text)
     corpus = "\n\n".join(corpus_parts).strip()
+    # Append health context if available
+    if health_context:
+        corpus = corpus + "\n\n" + health_context if corpus else health_context
     fallback = f"Episodic summary (v2.1 stub) for {window_start.date()}"
     if not corpus:
         return fallback
 
     system_msg = (
         "Summarize the day as a whole in 2-4 sentences using neutral, factual language. "
+        "Include any health data (sleep, heart rate, activity) as part of the factual picture. "
         "Do not give advice, interpretation, identity claims, or future predictions. "
         "Plain text only; no bullets, emojis, or headings."
     )
@@ -584,7 +672,12 @@ Return JSON only with:
         return {}
 
 
-async def extract_state_vector(summary_text: str, emotional_state: Dict[str, Any], rhythm_state: Dict[str, Any]) -> Dict[str, Any]:
+async def extract_state_vector(
+    summary_text: str,
+    emotional_state: Dict[str, Any],
+    rhythm_state: Dict[str, Any],
+    body_dosha: Dict[str, float] | None = None,
+) -> Dict[str, Any]:
     """
     Compute dosha state vector for Friction Framework from episode summary.
 
@@ -592,6 +685,9 @@ async def extract_state_vector(summary_text: str, emotional_state: Dict[str, Any
     - Vata (Adaptive): scattered, anxious, variable, creative, quick-thinking
     - Pitta (Performance): intense, focused, irritable, driven, goal-oriented
     - Kapha (Conservation): steady, slow, heavy, calm, resistant to change
+
+    If body_dosha is provided (from HealthKit/body_state_history), blends
+    60% journal-derived scores with 40% body-derived dosha scores.
 
     Returns normalized dosha scores that sum to 1.0
     """
@@ -660,18 +756,35 @@ async def extract_state_vector(summary_text: str, emotional_state: Dict[str, Any
         if energy > 0.6 and structure < 0.4:
             scores["vata"] += 0.15
 
-    # Normalize to sum to 1.0
+    # Normalize journal-derived scores to sum to 1.0
     total = sum(scores.values())
     if total > 0:
         scores = {k: round(v / total, 2) for k, v in scores.items()}
     else:
         scores = {"vata": 0.33, "pitta": 0.33, "kapha": 0.34}
 
+    # Blend with body dosha if available (60% journal + 40% body)
+    if body_dosha and all(k in body_dosha for k in ("vata", "pitta", "kapha")):
+        # Normalize body dosha to sum to 1.0
+        body_total = sum(body_dosha.values())
+        if body_total > 0:
+            norm_body = {k: v / body_total for k, v in body_dosha.items()}
+            scores = {
+                k: round(scores[k] * 0.6 + norm_body.get(k, 0.33) * 0.4, 3)
+                for k in scores
+            }
+            # Re-normalize
+            blend_total = sum(scores.values())
+            if blend_total > 0:
+                scores = {k: round(v / blend_total, 2) for k, v in scores.items()}
+
     # Ensure exactly 1.0
     adjustment = 1.0 - sum(scores.values())
     scores["kapha"] = round(scores["kapha"] + adjustment, 2)
 
     confidence = min(0.85, 0.3 + total * 0.1)  # Higher confidence with more signals
+    if body_dosha:
+        confidence = min(0.95, confidence + 0.1)  # Body data boosts confidence
 
     return {
         "dosha": scores,
@@ -1063,15 +1176,19 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
             episode_id=existing_episode_id,
         )
 
-        # Recalculate everything with all journals
-        summary_text = await _summarize_day(journals, window_start)
+        # Fetch health context for the day (longitudinal integration)
+        health_context = await _fetch_health_context_for_window(user_id, window_start, window_end)
+        body_dosha = await _fetch_body_dosha_for_window(user_id, window_start, window_end)
+
+        # Recalculate everything with all journals + health context
+        summary_text = await _summarize_day(journals, window_start, health_context=health_context)
         vector_values, has_vec = await _embed_summary(summary_text)
         vector_literal = to_pgvector(vector_values, length=1536) if has_vec else None
         soul_signals = await extract_episodic_soul(summary_text)
         episodic_emotional_state = await extract_episodic_emotional_state(summary_text)
         episodic_rhythm_state = await extract_episodic_rhythm_state(summary_text)
-        # Recompute state vectors for Friction Framework
-        state_vector = await extract_state_vector(summary_text, episodic_emotional_state, episodic_rhythm_state)
+        # Recompute state vectors for Friction Framework (blended with body dosha)
+        state_vector = await extract_state_vector(summary_text, episodic_emotional_state, episodic_rhythm_state, body_dosha=body_dosha)
         guna_vector = await extract_guna_vector(summary_text, episodic_emotional_state)
         recent_summaries_prev = await _fetch_recent_episode_summaries_before(user_id, limit=7, before_ts=window_end)
         recent_summaries = [summary_text] + recent_summaries_prev
@@ -1187,15 +1304,19 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
             )
         return
 
-    # Create stub episode (no embeddings, no LLM)
-    summary_text = await _summarize_day(journals, window_start)
+    # Fetch health context for the day (longitudinal integration)
+    health_context = await _fetch_health_context_for_window(user_id, window_start, window_end)
+    body_dosha = await _fetch_body_dosha_for_window(user_id, window_start, window_end)
+
+    # Create new episode with health context
+    summary_text = await _summarize_day(journals, window_start, health_context=health_context)
     vector_values, has_vec = await _embed_summary(summary_text)
     vector_literal = to_pgvector(vector_values, length=1536) if has_vec else None
     soul_signals = await extract_episodic_soul(summary_text)
     episodic_emotional_state = await extract_episodic_emotional_state(summary_text)
     episodic_rhythm_state = await extract_episodic_rhythm_state(summary_text)
-    # Compute state vectors for Friction Framework
-    state_vector = await extract_state_vector(summary_text, episodic_emotional_state, episodic_rhythm_state)
+    # Compute state vectors for Friction Framework (blended with body dosha)
+    state_vector = await extract_state_vector(summary_text, episodic_emotional_state, episodic_rhythm_state, body_dosha=body_dosha)
     guna_vector = await extract_guna_vector(summary_text, episodic_emotional_state)
     recent_summaries_prev = await _fetch_recent_episode_summaries_before(user_id, limit=7, before_ts=window_end)
     recent_summaries = [summary_text] + recent_summaries_prev

@@ -10,17 +10,23 @@ from dotenv import load_dotenv
 REQUIRED_VARS = (
     "DATABASE_URL",
     "REDIS_URL",
-    "OPENROUTER_API_KEY",
-    "LLM_ROUTER",
+    "OPENAI_API_KEY",
+    "LLM_PROVIDER",
     "MODEL_CHAT",
     "MODEL_TOOL",
     "MODEL_REFLECT",
     "MODEL_EMBED",
+    "ENCRYPTION_KEY",
+    "SAKHI_ENCRYPTION_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
 )
 
 
 PLACEHOLDER_VALUES = {
-    "OPENROUTER_API_KEY": {"replace_me"},
+    "OPENAI_API_KEY": {"sk-..."},
+    "ENCRYPTION_KEY": {"replace-with-32-plus-char-secret"},
 }
 
 

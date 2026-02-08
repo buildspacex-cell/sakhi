@@ -337,15 +337,32 @@ async def _fetch_one_body(
 
 async def analyze_batch(
     emails_with_bodies: List[Dict[str, Any]],
+    person_id: Optional[str] = None,
 ) -> EmailBatchAnalysis:
     """
     Run a batch of emails through the LLM for triage and commitment extraction.
+
+    If person_id is provided, injects contact preferences into the prompt
+    so the LLM can personalize triage based on user-defined priorities.
     """
     from sakhi.apps.api.core.llm import call_llm
 
     # Build the prompt with email data
     now = datetime.now(timezone.utc)
     today_str = now.strftime("%Y-%m-%d %H:%M UTC")
+
+    # Fetch contact preferences for personalized triage
+    prefs_context = ""
+    if person_id:
+        try:
+            from sakhi.apps.api.services.email.contact_preferences import (
+                format_preferences_for_llm,
+                get_preferences,
+            )
+            preferences = await get_preferences(person_id)
+            prefs_context = format_preferences_for_llm(preferences)
+        except Exception as e:
+            LOGGER.warning("[Digest] Failed to load contact preferences: %s", e)
 
     email_descriptions = []
     for i, email in enumerate(emails_with_bodies, 1):
@@ -377,6 +394,8 @@ async def analyze_batch(
     emails_text = "\n".join(email_descriptions)
 
     prompt = f"""Today's date: {today_str}
+
+{prefs_context}
 
 Analyze these emails. Return JSON with this EXACT structure:
 
@@ -411,6 +430,12 @@ Rules:
 - triage=fyi: worth knowing, no action needed
 - triage=noise: newsletters, automated, marketing, outdated/expired content
 - Verification emails (password reset, OTP, email confirmation, security codes) are ALWAYS noise
+
+Contact priority rules (if preferences are provided above):
+- If a sender is marked "critical" or "high", prefer triage=action unless clearly noise (e.g. automated/expired)
+- If a sender is marked "muted", ALWAYS classify as noise regardless of content
+- If a sender is marked "low", prefer triage=fyi unless explicitly urgent
+- Use the relationship and notes to inform draft reply tone and urgency assessment
 
 Time intelligence (IMPORTANT — today is {today_str}):
 - If a deadline, event date, or expiry mentioned in the email has ALREADY PASSED, classify as noise — not action.
@@ -598,7 +623,7 @@ async def generate_digest(
             batch = emails_with_bodies[i:i + LLM_BATCH_SIZE]
             batch_num = i // LLM_BATCH_SIZE
             try:
-                analysis = await analyze_batch(batch)
+                analysis = await analyze_batch(batch, person_id=person_id)
                 all_items.extend(analysis.items)
                 all_commitments.extend(analysis.commitments)
                 batch_results.append(f"batch{batch_num}={len(analysis.items)}items")

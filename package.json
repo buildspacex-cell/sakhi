@@ -22,7 +22,10 @@
       "@babel/core": "^7.23.9",
       "@babel/plugin-transform-react-jsx": "^7.23.4",
       "@babel/preset-typescript": "^7.24.7"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@shopify/react-native-skia"
+    ]
   },
   "version": "1.0.0"
 }

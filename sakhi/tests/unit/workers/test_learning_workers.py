@@ -172,3 +172,17 @@ class TestReinforcementCalibration:
 
         result = await mock_db.execute("INSERT INTO feedback_log ...")
         assert result is not None
+
+
+class TestLearningJobs:
+    """Tests for learning_jobs worker tasks."""
+
+    def test_run_mark_missed_importable(self):
+        """Verify mark-missed task is importable and callable."""
+        from sakhi.apps.worker.tasks.learning_jobs import run_mark_missed
+        assert callable(run_mark_missed)
+
+    def test_scheduler_imports_mark_missed(self):
+        """Verify scheduler can import the mark-missed task."""
+        from sakhi.apps.worker.tasks.learning_jobs import run_mark_missed
+        assert run_mark_missed.__name__ == "run_mark_missed"

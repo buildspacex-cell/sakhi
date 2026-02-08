@@ -196,6 +196,9 @@ async def update_body_state_from_health_data(person_id: str) -> Dict[str, Any]:
     # Store history snapshot
     await _store_body_state_history(person_id, body_state)
 
+    # Log health signals to symptom_log for pattern learning
+    await _log_health_signals(person_id, body_state)
+
     return body_state
 
 
@@ -712,6 +715,89 @@ async def _store_body_state_history(person_id: str, body_state: Dict[str, Any]) 
         sleep.get("quality_score"),
         energy.get("level"),
     )
+
+
+async def _log_health_signals(person_id: str, body_state: Dict[str, Any]) -> None:
+    """
+    Extract health signals from computed body_state and log them to symptom_log.
+
+    This bridges health data into the pattern learning system. By logging
+    health-derived signals as symptoms, detect_patterns() automatically
+    correlates journal behaviors with health outcomes:
+      - behavior: late_dinner (journal) → symptom: poor_sleep (HealthKit)
+      - behavior: meditation (journal) → absence of low_hrv (HealthKit)
+    """
+    from sakhi.apps.api.services.ayurveda.pattern_learning import (
+        ExtractedSymptom,
+        log_symptom,
+    )
+
+    signals: List[ExtractedSymptom] = []
+
+    # Sleep signals
+    sleep = body_state.get("sleep", {})
+    duration = sleep.get("duration_hours")
+    if isinstance(duration, (int, float)) and duration < 6:
+        signals.append(ExtractedSymptom(
+            symptom_type="physical",
+            symptom_name="poor_sleep",
+            severity=max(0.3, round(1.0 - duration / 8.0, 2)),
+            likely_dosha="vata",
+        ))
+    quality = sleep.get("quality_score")
+    if isinstance(quality, (int, float)) and quality < 0.4:
+        signals.append(ExtractedSymptom(
+            symptom_type="physical",
+            symptom_name="restless_sleep",
+            severity=round(1.0 - quality, 2),
+            likely_dosha="vata",
+        ))
+
+    # Heart rate signals
+    vitals = body_state.get("vitals", {})
+    rhr = vitals.get("resting_heart_rate") or vitals.get("resting_hr")
+    if isinstance(rhr, (int, float)) and rhr > 80:
+        signals.append(ExtractedSymptom(
+            symptom_type="physical",
+            symptom_name="elevated_heart_rate",
+            severity=min(1.0, round((rhr - 60) / 40, 2)),
+            likely_dosha="pitta",
+        ))
+
+    # HRV signals
+    hrv = vitals.get("heart_rate_variability") or vitals.get("hrv_sdnn")
+    if isinstance(hrv, (int, float)) and hrv < 30:
+        signals.append(ExtractedSymptom(
+            symptom_type="physical",
+            symptom_name="low_hrv",
+            severity=max(0.3, round(1.0 - hrv / 50, 2)),
+            likely_dosha="vata",
+        ))
+
+    # Energy signals
+    energy = body_state.get("energy", {})
+    energy_level = energy.get("level")
+    if isinstance(energy_level, (int, float)) and energy_level < 0.3:
+        signals.append(ExtractedSymptom(
+            symptom_type="energy",
+            symptom_name="low_energy",
+            severity=round(1.0 - energy_level, 2),
+            likely_dosha="kapha",
+        ))
+
+    # Log each signal
+    now = datetime.now(timezone.utc)
+    for sig in signals:
+        try:
+            await log_symptom(
+                person_id=person_id,
+                symptom=sig,
+                occurred_at=now,
+                source_text="[HealthKit sync]",
+            )
+        except Exception as exc:
+            # Don't let signal logging failures break the health refresh
+            pass
 
 
 __all__ = [

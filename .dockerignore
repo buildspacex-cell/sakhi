@@ -1,0 +1,34 @@
+# Version control
+.git
+.gitignore
+
+# Node / frontend (not needed for Python API image)
+node_modules
+apps/web/.next
+apps/mobile/.expo
+pnpm-lock.yaml
+
+# Archive
+_archive
+
+# Environment files (secrets set via Railway env vars)
+.env
+.env.*
+
+# Python caches
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# IDE
+.vscode
+.idea
+.claude
+
+# Docs (not needed at runtime)
+docs
+
+# macOS
+.DS_Store

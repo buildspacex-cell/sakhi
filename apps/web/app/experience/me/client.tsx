@@ -495,7 +495,7 @@ export default function MePageContent() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: palette.bg, color: palette.fg, padding: "1rem", maxWidth: 480, margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", background: palette.bg, color: palette.fg, padding: "2rem 3rem", maxWidth: 1280, margin: "0 auto" }}>
       {/* Inject keyframe animation */}
       <style dangerouslySetInnerHTML={{ __html: spinKeyframes }} />
 
@@ -523,49 +523,50 @@ export default function MePageContent() {
         </div>
       )}
 
-      {/* Current State Card */}
-      <CurrentStateCard state={currentState} baselineDosha={osProfile?.baseline_dosha} />
+      {/* Dashboard grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", alignItems: "start" }}>
+        {/* Row 1 */}
+        <CurrentStateCard state={currentState} baselineDosha={osProfile?.baseline_dosha} />
+        <UnderstandingCard details={memoryDetails} />
 
-      {/* Operating System Card */}
-      <OperatingSystemCard profile={osProfile} expanded={osExpanded} onToggle={() => setOsExpanded(!osExpanded)} />
+        {/* Row 2 */}
+        <OperatingSystemCard profile={osProfile} expanded={osExpanded} onToggle={() => setOsExpanded(!osExpanded)} />
+        <SoulStateCard soul={soulSummary} />
 
-      {/* Soul State Card */}
-      <SoulStateCard soul={soulSummary} />
+        {/* Row 3 */}
+        <WeeklyRhythmCard weekly={weeklyState} />
+        <ConnectionsCard
+          emailStatus={emailStatus}
+          connecting={emailConnecting}
+          onConnectGmail={handleConnectGmail}
+          onDisconnectGmail={handleDisconnectGmail}
+        />
 
-      {/* Understanding Depth Card */}
-      <UnderstandingCard details={memoryDetails} />
+        {/* Full-width: Recommendations */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <PersonalizedRecommendationsCard recommendations={recommendations} />
+        </div>
 
-      {/* Personalized Recommendations Card */}
-      <PersonalizedRecommendationsCard recommendations={recommendations} />
-
-      {/* Weekly Rhythm Card */}
-      <WeeklyRhythmCard weekly={weeklyState} />
-
-      {/* Email Digest Card */}
-      <EmailDigestCard
-        digest={emailDigest}
-        signals={emailSignals}
-        connected={emailStatus?.connected === true}
-        loading={digestLoading}
-        onRefresh={() => {
-          setDigestLoading(true);
-          fetch("/api/email/digest", { method: "POST" })
-            .then((res) => (res.ok ? res.json() : null))
-            .then((data) => {
-              if (data) setEmailDigest(data);
-            })
-            .catch(() => {})
-            .finally(() => setDigestLoading(false));
-        }}
-      />
-
-      {/* Connections Card */}
-      <ConnectionsCard
-        emailStatus={emailStatus}
-        connecting={emailConnecting}
-        onConnectGmail={handleConnectGmail}
-        onDisconnectGmail={handleDisconnectGmail}
-      />
+        {/* Full-width: Email Digest */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <EmailDigestCard
+            digest={emailDigest}
+            signals={emailSignals}
+            connected={emailStatus?.connected === true}
+            loading={digestLoading}
+            onRefresh={() => {
+              setDigestLoading(true);
+              fetch("/api/email/digest", { method: "POST" })
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  if (data) setEmailDigest(data);
+                })
+                .catch(() => {})
+                .finally(() => setDigestLoading(false));
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -1045,7 +1046,7 @@ function WeeklyRhythmCard({ weekly }: { weekly: WeeklyState | null }) {
 // ─────────────────────────────────────────────────────────────
 function Card({ title, icon, headerRight, children }: { title?: string; icon?: React.ReactNode; headerRight?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div style={{ background: palette.cardBg, borderRadius: 12, padding: "1rem", marginBottom: "1rem", border: `1px solid ${palette.border}` }}>
+    <div style={{ background: palette.cardBg, borderRadius: 12, padding: "1rem", border: `1px solid ${palette.border}`, height: "100%" }}>
       {title && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: palette.fg, fontWeight: 500 }}>

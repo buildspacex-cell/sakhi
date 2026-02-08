@@ -161,8 +161,17 @@ GET /email/signals/boundary?person_id=<uuid>
 
 ### Conversation Integration
 
+Email signals are wired into the conversation pipeline via the **OpenClaw approach** (context injection):
+
+- **Reactive email context**: When user asks about email/inbox, `get_email_context_for_conversation()` provides avoidance, boundary erosion, and cognitive load patterns directly in the LLM prompt
+- **Email friction contribution**: `get_email_friction_contribution()` silently feeds into the friction state computation on every turn, making Ayurvedic recommendations more accurate
+- **Causal reasoning**: `explain_friction_state()` explains WHY the user is in their current state, drawing from personal patterns, recent behaviors, and Ayurvedic knowledge
+- **Contact preferences**: `format_preferences_for_llm()` injects contact priorities into the conversation so Sakhi knows who matters to the user
+
+Modified files: `turn_v2.py` (signal gathering), `conversation_reasoner.py` (prompt composition)
+
 ```bash
-# Surfaceable insight (proactive mention)
+# Surfaceable insight (proactive mention — deferred)
 GET /email/insight?person_id=<uuid>
 
 # Context for conversation engine
@@ -356,22 +365,35 @@ The **EmailDigestCard** on the Me page shows:
 
 ## Privacy Design
 
-1. **Read-only scope**: Cannot send, modify, or delete emails
+1. **Minimal scopes**: `gmail.readonly` + `gmail.send` — cannot modify, delete, or manage labels
 2. **Metadata only**: Email bodies are never stored — fetched transiently for LLM analysis, then discarded
-3. **PII masking**: All email addresses replaced with `***@***` before LLM processing
-4. **Encrypted tokens**: OAuth tokens encrypted at rest (Fernet)
-5. **User control**: Disconnect deletes all email data
-6. **RLS enforced**: Users can only access their own data
+3. **Explicit send only**: Sakhi never auto-sends — every reply requires user confirmation (2-step: click → confirm)
+4. **PII masking**: All email addresses replaced with `***@***` before LLM processing
+5. **Encrypted tokens**: OAuth tokens encrypted at rest (Fernet)
+6. **User control**: Disconnect deletes all email data
+7. **RLS enforced**: Users can only access their own data
 
 ---
 
 ## Future Enhancements
 
-- [ ] Outlook/Microsoft 365 adapter
-- [ ] Email send capability (separate OAuth scope)
+- [x] Contact preferences & priority system (see [unified-messaging-strategy.md](./unified-messaging-strategy.md))
+- [ ] Outlook/Microsoft 365 adapter (MS Graph API)
+- [ ] Slack adapter
+- [ ] MS Teams adapter (shared MS Graph auth)
 - [ ] Smart unsubscribe suggestions
 - [ ] Email response time analysis
 - [ ] Sender relationship mapping
+- [ ] Attachment support in replies
+- [ ] CC/BCC on replies
+- [ ] Rich text / HTML replies
+- [ ] HTML body rendering in peek modal
+- [ ] Send rate limiting
+- [ ] Unit tests for send/peek endpoints
+- [x] Email send via Gmail API (read + send scopes)
+- [x] Email peek modal with transient body fetch
+- [x] 2-step send confirmation (click → confirm → send)
+- [x] "Open in Gmail" fallback link
 - [x] LLM-powered email digest with triage and draft replies
 - [x] Verification email + calendar invite filtering
 - [x] Time-aware triage (past deadlines → noise)
@@ -408,3 +430,4 @@ What needs per-channel work:
 - Pre-filters (verification emails are email-only; group chat noise is WhatsApp-only)
 
 See [BUILD_PLAN.md — Unified Messaging Pipeline](../BUILD_PLAN.md) for full architecture.
+See [unified-messaging-strategy.md](./unified-messaging-strategy.md) for integration approach analysis (API vs notification listener vs mobile agent) and the layered roadmap.

@@ -30,6 +30,12 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from sakhi.apps.api.services.email.adapters.gmail import GmailAdapter
+from sakhi.apps.api.services.email.contact_preferences import (
+    delete_preference,
+    get_preferences,
+    get_suggestions,
+    upsert_preference,
+)
 from sakhi.apps.api.services.email.digest import (
     dismiss_action_item,
     fetch_email_detail,
@@ -632,6 +638,82 @@ async def dismiss_action(
     """Dismiss an action item so it won't appear in future digests."""
     success = await dismiss_action_item(person_id, body.message_id)
     return {"dismissed": success, "message_id": body.message_id}
+
+
+# =============================================================================
+# Contact Preferences
+# =============================================================================
+
+
+class PreferenceRequest(BaseModel):
+    """Request to create or update a contact preference."""
+    contact_identifier: str
+    channel: str = "email"
+    display_name: Optional[str] = None
+    relationship: Optional[str] = None
+    organization: Optional[str] = None
+    priority: str = "normal"
+    notes: Optional[str] = None
+    learned_from: Optional[str] = "user_set"
+    confidence: Optional[float] = 1.0
+
+
+@router.get("/preferences")
+async def list_preferences(
+    person_id: str = Query(..., description="Person ID"),
+):
+    """List all contact preferences for the user, sorted by priority."""
+    prefs = await get_preferences(person_id)
+    return {"preferences": prefs}
+
+
+@router.put("/preferences")
+async def set_preference(
+    body: PreferenceRequest,
+    person_id: str = Query(..., description="Person ID"),
+):
+    """
+    Create or update a contact preference.
+
+    Upserts on (person_id, contact_identifier, channel).
+    """
+    if not body.contact_identifier.strip():
+        raise HTTPException(status_code=400, detail="contact_identifier is required")
+
+    valid_priorities = {"critical", "high", "normal", "low", "muted"}
+    if body.priority not in valid_priorities:
+        raise HTTPException(
+            status_code=400,
+            detail=f"priority must be one of: {', '.join(sorted(valid_priorities))}",
+        )
+
+    result = await upsert_preference(person_id, body.model_dump())
+    return result
+
+
+@router.delete("/preferences/{preference_id}")
+async def remove_preference(
+    preference_id: str,
+    person_id: str = Query(..., description="Person ID"),
+):
+    """Delete a contact preference."""
+    deleted = await delete_preference(preference_id, person_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Preference not found")
+    return {"deleted": True}
+
+
+@router.get("/preferences/suggestions")
+async def get_preference_suggestions(
+    person_id: str = Query(..., description="Person ID"),
+):
+    """
+    Get Sakhi's suggestions for contact priorities based on dismiss patterns.
+
+    Suggests muting senders whose emails the user has dismissed 3+ times.
+    """
+    suggestions = await get_suggestions(person_id)
+    return {"suggestions": suggestions}
 
 
 # =============================================================================

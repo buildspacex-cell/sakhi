@@ -54,6 +54,7 @@ from sakhi.apps.worker.tasks.intent_evolution_decay import intent_evolution_deca
 from sakhi.apps.worker.tasks.emotion_loop_refresh import emotion_loop_refresh
 from sakhi.apps.worker.tasks.forecast import run_forecast
 from sakhi.apps.worker.tasks.nudge_worker import run_nudge_check
+from sakhi.apps.worker.tasks.learning_jobs import run_mark_missed
 # ARCHIVED: alignment_refresh, narrative_arc_refresh, pattern_sense_refresh,
 # inner_dialogue_refresh, identity_drift_refresh, inner_conflict, coherence,
 # evening_closure_worker, morning_preview_worker, morning_ask_worker,
@@ -608,6 +609,7 @@ def schedule_forecast_jobs() -> None:
     if _should_run_hour(FORECAST_HOUR):
         _enqueue(_analytics_queue, run_forecast, user_id)
         _enqueue(_analytics_queue, run_nudge_check, user_id)
+        _enqueue(_learning_queue, run_mark_missed)
     # interval-based (every N hours) best-effort
     try:
         if FORECAST_INTERVAL_HOURS > 0 and (datetime.utcnow().hour % FORECAST_INTERVAL_HOURS) == 0:

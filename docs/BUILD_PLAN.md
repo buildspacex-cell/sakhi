@@ -902,6 +902,22 @@ Conversation                    Learning Pipeline
 | ⬜ | Unit Tests for Send/Peek | Test coverage for send_reply, fetch_email_detail | Mock Gmail API responses |
 | ⬜ | OAuth Scope Re-auth UX | Smooth upgrade flow when gmail.send scope added | Currently Google handles via re-consent prompt |
 
+**Unified Messaging Roadmap** (see [docs/features/unified-messaging-strategy.md](features/unified-messaging-strategy.md)):
+
+| Status | Layer | Item | Description | Effort |
+|--------|-------|------|-------------|--------|
+| ✅ | 1 | Contact Preferences | User-defined priorities: boss, family, muted senders. Injected into LLM prompt. | ~1 day |
+| ✅ | 1 | Contextual Learning | Auto-suggest muting senders dismissed 3+ times. Infer priority from reply speed. | ~1 day |
+| ⬜ | 2 | Outlook Adapter | MS Graph API adapter for O365/Outlook email | ~1 week |
+| ⬜ | 2 | Slack Adapter | Slack OAuth adapter for workspace messages | ~1 week |
+| ⬜ | 2 | Teams Adapter | MS Graph adapter (shares auth with Outlook) | ~1 week |
+| ⬜ | 3 | Share-to-Sakhi | iOS Share Extension + Android Share Target for WhatsApp/Telegram/SMS | ~3 days |
+| ⬜ | 4 | Desktop Agent Triage | Read WhatsApp Web, Telegram Web via screen capture for B2C users | ~2-3 weeks |
+| ⬜ | 5 | Sakhi Messaging + Mesh | Users message through Sakhi directly (natural pull from Layers 1-4) | TBD |
+| ⬜ | E | Enterprise Track | SSO, admin-consented OAuth, HR burnout dashboards | After B2C proven |
+
+**Strategy**: Solve incrementally. APIs for work channels (Gmail done, add Outlook/Slack/Teams). "Share with Sakhi" bridges WhatsApp/Telegram/SMS (cross-platform, no API needed). Desktop agent covers B2C power users (reads WhatsApp Web etc. via screen capture — no platform restrictions on personal computers). Each layer builds the habit that pulls users toward Sakhi messaging long-term. Enterprise track runs in parallel once B2C is proven (company deploys via MDM, admin OAuth covers entire org).
+
 ---
 
 ## PHASE F: Data Sovereignty (Week 11-12)
@@ -1430,7 +1446,7 @@ When deciding what to discuss:
 ```
 Phase J.1 → Schema + Registry + Loader (foundation)
 Phase J.2 → Email + Calendar + Memory skills (convert existing integration.py)
-Phase J.3 → Agent orchestration in conversation_v2 (replace hard-coded context injection)
+Phase J.3 → Agent orchestration in conversation_v2 (context router ✅, skill-based orchestration ⬜)
 Phase J.4 → User custom skills + marketplace (long-term)
 ```
 
