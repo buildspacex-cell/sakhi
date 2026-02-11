@@ -21,6 +21,10 @@ except Exception:
 REQUIRED_ENV_VARS = ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "OPENAI_API_KEY")
 _missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
 if _missing:
+    # Debug: show which env vars ARE set (names only, not values)
+    _all_keys = sorted(k for k in os.environ if k.startswith(("SUPABASE", "OPENAI", "DATABASE", "REDIS", "ENV")))
+    print(f"DEBUG env keys present: {_all_keys}")
+    print(f"DEBUG ENV={os.getenv('ENV')!r}, total env vars={len(os.environ)}")
     raise RuntimeError(f"Missing required env var(s): {', '.join(_missing)}")
 
 DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID") or os.getenv("DEMO_USER_ID")
