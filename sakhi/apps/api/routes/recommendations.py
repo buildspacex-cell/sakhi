@@ -7,6 +7,7 @@ powered by knowledge graph reasoning and personal pattern learning.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -82,7 +83,8 @@ async def get_current_recommendations(
     if not personal_model:
         raise HTTPException(status_code=404, detail="User profile not found")
 
-    operating_system = personal_model.get("operating_system") or {}
+    raw_os = personal_model.get("operating_system") or {}
+    operating_system = json.loads(raw_os) if isinstance(raw_os, str) else raw_os
 
     # Compute current state (Vikriti)
     vikriti = await compute_current_vikriti(person_id)
@@ -151,7 +153,8 @@ async def get_recommendations_with_preferences(
     if not personal_model:
         raise HTTPException(status_code=404, detail="User profile not found")
 
-    operating_system = personal_model.get("operating_system") or {}
+    raw_os = personal_model.get("operating_system") or {}
+    operating_system = json.loads(raw_os) if isinstance(raw_os, str) else raw_os
 
     # Compute current state
     vikriti = await compute_current_vikriti(person_id)

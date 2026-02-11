@@ -204,13 +204,13 @@ async def bm25_search_facts(
             SELECT
                 id,
                 ts_rank_cd(
-                    to_tsvector('english', COALESCE(key, '') || ' ' || COALESCE(value, '')),
+                    to_tsvector('english', COALESCE(key, '') || ' ' || COALESCE(value::text, '')),
                     plainto_tsquery('english', $2),
                     32
                 ) as rank
             FROM facts
             WHERE person_id = $1
-              AND to_tsvector('english', COALESCE(key, '') || ' ' || COALESCE(value, ''))
+              AND to_tsvector('english', COALESCE(key, '') || ' ' || COALESCE(value::text, ''))
                   @@ plainto_tsquery('english', $2)
             ORDER BY rank DESC
             LIMIT $3

@@ -14,6 +14,7 @@ Gathers:
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -157,7 +158,8 @@ async def get_constitution_context(person_id: str) -> ConstitutionContext:
     if not personal_model:
         return ConstitutionContext()
 
-    os_data = personal_model.get("operating_system") or {}
+    raw = personal_model.get("operating_system") or {}
+    os_data = json.loads(raw) if isinstance(raw, str) else raw
 
     # Extract dosha percentages
     doshas = os_data.get("doshas", {})
@@ -193,7 +195,8 @@ async def get_current_state_context(
             person_id,
             one=True,
         )
-        operating_system = (personal_model or {}).get("operating_system", {})
+        raw_os = (personal_model or {}).get("operating_system", {})
+        operating_system = json.loads(raw_os) if isinstance(raw_os, str) else raw_os
 
     # Compute current vikriti
     vikriti = await compute_current_vikriti(person_id)
