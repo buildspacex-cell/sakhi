@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from sakhi.apps.api.core.db import q
 
 
@@ -27,7 +29,7 @@ async def consolidate_person(pid: str) -> None:
             """,
             pid,
             tag,
-            {"count": count},
+            json.dumps({"count": count}),
         )
 
     if tag_counts.get("morning_focus", 0) >= 3:
