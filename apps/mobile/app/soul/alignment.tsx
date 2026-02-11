@@ -4,11 +4,13 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryPie, VictoryTheme } from "victory-native";
 
+const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 export default function SoulAlignmentScreen() {
   const [data, setData] = useState<any>({});
 
   useEffect(() => {
-    fetch("http://localhost:8000/soul/alignment/demo")
+    fetch(`${API}/soul/alignment/demo`)
       .then((r) => r.json())
       .then((d) => setData(d || {}))
       .catch(() => setData({}));

@@ -3,14 +3,16 @@ import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryBar, VictoryChart, VictoryTheme, VictoryAxis } from "victory-native";
 import { timelineSeries } from "../../lib/soulViewModel";
 
+const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 export default function SoulFrictionScreen() {
   const [friction, setFriction] = useState<string | null>(null);
   const [heat, setHeat] = useState<{ name: string; value: number }[]>([]);
 
   useEffect(() => {
     Promise.all([
-      fetch("http://localhost:8000/soul/summary/demo").then((r) => r.json()).catch(() => ({})),
-      fetch("http://localhost:8000/soul/timeline/demo").then((r) => r.json()).catch(() => []),
+      fetch(`${API}/soul/summary/demo`).then((r) => r.json()).catch(() => ({})),
+      fetch(`${API}/soul/timeline/demo`).then((r) => r.json()).catch(() => []),
     ]).then(([summary, tl]) => {
       setFriction(summary?.dominant_friction || null);
       const series = timelineSeries(tl || []);

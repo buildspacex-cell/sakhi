@@ -11,6 +11,7 @@ Prevents redundant questioning by checking memory before asking.
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -134,6 +135,8 @@ async def load_constitution_context(person_id: str) -> ConstitutionContext:
 
         if row and row.get("operating_system"):
             os_data = row["operating_system"]
+            if isinstance(os_data, str):
+                os_data = json.loads(os_data)
             if isinstance(os_data, dict):
                 ctx.operating_system = os_data.get("type")
                 ctx.dosha_baseline = os_data.get("dosha_baseline") or {}
@@ -149,7 +152,10 @@ async def load_constitution_context(person_id: str) -> ConstitutionContext:
                         ctx.dominant_dosha = "balanced"
 
         if row and row.get("life_context"):
-            ctx.life_context = row["life_context"] if isinstance(row["life_context"], dict) else {}
+            lc = row["life_context"]
+            if isinstance(lc, str):
+                lc = json.loads(lc)
+            ctx.life_context = lc if isinstance(lc, dict) else {}
 
     except Exception as e:
         logger.warning("[load_constitution_context] Error: %s", e)

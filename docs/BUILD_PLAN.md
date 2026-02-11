@@ -723,7 +723,7 @@ Conversation                    Learning Pipeline
 | ⬜ | Friction State | Chaos/Intensity/Stagnation view | `apps/mobile/components/FrictionState.tsx` | Shows current state + drift |
 | ⬜ | Recommendations | Personalized suggestions | `apps/mobile/components/Recommendations.tsx` | Food, activity, rest suggestions |
 | ✅ | Onboarding API | Phased onboarding endpoint | `sakhi/apps/api/routes/friction_framework.py` | `POST /onboarding/submit` with phase1/2a/2b/full |
-| ⬜ | Onboarding Flow | Prakruti assessment UI | `apps/mobile/screens/Onboarding.tsx` | 10-15 questions → constitution |
+| ✅ | Onboarding Flow | Phased onboarding UI (web + mobile) | `apps/web/app/experience/onboarding/page.tsx`, `apps/mobile/app/onboarding/index.tsx` | Phase 1 (3 Q → OS), Phase 2a (2 Q → refined OS), Phase 2b (8 Q → full OS with strengths/patterns) |
 | ⬜ | Energy Timeline | Daily energy pattern | `apps/mobile/components/EnergyTimeline.tsx` | Circadian rhythm awareness |
 
 **Test**: User completes onboarding → sees personalized dosha state → gets relevant recommendations.

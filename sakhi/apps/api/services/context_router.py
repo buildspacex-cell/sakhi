@@ -86,6 +86,11 @@ _BODY_KEYWORDS = [
     "exercise", "workout", "steps", "digestion", "body", "physical",
     "fatigue", "restless", "insomnia", "health", "resting heart",
     "weight", "muscle", "pain", "ache", "nausea",
+    # Health symptoms
+    "headache", "migraine", "dizzy", "dizziness", "fever", "sick",
+    "symptom", "stomach", "chest", "throat", "sore", "cramp",
+    "stiff", "tense", "tension", "inflammation", "swollen",
+    "burning", "throbbing", "numb", "cold", "hot",
 ]
 
 

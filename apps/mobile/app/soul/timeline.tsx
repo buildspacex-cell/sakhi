@@ -3,10 +3,12 @@ import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { timelineSeries } from "../../lib/soulViewModel";
 import { VictoryChart, VictoryLine, VictoryTheme, VictoryLegend } from "victory-native";
 
+const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 export default function SoulTimelineScreen() {
   const [series, setSeries] = useState<any[]>([]);
   useEffect(() => {
-    fetch("http://localhost:8000/soul/timeline/demo")
+    fetch(`${API}/soul/timeline/demo`)
       .then((r) => r.json())
       .then((data) => setSeries(timelineSeries(data || [])))
       .catch(() => setSeries([]));

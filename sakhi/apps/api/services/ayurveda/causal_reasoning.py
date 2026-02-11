@@ -97,6 +97,12 @@ SYMPTOM_DOSHA_MAP = {
     "indecisive": "vata",
     "cold": "vata",
     "fatigue": "vata",  # Can also be kapha
+    "dizzy": "vata",
+    "dizziness": "vata",
+    "numbness": "vata",
+    "cramp": "vata",
+    "stiff": "vata",
+    "tinnitus": "vata",
 
     # Pitta symptoms (fire/water - intensity, irritation)
     "irritable": "pitta",
@@ -112,6 +118,13 @@ SYMPTOM_DOSHA_MAP = {
     "perfectionist": "pitta",
     "intense": "pitta",
     "burnout": "pitta",
+    "headache": "pitta",
+    "migraine": "pitta",
+    "burning": "pitta",
+    "throbbing": "pitta",
+    "fever": "pitta",
+    "hot": "pitta",
+    "acid": "pitta",
 
     # Kapha symptoms (earth/water - stagnation, heaviness)
     "lethargic": "kapha",
@@ -126,6 +139,10 @@ SYMPTOM_DOSHA_MAP = {
     "stuck": "kapha",
     "resistant": "kapha",
     "foggy": "kapha",
+    "sinus": "kapha",
+    "swollen": "kapha",
+    "water_retention": "kapha",
+    "excess_mucus": "kapha",
 }
 
 

@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 
+const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 export default function SoulNarrativeScreen() {
   const [data, setData] = useState<any>({});
   useEffect(() => {
-    fetch("http://localhost:8000/soul/narrative/demo")
+    fetch(`${API}/soul/narrative/demo`)
       .then((r) => r.json())
       .then((d) => setData(d || {}))
       .catch(() => setData({}));

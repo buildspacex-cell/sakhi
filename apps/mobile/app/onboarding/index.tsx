@@ -11,9 +11,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useOnboarding, OnboardingResponse } from "../../hooks/useOnboarding";
+import { supabase } from "../../lib/supabase";
 
 // =============================================================================
 // TYPES
@@ -64,10 +67,9 @@ const SCREENS: Screen[] = [
   {
     id: "transition",
     title: "I will get to know you gently.",
-    body: "We will start with a few basics.\nThe rest unfolds through conversation, at your pace.\nYou can always skip, pause, or come back.",
+    body: "Just 3 things to start.\nThe rest unfolds through conversation, at your pace.",
     questions: [],
     isTransition: true,
-    skipAllowed: true,
   },
   {
     id: "clarity_time",
@@ -347,6 +349,36 @@ const REFINE_SCREENS: Screen[] = [
 ];
 
 // =============================================================================
+// OS FRAMEWORK CARDS (for "About your Personal OS" modal)
+// =============================================================================
+
+const OS_FRAMEWORK_CARDS = [
+  {
+    id: 1,
+    title: "Adaptive",
+    color: "#8b5cf6",
+    body: "Your capacity for creativity, flexibility, and quick thinking.\n\nHigh adaptive energy means you thrive on change, new ideas, and spontaneity.",
+    accent: "When overextended: scattered attention, restlessness, anxiety.",
+  },
+  {
+    id: 2,
+    title: "Performance",
+    color: "#f59e0b",
+    body: "Your drive, focus, and intensity.\n\nHigh performance energy means you pursue goals with precision and don\u2019t shy away from challenge.",
+    accent: "When overextended: irritability, perfectionism, burnout.",
+  },
+  {
+    id: 3,
+    title: "Conservation",
+    color: "#10b981",
+    body: "Your stability, patience, and endurance.\n\nHigh conservation energy means you bring grounding, loyalty, and steady follow-through.",
+    accent: "When overextended: stagnation, resistance to change, heaviness.",
+  },
+];
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+
+// =============================================================================
 // MIRROR SCREEN COMPONENT
 // =============================================================================
 
@@ -358,7 +390,16 @@ interface MirrorScreenProps {
 }
 
 function MirrorScreen({ osResult, loading, error, onContinue }: MirrorScreenProps) {
-  const [showDetails, setShowDetails] = useState(true);
+  const [showOSModal, setShowOSModal] = useState(false);
+  const [osModalCard, setOsModalCard] = useState(0);
+
+  const handleModalScroll = useCallback((event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SCREEN_WIDTH);
+    setOsModalCard(index);
+  }, []);
+
+  const isLastOSCard = osModalCard === OS_FRAMEWORK_CARDS.length - 1;
 
   // Show loading state while API is being called
   if (loading) {
@@ -447,42 +488,15 @@ function MirrorScreen({ osResult, loading, error, onContinue }: MirrorScreenProp
           </View>
         </View>
 
-        {/* Expand/Collapse Control */}
+        {/* About your OS link */}
         <Pressable
           style={mirrorStyles.toggleButton}
-          onPress={() => setShowDetails(!showDetails)}
+          onPress={() => { setShowOSModal(true); setOsModalCard(0); }}
         >
-          <Text style={mirrorStyles.toggleText}>
-            {showDetails ? "Hide details" : "Show details"} {showDetails ? "▲" : "▼"}
+          <Text style={[mirrorStyles.toggleText, { color: "#6366f1", textDecorationLine: "underline" }]}>
+            About your Personal OS
           </Text>
         </Pressable>
-
-        {/* Collapsible Cards */}
-        {showDetails && (
-          <>
-            {/* Strengths Card */}
-            <View style={mirrorStyles.card}>
-              <Text style={mirrorStyles.cardTitle}>Your Strengths</Text>
-              {displayResult.strengths.map((strength, index) => (
-                <View key={index} style={mirrorStyles.bulletRow}>
-                  <Text style={mirrorStyles.bullet}>•</Text>
-                  <Text style={mirrorStyles.bulletText}>{strength}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Patterns Card */}
-            <View style={mirrorStyles.card}>
-              <Text style={mirrorStyles.cardTitleWarning}>Patterns to Watch</Text>
-              {displayResult.patterns.map((pattern, index) => (
-                <View key={index} style={mirrorStyles.bulletRow}>
-                  <Text style={mirrorStyles.bullet}>•</Text>
-                  <Text style={mirrorStyles.bulletText}>{pattern}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
 
         {/* Soft Anchor Line */}
         <Text style={mirrorStyles.anchorLine}>
@@ -496,6 +510,80 @@ function MirrorScreen({ osResult, loading, error, onContinue }: MirrorScreenProp
           <Text style={mirrorStyles.ctaText}>Continue</Text>
         </Pressable>
       </View>
+
+      {/* OS Framework Modal */}
+      <Modal
+        visible={showOSModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowOSModal(false)}
+      >
+        <View style={osModalStyles.overlay}>
+          <SafeAreaView style={osModalStyles.container}>
+            {/* Close button */}
+            <Pressable
+              style={osModalStyles.closeButton}
+              onPress={() => setShowOSModal(false)}
+            >
+              <Text style={osModalStyles.closeText}>{"\u2715"}</Text>
+            </Pressable>
+
+            {/* Swipeable cards */}
+            <View style={osModalStyles.cardsWrapper}>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={handleModalScroll}
+                decelerationRate="fast"
+              >
+                {OS_FRAMEWORK_CARDS.map((card) => (
+                  <View key={card.id} style={osModalStyles.cardOuter}>
+                    <View style={osModalStyles.cardInner}>
+                      <View style={[osModalStyles.colorBar, { backgroundColor: card.color }]} />
+                      <Text style={osModalStyles.cardTitle}>{card.title}</Text>
+                      <Text style={osModalStyles.cardBody}>{card.body}</Text>
+                      <Text style={osModalStyles.cardAccent}>{card.accent}</Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Pagination dots */}
+            <View style={osModalStyles.pagination}>
+              {OS_FRAMEWORK_CARDS.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    osModalStyles.dot,
+                    osModalCard === index && osModalStyles.dotActive,
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Got it button */}
+            <Pressable
+              style={[
+                osModalStyles.gotItButton,
+                !isLastOSCard && osModalStyles.gotItButtonDisabled,
+              ]}
+              onPress={() => setShowOSModal(false)}
+              disabled={!isLastOSCard}
+            >
+              <Text
+                style={[
+                  osModalStyles.gotItText,
+                  !isLastOSCard && osModalStyles.gotItTextDisabled,
+                ]}
+              >
+                {isLastOSCard ? "Got it" : "Swipe to continue"}
+              </Text>
+            </Pressable>
+          </SafeAreaView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -698,6 +786,121 @@ const mirrorStyles = StyleSheet.create({
 });
 
 // =============================================================================
+// OS FRAMEWORK MODAL STYLES
+// =============================================================================
+
+const osModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.96)",
+  },
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeText: {
+    fontSize: 20,
+    color: "#52525b",
+  },
+  cardsWrapper: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  cardOuter: {
+    width: SCREEN_WIDTH,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 36,
+  },
+  cardInner: {
+    alignItems: "center",
+    paddingVertical: 48,
+    maxWidth: 560,
+  },
+  colorBar: {
+    width: 48,
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 28,
+  },
+  cardTitle: {
+    fontSize: 26,
+    fontWeight: "500",
+    color: "#ffffff",
+    textAlign: "center",
+    lineHeight: 36,
+    marginBottom: 28,
+    letterSpacing: -0.5,
+  },
+  cardBody: {
+    fontSize: 16,
+    color: "#a1a1aa",
+    textAlign: "center",
+    lineHeight: 26,
+    marginBottom: 36,
+  },
+  cardAccent: {
+    fontSize: 14,
+    color: "#71717a",
+    textAlign: "center",
+    fontStyle: "italic",
+    lineHeight: 22,
+  },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 32,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#27272a",
+  },
+  dotActive: {
+    backgroundColor: "#6366f1",
+    width: 28,
+  },
+  gotItButton: {
+    backgroundColor: "#18191d",
+    paddingVertical: 18,
+    paddingHorizontal: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#27272a",
+    minWidth: 220,
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  gotItButtonDisabled: {
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+  },
+  gotItText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#f4f4f5",
+  },
+  gotItTextDisabled: {
+    color: "#52525b",
+    fontSize: 13,
+  },
+});
+
+// =============================================================================
 // FOLLOW-UP SCREEN COMPONENT
 // =============================================================================
 
@@ -720,7 +923,7 @@ function FollowUpScreen({ onStartConversation, onRefine }: FollowUpScreenProps) 
 
         {/* Body Copy - more compact */}
         <Text style={followUpStyles.body}>
-          This snapshot is based on a few early signals. Sakhi learns best over time — from conversation, choices, and patterns you share.
+          This snapshot is based on a few early signals. Sakhi learns best over time, from conversation, choices, and patterns you share.
         </Text>
         <Text style={followUpStyles.bodySecondary}>
           You're always in control of how this evolves.
@@ -737,17 +940,17 @@ function FollowUpScreen({ onStartConversation, onRefine }: FollowUpScreenProps) 
         <View style={followUpStyles.actionsAwareness}>
           <Text style={followUpStyles.actionsLabel}>Along the way</Text>
           <Text style={followUpStyles.actionsBody}>
-            Sakhi can also help with outside friction — making sense of things, or taking small things off your plate.
+            Sakhi can also help with outside friction: making sense of things, or taking small things off your plate.
           </Text>
         </View>
 
         {/* CTA Stack - inside scroll for better layout */}
         <View style={followUpStyles.ctaSection}>
-          <Pressable style={followUpStyles.primaryButton} onPress={onStartConversation}>
-            <Text style={followUpStyles.primaryButtonText}>Start a conversation</Text>
+          <Pressable style={followUpStyles.primaryButton} onPress={onRefine}>
+            <Text style={followUpStyles.primaryButtonText}>Refine this now</Text>
           </Pressable>
-          <Pressable style={followUpStyles.secondaryButton} onPress={onRefine}>
-            <Text style={followUpStyles.secondaryButtonText}>Refine this now</Text>
+          <Pressable style={followUpStyles.secondaryButton} onPress={onStartConversation}>
+            <Text style={followUpStyles.secondaryButtonText}>Start a conversation</Text>
           </Pressable>
         </View>
 
@@ -975,6 +1178,9 @@ function IntermediateOSScreen({ osResult, loading, error, onRefineMore, onStartC
         {/* Progress note */}
         <Text style={intermediateStyles.progressNote}>
           A few more questions will sharpen this picture.
+        </Text>
+        <Text style={[intermediateStyles.progressNote, { color: "#6366f1", fontStyle: "italic", marginBottom: 28 }]}>
+          Refine further to see your strengths and patterns.
         </Text>
 
         {/* CTA Stack */}
@@ -1228,6 +1434,28 @@ function FinalOSScreen({ osResult, loading, error, onStartConversation }: FinalO
             </View>
             <Text style={finalStyles.barValue}>{displayResult.conservation}%</Text>
           </View>
+        </View>
+
+        {/* Strengths Card */}
+        <View style={{ backgroundColor: "#18191d", borderRadius: 18, padding: 22, marginBottom: 18, borderWidth: 1, borderColor: "#27272a" }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#f4f4f5", marginBottom: 18 }}>Your Strengths</Text>
+          {osResult.os_details.strengths.map((s: string, i: number) => (
+            <View key={i} style={{ flexDirection: "row", marginBottom: 12 }}>
+              <Text style={{ color: "#6366f1", marginRight: 12, marginTop: 2 }}>•</Text>
+              <Text style={{ fontSize: 14, color: "#a1a1aa", flex: 1, lineHeight: 20 }}>{s}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Patterns Card */}
+        <View style={{ backgroundColor: "#18191d", borderRadius: 18, padding: 22, marginBottom: 28, borderWidth: 1, borderColor: "#27272a" }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#f4f4f5", marginBottom: 18 }}>Patterns to Watch</Text>
+          {osResult.os_details.patterns_to_watch.map((p: string, i: number) => (
+            <View key={i} style={{ flexDirection: "row", marginBottom: 12 }}>
+              <Text style={{ color: "#6366f1", marginRight: 12, marginTop: 2 }}>•</Text>
+              <Text style={{ fontSize: 14, color: "#a1a1aa", flex: 1, lineHeight: 20 }}>{p}</Text>
+            </View>
+          ))}
         </View>
 
         {/* Message */}
@@ -1528,8 +1756,21 @@ export default function OnboardingScreen() {
   }, []);
 
   const handleStartConversation = useCallback(() => {
+    // Save preferred name if entered (fire and forget)
+    const name = answers.preferred_name;
+    if (typeof name === "string" && name.trim()) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.id) {
+          supabase
+            .from("auth_users")
+            .update({ full_name: name.trim() })
+            .eq("supabase_user_id", user.id)
+            .then(() => {}); // best effort
+        }
+      }).catch(() => {}); // don't block navigation
+    }
     router.replace("/voice" as never);
-  }, [router]);
+  }, [router, answers]);
 
   const handleRefine = useCallback(() => {
     setRefineMode(true);

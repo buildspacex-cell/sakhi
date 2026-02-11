@@ -65,7 +65,8 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Define protected routes that require authentication
-  const protectedRoutes = ["/experience"];
+  // Note: /experience itself is the public welcome screen; only sub-routes are protected
+  const protectedRoutes = ["/experience/onboarding", "/experience/converse"];
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
@@ -84,10 +85,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If already authenticated and trying to access login, redirect to experience
+  // If already authenticated and trying to access login, honour the redirect param
   if (isAuthRoute && user && request.nextUrl.pathname === "/auth/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/experience";
+    const redirectParam = request.nextUrl.searchParams.get("redirect");
+    if (redirectParam && redirectParam.startsWith("/")) {
+      url.pathname = redirectParam;
+    } else {
+      url.pathname = "/experience";
+    }
+    // Clear leftover search params so ?redirect= doesn't bleed through
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

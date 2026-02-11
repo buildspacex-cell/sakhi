@@ -3,12 +3,14 @@ import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryPie, VictoryTheme, VictoryLegend } from "victory-native";
 import { summarizeSoul, normalizeSoulState } from "../../lib/soulViewModel";
 
+const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 export default function SoulShadowScreen() {
   const [summary, setSummary] = useState<any>({});
   useEffect(() => {
     Promise.all([
-      fetch("http://localhost:8000/soul/state/demo").then((r) => r.json()).catch(() => ({})),
-      fetch("http://localhost:8000/soul/summary/demo").then((r) => r.json()).catch(() => ({})),
+      fetch(`${API}/soul/state/demo`).then((r) => r.json()).catch(() => ({})),
+      fetch(`${API}/soul/summary/demo`).then((r) => r.json()).catch(() => ({})),
     ]).then(([state, sum]) => setSummary(summarizeSoul(normalizeSoulState(state || {}), sum || {})));
   }, []);
 

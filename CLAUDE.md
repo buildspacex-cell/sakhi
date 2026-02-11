@@ -260,6 +260,13 @@ const response = await fetch(`${getApiBase()}/endpoint`);
 - Tailwind CSS with custom brand colors (indigo palette)
 - Dark mode supported via `dark:` classes
 
+### Mobile / Web Parity
+- **The flow (screens, questions, logic) must be identical** between `apps/mobile/` and `apps/web/`. The mobile app is the source of truth for flow design.
+- **The visual design must be appropriate to each form factor.** Do NOT just copy mobile styles to web. Web pages should be responsive and work on all browsers and screen sizes (desktop, tablet, mobile-width browsers).
+- **Web layout pattern**: Center content in a max-width column (`maxWidth: 560px`, `margin: 0 auto`). Buttons, inputs, and footers live inside this column — never in a separate full-width bar.
+- **Responsive by default**: Use `width: 100%` with `maxWidth` constraints so layouts naturally adapt to narrow viewports without media queries.
+- When building or modifying any experience flow, always reference the mobile app for the canonical flow and question data, then adapt the presentation for web.
+
 ---
 
 ## Voice Integration
@@ -578,6 +585,27 @@ When the user says these phrases, immediately perform the corresponding action:
 | **"test this"** | Run relevant tests for the files we just modified |
 | **"deploy check"** | Run `make ready-to-commit` to catch all deploy issues |
 | **"update memory"** | Update `.claude/MEMORY.md` with new learnings from this session |
+| **"reset onboarding \<user_id\>"** | Reset onboarding for a user (see instructions below) |
+
+### Reset Onboarding
+
+When the user says **"reset onboarding"** with a user ID, run these SQL commands:
+
+```bash
+export $(grep -v '^#' /Users/fanantics/Documents/Sakhi/.env | grep DATABASE_URL | xargs) && \
+/opt/homebrew/Cellar/libpq/18.1/bin/psql "$(echo $DATABASE_URL | sed 's/\?.*//')" -c "
+  UPDATE auth_users SET onboarding_completed_at = NULL, onboarding_phase = NULL WHERE id = '<USER_ID>';
+  DELETE FROM personal_model WHERE person_id = '<USER_ID>';
+  DELETE FROM auth.sessions WHERE user_id = (SELECT supabase_user_id FROM auth_users WHERE id = '<USER_ID>');
+"
+```
+
+This clears:
+1. `auth_users.onboarding_completed_at` and `onboarding_phase` → app treats them as new user
+2. `personal_model` row → onboarding computes a fresh Operating System
+3. `auth.sessions` → signs the user out so they must log in again (full fresh flow)
+
+There is also a full data reset endpoint at `POST /dev/reset-user-data` (body: `{"person_id": "<USER_ID>"}`) that clears ALL user data across 30+ tables. Only use this for a complete wipe.
 
 ### Session Memory Files
 

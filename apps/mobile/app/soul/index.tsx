@@ -3,6 +3,8 @@ import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { normalizeSoulState, summarizeSoul } from "../../lib/soulViewModel";
 import { VictoryPie, VictoryTheme } from "victory-native";
 
+const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 export default function SoulHomeScreen() {
   const [state, setState] = useState<any>({});
   const [summary, setSummary] = useState<any>({});
@@ -10,8 +12,8 @@ export default function SoulHomeScreen() {
   useEffect(() => {
     const fetchData = async () => {
       const [s, sm] = await Promise.all([
-        fetch("http://localhost:8000/soul/state/demo").then((r) => r.json()).catch(() => ({})),
-        fetch("http://localhost:8000/soul/summary/demo").then((r) => r.json()).catch(() => ({})),
+        fetch(`${API}/soul/state/demo`).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API}/soul/summary/demo`).then((r) => r.json()).catch(() => ({})),
       ]);
       setState(normalizeSoulState(s || {}));
       setSummary(summarizeSoul(normalizeSoulState(s || {}), sm || {}));

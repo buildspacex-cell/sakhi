@@ -3,10 +3,12 @@ import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryPie, VictoryTheme, VictoryBar, VictoryChart, VictoryAxis } from "victory-native";
 import { normalizeSoulState } from "../../lib/soulViewModel";
 
+const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
 export default function SoulValuesScreen() {
   const [state, setState] = useState<any>({});
   useEffect(() => {
-    fetch("http://localhost:8000/soul/state/demo")
+    fetch(`${API}/soul/state/demo`)
       .then((r) => r.json())
       .then((data) => setState(normalizeSoulState(data || {})))
       .catch(() => setState({}));

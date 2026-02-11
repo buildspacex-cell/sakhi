@@ -46,7 +46,11 @@ async def generate_reply(
     if behavior_profile:
         metadata_payload["behavior_profile"] = behavior_profile
 
-    context = await build_conversation_context(person_id)
+    try:
+        context = await build_conversation_context(person_id)
+    except Exception as ctx_exc:
+        logger.warning("[generate_reply] build_conversation_context failed for %s: %s", person_id, ctx_exc)
+        context = {}
     tone = decide_tone(context, behavior_profile)
     rhythm_trigger = metadata_payload.get("rhythm_triggers") or {}
     meta_trigger = metadata_payload.get("meta_reflection_triggers") or {}
@@ -118,8 +122,16 @@ async def generate_reply(
 
     # Build prompts
     base_prompt = build_prompt(user_text, context, tone, metadata=metadata_payload)
-    recall_ctx = await build_recall_context(person_id, user_text)
-    pattern_ctx = await build_patterns_context(person_id)
+    try:
+        recall_ctx = await build_recall_context(person_id, user_text)
+    except Exception as recall_exc:
+        logger.warning("[generate_reply] build_recall_context failed for %s: %s", person_id, recall_exc)
+        recall_ctx = ""
+    try:
+        pattern_ctx = await build_patterns_context(person_id)
+    except Exception as pat_exc:
+        logger.warning("[generate_reply] build_patterns_context failed for %s: %s", person_id, pat_exc)
+        pattern_ctx = ""
     system_ctx = f"{recall_ctx}\n\nPatterns:\n{pattern_ctx}"
 
     # Build message history for LLM context continuity
@@ -177,42 +189,48 @@ Use this context to understand references in the recent conversation:
     reply = response if isinstance(response, str) else (response.get("text") or "")
     reply = reply.strip()
 
-    await dbexec(
-        """
-        UPDATE session_continuity
-        SET last_interaction_ts = NOW()
-        WHERE person_id = $1
-        """,
-        person_id,
-    )
-
-    if reply:
+    try:
         await dbexec(
             """
-            UPDATE personal_model
-            SET short_term = jsonb_set(
-                normalized_short_term,
-                '{texts}',
-                COALESCE(normalized_short_term->'texts','[]'::jsonb) || to_jsonb($2::text),
-                true
-            ),
-            updated_at = NOW()
-            FROM (
-                SELECT
-                    CASE
-                        WHEN jsonb_typeof(COALESCE(short_term, '{}'::jsonb)) = 'object'
-                            THEN COALESCE(short_term, '{}'::jsonb)
-                        ELSE '{}'::jsonb
-                    END AS normalized_short_term
-                FROM personal_model
-                WHERE person_id = $1
-                FOR UPDATE
-            ) AS st
+            UPDATE session_continuity
+            SET last_interaction_ts = NOW()
             WHERE person_id = $1
             """,
             person_id,
-            reply,
         )
+    except Exception:
+        pass  # best effort — row may not exist for new users
+
+    if reply:
+        try:
+            await dbexec(
+                """
+                UPDATE personal_model
+                SET short_term = jsonb_set(
+                    normalized_short_term,
+                    '{texts}',
+                    COALESCE(normalized_short_term->'texts','[]'::jsonb) || to_jsonb($2::text),
+                    true
+                ),
+                updated_at = NOW()
+                FROM (
+                    SELECT
+                        CASE
+                            WHEN jsonb_typeof(COALESCE(short_term, '{}'::jsonb)) = 'object'
+                                THEN COALESCE(short_term, '{}'::jsonb)
+                            ELSE '{}'::jsonb
+                        END AS normalized_short_term
+                    FROM personal_model
+                    WHERE person_id = $1
+                    FOR UPDATE
+                ) AS st
+                WHERE person_id = $1
+                """,
+                person_id,
+                reply,
+            )
+        except Exception as st_exc:
+            logger.warning("[generate_reply] short_term update failed for %s: %s", person_id, st_exc)
 
     response_payload: Dict[str, Any] = {
         "reply": reply,

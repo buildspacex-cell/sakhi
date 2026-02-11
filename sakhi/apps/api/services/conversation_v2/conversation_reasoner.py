@@ -545,6 +545,33 @@ def build_prompt(
         "meta_reflection_trigger": metadata_payload.get("meta_reflection_triggers"),
         "behavior_profile": behavior_profile,
     }
+    # --- Operating System / Constitution Section ---
+    os_type = metadata_payload.get("operating_system") or ""  # plain string e.g. "Conservation"
+    dosha_baseline = metadata_payload.get("dosha_baseline") or {}
+
+    os_section = ""
+    if os_type and isinstance(os_type, str):
+        from sakhi.apps.api.routes.friction_framework import OS_TYPE_DEFINITIONS
+        os_def = OS_TYPE_DEFINITIONS.get(os_type, OS_TYPE_DEFINITIONS.get("Balanced", {}))
+
+        dosha_parts = []
+        for d in ["vata", "pitta", "kapha"]:
+            pct = dosha_baseline.get(d, 0) if isinstance(dosha_baseline, dict) else 0
+            if pct:
+                dosha_parts.append(f"{d.title()}: {pct:.0f}%")
+        dosha_str = ", ".join(dosha_parts) if dosha_parts else "not yet calibrated"
+
+        os_section = (
+            f"\nUser's Operating System: {os_type}\n"
+            f"Description: {os_def.get('description', '')}\n"
+            f"Constitution baseline: {dosha_str}\n"
+            f"Strengths: {', '.join(os_def.get('strengths', []))}\n"
+            f"Vulnerabilities: {', '.join(os_def.get('vulnerabilities', []))}\n"
+            "Guidance: Use this constitutional understanding to personalize your response. "
+            "Connect symptoms and patterns to their OS type naturally — don't lecture about doshas, "
+            "but let this inform what you suggest and how you frame things.\n"
+        )
+
     journaling_ai = context.get("journaling_ai")
     journal_section = ""
     if journaling_ai:
@@ -825,6 +852,7 @@ Behavior cues:
 {recommendation_section}
 {scheduling_section}
 {context_scan}
+{os_section}
 {tier2_sections}
 {email_section}
 {causal_section}
