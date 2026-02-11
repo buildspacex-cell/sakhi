@@ -59,6 +59,29 @@ OPERATING_SYSTEM_DESCRIPTIONS = {
     },
 }
 
+# Aliases: onboarding uses these shorter names
+OPERATING_SYSTEM_DESCRIPTIONS["Adaptive"] = OPERATING_SYSTEM_DESCRIPTIONS["Adaptive-Flow"]
+OPERATING_SYSTEM_DESCRIPTIONS["Performance"] = OPERATING_SYSTEM_DESCRIPTIONS["Adaptive-Performance"]
+OPERATING_SYSTEM_DESCRIPTIONS["Conservation"] = OPERATING_SYSTEM_DESCRIPTIONS["Adaptive-Endurance"]
+
+# Dual types
+OPERATING_SYSTEM_DESCRIPTIONS["Adaptive-Conservation"] = {
+    "name": "Creative-Steady",
+    "short": "imaginative with endurance",
+    "description": "You blend creativity with stamina. You get excited by new ideas but also have the patience to see things through. Balance quick thinking with steady follow-through.",
+    "strengths": ["creative endurance", "adaptability", "patience with novelty"],
+    "watch_for": ["scattered energy vs stagnation swings", "difficulty prioritizing"],
+    "thrives_with": ["structured creativity", "gentle routine", "movement"],
+}
+OPERATING_SYSTEM_DESCRIPTIONS["Performance-Conservation"] = {
+    "name": "Driven-Steady",
+    "short": "focused with endurance",
+    "description": "You combine drive with stamina. You pursue goals with determination and have the patience to see them through. Balance intensity with rest.",
+    "strengths": ["focused endurance", "leadership", "consistency"],
+    "watch_for": ["overwork combined with resistance to change", "stubbornness"],
+    "thrives_with": ["variety in routine", "cooling activities", "playfulness"],
+}
+
 # Fallback for unknown types
 DEFAULT_OPERATING_SYSTEM = {
     "name": "You",
@@ -285,10 +308,16 @@ class JargonFreeContext:
     what_helps_now: str = ""
     body_signals_to_watch: str = ""
 
-    # Recommendations (translated)
+    # Recommendations (translated from friction state)
     foods_translated: List[Dict[str, str]] = None
     practices_translated: List[Dict[str, str]] = None
     immediate_actions: List[Dict[str, str]] = None
+
+    # Symptom-specific (OS-aware, 1-2 recs — takes priority when present)
+    symptom_insight: str = ""
+    symptom_best_food: Optional[Dict[str, str]] = None
+    symptom_best_practice: Optional[Dict[str, str]] = None
+    symptom_avoid: str = ""
 
 
 def build_jargon_free_context(
@@ -298,6 +327,7 @@ def build_jargon_free_context(
     drift_percentage: float,
     energy_mode: str,
     recommendations: Optional[Dict[str, Any]] = None,
+    symptom_protocol: Optional[Dict[str, Any]] = None,
 ) -> JargonFreeContext:
     """
     Build complete jargon-free context from all signals.
@@ -340,6 +370,13 @@ def build_jargon_free_context(
         ctx.foods_translated = []
         ctx.practices_translated = []
         ctx.immediate_actions = []
+
+    # Symptom-specific protocol (OS-aware, takes priority over friction-based)
+    if symptom_protocol:
+        ctx.symptom_insight = symptom_protocol.get("insight", "")
+        ctx.symptom_best_food = symptom_protocol.get("best_food")
+        ctx.symptom_best_practice = symptom_protocol.get("best_practice")
+        ctx.symptom_avoid = symptom_protocol.get("avoid", "")
 
     return ctx
 
@@ -394,6 +431,48 @@ def _translate_immediate(actions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
             "why": why,
         })
     return translated
+
+
+# =============================================================================
+# KNOWLEDGE GRAPH → PLAIN ENGLISH TRANSLATORS
+# =============================================================================
+
+# Dosha-specific "why" for food recommendations (jargon-free)
+DOSHA_FOOD_WHY = {
+    "kapha": "helps cut through heaviness naturally",
+    "pitta": "cools and settles your system from inside",
+    "vata": "warms and grounds your system",
+}
+
+
+def translate_graph_food(food: Dict[str, Any], dosha: str) -> Dict[str, str]:
+    """Translate a knowledge graph food to plain English recommendation."""
+    name = food.get("display_name") or food.get("name", "").replace("_", " ").title()
+    for sanskrit, english in PRACTICE_TRANSLATIONS.items():
+        name = name.replace(sanskrit, english)
+    why = DOSHA_FOOD_WHY.get(dosha, "good for you right now")
+    return {"what": name.lower(), "why": why}
+
+
+def translate_graph_practice(practice: Dict[str, Any]) -> Dict[str, str]:
+    """Translate a knowledge graph practice to plain English recommendation."""
+    name = translate_practice_name(
+        practice.get("display_name") or practice.get("name", "")
+    )
+    benefits = practice.get("benefits", [])
+    why = benefits[0] if benefits else "helps bring your system back to balance"
+    return {"what": name.lower(), "why": why}
+
+
+def translate_graph_avoid(foods: List[Dict[str, Any]]) -> str:
+    """Translate aggravating foods to a plain English 'avoid' string."""
+    if not foods:
+        return ""
+    names = []
+    for f in foods[:3]:
+        name = f.get("display_name") or f.get("name", "").replace("_", " ")
+        names.append(name.lower())
+    return ", ".join(names) + " — they can make things worse right now"
 
 
 def build_jargon_free_prompt_section(ctx: JargonFreeContext) -> str:

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import type React from "react";
 import type { Route } from "next";
 import DebugPanel from "./DebugPanel";
@@ -669,6 +670,12 @@ function ConverseContent() {
     [router, authUser?.person_id]
   );
 
+  const handleSignOut = useCallback(async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/experience" as Route);
+  }, [router]);
+
   // Get greeting based on time
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -684,12 +691,13 @@ function ConverseContent() {
   // =============================================================================
 
   const containerStyle: React.CSSProperties = {
-    minHeight: "100vh",
+    height: "100vh",
     background: palette.bg,
     color: palette.fg,
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif',
     display: "flex",
     flexDirection: "column",
+    overflow: "hidden",
   };
 
   const headerStyle: React.CSSProperties = {
@@ -890,7 +898,7 @@ function ConverseContent() {
   // FAB styles
   const fabContainerStyle: React.CSSProperties = {
     position: "fixed",
-    bottom: "140px",
+    bottom: "200px",
     right: "24px",
     zIndex: 100,
     display: "flex",
@@ -962,7 +970,23 @@ function ConverseContent() {
       <header style={headerStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={brandStyle}>Sakhi</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={brandStyle}>Sakhi</div>
+              <button
+                onClick={handleSignOut}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: palette.muted,
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  padding: "2px 0",
+                  opacity: 0.6,
+                }}
+              >
+                Sign out
+              </button>
+            </div>
             <div style={greetingStyle}>
               {getGreeting()}
               {displayName && `, ${displayName}`}
@@ -1477,6 +1501,7 @@ function ConverseContent() {
         data={lastResponseDebug || {}}
         isOpen={showDebug}
         onClose={() => setShowDebug(false)}
+        personId={authUser?.person_id}
       />
     </div>
   );

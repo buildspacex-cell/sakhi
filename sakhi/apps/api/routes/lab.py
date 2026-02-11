@@ -2474,3 +2474,73 @@ async def test_suppression(request: SuppressionTestRequest):
         "tested_at": decision.checked_at.isoformat(),
         "demo_user_id": demo_user_id,
     }
+
+
+# ---------------------------------------------------------------------------
+# Prompt Playground — replay a turn with an edited prompt (no side effects)
+# ---------------------------------------------------------------------------
+
+class ReplayPromptRequest(BaseModel):
+    person_id: str
+    edited_prompt: str
+    system_context: str = ""
+    user_text: str
+    conversation_history: List[Dict[str, Any]] = []
+    session_summary: str = ""
+    model: Optional[str] = None
+
+
+@router.post("/replay-prompt")
+async def lab_replay_prompt(body: ReplayPromptRequest):
+    """Re-run a conversation turn with an edited prompt. Read-only — no DB writes."""
+    if not body.person_id:
+        raise HTTPException(status_code=400, detail="person_id required")
+    if not body.edited_prompt:
+        raise HTTPException(status_code=400, detail="edited_prompt required")
+
+    # Build messages array mirroring conversation_engine.py:141-181
+    messages: List[Dict[str, str]] = []
+
+    if body.system_context:
+        messages.append({"role": "system", "content": body.system_context})
+
+    messages.append({"role": "system", "content": body.edited_prompt})
+
+    if body.session_summary:
+        context_instruction = (
+            "[Earlier Conversation Context]\n"
+            "Use this context to understand references in the recent conversation:\n"
+            "- When user says \"she/he/they\", refer to People & Relationships\n"
+            "- When user says \"it/that/the project\", refer to Topics & References\n"
+            "- Be aware of the Emotional Thread and Open Threads\n\n"
+        )
+        messages.append({"role": "system", "content": context_instruction + body.session_summary})
+
+    for turn in body.conversation_history:
+        role = turn.get("role", "user")
+        text = turn.get("text") or turn.get("content", "")
+        if text:
+            llm_role = "assistant" if role in ("sakhi", "assistant") else "user"
+            messages.append({"role": llm_role, "content": text})
+
+    messages.append({"role": "user", "content": body.user_text})
+
+    model_name = body.model or os.getenv("MODEL_CONVERSATION", "gpt-4o-mini")
+
+    try:
+        response = await call_llm(
+            messages=messages,
+            person_id=body.person_id,
+            model=model_name,
+        )
+        reply = response if isinstance(response, str) else (response.get("text") or "")
+        reply = reply.strip()
+    except Exception as exc:
+        logger.exception("[replay-prompt] LLM call failed: %s", exc)
+        raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}")
+
+    return {
+        "replay_reply": reply,
+        "model": model_name,
+        "prompt_char_count": len(body.edited_prompt),
+    }

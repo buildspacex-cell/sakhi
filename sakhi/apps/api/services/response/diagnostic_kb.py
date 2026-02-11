@@ -835,6 +835,188 @@ def get_symptom_from_sense(sense: SenseFrame) -> str:
     return domain_defaults.get(sense.domain, "general")
 
 
+# =============================================================================
+# SYMPTOM MATCHING + OS-DOSHA INSIGHT TEMPLATES
+# =============================================================================
+# Foods/practices/avoids come from the knowledge graph (ay_nodes/ay_edges).
+# OS insight templates explain WHY a dosha-type symptom makes sense for this
+# person's OS type. 12 templates (3 doshas × 4 OS types) — zero jargon.
+
+# Fuzzy match aliases → canonical symptom key
+_SYMPTOM_ALIASES = {
+    # Congestion
+    "congestion": "congestion", "nose block": "congestion", "blocked nose": "congestion",
+    "stuffy nose": "congestion", "nasal": "congestion", "sinus": "congestion",
+    "runny nose": "congestion", "mucus": "congestion",
+    # Headache
+    "headache": "headache", "head pain": "headache", "head ache": "headache",
+    "throbbing head": "headache",
+    # Migraine
+    "migraine": "migraine",
+    # Fatigue
+    "fatigue": "fatigue", "tired": "fatigue", "exhausted": "fatigue",
+    "exhaustion": "fatigue", "no energy": "fatigue", "low energy": "fatigue",
+    "drained": "fatigue", "lethargic": "fatigue",
+    # Insomnia
+    "insomnia": "insomnia", "can't sleep": "insomnia", "sleepless": "insomnia",
+    "trouble sleeping": "insomnia", "sleep issues": "insomnia",
+    "not sleeping": "insomnia", "restless sleep": "insomnia",
+    # Acidity
+    "acidity": "acidity", "heartburn": "acidity", "acid reflux": "acidity",
+    "burning stomach": "acidity", "acid": "acidity",
+    # Bloating
+    "bloating": "bloating", "bloated": "bloating", "gas": "bloating",
+    "gassy": "bloating", "stomach bloat": "bloating",
+    # Constipation
+    "constipation": "constipation", "constipated": "constipation",
+    # Anxiety
+    "anxiety": "anxiety", "anxious": "anxiety", "panic": "anxiety",
+    "worried": "anxiety", "racing thoughts": "anxiety", "nervous": "anxiety",
+    # Stress
+    "stress": "stress", "stressed": "stress", "overwhelmed": "stress",
+    "burnout": "stress", "overloaded": "stress",
+    # Body pain
+    "body_pain": "body_pain", "body pain": "body_pain", "aches": "body_pain",
+    "pain": "body_pain", "stiff": "body_pain", "stiffness": "body_pain",
+    "sore body": "body_pain", "muscle pain": "body_pain",
+    # Cold
+    "cold": "cold", "common cold": "cold", "flu": "cold",
+    "chills": "cold", "sneezing": "cold",
+    # Fever
+    "fever": "fever", "temperature": "fever", "hot": "fever",
+    # Nausea
+    "nausea": "nausea", "nauseous": "nausea", "feeling sick": "nausea",
+    "queasy": "nausea", "vomiting": "nausea",
+    # Sore throat
+    "sore_throat": "sore_throat", "sore throat": "sore_throat",
+    "throat pain": "sore_throat", "scratchy throat": "sore_throat",
+    "throat": "sore_throat",
+}
+
+# OS-dosha insight templates: explain WHY this dosha-type symptom makes sense
+# for this person's OS type. Uses {symptom} placeholder.
+OS_DOSHA_INSIGHT_TEMPLATES = {
+    # Kapha symptoms (congestion, sluggishness, heaviness)
+    ("kapha", "Conservation"): "You're naturally steady — {symptom} is your system getting too heavy. It needs warmth and movement to clear out.",
+    ("kapha", "Adaptive"): "This isn't typical for you — {symptom} means something's slowing your system down. Warming things up will get you moving again.",
+    ("kapha", "Performance"): "You've been pushing hard and your body's holding on to things. {symptom} is a sign to lighten up and let warmth do the work.",
+    ("kapha", "Balanced"): "Your system's a bit sluggish right now. {symptom} will clear with some warmth and movement.",
+    # Pitta symptoms (heat, inflammation, irritation)
+    ("pitta", "Performance"): "You push hard — {symptom} is your system saying ease up. The heat needs somewhere to go.",
+    ("pitta", "Conservation"): "This is unusual for you — {symptom} means something's heating up internally. Cooling down will help.",
+    ("pitta", "Adaptive"): "Your energy's been scattered and it's building pressure. {symptom} is a sign to slow down and cool off.",
+    ("pitta", "Balanced"): "Something's running hot in your system. {symptom} will ease with some cooling.",
+    # Vata symptoms (anxiety, scattered, dryness, irregularity)
+    ("vata", "Adaptive"): "Your quick-moving mind is in overdrive — {symptom} is your system asking for grounding. Something steady and warm will help.",
+    ("vata", "Performance"): "You've been putting pressure on yourself and it's creating tension. {symptom} is a sign to ease the grip.",
+    ("vata", "Conservation"): "This isn't your natural state — {symptom} means something has shaken your usual steadiness. Warmth and routine will bring it back.",
+    ("vata", "Balanced"): "Your system feels unsettled. {symptom} will ease with warmth and a steady routine.",
+}
+
+
+def _normalize_os_type(os_type: str) -> str:
+    """Normalize OS type to one of the 4 protocol keys."""
+    if not os_type:
+        return "Balanced"
+    os_lower = os_type.lower()
+    if "conservation" in os_lower or "endurance" in os_lower or "steady" in os_lower:
+        return "Conservation"
+    if "performance" in os_lower or "driven" in os_lower:
+        return "Performance"
+    if "adaptive" in os_lower or "flow" in os_lower or "quick" in os_lower:
+        return "Adaptive"
+    return "Balanced"
+
+
+def match_symptom(symptom: str) -> Optional[str]:
+    """Fuzzy match a symptom string to a canonical symptom key."""
+    if not symptom:
+        return None
+    key = symptom.lower().strip()
+
+    # Direct alias match
+    canonical = _SYMPTOM_ALIASES.get(key)
+    if canonical:
+        return canonical
+
+    # Substring match — check if any alias is contained in the symptom text
+    for alias, can in _SYMPTOM_ALIASES.items():
+        if alias in key:
+            return can
+
+    return None
+
+
+def get_symptom_insight(symptom: str, dosha: str, os_type: str) -> str:
+    """Get OS-aware insight explaining WHY this symptom for this person."""
+    os_key = _normalize_os_type(os_type)
+    template = OS_DOSHA_INSIGHT_TEMPLATES.get((dosha, os_key))
+    if not template:
+        template = OS_DOSHA_INSIGHT_TEMPLATES.get((dosha, "Balanced"), "")
+    symptom_display = symptom.replace("_", " ")
+    return template.format(symptom=symptom_display) if template else ""
+
+
+async def generate_symptom_protocol_via_llm(
+    symptom: str, dosha: str, os_type: str, os_insight: str,
+) -> Optional[dict]:
+    """
+    LLM fallback: generate symptom recommendation when knowledge graph is empty.
+
+    Returns same dict format as knowledge-graph path:
+    {"insight": str, "best_food": {"what": ..., "why": ...}, ...}
+    """
+    import json as _json
+    from sakhi.apps.api.core.llm import call_llm
+
+    os_key = _normalize_os_type(os_type)
+    _OS_QUALITY = {
+        "Conservation": "steady and grounded",
+        "Adaptive": "quick-moving and creative",
+        "Performance": "driven and focused",
+        "Balanced": "balanced",
+    }
+    quality = _OS_QUALITY.get(os_key, "balanced")
+
+    _DOSHA_QUALITY = {
+        "kapha": "heaviness and sluggishness",
+        "pitta": "heat and intensity",
+        "vata": "scattered energy and dryness",
+    }
+    imbalance = _DOSHA_QUALITY.get(dosha, "imbalance")
+
+    prompt = (
+        f"The user is experiencing: {symptom}\n"
+        f"Their system type: {os_key} (naturally {quality})\n"
+        f"The underlying pattern: {imbalance}\n\n"
+        "Give exactly ONE food recommendation and ONE practice "
+        "(yoga, breathing, or routine) that would help.\n"
+        "Each must have a short reason why it helps THIS person.\n"
+        "Also name ONE thing to avoid.\n\n"
+        "Rules:\n"
+        "- No Sanskrit or Ayurvedic terms (no dosha, pranayama, kapha, etc.)\n"
+        "- Use plain everyday English\n"
+        "- Connect the reason to their system type\n"
+        "- Be specific (not 'eat healthy' — name the actual food/practice)\n\n"
+        'Return JSON:\n'
+        '{"food": {"what": "the specific food or drink", "why": "reason"}, '
+        '"practice": {"what": "the specific practice", "why": "reason"}, '
+        '"avoid": "what to skip and why"}'
+    )
+
+    try:
+        result = await call_llm(prompt, model="openrouter/fast")
+        data = _json.loads(result) if isinstance(result, str) else result
+        return {
+            "insight": os_insight,
+            "best_food": data.get("food"),
+            "best_practice": data.get("practice"),
+            "avoid": data.get("avoid", ""),
+        }
+    except Exception:
+        return None
+
+
 __all__ = [
     "DiagnosticPath",
     "ConstitutionGuidance",
@@ -843,4 +1025,7 @@ __all__ = [
     "get_diagnostic_questions",
     "get_constitution_guidance",
     "get_symptom_from_sense",
+    "match_symptom",
+    "get_symptom_insight",
+    "generate_symptom_protocol_via_llm",
 ]

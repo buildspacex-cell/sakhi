@@ -138,6 +138,7 @@ def synthesize_context(
     memory_graph_context: Optional[Dict[str, Any]] = None,
     body_state: Optional[Dict[str, Any]] = None,
     body_state_translated: Optional[Dict[str, Any]] = None,
+    symptom_protocol: Optional[Dict[str, Any]] = None,
 ) -> SynthesizedContext:
     """
     Synthesize all gathered context into a prompt-ready format.
@@ -191,6 +192,7 @@ def synthesize_context(
         drift_percentage=drift_percentage,
         energy_mode=energy_mode,
         recommendations=recommendations.get("recommendations") if recommendations else None,
+        symptom_protocol=symptom_protocol,
     )
 
     # Life context (persistent facts about the user)
@@ -774,6 +776,21 @@ def _build_recommendations_section_jargon_free(jf: JargonFreeContext) -> str:
     """Build simple, friendly recommendations."""
     sections = []
 
+    # Symptom-specific protocol takes priority (OS-aware, 1-2 targeted recs)
+    if jf.symptom_insight:
+        sections.append(f"""WHAT COULD HELP
+───────────────────────────────────────────────────────────────────────────────
+{jf.symptom_insight}""")
+        if jf.symptom_best_food:
+            sections.append(f"\n  → {jf.symptom_best_food['what']} — {jf.symptom_best_food['why']}")
+        if jf.symptom_best_practice:
+            sections.append(f"  → {jf.symptom_best_practice['what']} — {jf.symptom_best_practice['why']}")
+        if jf.symptom_avoid:
+            sections.append(f"Skip: {jf.symptom_avoid}")
+        sections.append("")
+        return "\n".join(sections)
+
+    # Fallback: generic friction-state recommendations
     sections.append(f"""WHAT COULD HELP
 ───────────────────────────────────────────────────────────────────────────────
 {jf.what_helps_now}""")

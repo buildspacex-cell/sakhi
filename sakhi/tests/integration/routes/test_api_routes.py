@@ -212,7 +212,7 @@ class TestMemoryRecallEndpoint:
         await ensure_test_user(DEMO_USER_ID)
 
         # Create a test memory in memory_episodic
-        mem_id = "test-mem-" + DEMO_USER_ID[:8]
+        mem_id = "00000000-0000-4000-a000-000000000001"
         record_data = json.dumps({"type": "test"})
 
         await db.execute("""
@@ -260,7 +260,7 @@ class TestJournalEndpoints:
         await ensure_test_user(DEMO_USER_ID)
 
         # Create a test entry
-        entry_id = "test-entry-" + DEMO_USER_ID[:8]
+        entry_id = "00000000-0000-4000-a000-000000000002"
         await db.execute("""
             INSERT INTO journal_entries (id, user_id, title, content, mood, created_at)
             VALUES ($1, $2, $3, $4, $5, NOW())

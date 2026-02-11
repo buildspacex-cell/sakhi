@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 // =============================================================================
 // TYPES
@@ -90,6 +90,7 @@ interface DebugPanelProps {
   data: DebugData;
   isOpen: boolean;
   onClose: () => void;
+  personId?: string;
 }
 
 // =============================================================================
@@ -311,11 +312,28 @@ function CodeBlock({ content }: { content: string }) {
 // MAIN COMPONENT
 // =============================================================================
 
-export default function DebugPanel({ data, isOpen, onClose }: DebugPanelProps) {
+export default function DebugPanel({ data, isOpen, onClose, personId }: DebugPanelProps) {
+  const [editedPrompt, setEditedPrompt] = useState("");
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [replayResult, setReplayResult] = useState<string | null>(null);
+  const lastPromptRef = useRef<string>("");
+
+  const engineDebugForEffect = data.debug?.conversation_engine_debug;
+  const originalPrompt = engineDebugForEffect?.adaptive_prompt || engineDebugForEffect?.base_prompt || "";
+
+  // Sync edited prompt when new data arrives (new turn)
+  useEffect(() => {
+    if (originalPrompt && originalPrompt !== lastPromptRef.current) {
+      setEditedPrompt(originalPrompt);
+      setReplayResult(null);
+      lastPromptRef.current = originalPrompt;
+    }
+  }, [originalPrompt]);
+
   if (!isOpen) return null;
 
   const adaptive = data.adaptive_response || data.debug?.adaptive_response;
-  const engineDebug = data.debug?.conversation_engine_debug;
+  const engineDebug = engineDebugForEffect;
   const doshaBaseline = data.dosha_baseline || {};
 
   // Collect all errors and warnings
@@ -608,20 +626,151 @@ export default function DebugPanel({ data, isOpen, onClose }: DebugPanelProps) {
           )}
         </Section>
 
-        {/* Adaptive Prompt */}
-        <Section title="Adaptive Prompt (Full)" defaultOpen={false}>
-          {engineDebug?.adaptive_prompt ? (
-            <CodeBlock content={engineDebug.adaptive_prompt} />
-          ) : engineDebug?.base_prompt ? (
-            <>
-              <div style={{ marginBottom: "8px" }}>
-                <Badge color="muted">Base Prompt (adaptive not used)</Badge>
-              </div>
-              <CodeBlock content={engineDebug.base_prompt} />
-            </>
-          ) : (
-            <div style={{ color: palette.muted }}>No prompt data available</div>
-          )}
+        {/* Prompt Playground */}
+        <Section title="Prompt Playground" defaultOpen={false}>
+          {(() => {
+            const promptSource = engineDebug?.adaptive_prompt ? "adaptive" : "base";
+
+            const handleReplay = async () => {
+              if (!personId || !editedPrompt) return;
+              setIsReplaying(true);
+              setReplayResult(null);
+              try {
+                // Extract conversation history (user/assistant turns only)
+                const allMessages = (data.debug as any)?.conversation_engine_debug?.messages || [];
+                const convHistory: Array<{role: string; text: string}> = [];
+                let sessionSummary = "";
+                for (const msg of allMessages) {
+                  if (msg.role === "user" || msg.role === "assistant") {
+                    convHistory.push({ role: msg.role, text: msg.content || "" });
+                  } else if (msg.role === "system" && (msg.content || "").includes("[Earlier Conversation Context]")) {
+                    sessionSummary = (msg.content || "").replace("[Earlier Conversation Context]\nUse this context to understand references in the recent conversation:\n- When user says \"she/he/they\", refer to People & Relationships\n- When user says \"it/that/the project\", refer to Topics & References\n- Be aware of the Emotional Thread and Open Threads\n\n", "");
+                  }
+                }
+                // Remove the last user message from history (it's sent as user_text)
+                if (convHistory.length > 0 && convHistory[convHistory.length - 1].role === "user") {
+                  convHistory.pop();
+                }
+
+                const res = await fetch("/api/lab/replay-prompt", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    person_id: personId,
+                    edited_prompt: editedPrompt,
+                    system_context: engineDebug?.system_context || "",
+                    user_text: data.input_text || "",
+                    conversation_history: convHistory,
+                    session_summary: sessionSummary,
+                  }),
+                });
+                const result = await res.json();
+                if (res.ok) {
+                  setReplayResult(result.replay_reply || "(empty response)");
+                } else {
+                  setReplayResult(`Error: ${result.error || result.detail || res.statusText}`);
+                }
+              } catch (err: any) {
+                setReplayResult(`Error: ${err.message || "Failed to replay"}`);
+              } finally {
+                setIsReplaying(false);
+              }
+            };
+
+            const handleReset = () => {
+              setEditedPrompt(originalPrompt);
+              setReplayResult(null);
+            };
+
+            if (!originalPrompt) {
+              return <div style={{ color: palette.muted }}>No prompt data available</div>;
+            }
+
+            return (
+              <>
+                <div style={{ marginBottom: "8px" }}>
+                  <Badge color={promptSource === "adaptive" ? "info" : "muted"}>
+                    {promptSource === "adaptive" ? "Adaptive Prompt" : "Base Prompt (adaptive not used)"}
+                  </Badge>
+                </div>
+
+                <textarea
+                  value={editedPrompt}
+                  onChange={(e) => setEditedPrompt(e.target.value)}
+                  style={{
+                    width: "100%",
+                    minHeight: "200px",
+                    maxHeight: "400px",
+                    background: "#111215",
+                    color: palette.fg,
+                    border: `1px solid ${palette.border}`,
+                    borderRadius: "6px",
+                    padding: "12px",
+                    fontFamily: 'ui-monospace, "SF Mono", Monaco, "Cascadia Code", monospace',
+                    fontSize: "11px",
+                    lineHeight: "1.5",
+                    resize: "vertical",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => { e.target.style.borderColor = palette.accent; }}
+                  onBlur={(e) => { e.target.style.borderColor = palette.border; }}
+                />
+
+                <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                  <button
+                    onClick={handleReplay}
+                    disabled={isReplaying || !personId}
+                    style={{
+                      padding: "8px 16px",
+                      background: isReplaying ? palette.border : palette.accent,
+                      color: palette.fg,
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: isReplaying ? "not-allowed" : "pointer",
+                      opacity: isReplaying ? 0.7 : 1,
+                      fontFamily: 'ui-monospace, "SF Mono", Monaco, "Cascadia Code", monospace',
+                    }}
+                  >
+                    {isReplaying ? "Re-running..." : "Re-run with Edited Prompt"}
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    style={{
+                      padding: "8px 16px",
+                      background: "transparent",
+                      color: palette.muted,
+                      border: `1px solid ${palette.border}`,
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      fontFamily: 'ui-monospace, "SF Mono", Monaco, "Cascadia Code", monospace',
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                {/* Comparison view */}
+                {replayResult !== null && (
+                  <div style={{ marginTop: "12px" }}>
+                    <div style={{ marginBottom: "8px" }}>
+                      <Badge color="muted">Original Response</Badge>
+                    </div>
+                    <CodeBlock content={data.reply || "(no original response)"} />
+
+                    <div style={{ marginTop: "12px", marginBottom: "8px" }}>
+                      <Badge color="info">Replayed Response</Badge>
+                    </div>
+                    <CodeBlock content={replayResult} />
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </Section>
 
         {/* States */}

@@ -360,6 +360,58 @@ async def run_adaptive_pipeline(
     except Exception as graph_err:
         logger.debug("[AdaptivePipeline] Memory graph not loaded: %s", graph_err)
 
+    # Look up symptom-specific recommendations from knowledge graph (+ LLM fallback)
+    symptom_protocol = None
+    try:
+        import asyncio as _asyncio
+        from sakhi.apps.api.services.response.diagnostic_kb import (
+            get_symptom_from_sense, match_symptom, get_symptom_insight,
+            generate_symptom_protocol_via_llm,
+        )
+        from sakhi.apps.api.services.ayurveda.causal_reasoning import map_symptom_to_dosha
+        from sakhi.apps.api.services.ayurveda.graph_reasoning import (
+            query_foods_for_dosha, query_practices_for_dosha,
+        )
+        from sakhi.apps.api.services.response.translation import (
+            translate_graph_food, translate_graph_practice, translate_graph_avoid,
+        )
+
+        symptom_key = get_symptom_from_sense(result.sense)
+        canonical = match_symptom(symptom_key)
+        dosha = map_symptom_to_dosha(canonical) if canonical else None
+
+        if canonical and dosha:
+            os_type = result.knowledge_gap.constitution.operating_system or ""
+            insight = get_symptom_insight(canonical, dosha, os_type)
+
+            # Query knowledge graph in parallel
+            pacify_foods, pacify_practices, aggravate_foods = await _asyncio.gather(
+                query_foods_for_dosha(dosha, "PACIFIES", limit=3),
+                query_practices_for_dosha(dosha, limit=3),
+                query_foods_for_dosha(dosha, "AGGRAVATES", limit=3),
+            )
+
+            if pacify_foods or pacify_practices:
+                symptom_protocol = {
+                    "insight": insight,
+                    "best_food": translate_graph_food(pacify_foods[0], dosha) if pacify_foods else None,
+                    "best_practice": translate_graph_practice(pacify_practices[0]) if pacify_practices else None,
+                    "avoid": translate_graph_avoid(aggravate_foods[:3]) if aggravate_foods else "",
+                }
+                logger.debug(
+                    "[AdaptivePipeline] Symptom protocol from knowledge graph: symptom=%s, dosha=%s",
+                    canonical, dosha,
+                )
+            else:
+                # Knowledge graph empty — LLM fallback
+                symptom_protocol = await generate_symptom_protocol_via_llm(
+                    canonical, dosha, os_type, insight,
+                )
+                if symptom_protocol:
+                    logger.debug("[AdaptivePipeline] Symptom protocol from LLM fallback: symptom=%s", canonical)
+    except Exception as proto_err:
+        logger.debug("[AdaptivePipeline] Symptom protocol lookup failed: %s", proto_err)
+
     # Stage 4: Context Synthesis
     try:
         result.synthesized = stage_4_synthesis(
@@ -372,6 +424,7 @@ async def run_adaptive_pipeline(
             energy_mode=energy_mode,
             recommendations=recommendations,
             memory_graph_context=memory_graph_context,
+            symptom_protocol=symptom_protocol,
         )
         result.pipeline_stages["synthesis"] = True
     except Exception as e:
