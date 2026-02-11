@@ -314,7 +314,8 @@ async def get_historical_effectiveness(person_id: str) -> HistoricalEffectivenes
     # Query feedback on recommendations
     feedback = await dbfetch(
         """
-        SELECT item_name, item_type, helpful, created_at
+        SELECT recommendation_type, recommendation_domain,
+               recommendation_content, rating, was_followed, created_at
         FROM recommendation_feedback
         WHERE person_id = $1
         ORDER BY created_at DESC
@@ -328,16 +329,22 @@ async def get_historical_effectiveness(person_id: str) -> HistoricalEffectivenes
     ineffective = []
 
     for f in feedback or []:
-        item = f.get("item_name", "")
-        item_type = f.get("item_type", "")
-        helpful = f.get("helpful")
+        raw_content = f.get("recommendation_content") or {}
+        content = json.loads(raw_content) if isinstance(raw_content, str) else raw_content
+        item = content.get("name", "") or f.get("recommendation_domain", "")
+        rec_type = f.get("recommendation_type", "")
+        rating = f.get("rating")
+        was_followed = f.get("was_followed")
 
-        if helpful is True:
-            if item_type == "practice":
+        is_positive = (rating is not None and rating >= 3.0) or was_followed is True
+        is_negative = (rating is not None and rating < 3.0) or was_followed is False
+
+        if is_positive:
+            if rec_type == "practice":
                 effective_practices.append(item)
-            elif item_type == "food":
+            elif rec_type == "food":
                 effective_foods.append(item)
-        elif helpful is False:
+        elif is_negative:
             ineffective.append(item)
 
     return HistoricalEffectiveness(
