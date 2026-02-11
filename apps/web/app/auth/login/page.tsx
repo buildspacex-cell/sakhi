@@ -56,8 +56,9 @@ function LoginContent() {
         setError(error.message);
         setIsLoading(false);
       }
-    } catch (err) {
-      setError("Failed to initiate login. Please try again.");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err?.message || "Failed to initiate login. Please try again.");
       setIsLoading(false);
     }
   };
