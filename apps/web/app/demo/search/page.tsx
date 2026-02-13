@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import DemoModeBadge from "../components/DemoModeBadge";
 
 /**
  * Personalized Search Demo
@@ -22,6 +23,33 @@ const USER = {
   name: "Alex",
   handle: "@alex",
   avatar: "A",
+};
+
+const DEMO_PERSON_ID =
+  process.env.NEXT_PUBLIC_DEMO_PERSON_ID ||
+  "d290f1ee-6c54-4b01-90e6-d701748f0851";
+
+type AuthUser = {
+  person_id: string;
+  full_name?: string | null;
+};
+
+type TaskPlanStep = {
+  step: number;
+  action: string;
+  description?: string;
+  status: string;
+  result?: unknown;
+  error?: string | null;
+};
+
+type TaskPlanResponse = {
+  plan_id: string;
+  status: string;
+  goal: string;
+  steps: TaskPlanStep[];
+  requires_approval: boolean;
+  final_output?: string | null;
 };
 
 // User's scent preferences (for quick search)
@@ -127,46 +155,7 @@ const SUBSCRIPTION_RESULTS = {
   nextRun: "March 1, 2026",
 };
 
-// Demo search results (quick search)
-const DEMO_RESULTS = [
-  {
-    rank: 1,
-    title: "Woody Cedar Car Freshener",
-    price: 15.99,
-    rating: 4.5,
-    reviews: 1234,
-    matchScore: 0.92,
-    matchLevel: "perfect" as const,
-    reasons: ["Strong woody cedar notes you love", "No floral ingredients"],
-    warnings: [],
-    image: "🌲",
-  },
-  {
-    rank: 2,
-    title: "Fresh Citrus Vent Clip",
-    price: 12.99,
-    rating: 4.2,
-    reviews: 892,
-    matchScore: 0.78,
-    matchLevel: "good" as const,
-    reasons: ["Citrus notes you like", "Fresh, clean scent"],
-    warnings: ["Some users report faint floral undertones"],
-    image: "🍋",
-  },
-  {
-    rank: 3,
-    title: "Sandalwood Luxury Diffuser",
-    price: 28.99,
-    rating: 4.8,
-    reviews: 2341,
-    matchScore: 0.95,
-    matchLevel: "perfect" as const,
-    reasons: ["Premium sandalwood you love", "Long-lasting"],
-    warnings: [],
-    isPremium: true,
-    image: "✨",
-  },
-];
+const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
 // Quick search steps
 type QuickDemoStep =
@@ -177,6 +166,16 @@ type QuickDemoStep =
   | "searching"
   | "matching"
   | "results";
+
+const QUICK_STEP_LABELS: Record<QuickDemoStep, string> = {
+  idle: "Idle",
+  user_request: "User Request",
+  sakhi_analyzing: "Planning",
+  checking_preferences: "Needs Approval",
+  searching: "Execution Started",
+  matching: "Executing Steps",
+  results: "Finished",
+};
 
 // Research steps
 type ResearchDemoStep =
@@ -199,6 +198,42 @@ interface Message {
   sender: "user" | "sakhi" | "system";
   content: string;
   thinking?: boolean;
+}
+
+function toErrorMessage(payload: unknown): string {
+  if (!payload || typeof payload !== "object") {
+    return "Request failed";
+  }
+  const maybePayload = payload as { detail?: string; error?: string };
+  return maybePayload.detail || maybePayload.error || "Request failed";
+}
+
+function summarizeResult(result: unknown): string {
+  if (result == null) return "";
+  if (typeof result === "string") return result;
+  try {
+    const text = JSON.stringify(result);
+    return text.length > 140 ? `${text.slice(0, 137)}...` : text;
+  } catch {
+    return String(result);
+  }
+}
+
+function toStatusColor(status: string): string {
+  switch (status) {
+    case "pending_approval":
+      return palette.warning;
+    case "executing":
+      return palette.accent;
+    case "completed":
+      return palette.success;
+    case "failed":
+      return palette.rose;
+    case "cancelled":
+      return palette.muted;
+    default:
+      return palette.muted;
+  }
 }
 
 // Color palette
@@ -230,6 +265,69 @@ export default function SearchDemo() {
   const [recurringStep, setRecurringStep] = useState<RecurringDemoStep>("idle");
   const [currentSubStep, setCurrentSubStep] = useState(0);
   const [showSubResults, setShowSubResults] = useState(false);
+  const [quickTask, setQuickTask] = useState("Find me a car air freshener under $20");
+  const [quickPlan, setQuickPlan] = useState<TaskPlanResponse | null>(null);
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const activePersonId = authUser?.person_id || DEMO_PERSON_ID;
+  const quickNeedsApproval = mode === "quick" && quickPlan?.status === "pending_approval";
+  const quickIsExecuting = mode === "quick" && quickPlan?.status === "executing";
+  const quickIsTerminal = mode === "quick" && Boolean(quickPlan?.status && TERMINAL_STATUSES.has(quickPlan.status));
+
+  useEffect(() => {
+    const loadAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (payload?.person_id) {
+          setAuthUser({
+            person_id: payload.person_id,
+            full_name: payload.full_name,
+          });
+        }
+      } catch {
+        // intentionally silent, demo can use fallback profile
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    loadAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!quickPlan?.plan_id || quickPlan.status !== "executing" || isRunning) return;
+
+    let cancelled = false;
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/agent/plans/${encodeURIComponent(quickPlan.plan_id)}`);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || cancelled) return;
+        const latest = payload as TaskPlanResponse;
+        setQuickPlan(latest);
+        setShowResults(true);
+
+        if (latest.status === "executing") {
+          setQuickStep("matching");
+        } else if (TERMINAL_STATUSES.has(latest.status)) {
+          setQuickStep("results");
+          if (latest.status === "failed") {
+            setQuickError("Task execution failed.");
+          }
+        }
+      } catch {
+        // intentionally silent; explicit actions surface hard errors
+      }
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [isRunning, quickPlan?.plan_id, quickPlan?.status]);
 
   // Quick Search Demo
   const runQuickDemo = useCallback(async () => {
@@ -237,68 +335,210 @@ export default function SearchDemo() {
     setIsRunning(true);
     setShowResults(false);
     setMessages([]);
+    setQuickError(null);
+    setQuickPlan(null);
 
-    // Step 1: User makes request
-    setQuickStep("user_request");
-    setMessages([{ sender: "user", content: "Find me a car air freshener under $20" }]);
-    await delay(1500);
+    const task = quickTask.trim() || "Find me a car air freshener under $20";
 
-    // Step 2: Sakhi starts
-    setQuickStep("sakhi_analyzing");
-    setMessages((prev) => [
-      ...prev,
-      { sender: "sakhi", content: "Looking for car fresheners...", thinking: true },
-    ]);
-    await delay(1000);
+    try {
+      // Step 1: User makes request
+      setQuickStep("user_request");
+      setMessages([{ sender: "user", content: task }]);
+      await delay(700);
 
-    // Step 3: Check preferences
-    setQuickStep("checking_preferences");
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "system",
-        content: `I know your scent preferences:
-❤️ Love: Woody, Cedar, Sandalwood
-👍 Like: Citrus, Fresh, Clean
-👎 Avoid: Floral, Sweet, Vanilla
+      // Step 2: Sakhi starts planning
+      setQuickStep("sakhi_analyzing");
+      setMessages((prev) => [
+        ...prev,
+        { sender: "sakhi", content: "Building a real task plan for this request...", thinking: true },
+      ]);
+      await delay(600);
 
-Searching with YOUR taste in mind...`,
-      },
-    ]);
-    await delay(2000);
+      const response = await fetch("/api/agent/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: activePersonId,
+          task,
+          auto_execute: false,
+        }),
+      });
 
-    // Step 4: Searching
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(toErrorMessage(payload));
+      }
+
+      const plan = payload as TaskPlanResponse;
+      const stepList = (plan.steps || [])
+        .slice(0, 6)
+        .map((step) => `${step.step}. ${step.description || step.action}`)
+        .join("\n");
+
+      setQuickPlan(plan);
+      setQuickStep("checking_preferences");
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "system",
+          content: `Plan proposed (${plan.steps.length} steps):
+${stepList || "1. Respond to user"}
+
+Status: ${plan.status}`,
+        },
+        {
+          sender: "sakhi",
+          content: "Approval required. Review the plan, then tap \"Approve & Execute\".",
+        },
+      ]);
+      setShowResults(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create task plan";
+      setQuickError(message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: `I couldn't build the plan: ${message}`,
+        },
+      ]);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activePersonId, isRunning, quickTask]);
+
+  const approveQuickDemo = useCallback(async () => {
+    if (isRunning || !quickPlan) return;
+    setIsRunning(true);
+    setQuickError(null);
     setQuickStep("searching");
-    setMessages((prev) => [
-      ...prev,
-      { sender: "sakhi", content: "Searching Amazon... found 47 products. Matching to your preferences...", thinking: true },
-    ]);
-    await delay(2000);
 
-    // Step 5: Matching
-    setQuickStep("matching");
-    await delay(1500);
+    try {
+      setMessages((prev) => [
+        ...prev,
+        { sender: "user", content: "Approve and execute it." },
+      ]);
 
-    // Step 6: Results
-    setQuickStep("results");
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "sakhi",
-        content: `Found 3 perfect matches for you!
+      const approveResponse = await fetch(
+        `/api/agent/plans/${encodeURIComponent(quickPlan.plan_id)}/approve`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ person_id: activePersonId }),
+        }
+      );
 
-🏆 #1: Woody Cedar Car Freshener
-$15.99 · ⭐ 4.5 (1,234 reviews)
-✅ Perfect match: Strong woody notes you love
+      const approvePayload = await approveResponse.json().catch(() => ({}));
+      if (!approveResponse.ok) {
+        throw new Error(toErrorMessage(approvePayload));
+      }
 
-I also found a premium option worth considering...`,
-      },
-    ]);
-    setShowResults(true);
-    await delay(1000);
+      let latestPlan = approvePayload as TaskPlanResponse;
+      setQuickPlan(latestPlan);
+      setShowResults(true);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: "Execution started. I'll keep this updated in real time.",
+        },
+      ]);
 
-    setIsRunning(false);
-  }, [isRunning]);
+      // Poll until completion/failure/cancel
+      for (let attempt = 0; attempt < 24; attempt++) {
+        if (["completed", "failed", "cancelled"].includes(latestPlan.status)) {
+          break;
+        }
+        await delay(1200);
+        const stateResponse = await fetch(`/api/agent/plans/${encodeURIComponent(latestPlan.plan_id)}`);
+        const statePayload = await stateResponse.json().catch(() => ({}));
+        if (!stateResponse.ok) {
+          throw new Error(toErrorMessage(statePayload));
+        }
+        latestPlan = statePayload as TaskPlanResponse;
+        setQuickPlan(latestPlan);
+        if (latestPlan.status === "executing") {
+          setQuickStep("matching");
+        }
+      }
+
+      if (latestPlan.status === "completed") {
+        setQuickStep("results");
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "sakhi",
+            content: latestPlan.final_output
+              ? `Done. ${latestPlan.final_output}`
+              : "Done. Task completed.",
+          },
+        ]);
+      } else if (latestPlan.status === "failed") {
+        setQuickStep("results");
+        setQuickError("Task execution failed.");
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "sakhi",
+            content: "I hit an execution failure. You can run again or adjust the ask.",
+          },
+        ]);
+      } else if (latestPlan.status === "cancelled") {
+        setQuickStep("results");
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "sakhi",
+            content: "Execution cancelled.",
+          },
+        ]);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to approve task plan";
+      setQuickError(message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: `I couldn't start execution: ${message}`,
+        },
+      ]);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activePersonId, isRunning, quickPlan]);
+
+  const rejectQuickDemo = useCallback(async () => {
+    if (isRunning || !quickPlan) return;
+    setIsRunning(true);
+    setQuickError(null);
+    try {
+      const response = await fetch(
+        `/api/agent/plans/${encodeURIComponent(quickPlan.plan_id)}/cancel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ person_id: activePersonId }),
+        }
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(toErrorMessage(payload));
+      }
+      setQuickPlan((prev) => (prev ? { ...prev, status: "cancelled" } : prev));
+      setQuickStep("results");
+      setMessages((prev) => [
+        ...prev,
+        { sender: "user", content: "Cancel it." },
+        { sender: "sakhi", content: "No problem. I cancelled that plan." },
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to cancel plan";
+      setQuickError(message);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activePersonId, isRunning, quickPlan]);
 
   // Deep Research Demo
   const runResearchDemo = useCallback(async () => {
@@ -479,6 +719,8 @@ Next audit: March 1, 2026`,
     setIsRunning(false);
     setCurrentResearchStep(0);
     setCurrentSubStep(0);
+    setQuickPlan(null);
+    setQuickError(null);
   };
 
   const switchMode = (newMode: DemoMode) => {
@@ -491,6 +733,17 @@ Next audit: March 1, 2026`,
   const isResearchMode = mode === "research";
   const isRecurringMode = mode === "recurring";
   const currentStep = isQuickMode ? quickStep : isResearchMode ? researchStep : recurringStep;
+  const quickPrimaryLabel = isRunning
+    ? quickNeedsApproval
+      ? "Approving..."
+      : quickIsExecuting
+        ? "Executing..."
+        : "Planning..."
+    : quickIsExecuting
+      ? "Execution In Progress"
+      : quickIsTerminal
+        ? "Run Again"
+        : "Start Demo";
 
   return (
     <main style={styles.container}>
@@ -505,6 +758,16 @@ Next audit: March 1, 2026`,
               : "Recurring tasks that run automatically on your schedule"
           }
         </p>
+        <div style={styles.modeBadgeWrap}>
+          <DemoModeBadge
+            mode={isQuickMode ? "production-ready" : "simulated"}
+            detail={
+              isQuickMode
+                ? "Quick flow is connected to real plan APIs with explicit approval and execution states."
+                : "This tab is currently a simulated storyboard flow."
+            }
+          />
+        </div>
       </header>
 
       {/* Mode Tabs */}
@@ -534,6 +797,30 @@ Next audit: March 1, 2026`,
           Recurring Tasks
         </button>
       </div>
+
+      {isQuickMode && (
+        <div style={styles.quickTaskSection}>
+          <label htmlFor="quick-task-input" style={styles.quickTaskLabel}>
+            Live task ask
+          </label>
+          <input
+            id="quick-task-input"
+            type="text"
+            value={quickTask}
+            onChange={(event) => setQuickTask(event.target.value)}
+            style={styles.quickTaskInput}
+            disabled={isRunning || quickIsExecuting}
+            placeholder="Find me a car air freshener under $20"
+          />
+          <p style={styles.quickTaskHint}>
+            {authLoading
+              ? "Loading your profile context..."
+              : authUser?.person_id
+                ? "Using your signed-in profile for this plan."
+                : "Using demo profile fallback for this plan."}
+          </p>
+        </div>
+      )}
 
       {/* Main Content */}
       <div style={styles.mainContent}>
@@ -792,68 +1079,80 @@ Next audit: March 1, 2026`,
         {/* Right: Results Panel */}
         <div style={styles.resultsPanel}>
           {isQuickMode ? (
-            // Quick search results
+            // Quick mode (real plan lifecycle)
             <>
-              <h3 style={styles.panelTitle}>Results For You</h3>
-              <p style={styles.panelSubtitle}>Ranked by preference match</p>
+              <h3 style={styles.panelTitle}>Live Task Status</h3>
+              <p style={styles.panelSubtitle}>Real planner + approval + execution</p>
 
-              {!showResults ? (
+              {quickError && <div style={styles.quickErrorNotice}>⚠️ {quickError}</div>}
+
+              {!showResults || !quickPlan ? (
                 <div style={styles.waitingResults}>
-                  <span style={styles.waitingIcon}>{quickStep === "idle" ? "🔍" : "⏳"}</span>
+                  <span style={styles.waitingIcon}>{quickStep === "idle" ? "⚡" : "⏳"}</span>
                   <span style={styles.waitingText}>
-                    {quickStep === "idle" ? "Waiting to search..." : "Searching..."}
+                    {quickStep === "idle" ? "Waiting to start..." : "Preparing task plan..."}
                   </span>
                 </div>
               ) : (
-                <div style={styles.resultsList}>
-                  {DEMO_RESULTS.map((result) => (
-                    <div
-                      key={result.rank}
-                      style={{
-                        ...styles.resultCard,
-                        ...(result.isPremium ? styles.resultCardPremium : {}),
-                      }}
-                    >
-                      <div style={styles.resultHeader}>
-                        <span style={styles.resultImage}>{result.image}</span>
-                        <div style={styles.resultInfo}>
-                          <span style={styles.resultTitle}>
-                            {result.isPremium && <span style={styles.premiumBadge}>💎 Premium</span>}
-                            {result.title}
-                          </span>
-                          <span style={styles.resultMeta}>
-                            ${result.price} · ⭐ {result.rating} ({result.reviews.toLocaleString()})
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={matchBadgeStyle(result.matchLevel)}>
-                        {result.matchLevel === "perfect" ? "✅ Perfect Match" : "👍 Good Match"}
-                        <span style={styles.matchScore}>{Math.round(result.matchScore * 100)}%</span>
-                      </div>
-
-                      <div style={styles.reasons}>
-                        {result.reasons.map((reason, i) => (
-                          <div key={i} style={styles.reason}>
-                            <span style={styles.reasonIcon}>✓</span>
-                            <span>{reason}</span>
-                          </div>
-                        ))}
-                        {result.warnings.map((warning, i) => (
-                          <div key={i} style={styles.warning}>
-                            <span style={styles.warningIcon}>⚠️</span>
-                            <span>{warning}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {result.isPremium && (
-                        <div style={styles.premiumNote}>
-                          +$13 over budget but highest match score
-                        </div>
-                      )}
+                <div style={styles.quickPlanList}>
+                  <div style={styles.quickPlanCard}>
+                    <div style={styles.quickPlanHeader}>
+                      <span style={styles.quickPlanGoal}>{quickPlan.goal}</span>
+                      <span
+                        style={{
+                          ...styles.quickStatusBadge,
+                          borderColor: toStatusColor(quickPlan.status),
+                          color: toStatusColor(quickPlan.status),
+                        }}
+                      >
+                        {quickPlan.status}
+                      </span>
                     </div>
-                  ))}
+                    <div style={styles.quickPlanMeta}>
+                      <span>Plan ID: {quickPlan.plan_id.slice(0, 8)}...</span>
+                      <span>Stage: {QUICK_STEP_LABELS[quickStep]}</span>
+                      <span>Steps: {quickPlan.steps?.length || 0}</span>
+                    </div>
+                    {quickPlan.status === "pending_approval" && (
+                      <p style={styles.quickInlineHint}>Awaiting your approval to execute.</p>
+                    )}
+                    {quickPlan.status === "executing" && (
+                      <p style={styles.quickInlineHint}>Execution is running; step updates appear below.</p>
+                    )}
+                  </div>
+
+                  <div style={styles.quickStepsList}>
+                    {(quickPlan.steps || []).map((step) => (
+                      <article key={`${quickPlan.plan_id}-step-${step.step}`} style={styles.quickStepCard}>
+                        <div style={styles.quickStepHeader}>
+                          <span style={styles.quickStepIndex}>Step {step.step}</span>
+                          <span
+                            style={{
+                              ...styles.quickStepStatus,
+                              borderColor: toStatusColor(step.status),
+                              color: toStatusColor(step.status),
+                            }}
+                          >
+                            {step.status}
+                          </span>
+                        </div>
+                        <p style={styles.quickStepAction}>{step.description || step.action}</p>
+                        {step.result !== undefined && step.result !== null && (
+                          <p style={styles.quickStepResult}>Result: {summarizeResult(step.result)}</p>
+                        )}
+                        {typeof step.error === "string" && step.error.length > 0 && (
+                          <p style={styles.quickStepError}>Error: {step.error}</p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+
+                  {quickPlan.final_output && (
+                    <div style={styles.quickFinalOutput}>
+                      <span style={styles.quickFinalTitle}>Final Output</span>
+                      <p style={styles.quickFinalText}>{quickPlan.final_output}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -1023,17 +1322,37 @@ Next audit: March 1, 2026`,
       {/* Controls */}
       <div style={styles.controls}>
         <button
-          onClick={isQuickMode ? runQuickDemo : isResearchMode ? runResearchDemo : runRecurringDemo}
-          disabled={isRunning}
-          style={isRunning ? styles.buttonDisabled : styles.button}
-        >
-          {isRunning
-            ? isQuickMode ? "Searching..." : isResearchMode ? "Researching..." : "Organizing..."
-            : currentStep === "results" || currentStep === "complete"
-              ? "Run Again"
-              : "Start Demo"
+          onClick={
+            isQuickMode
+              ? quickNeedsApproval
+                ? approveQuickDemo
+                : runQuickDemo
+              : isResearchMode
+                ? runResearchDemo
+                : runRecurringDemo
           }
+          disabled={isRunning || (isQuickMode && quickIsExecuting)}
+          style={isRunning || (isQuickMode && quickIsExecuting) ? styles.buttonDisabled : styles.button}
+        >
+          {isQuickMode
+            ? quickPrimaryLabel
+            : isRunning
+              ? isResearchMode
+                ? "Researching..."
+                : "Organizing..."
+              : currentStep === "complete"
+                ? "Run Again"
+                : "Start Demo"}
         </button>
+        {isQuickMode && quickNeedsApproval && (
+          <button
+            onClick={rejectQuickDemo}
+            disabled={isRunning}
+            style={isRunning ? styles.buttonDisabled : styles.buttonSecondary}
+          >
+            Reject Plan
+          </button>
+        )}
         {currentStep !== "idle" && (
           <button onClick={resetDemo} style={styles.buttonSecondary}>
             Reset
@@ -1049,19 +1368,19 @@ Next audit: March 1, 2026`,
             <div style={styles.comparisonCard}>
               <span style={styles.comparisonHeader}>❌ Regular Search</span>
               <ul style={styles.comparisonList}>
-                <li>Returns 47 random products</li>
-                <li>You scroll, compare, guess</li>
-                <li>20 minutes later...</li>
-                <li>Still not sure it's right</li>
+                <li>Returns links and leaves decisions to you</li>
+                <li>No approval checkpoints for risky actions</li>
+                <li>No visible execution state</li>
+                <li>Little accountability after the ask</li>
               </ul>
             </div>
             <div style={styles.comparisonCardGood}>
-              <span style={styles.comparisonHeader}>✅ Sakhi Search</span>
+              <span style={styles.comparisonHeader}>✅ Sakhi Quick Actions (Live)</span>
               <ul style={styles.comparisonList}>
-                <li>Knows your preferences</li>
-                <li>Scores each product FOR you</li>
-                <li>Warns about mismatches</li>
-                <li>Suggests premium if worth it</li>
+                <li>Creates a real task plan from your ask</li>
+                <li>Requires explicit approval before execution</li>
+                <li>Shows step-level status and outputs</li>
+                <li>Uses your profile context (or demo fallback)</li>
               </ul>
             </div>
           </div>
@@ -1143,19 +1462,6 @@ function delay(ms: number): Promise<void> {
 }
 
 // Styles
-const matchBadgeStyle = (level: string): React.CSSProperties => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  padding: "6px 12px",
-  borderRadius: 8,
-  fontSize: 13,
-  fontWeight: 500,
-  background: level === "perfect" ? palette.successDim : palette.accentDim,
-  color: level === "perfect" ? palette.success : palette.accent,
-  marginBottom: 12,
-});
-
 const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: "100vh",
@@ -1175,6 +1481,42 @@ const styles: Record<string, React.CSSProperties> = {
   },
   subtitle: {
     fontSize: 16,
+    color: palette.muted,
+  },
+  modeBadgeWrap: {
+    marginTop: 16,
+    display: "flex",
+    justifyContent: "center",
+  },
+  quickTaskSection: {
+    maxWidth: 760,
+    margin: "0 auto 24px",
+    padding: 16,
+    borderRadius: 12,
+    border: `1px solid ${palette.divider}`,
+    background: palette.cardBg,
+  },
+  quickTaskLabel: {
+    display: "block",
+    fontSize: 13,
+    fontWeight: 600,
+    marginBottom: 8,
+    color: palette.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  quickTaskInput: {
+    width: "100%",
+    borderRadius: 10,
+    border: `1px solid ${palette.divider}`,
+    background: "#121318",
+    color: palette.fg,
+    padding: "12px 14px",
+    fontSize: 14,
+  },
+  quickTaskHint: {
+    margin: "8px 0 0",
+    fontSize: 12,
     color: palette.muted,
   },
   mainContent: {
@@ -1401,6 +1743,138 @@ const styles: Record<string, React.CSSProperties> = {
   waitingText: {
     color: palette.muted,
     fontSize: 14,
+  },
+  quickErrorNotice: {
+    marginBottom: 12,
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${palette.rose}`,
+    background: palette.roseDim,
+    color: palette.rose,
+    fontSize: 13,
+  },
+  quickPlanList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+  },
+  quickPlanCard: {
+    padding: 14,
+    borderRadius: 10,
+    border: `1px solid ${palette.divider}`,
+    background: "rgba(39, 39, 42, 0.5)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  quickPlanHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  quickPlanGoal: {
+    fontSize: 14,
+    fontWeight: 600,
+    lineHeight: 1.35,
+    flex: 1,
+  },
+  quickStatusBadge: {
+    border: `1px solid ${palette.divider}`,
+    borderRadius: 999,
+    padding: "4px 8px",
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    whiteSpace: "nowrap",
+  },
+  quickPlanMeta: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    color: palette.muted,
+    fontSize: 11,
+  },
+  quickInlineHint: {
+    margin: 0,
+    fontSize: 12,
+    color: palette.muted,
+  },
+  quickStepsList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  quickStepCard: {
+    border: `1px solid ${palette.divider}`,
+    borderRadius: 10,
+    background: "#121318",
+    padding: "10px 12px",
+    display: "grid",
+    gap: 6,
+  },
+  quickStepHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  quickStepIndex: {
+    color: palette.muted,
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  quickStepStatus: {
+    border: `1px solid ${palette.divider}`,
+    borderRadius: 999,
+    padding: "2px 6px",
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  quickStepAction: {
+    margin: 0,
+    fontSize: 13,
+    fontWeight: 500,
+    lineHeight: 1.4,
+  },
+  quickStepResult: {
+    margin: 0,
+    fontSize: 12,
+    color: palette.muted,
+    lineHeight: 1.4,
+  },
+  quickStepError: {
+    margin: 0,
+    fontSize: 12,
+    color: palette.rose,
+    lineHeight: 1.4,
+  },
+  quickFinalOutput: {
+    border: `1px solid ${palette.success}`,
+    borderRadius: 10,
+    background: "rgba(34, 197, 94, 0.1)",
+    padding: 12,
+    display: "grid",
+    gap: 6,
+  },
+  quickFinalTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: palette.success,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  quickFinalText: {
+    margin: 0,
+    fontSize: 12,
+    lineHeight: 1.45,
+    color: palette.fg,
+    whiteSpace: "pre-wrap",
   },
   resultsList: {
     display: "flex",
