@@ -396,6 +396,169 @@ class TestCompanionEndpoints:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Test: /api/v1/agent/task*
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.integration
+class TestAgenticTaskPlanEndpoints:
+    """Tests for Stage 2 ask -> approve -> execute endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_agentic_task_create_returns_pending_approval(self, api_client):
+        """Creating a task should return a pending approval plan by default."""
+        from sakhi.apps.api.services.agentic.planner import TaskPlan, TaskStep, TaskStatus
+
+        plan = TaskPlan(
+            id="plan-123",
+            person_id=DEMO_USER_ID,
+            task_description="Find kettles",
+            goal="Find kettle options",
+            steps=[
+                TaskStep(
+                    step=1,
+                    action="web_search",
+                    parameters={"query": "best kettle under 80"},
+                    description="Search kettle options",
+                )
+            ],
+            status=TaskStatus.PENDING_APPROVAL,
+        )
+
+        with patch("sakhi.apps.api.routes.agentic.create_task_plan", new_callable=AsyncMock) as mock_create:
+            mock_create.return_value = plan
+
+            response = await api_client.post(
+                "/api/v1/agent/task",
+                params={"person_id": DEMO_USER_ID},
+                json={
+                    "task": "Find top electric kettles under $80",
+                    "auto_execute": False,
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["plan_id"] == "plan-123"
+            assert data["status"] == "pending_approval"
+            assert data["requires_approval"] is True
+            assert data["goal"] == "Find kettle options"
+            assert len(data["steps"]) == 1
+            assert data["steps"][0]["action"] == "web_search"
+            assert mock_create.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_agentic_task_approve_returns_execution_result(self, api_client):
+        """Approving a task should return the executed/completed plan."""
+        from sakhi.apps.api.services.agentic.planner import (
+            TaskPlan,
+            TaskStep,
+            TaskStatus,
+            StepStatus,
+        )
+
+        completed_plan = TaskPlan(
+            id="plan-approve-1",
+            person_id=DEMO_USER_ID,
+            task_description="Find kettles",
+            goal="Find kettle options",
+            steps=[
+                TaskStep(
+                    step=1,
+                    action="web_search",
+                    parameters={"query": "best kettle under 80"},
+                    description="Search kettle options",
+                    status=StepStatus.COMPLETED,
+                    result={"count": 3},
+                ),
+                TaskStep(
+                    step=2,
+                    action="respond",
+                    parameters={},
+                    description="Return recommendation",
+                    status=StepStatus.COMPLETED,
+                    result="Top pick: Fellow Stagg EKG",
+                ),
+            ],
+            status=TaskStatus.COMPLETED,
+            final_output="Top pick: Fellow Stagg EKG",
+        )
+
+        with patch("sakhi.apps.api.routes.agentic.approve_task_plan", new_callable=AsyncMock) as mock_approve:
+            mock_approve.return_value = completed_plan
+
+            response = await api_client.post(
+                "/api/v1/agent/task/plan-approve-1/approve",
+                params={"person_id": DEMO_USER_ID},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["plan_id"] == "plan-approve-1"
+            assert data["status"] == "completed"
+            assert data["requires_approval"] is False
+            assert data["final_output"] == "Top pick: Fellow Stagg EKG"
+            assert mock_approve.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_agentic_task_active_lists_running_plans(self, api_client):
+        """Active tasks endpoint should return active plan summaries."""
+        from sakhi.apps.api.services.agentic.planner import TaskPlan, TaskStep, TaskStatus
+
+        active_plans = [
+            TaskPlan(
+                id="plan-live-1",
+                person_id=DEMO_USER_ID,
+                task_description="Research apartments",
+                goal="Find apartments",
+                steps=[TaskStep(step=1, action="web_search", description="Search listings")],
+                status=TaskStatus.EXECUTING,
+            ),
+            TaskPlan(
+                id="plan-live-2",
+                person_id=DEMO_USER_ID,
+                task_description="Summarize latest reviews",
+                goal="Get review summary",
+                steps=[TaskStep(step=1, action="summarize", description="Summarize results")],
+                status=TaskStatus.PENDING_APPROVAL,
+            ),
+        ]
+
+        with patch("sakhi.apps.api.routes.agentic.get_active_plans", new_callable=AsyncMock) as mock_active:
+            mock_active.return_value = active_plans
+
+            response = await api_client.get(
+                "/api/v1/agent/tasks/active",
+                params={"person_id": DEMO_USER_ID},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["count"] == 2
+            assert data["tasks"][0]["plan_id"] == "plan-live-1"
+            assert data["tasks"][0]["status"] == "executing"
+            assert data["tasks"][1]["plan_id"] == "plan-live-2"
+            assert data["tasks"][1]["status"] == "pending_approval"
+            assert mock_active.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_agentic_task_cancel_returns_cancelled_flag(self, api_client):
+        """Cancelling a task should return a cancelled response."""
+        with patch("sakhi.apps.api.routes.agentic.cancel_task_plan", new_callable=AsyncMock) as mock_cancel:
+            mock_cancel.return_value = True
+
+            response = await api_client.post(
+                "/api/v1/agent/task/plan-cancel-1/cancel",
+                params={"person_id": DEMO_USER_ID},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["cancelled"] is True
+            assert data["plan_id"] == "plan-cancel-1"
+            assert mock_cancel.await_count == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Test: /memory/recall
 # ─────────────────────────────────────────────────────────────────────────────
 

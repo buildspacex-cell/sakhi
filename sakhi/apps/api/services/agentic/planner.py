@@ -6,8 +6,10 @@ Plan and execute multi-step tasks for Sakhi.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import json
+import uuid
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 from enum import Enum
@@ -15,8 +17,11 @@ from enum import Enum
 from pydantic import BaseModel
 
 from sakhi.apps.api.core.db import q as dbfetch, exec as dbexec
+from sakhi.apps.api.core.event_logger import log_event
 
 LOGGER = logging.getLogger(__name__)
+_TASK_PLANS_TABLE_READY = False
+_TASK_PLANS_TABLE_LOCK = asyncio.Lock()
 
 
 class TaskStatus(str, Enum):
@@ -63,6 +68,67 @@ class TaskPlan(BaseModel):
     session_id: Optional[str] = None
 
 
+async def _log_task_event(
+    person_id: str,
+    event: str,
+    payload: Optional[Dict[str, Any]] = None,
+) -> None:
+    try:
+        await log_event(
+            person_id=person_id,
+            layer="stage2_outer_action",
+            event=event,
+            payload=payload or {},
+        )
+    except Exception as exc:
+        LOGGER.debug("[planner] Failed to log task event %s: %s", event, exc)
+
+
+async def _ensure_task_plans_table() -> None:
+    """
+    Ensure task plan storage exists.
+
+    This keeps the Stage 2 loop runnable even when incremental migrations
+    have not yet been applied in local/staging environments.
+    """
+    global _TASK_PLANS_TABLE_READY
+    if _TASK_PLANS_TABLE_READY:
+        return
+
+    async with _TASK_PLANS_TABLE_LOCK:
+        if _TASK_PLANS_TABLE_READY:
+            return
+
+        await dbexec(
+            """
+            CREATE TABLE IF NOT EXISTS task_plans (
+                id TEXT PRIMARY KEY,
+                person_id TEXT NOT NULL,
+                session_id TEXT,
+                task_description TEXT NOT NULL,
+                goal TEXT NOT NULL,
+                steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+                status TEXT NOT NULL DEFAULT 'planning',
+                current_step INTEGER NOT NULL DEFAULT 0,
+                results JSONB NOT NULL DEFAULT '{}'::jsonb,
+                final_output TEXT,
+                approved_at TIMESTAMPTZ,
+                started_at TIMESTAMPTZ,
+                completed_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+        await dbexec(
+            """
+            CREATE INDEX IF NOT EXISTS idx_task_plans_person_status
+            ON task_plans (person_id, status)
+            """
+        )
+        _TASK_PLANS_TABLE_READY = True
+
+
 async def create_task_plan(
     person_id: str,
     task_description: str,
@@ -76,6 +142,8 @@ async def create_task_plan(
     """
     from sakhi.apps.api.core.llm import get_router
     from sakhi.apps.api.services.agentic.tools import get_available_tools
+
+    await _ensure_task_plans_table()
 
     # Get available tools
     tools = await get_available_tools(person_id)
@@ -167,14 +235,16 @@ Return ONLY valid JSON."""
         )]
 
     # Save to database
+    plan_id = str(uuid.uuid4())
     row = await dbfetch(
         """
         INSERT INTO task_plans (
-            person_id, session_id, task_description, goal, steps, status
+            id, person_id, session_id, task_description, goal, steps, status
         )
-        VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+        VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
         RETURNING id, created_at
         """,
+        plan_id,
         person_id,
         session_id,
         task_description,
@@ -205,6 +275,7 @@ Return ONLY valid JSON."""
 
 async def get_task_plan(plan_id: str) -> Optional[TaskPlan]:
     """Get a task plan by ID."""
+    await _ensure_task_plans_table()
     row = await dbfetch(
         "SELECT * FROM task_plans WHERE id = $1",
         plan_id,
@@ -232,6 +303,7 @@ async def get_task_plan(plan_id: str) -> Optional[TaskPlan]:
 
 async def approve_task_plan(plan_id: str, person_id: str) -> Optional[TaskPlan]:
     """Approve a task plan for execution."""
+    await _ensure_task_plans_table()
     await dbexec(
         """
         UPDATE task_plans
@@ -249,6 +321,7 @@ async def approve_task_plan(plan_id: str, person_id: str) -> Optional[TaskPlan]:
 
 async def cancel_task_plan(plan_id: str, person_id: str) -> bool:
     """Cancel a task plan."""
+    await _ensure_task_plans_table()
     await dbexec(
         """
         UPDATE task_plans
@@ -272,6 +345,7 @@ async def execute_task_plan(
     """
     from sakhi.apps.api.services.agentic.tools import execute_tool
 
+    await _ensure_task_plans_table()
     plan = await get_task_plan(plan_id)
     if not plan:
         raise ValueError(f"Plan not found: {plan_id}")
@@ -392,6 +466,19 @@ async def execute_task_plan(
     plan.results = results
     plan.final_output = final_output
 
+    if final_status == TaskStatus.COMPLETED:
+        await _log_task_event(
+            person_id=person_id,
+            event="task_plan_completed",
+            payload={"plan_id": plan_id, "steps_count": len(plan.steps)},
+        )
+    elif final_status == TaskStatus.FAILED:
+        await _log_task_event(
+            person_id=person_id,
+            event="task_plan_failed",
+            payload={"plan_id": plan_id, "steps_count": len(plan.steps)},
+        )
+
     LOGGER.info("[planner] Plan %s completed with status: %s", plan_id, final_status.value)
 
     return plan
@@ -506,6 +593,7 @@ Provide a well-organized summary that addresses the goal."""
 
 async def get_active_plans(person_id: str) -> List[TaskPlan]:
     """Get active task plans for a user."""
+    await _ensure_task_plans_table()
     rows = await dbfetch(
         """
         SELECT * FROM task_plans

@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from sakhi.apps.api.core.event_logger import log_event
 from sakhi.apps.api.services.agentic.search import (
     web_search,
     news_search,
@@ -41,6 +42,25 @@ from sakhi.apps.api.services.agentic.research import (
 
 router = APIRouter(prefix="/api/v1/agent", tags=["agentic"])
 LOGGER = logging.getLogger(__name__)
+
+
+async def _log_stage2_event(
+    person_id: Optional[str],
+    event: str,
+    payload: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Best-effort Stage 2 funnel event logging."""
+    if not person_id:
+        return
+    try:
+        await log_event(
+            person_id=person_id,
+            layer="stage2_outer_action",
+            event=event,
+            payload=payload or {},
+        )
+    except Exception as exc:
+        LOGGER.debug("[agentic] stage2 event log failed: %s", exc)
 
 
 # =============================================================================
@@ -193,11 +213,30 @@ async def create_task(
     session_id: Optional[str] = Query(None),
 ):
     """Create a task plan."""
-    plan = await create_task_plan(
-        person_id=person_id,
-        task_description=request.task,
-        session_id=session_id,
-        auto_approve=request.auto_execute,
+    try:
+        plan = await create_task_plan(
+            person_id=person_id,
+            task_description=request.task,
+            session_id=session_id,
+            auto_approve=request.auto_execute,
+        )
+    except Exception:
+        await _log_stage2_event(
+            person_id,
+            "task_plan_create_failed",
+            {"task": request.task, "auto_execute": request.auto_execute},
+        )
+        raise
+
+    await _log_stage2_event(
+        person_id,
+        "task_plan_created",
+        {
+            "plan_id": plan.id,
+            "status": plan.status.value,
+            "steps_count": len(plan.steps),
+            "auto_execute": request.auto_execute,
+        },
     )
 
     return TaskResponse(
@@ -237,6 +276,16 @@ async def approve_task(
     if not plan:
         raise HTTPException(404, "Task plan not found or already processed")
 
+    await _log_stage2_event(
+        person_id,
+        "task_plan_approved",
+        {
+            "plan_id": plan.id,
+            "status": plan.status.value,
+            "steps_count": len(plan.steps),
+        },
+    )
+
     return TaskResponse(
         plan_id=plan.id,
         status=plan.status.value,
@@ -254,6 +303,12 @@ async def cancel_task(
 ):
     """Cancel a task plan."""
     success = await cancel_task_plan(plan_id, person_id)
+    if success:
+        await _log_stage2_event(
+            person_id,
+            "task_plan_cancelled",
+            {"plan_id": plan_id},
+        )
     return {"cancelled": success, "plan_id": plan_id}
 
 

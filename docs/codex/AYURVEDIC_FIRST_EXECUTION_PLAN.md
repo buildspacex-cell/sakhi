@@ -134,6 +134,9 @@ Companion loop demonstrates immediate value without requiring long journaling hi
 ### Goal
 Prove Sakhi can reduce external execution friction in one high-frequency flow.
 
+### Reference
+Reality mapping and closure sequence: `docs/codex/STAGE2_FLOW_REALITY_MAP.md`
+
 ### Build
 1. One real action loop: ask -> Sakhi researches/filters -> user approves -> done.
 2. Clear approval boundary before high-impact actions.

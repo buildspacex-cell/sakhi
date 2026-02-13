@@ -89,6 +89,9 @@ Deliver immediate in-session value before long-history benefits.
 ### Objective
 Prove practical external friction removal in one high-frequency workflow.
 
+### Reference
+Flow reality map + closure sequence: `docs/codex/STAGE2_FLOW_REALITY_MAP.md`
+
 ### Epics
 1. Ask -> propose -> approve -> execute loop.
 2. Reliable execution states + recoverable errors.
@@ -252,4 +255,3 @@ If approved, execution begins at Stage 0 with:
 1. Ticket breakdown converted into working tasks.
 2. Implementation in order.
 3. Test gate run and evidence capture after each ticket group.
-

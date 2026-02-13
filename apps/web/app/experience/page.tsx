@@ -195,6 +195,9 @@ function ExperienceGateContent() {
           <a href="/experience/checkin" style={checkinLinkStyle}>
             Try quick check-in
           </a>
+          <a href="/experience/actions" style={checkinLinkStyle}>
+            Try task execution
+          </a>
         </div>
       </main>
 
@@ -342,6 +345,7 @@ const learnMoreStyle: React.CSSProperties = {
 };
 
 const checkinLinkStyle: React.CSSProperties = {
+  display: "block",
   marginTop: "6px",
   color: palette.mutedLight,
   fontSize: "13px",
