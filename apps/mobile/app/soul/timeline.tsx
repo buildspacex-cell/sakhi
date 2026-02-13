@@ -2,21 +2,30 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { timelineSeries } from "../../lib/soulViewModel";
 import { VictoryChart, VictoryLine, VictoryTheme, VictoryLegend } from "victory-native";
+import { useAuth } from "../../lib/auth/AuthContext";
 
 const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 export default function SoulTimelineScreen() {
+  const { user } = useAuth();
+  const personId = user?.personId;
   const [series, setSeries] = useState<any[]>([]);
   useEffect(() => {
-    fetch(`${API}/soul/timeline/demo`)
+    if (!personId) {
+      setSeries([]);
+      return;
+    }
+
+    fetch(`${API}/soul/timeline/${encodeURIComponent(personId)}`)
       .then((r) => r.json())
       .then((data) => setSeries(timelineSeries(data || [])))
       .catch(() => setSeries([]));
-  }, []);
+  }, [personId]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Soul Timeline</Text>
+      {!personId && <Text style={styles.subtitle}>Sign in to view your soul timeline.</Text>}
       {series.length ? (
         <View style={styles.chartCard}>
           <VictoryChart theme={VictoryTheme.material} domainPadding={10}>

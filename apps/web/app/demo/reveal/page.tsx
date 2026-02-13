@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import DemoModeBadge from "../components/DemoModeBadge";
 
 /**
  * The Reveal Demo - Act 4
@@ -108,6 +109,10 @@ export default function RevealDemo() {
         <p style={styles.subtitle}>
           The secret behind Sakhi's deep understanding: Ayurveda + patterns + memory
         </p>
+        <DemoModeBadge
+          mode="partial"
+          detail="Reflection runs against real APIs and falls back to simulated output if unavailable."
+        />
       </header>
 
       {/* Symptom Selector */}

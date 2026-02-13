@@ -179,6 +179,9 @@ def stage_4_synthesis(
     energy_mode: str = "sattva",
     recommendations: Optional[Dict[str, Any]] = None,
     memory_graph_context: Optional[Dict[str, Any]] = None,
+    body_state: Optional[Dict[str, Any]] = None,
+    body_state_translated: Optional[Dict[str, Any]] = None,
+    symptom_protocol: Optional[Dict[str, Any]] = None,
 ) -> SynthesizedContext:
     """
     Stage 4: Context Synthesis
@@ -198,6 +201,9 @@ def stage_4_synthesis(
         energy_mode=energy_mode,
         recommendations=recommendations,
         memory_graph_context=memory_graph_context,
+        body_state=body_state,
+        body_state_translated=body_state_translated,
+        symptom_protocol=symptom_protocol,
     )
 
 

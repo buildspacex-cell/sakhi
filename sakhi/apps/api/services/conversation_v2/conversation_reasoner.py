@@ -10,12 +10,17 @@ from sakhi.libs.json_utils import json_safe
 # Tier 1: 360° Context Scan (always present)
 # =============================================================================
 
+def _as_dict(value: Any) -> Dict[str, Any]:
+    """Return a dict when possible, otherwise a safe empty mapping."""
+    return value if isinstance(value, dict) else {}
+
 
 def build_context_scan(metadata: Dict[str, Any]) -> str:
     """
     Build a compact 360° context scan from always-computed (cheap) data.
     One line per module with key metrics. Omit lines for modules with no data.
     """
+    metadata = _as_dict(metadata)
     lines = []
 
     # Identity
@@ -102,26 +107,28 @@ def build_context_scan(metadata: Dict[str, Any]) -> str:
         lines.append(f"Friction: {friction['state']} (drift={drift:.0f}%)")
 
     # Body (health data — current + trends)
-    body = metadata.get("body_state") or {}
+    body = _as_dict(metadata.get("body_state"))
     body_parts: List[str] = []
-    body_sleep = body.get("sleep", {})
+    body_sleep = _as_dict(body.get("sleep"))
     if body_sleep.get("quality"):
         body_parts.append(f"sleep={body_sleep['quality']}")
     if isinstance(body_sleep.get("duration_hours"), (int, float)):
         body_parts.append(f"{body_sleep['duration_hours']:.1f}h")
-    body_vitals = body.get("vitals", {})
+    body_vitals = _as_dict(body.get("vitals"))
     rhr = body_vitals.get("resting_heart_rate") or body_vitals.get("resting_hr")
     if rhr:
         body_parts.append(f"rhr={rhr}")
     hrv = body_vitals.get("heart_rate_variability") or body_vitals.get("hrv_sdnn")
     if hrv:
         body_parts.append(f"hrv={hrv}")
-    if body.get("energy", {}).get("level"):
-        body_parts.append(f"energy={body['energy']['level']}")
-    if body.get("dosha_body", {}).get("dominant_imbalance"):
-        body_parts.append(f"dosha_body={body['dosha_body']['dominant_imbalance']}")
+    body_energy = _as_dict(body.get("energy"))
+    if body_energy.get("level"):
+        body_parts.append(f"energy={body_energy['level']}")
+    body_dosha = _as_dict(body.get("dosha_body"))
+    if body_dosha.get("dominant_imbalance"):
+        body_parts.append(f"dosha_body={body_dosha['dominant_imbalance']}")
     # Health trends (longitudinal)
-    trends = metadata.get("health_trends") or {}
+    trends = _as_dict(metadata.get("health_trends"))
     for trend_key in ("sleep_trend", "hrv_trend", "energy_trend"):
         val = trends.get(trend_key)
         if val and val not in ("stable", "insufficient_data"):
@@ -404,15 +411,15 @@ def _build_reflection_section(m: Dict[str, Any]) -> str:
 
 def _build_body_section(m: Dict[str, Any]) -> str:
     """Build deep body/health context section with current state + longitudinal trends."""
-    body = m.get("body_state") or {}
-    trends = m.get("health_trends") or {}
+    body = _as_dict(m.get("body_state"))
+    trends = _as_dict(m.get("health_trends"))
     if not body and not trends:
         return ""
 
     parts = []
 
     # Current state
-    sleep = body.get("sleep", {})
+    sleep = _as_dict(body.get("sleep"))
     if sleep.get("quality") or sleep.get("duration_hours"):
         sleep_str = f"Sleep: {sleep.get('quality', '?')} quality"
         if sleep.get("duration_hours"):
@@ -421,7 +428,7 @@ def _build_body_section(m: Dict[str, Any]) -> str:
             sleep_str += f", deep={sleep['deep_sleep_percent']}%"
         parts.append(sleep_str)
 
-    vitals = body.get("vitals", {})
+    vitals = _as_dict(body.get("vitals"))
     rhr = vitals.get("resting_heart_rate") or vitals.get("resting_hr")
     hrv = vitals.get("heart_rate_variability") or vitals.get("hrv_sdnn")
     if rhr or hrv:
@@ -432,22 +439,22 @@ def _build_body_section(m: Dict[str, Any]) -> str:
             v_str += f" HRV={hrv}ms"
         parts.append(v_str)
 
-    energy = body.get("energy", {})
+    energy = _as_dict(body.get("energy"))
     if energy.get("level"):
         e_str = f"Energy: {energy['level']}"
         if energy.get("trend"):
             e_str += f" ({energy['trend']})"
         parts.append(e_str)
 
-    dosha = body.get("dosha_body", {})
+    dosha = _as_dict(body.get("dosha_body"))
     if dosha.get("dominant_imbalance"):
         parts.append(f"Body dosha: {dosha['dominant_imbalance']} dominant")
 
-    agni = body.get("agni", {})
+    agni = _as_dict(body.get("agni"))
     if agni.get("strength"):
         parts.append(f"Agni: {agni['strength']}")
 
-    ojas = body.get("ojas", {})
+    ojas = _as_dict(body.get("ojas"))
     if isinstance(ojas.get("level"), (int, float)):
         parts.append(f"Ojas: {ojas['level']:.1f}")
 
@@ -458,7 +465,7 @@ def _build_body_section(m: Dict[str, Any]) -> str:
             val = trends.get(key)
             if val and val not in ("stable", "insufficient_data"):
                 trend_parts.append(f"{key.replace('_trend', '')}={val}")
-        dosha_traj = trends.get("dosha_trajectory", {})
+        dosha_traj = _as_dict(trends.get("dosha_trajectory"))
         for d in ("vata", "pitta", "kapha"):
             val = dosha_traj.get(d)
             if val and val not in ("stable", "insufficient_data"):

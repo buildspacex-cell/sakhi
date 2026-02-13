@@ -2,17 +2,25 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryPie, VictoryTheme, VictoryBar, VictoryChart, VictoryAxis } from "victory-native";
 import { normalizeSoulState } from "../../lib/soulViewModel";
+import { useAuth } from "../../lib/auth/AuthContext";
 
 const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 export default function SoulValuesScreen() {
+  const { user } = useAuth();
+  const personId = user?.personId;
   const [state, setState] = useState<any>({});
   useEffect(() => {
-    fetch(`${API}/soul/state/demo`)
+    if (!personId) {
+      setState({});
+      return;
+    }
+
+    fetch(`${API}/soul/state/${encodeURIComponent(personId)}`)
       .then((r) => r.json())
       .then((data) => setState(normalizeSoulState(data || {})))
       .catch(() => setState({}));
-  }, []);
+  }, [personId]);
 
   const aversionVsLonging = [
     { name: "Longing", value: (state.longing || []).length },
@@ -23,6 +31,7 @@ export default function SoulValuesScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Values & Commitments</Text>
+      {!personId && <Text style={styles.subtitle}>Sign in to view your values profile.</Text>}
       {state.core_values?.length ? (
         <View style={styles.chartCard}>
           <VictoryPie

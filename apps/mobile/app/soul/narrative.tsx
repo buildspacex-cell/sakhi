@@ -2,21 +2,30 @@
 
 import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { useAuth } from "../../lib/auth/AuthContext";
 
 const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 export default function SoulNarrativeScreen() {
+  const { user } = useAuth();
+  const personId = user?.personId;
   const [data, setData] = useState<any>({});
   useEffect(() => {
-    fetch(`${API}/soul/narrative/demo`)
+    if (!personId) {
+      setData({});
+      return;
+    }
+
+    fetch(`${API}/soul/narrative/${encodeURIComponent(personId)}`)
       .then((r) => r.json())
       .then((d) => setData(d || {}))
       .catch(() => setData({}));
-  }, []);
+  }, [personId]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Soul Narrative</Text>
+      {!personId && <Text style={styles.subtitle}>Sign in to view your narrative arc.</Text>}
       <Card title="Identity Arc" text={data.identity_arc} />
       <Card title="Archetype" text={data.soul_archetype} />
       <Card title="Life Phase" text={data.life_phase} />

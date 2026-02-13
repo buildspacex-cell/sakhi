@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import DemoModeBadge from "../components/DemoModeBadge";
 
 /**
  * Mission Demo - Life Goals Become Structured Plans
@@ -53,8 +54,9 @@ interface MissionResult {
   first_week_actions: number;
 }
 
-// Demo user ID - matches the seeded demo data
-const DEMO_PERSON_ID = "d290f1ee-6c54-4b01-90e6-d701748f0851";
+const DEMO_PERSON_ID =
+  process.env.NEXT_PUBLIC_DEMO_PERSON_ID ||
+  "d290f1ee-6c54-4b01-90e6-d701748f0851";
 
 const exampleGoals = [
   {
@@ -131,6 +133,10 @@ export default function MissionDemo() {
         <p style={styles.subtitle}>
           Tell Sakhi your goal. Watch it transform into a structured, actionable plan.
         </p>
+        <DemoModeBadge
+          mode="partial"
+          detail="Mission planning is real, currently seeded with demo profile defaults."
+        />
       </header>
 
       {/* Goal Selection */}

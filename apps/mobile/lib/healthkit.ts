@@ -214,7 +214,10 @@ async function postBatch(
     const resp = await fetch(`${config.backendUrl}/health/sync/${personId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ records }),
+      body: JSON.stringify({
+        source: "apple_health",
+        records,
+      }),
     });
     return resp.ok;
   } catch {

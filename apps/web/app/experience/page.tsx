@@ -192,6 +192,9 @@ function ExperienceGateContent() {
           >
             What is Sakhi?
           </button>
+          <a href="/experience/checkin" style={checkinLinkStyle}>
+            Try quick check-in
+          </a>
         </div>
       </main>
 
@@ -335,6 +338,15 @@ const learnMoreStyle: React.CSSProperties = {
   background: "none",
   border: "none",
   cursor: "pointer",
+  fontFamily,
+};
+
+const checkinLinkStyle: React.CSSProperties = {
+  marginTop: "6px",
+  color: palette.mutedLight,
+  fontSize: "13px",
+  textDecoration: "underline",
+  textUnderlineOffset: "3px",
   fontFamily,
 };
 

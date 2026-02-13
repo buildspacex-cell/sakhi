@@ -230,6 +230,12 @@ async def my_function():
 - Defined in `.env` at project root
 - Access via `os.environ['VAR_NAME']` or `from dotenv import load_dotenv`
 
+### Vercel `.env.production` (apps/web/.env.production)
+- Vercel monorepo builds don't reliably inject env vars when Root Directory is `apps/web/`
+- `NEXT_PUBLIC_*` vars are committed in `apps/web/.env.production` so they're baked into client JS at build time
+- **When adding a new `NEXT_PUBLIC_*` variable**: add it to both Vercel dashboard AND `apps/web/.env.production`
+- Server-side-only keys (`SUPABASE_SERVICE_ROLE_KEY`, etc.) must ONLY be set in Vercel dashboard — never commit them to `.env.production`
+
 ---
 
 ## Frontend (apps/web/)

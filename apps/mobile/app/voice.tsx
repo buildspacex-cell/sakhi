@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,9 @@ import {
   AppStateStatus,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useVoice, VoiceState, PermissionState } from "../hooks/useVoice";
+import { useAuth } from "../lib/auth/AuthContext";
 
 // =============================================================================
 // CONFIG
@@ -24,7 +26,7 @@ import { useVoice, VoiceState, PermissionState } from "../hooks/useVoice";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
-const DEMO_PERSON_ID = "6b5b2fbc-9efb-4ba4-be0a-9ec527e23f90";
+const DEMO_PERSON_ID = process.env.EXPO_PUBLIC_DEMO_PERSON_ID || "";
 
 // =============================================================================
 // PALETTE
@@ -61,12 +63,15 @@ interface Message {
 // =============================================================================
 
 export default function VoiceScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const personId = user?.personId || DEMO_PERSON_ID;
   const [messages, setMessages] = useState<Message[]>([]);
   const [textInput, setTextInput] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
 
   const voice = useVoice({
-    personId: DEMO_PERSON_ID,
+    personId,
     backendUrl: BACKEND_URL,
     openaiApiKey: OPENAI_API_KEY,
     autoPlayResponse: true,
@@ -84,9 +89,12 @@ export default function VoiceScreen() {
 
   // Add messages when voice interaction completes
   useEffect(() => {
-    if (voice.transcript && voice.response) {
+    const transcriptText = voice.transcript;
+    const responseText = voice.response;
+
+    if (transcriptText && responseText) {
       const userExists = messages.some(
-        (m) => m.type === "user" && m.text === voice.transcript
+        (m) => m.type === "user" && m.text === transcriptText
       );
       if (!userExists) {
         setMessages((prev) => [
@@ -94,19 +102,19 @@ export default function VoiceScreen() {
           {
             id: `user-${Date.now()}`,
             type: "user",
-            text: voice.transcript,
+            text: transcriptText,
             timestamp: new Date(),
           },
           {
             id: `sakhi-${Date.now()}`,
             type: "sakhi",
-            text: voice.response,
+            text: responseText,
             timestamp: new Date(),
           },
         ]);
       }
     }
-  }, [voice.transcript, voice.response, messages]);
+  }, [messages, voice.response, voice.transcript]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -118,6 +126,8 @@ export default function VoiceScreen() {
   }, [messages]);
 
   const handleVoiceButton = async () => {
+    if (!personId) return;
+
     // If permission denied, open settings
     if (voice.permissionState === "denied") {
       await voice.openSettings();
@@ -168,6 +178,13 @@ export default function VoiceScreen() {
       {/* Header - stable, non-interactive */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Sakhi</Text>
+        <Pressable
+          style={[styles.headerAction, !personId && styles.headerActionDisabled]}
+          onPress={() => router.push("/checkin" as never)}
+          disabled={!personId}
+        >
+          <Text style={styles.headerActionText}>Quick check-in</Text>
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView
@@ -257,6 +274,11 @@ export default function VoiceScreen() {
           )}
 
           {/* Error */}
+          {!personId && (
+            <View style={styles.errorBubble}>
+              <Text style={styles.errorText}>Sign in to use live voice conversation.</Text>
+            </View>
+          )}
           {voice.error && (
             <View style={styles.errorBubble}>
               <Text style={styles.errorText}>{voice.error.message}</Text>
@@ -439,12 +461,32 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 24,
     alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: "500",
     color: palette.muted,
     letterSpacing: 0.5,
+  },
+  headerAction: {
+    position: "absolute",
+    right: 16,
+    top: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.cardBg,
+  },
+  headerActionDisabled: {
+    opacity: 0.45,
+  },
+  headerActionText: {
+    fontSize: 12,
+    color: palette.muted,
+    letterSpacing: 0.2,
   },
   keyboardView: {
     flex: 1,

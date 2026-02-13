@@ -2,28 +2,39 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { normalizeSoulState, summarizeSoul } from "../../lib/soulViewModel";
 import { VictoryPie, VictoryTheme } from "victory-native";
+import { useAuth } from "../../lib/auth/AuthContext";
 
 const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 export default function SoulHomeScreen() {
+  const { user } = useAuth();
+  const personId = user?.personId;
   const [state, setState] = useState<any>({});
   const [summary, setSummary] = useState<any>({});
 
   useEffect(() => {
+    if (!personId) {
+      const normalized = normalizeSoulState({});
+      setState(normalized);
+      setSummary(summarizeSoul(normalized, {}));
+      return;
+    }
+
     const fetchData = async () => {
       const [s, sm] = await Promise.all([
-        fetch(`${API}/soul/state/demo`).then((r) => r.json()).catch(() => ({})),
-        fetch(`${API}/soul/summary/demo`).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API}/soul/state/${encodeURIComponent(personId)}`).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API}/soul/summary/${encodeURIComponent(personId)}`).then((r) => r.json()).catch(() => ({})),
       ]);
       setState(normalizeSoulState(s || {}));
       setSummary(summarizeSoul(normalizeSoulState(s || {}), sm || {}));
     };
     fetchData();
-  }, []);
+  }, [personId]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Soul Snapshot</Text>
+      {!personId && <Text style={styles.subtitle}>Sign in to view your soul analytics.</Text>}
       <View style={styles.chartCard}>
         <Text style={styles.title}>Coherence</Text>
         <VictoryPie

@@ -308,7 +308,7 @@ export function useVoice(options: UseVoiceOptions): UseVoiceReturn {
           Accept: "application/json",
         },
         body: JSON.stringify({
-          message: transcriptText,
+          text: transcriptText,
         }),
       });
 

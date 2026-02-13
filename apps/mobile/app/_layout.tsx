@@ -24,6 +24,14 @@ export default function RootLayout() {
             presentation: "fullScreenModal",
           }}
         />
+        <Stack.Screen
+          name="checkin"
+          options={{
+            title: "Quick Check-In",
+            headerShown: false,
+            presentation: "fullScreenModal",
+          }}
+        />
         <Stack.Screen name="soul" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>

@@ -2,21 +2,30 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryPie, VictoryTheme, VictoryLegend } from "victory-native";
 import { summarizeSoul, normalizeSoulState } from "../../lib/soulViewModel";
+import { useAuth } from "../../lib/auth/AuthContext";
 
 const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 export default function SoulShadowScreen() {
+  const { user } = useAuth();
+  const personId = user?.personId;
   const [summary, setSummary] = useState<any>({});
   useEffect(() => {
+    if (!personId) {
+      setSummary({});
+      return;
+    }
+
     Promise.all([
-      fetch(`${API}/soul/state/demo`).then((r) => r.json()).catch(() => ({})),
-      fetch(`${API}/soul/summary/demo`).then((r) => r.json()).catch(() => ({})),
+      fetch(`${API}/soul/state/${encodeURIComponent(personId)}`).then((r) => r.json()).catch(() => ({})),
+      fetch(`${API}/soul/summary/${encodeURIComponent(personId)}`).then((r) => r.json()).catch(() => ({})),
     ]).then(([state, sum]) => setSummary(summarizeSoul(normalizeSoulState(state || {}), sum || {})));
-  }, []);
+  }, [personId]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Shadow & Light</Text>
+      {!personId && <Text style={styles.subtitle}>Sign in to view your shadow and light patterns.</Text>}
       {(summary.shadow?.length || summary.light?.length) ? (
         <View style={styles.chartCard}>
           <VictoryLegend

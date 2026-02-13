@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import DemoModeBadge from "../components/DemoModeBadge";
 
 /**
  * Vision Loop Demo - Act 1
@@ -167,6 +168,10 @@ export default function VisionDemo() {
         <p style={styles.subtitle}>
           Sakhi browses the web autonomously, using your preferences to find products YOU'll love
         </p>
+        <DemoModeBadge
+          mode="simulated"
+          detail="Reasoning is real-time, but browser execution in this flow is simulated."
+        />
       </header>
 
       {/* Task Input */}

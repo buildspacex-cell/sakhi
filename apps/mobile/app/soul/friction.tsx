@@ -2,17 +2,26 @@ import React, { useEffect, useState, useMemo } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { VictoryBar, VictoryChart, VictoryTheme, VictoryAxis } from "victory-native";
 import { timelineSeries } from "../../lib/soulViewModel";
+import { useAuth } from "../../lib/auth/AuthContext";
 
 const API = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 export default function SoulFrictionScreen() {
+  const { user } = useAuth();
+  const personId = user?.personId;
   const [friction, setFriction] = useState<string | null>(null);
   const [heat, setHeat] = useState<{ name: string; value: number }[]>([]);
 
   useEffect(() => {
+    if (!personId) {
+      setFriction(null);
+      setHeat([]);
+      return;
+    }
+
     Promise.all([
-      fetch(`${API}/soul/summary/demo`).then((r) => r.json()).catch(() => ({})),
-      fetch(`${API}/soul/timeline/demo`).then((r) => r.json()).catch(() => []),
+      fetch(`${API}/soul/summary/${encodeURIComponent(personId)}`).then((r) => r.json()).catch(() => ({})),
+      fetch(`${API}/soul/timeline/${encodeURIComponent(personId)}`).then((r) => r.json()).catch(() => []),
     ]).then(([summary, tl]) => {
       setFriction(summary?.dominant_friction || null);
       const series = timelineSeries(tl || []);
@@ -23,7 +32,7 @@ export default function SoulFrictionScreen() {
       }, {});
       setHeat(Object.entries(buckets).map(([name, value]) => ({ name, value })));
     });
-  }, []);
+  }, [personId]);
 
   const heatRows = useMemo(() => {
     if (!heat.length) return null;
@@ -42,6 +51,7 @@ export default function SoulFrictionScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Value–Friction</Text>
+      {!personId && <Text style={styles.subtitle}>Sign in to view your friction patterns.</Text>}
       {heat.length ? (
         <View style={styles.chartCard}>
           <VictoryChart theme={VictoryTheme.material} domainPadding={15}>

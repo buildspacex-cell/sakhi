@@ -12,12 +12,13 @@ Routes tested:
 - /persona/state
 """
 
-import pytest
 import json
-from unittest.mock import AsyncMock, patch, MagicMock
+from datetime import date
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from sakhi.tests.fixtures import DEMO_USER_ID
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Test: /health
@@ -35,6 +36,16 @@ class TestHealthEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data.get("status") == "ok" or "healthy" in str(data).lower()
+
+    @pytest.mark.asyncio
+    async def test_health_sync_requires_source(self, api_client):
+        """Test that /health/sync requires the source field in payload."""
+        response = await api_client.post(
+            f"/health/sync/{DEMO_USER_ID}",
+            json={"records": []},
+        )
+
+        assert response.status_code == 422
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -190,6 +201,198 @@ class TestTurnEndpointMocked:
             # The endpoint may still fail due to other LLM calls
             # Check for either success or expected error
             assert response.status_code in [200, 500, 503]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test: /demo/run/*
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.integration
+class TestDemoRunEndpoints:
+    """Tests for demo run endpoints with mocked service dependencies."""
+
+    @pytest.mark.asyncio
+    async def test_run_vision_demo_proxy(self, api_client):
+        """Test that /demo/run/vision returns demo steps when service succeeds."""
+        with patch("sakhi.apps.api.services.demo.run_vision_demo", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = [
+                {"step": 1, "reasoning": "Found relevant item", "complete": True}
+            ]
+
+            response = await api_client.post(
+                "/demo/run/vision",
+                params={"task": "Find green tea", "mode": "simulated"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "success"
+            assert data["demo_type"] == "vision"
+            assert isinstance(data.get("steps"), list)
+            assert data["steps"][0]["step"] == 1
+            assert mock_run.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_run_reflection_demo_proxy(self, api_client):
+        """Test that /demo/run/reflection returns reflection payload when service succeeds."""
+        primary_cause = MagicMock()
+        primary_cause.dict.return_value = {
+            "cause": "late_night_screen",
+            "correlation": 0.84,
+            "explanation": "Late-night screen time correlates with scattered mornings.",
+        }
+
+        explanation = MagicMock()
+        explanation.symptom = "scattered"
+        explanation.dosha_context = "Elevated vata indicators."
+        explanation.primary_causes = [primary_cause]
+        explanation.contributing_factors = []
+        explanation.seasonal_influence = None
+        explanation.personal_pattern_match = True
+        explanation.explanation_text = "Likely driven by disrupted evening rhythm."
+
+        with patch(
+            "sakhi.apps.api.services.ayurveda.causal_reasoning.explain_symptom",
+            new_callable=AsyncMock,
+        ) as mock_explain:
+            mock_explain.return_value = explanation
+
+            response = await api_client.post(
+                "/demo/run/reflection",
+                params={"symptom": "scattered"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "success"
+            assert data["demo_type"] == "reflection"
+            assert data["result"]["symptom"] == "scattered"
+            assert isinstance(data["result"]["primary_causes"], list)
+            assert data["result"]["primary_causes"][0]["cause"] == "late_night_screen"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test: /learning/companion/*
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.integration
+class TestCompanionEndpoints:
+    """Tests for Stage 1 companion check-in/protocol endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_companion_checkin_returns_explanation_and_protocols(self, api_client):
+        """Check-in should return explanation, evidence, and 2/5/10 protocol options."""
+        primary = MagicMock()
+        primary.factor_type = "behavior"
+        primary.description = "Late-night screen exposure"
+        primary.confidence = 0.82
+        primary.evidence = "Detected in recent behavior logs"
+
+        explanation = MagicMock()
+        explanation.primary_causes = [primary]
+        explanation.dosha_context = "Elevated vata signs"
+        explanation.explanation_text = "Recent stimulation likely elevated vata and mental agitation."
+
+        with patch(
+            "sakhi.apps.api.services.ayurveda.causal_reasoning.explain_symptom",
+            new_callable=AsyncMock,
+        ) as mock_explain:
+            mock_explain.return_value = explanation
+
+            response = await api_client.post(
+                "/learning/companion/checkin",
+                json={
+                    "person_id": DEMO_USER_ID,
+                    "symptom": "anxious",
+                    "energy_level": 0.35,
+                    "body_cues": ["dry mouth"],
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["symptom"] == "anxious"
+            assert data["dosha_hint"] == "vata"
+            assert data["confidence"] >= 0.8
+            assert 0 <= data["uncertainty"] <= 1
+            assert len(data["protocols"]) == 3
+            assert [p["duration_minutes"] for p in data["protocols"]] == [2, 5, 10]
+            assert data["evidence"][0]["description"] == "Late-night screen exposure"
+
+    @pytest.mark.asyncio
+    async def test_companion_followup_plan_rejects_unknown_protocol(self, api_client):
+        """Unknown protocol ID should be rejected."""
+        response = await api_client.post(
+            "/learning/companion/followup/plan",
+            json={
+                "person_id": DEMO_USER_ID,
+                "symptom": "anxious",
+                "protocol_id": "missing_protocol",
+                "target_days": 5,
+            },
+        )
+
+        assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_companion_followup_plan_creates_tracked_plan(self, api_client):
+        """Selected protocol should create a tracked intervention plan."""
+        plan = MagicMock()
+        plan.id = "plan-123"
+        plan.intervention_name = "Grounding Breath Reset"
+        plan.schedule_type = MagicMock(value="daily")
+        plan.duration_days = 7
+        plan.total_scheduled = 7
+        plan.start_date = date.today()
+        plan.end_date = date.today()
+
+        with patch(
+            "sakhi.apps.api.services.learning.intervention_plans.create_intervention_plan",
+            new_callable=AsyncMock,
+        ) as mock_create_plan:
+            mock_create_plan.return_value = plan
+
+            response = await api_client.post(
+                "/learning/companion/followup/plan",
+                json={
+                    "person_id": DEMO_USER_ID,
+                    "symptom": "anxious",
+                    "protocol_id": "vata_grounding_breath_2m",
+                    "target_days": 7,
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert data["plan_id"] == "plan-123"
+            assert data["protocol_id"] == "vata_grounding_breath_2m"
+            assert data["schedule_type"] == "daily"
+
+    @pytest.mark.asyncio
+    async def test_companion_protocol_completion_logs_outcome(self, api_client):
+        """Protocol completion should be stored as intervention outcome."""
+        with patch(
+            "sakhi.apps.api.services.learning.outcomes.log_intervention_outcome",
+            new_callable=AsyncMock,
+        ) as mock_log_outcome:
+            mock_log_outcome.return_value = "outcome-456"
+
+            response = await api_client.post(
+                "/learning/companion/protocol/complete",
+                json={
+                    "person_id": DEMO_USER_ID,
+                    "symptom": "anxious",
+                    "protocol_id": "vata_grounding_breath_2m",
+                    "was_effective": True,
+                    "effectiveness_score": 0.8,
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert data["outcome_id"] == "outcome-456"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
