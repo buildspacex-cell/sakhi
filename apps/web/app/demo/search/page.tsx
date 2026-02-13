@@ -52,6 +52,15 @@ type TaskPlanResponse = {
   final_output?: string | null;
 };
 
+type RecurringRunLog = {
+  id: string;
+  planId: string;
+  status: string;
+  startedAt: string;
+  completedAt?: string;
+  summary?: string;
+};
+
 // User's scent preferences (for quick search)
 const SCENT_PREFERENCES = {
   loves: ["Woody", "Cedar", "Sandalwood"],
@@ -123,6 +132,10 @@ const SUBSCRIPTION_PREFERENCES = {
   alerts: ["Price increases", "Unused subscriptions", "Renewals"],
   schedule: "1st of every month",
 };
+
+const DEFAULT_RESEARCH_TASK = "Research the best laptop for me under $2,000 for coding and writing";
+const DEFAULT_RECURRING_TASK =
+  "Set up a monthly subscription audit from my connected accounts and run the first audit now";
 
 // Subscription audit steps
 const SUBSCRIPTION_STEPS = [
@@ -236,6 +249,17 @@ function toStatusColor(status: string): string {
   }
 }
 
+function formatNextMonthlyRun(referenceDate = new Date()): string {
+  const next = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1, 9, 0, 0, 0);
+  return next.toLocaleString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 // Color palette
 const palette = {
   bg: "#0e0f12",
@@ -268,6 +292,13 @@ export default function SearchDemo() {
   const [quickTask, setQuickTask] = useState("Find me a car air freshener under $20");
   const [quickPlan, setQuickPlan] = useState<TaskPlanResponse | null>(null);
   const [quickError, setQuickError] = useState<string | null>(null);
+  const [researchPlan, setResearchPlan] = useState<TaskPlanResponse | null>(null);
+  const [researchError, setResearchError] = useState<string | null>(null);
+  const [recurringPlan, setRecurringPlan] = useState<TaskPlanResponse | null>(null);
+  const [recurringError, setRecurringError] = useState<string | null>(null);
+  const [recurringEnabled, setRecurringEnabled] = useState(false);
+  const [recurringNextRun, setRecurringNextRun] = useState("");
+  const [recurringRunLogs, setRecurringRunLogs] = useState<RecurringRunLog[]>([]);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -275,6 +306,15 @@ export default function SearchDemo() {
   const quickNeedsApproval = mode === "quick" && quickPlan?.status === "pending_approval";
   const quickIsExecuting = mode === "quick" && quickPlan?.status === "executing";
   const quickIsTerminal = mode === "quick" && Boolean(quickPlan?.status && TERMINAL_STATUSES.has(quickPlan.status));
+  const researchNeedsApproval = mode === "research" && researchPlan?.status === "pending_approval";
+  const researchIsExecuting = mode === "research" && researchPlan?.status === "executing";
+  const researchIsTerminal =
+    mode === "research" && Boolean(researchPlan?.status && TERMINAL_STATUSES.has(researchPlan.status));
+  const recurringNeedsApproval = mode === "recurring" && recurringPlan?.status === "pending_approval";
+  const recurringIsExecuting = mode === "recurring" && recurringPlan?.status === "executing";
+  const recurringIsTerminal =
+    mode === "recurring" && Boolean(recurringPlan?.status && TERMINAL_STATUSES.has(recurringPlan.status));
+  const anyExecuting = quickIsExecuting || researchIsExecuting || recurringIsExecuting;
 
   useEffect(() => {
     const loadAuth = async () => {
@@ -328,6 +368,82 @@ export default function SearchDemo() {
       window.clearInterval(timer);
     };
   }, [isRunning, quickPlan?.plan_id, quickPlan?.status]);
+
+  useEffect(() => {
+    if (!researchPlan?.plan_id || researchPlan.status !== "executing" || isRunning) return;
+
+    let cancelled = false;
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/agent/plans/${encodeURIComponent(researchPlan.plan_id)}`);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || cancelled) return;
+        const latest = payload as TaskPlanResponse;
+        setResearchPlan(latest);
+        setShowResearchResults(true);
+
+        if (latest.status === "executing") {
+          setResearchStep("researching");
+        } else if (TERMINAL_STATUSES.has(latest.status)) {
+          setResearchStep("complete");
+          if (latest.status === "failed") {
+            setResearchError("Research execution failed.");
+          }
+        }
+      } catch {
+        // intentionally silent; explicit actions surface hard errors
+      }
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [isRunning, researchPlan?.plan_id, researchPlan?.status]);
+
+  useEffect(() => {
+    if (!recurringPlan?.plan_id || recurringPlan.status !== "executing" || isRunning) return;
+
+    let cancelled = false;
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/agent/plans/${encodeURIComponent(recurringPlan.plan_id)}`);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || cancelled) return;
+        const latest = payload as TaskPlanResponse;
+        setRecurringPlan(latest);
+        setShowSubResults(true);
+
+        if (latest.status === "executing") {
+          setRecurringStep("running");
+        } else if (TERMINAL_STATUSES.has(latest.status)) {
+          setRecurringStep("complete");
+          if (latest.status === "failed") {
+            setRecurringError("Scheduled audit run failed.");
+          }
+        }
+      } catch {
+        // intentionally silent; explicit actions surface hard errors
+      }
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [isRunning, recurringPlan?.plan_id, recurringPlan?.status]);
+
+  useEffect(() => {
+    if (!researchPlan?.steps?.length) return;
+    const completed = researchPlan.steps.filter((step) => step.status === "completed").length;
+    setCurrentResearchStep(Math.min(Math.max(completed, 0), Math.max(RESEARCH_STEPS.length - 1, 0)));
+  }, [researchPlan]);
+
+  useEffect(() => {
+    if (!recurringPlan?.steps?.length) return;
+    const completed = recurringPlan.steps.filter((step) => step.status === "completed").length;
+    setCurrentSubStep(Math.min(Math.max(completed, 0), Math.max(SUBSCRIPTION_STEPS.length - 1, 0)));
+  }, [recurringPlan]);
 
   // Quick Search Demo
   const runQuickDemo = useCallback(async () => {
@@ -540,173 +656,450 @@ Status: ${plan.status}`,
     }
   }, [activePersonId, isRunning, quickPlan]);
 
-  // Deep Research Demo
+  // Deep Research Demo (real async plan + approval)
   const runResearchDemo = useCallback(async () => {
     if (isRunning) return;
     setIsRunning(true);
     setShowResearchResults(false);
     setCurrentResearchStep(0);
     setMessages([]);
+    setResearchError(null);
+    setResearchPlan(null);
 
-    // Step 1: User makes request
-    setResearchStep("user_request");
-    setMessages([{ sender: "user", content: "Research the best laptop for me" }]);
-    await delay(1500);
+    const task = DEFAULT_RESEARCH_TASK;
 
-    // Step 2: Sakhi understands and asks for confirmation
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "sakhi",
-        content: `I'll research laptops matching your profile:
+    try {
+      setResearchStep("user_request");
+      setMessages([{ sender: "user", content: task }]);
+      await delay(700);
 
-📋 Your priorities: Battery, Build, Display
-💼 Your uses: Coding, Writing, Light Gaming
-💰 Your budget: $1,500 - $2,000
+      setResearchStep("accepted");
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: "I’ll set this up as a deep research plan and wait for your approval before execution.",
+          thinking: true,
+        },
+      ]);
+      await delay(600);
 
-This is a deep research task. I'll analyze reviews, compare specs, and find your perfect match. This runs in the background — I'll notify you when done.
+      const response = await fetch("/api/agent/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: activePersonId,
+          task,
+          auto_execute: false,
+        }),
+      });
 
-Should I proceed?`,
-      },
-    ]);
-    await delay(2500);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(toErrorMessage(payload));
+      }
 
-    // Step 3: User confirms (simulated)
-    setMessages((prev) => [
-      ...prev,
-      { sender: "user", content: "Yes, research it" },
-    ]);
-    await delay(1000);
+      const plan = payload as TaskPlanResponse;
+      const stepList = (plan.steps || [])
+        .slice(0, 6)
+        .map((step) => `${step.step}. ${step.description || step.action}`)
+        .join("\n");
 
-    // Step 4: Sakhi accepts and starts
-    setResearchStep("accepted");
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "sakhi",
-        content: `Got it! Starting deep research now...
+      setResearchPlan(plan);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "system",
+          content: `Research plan proposed (${plan.steps.length} steps):
+${stepList || "1. Respond to user"}
 
-📱 You can close this — I'll work in the background.
-🔔 I'll notify you when I find your perfect laptop.`,
-      },
-    ]);
-    await delay(1500);
-
-    // Step 5: Research progress (show each step)
-    setResearchStep("researching");
-    for (let i = 0; i < RESEARCH_STEPS.length; i++) {
-      setCurrentResearchStep(i);
-      await delay(RESEARCH_STEPS[i].duration);
+Status: ${plan.status}`,
+        },
+        {
+          sender: "sakhi",
+          content: "Review this plan, then tap \"Approve & Execute\" to run deep research.",
+        },
+      ]);
+      setShowResearchResults(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create research plan";
+      setResearchError(message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: `I couldn't set up research: ${message}`,
+        },
+      ]);
+    } finally {
+      setIsRunning(false);
     }
+  }, [activePersonId, isRunning]);
 
-    // Step 6: Complete
-    setResearchStep("complete");
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "sakhi",
-        content: `🎉 Research complete!
+  const approveResearchDemo = useCallback(async () => {
+    if (isRunning || !researchPlan) return;
+    setIsRunning(true);
+    setResearchError(null);
+    setResearchStep("researching");
 
-I analyzed 47 sources and 234 user reviews to find your ideal laptop.
+    try {
+      setMessages((prev) => [...prev, { sender: "user", content: "Yes, run the deep research." }]);
 
-My top recommendation: MacBook Pro 14" M3 Pro
+      const approveResponse = await fetch(
+        `/api/agent/plans/${encodeURIComponent(researchPlan.plan_id)}/approve`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ person_id: activePersonId }),
+        }
+      );
 
-This matches your priorities perfectly — exceptional battery life, premium build quality, and a stunning display. Check the detailed findings →`,
-      },
-    ]);
-    setShowResearchResults(true);
-    await delay(1000);
+      const approvePayload = await approveResponse.json().catch(() => ({}));
+      if (!approveResponse.ok) {
+        throw new Error(toErrorMessage(approvePayload));
+      }
 
-    setIsRunning(false);
-  }, [isRunning]);
+      let latestPlan = approvePayload as TaskPlanResponse;
+      setResearchPlan(latestPlan);
+      setShowResearchResults(true);
+      setMessages((prev) => [
+        ...prev,
+        { sender: "sakhi", content: "Deep research execution started. I’ll update progress here." },
+      ]);
 
-  // Recurring Tasks Demo (Subscription Tracking)
+      for (let attempt = 0; attempt < 30; attempt++) {
+        if (TERMINAL_STATUSES.has(latestPlan.status)) break;
+        await delay(1200);
+        const stateResponse = await fetch(`/api/agent/plans/${encodeURIComponent(latestPlan.plan_id)}`);
+        const statePayload = await stateResponse.json().catch(() => ({}));
+        if (!stateResponse.ok) {
+          throw new Error(toErrorMessage(statePayload));
+        }
+        latestPlan = statePayload as TaskPlanResponse;
+        setResearchPlan(latestPlan);
+      }
+
+      if (latestPlan.status === "completed") {
+        setResearchStep("complete");
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "sakhi",
+            content: latestPlan.final_output
+              ? `Research complete. ${latestPlan.final_output}`
+              : "Research complete.",
+          },
+        ]);
+      } else if (latestPlan.status === "failed") {
+        setResearchStep("complete");
+        setResearchError("Research execution failed.");
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "sakhi",
+            content: "Deep research failed during execution. You can retry with the same ask.",
+          },
+        ]);
+      } else if (latestPlan.status === "cancelled") {
+        setResearchStep("complete");
+        setMessages((prev) => [...prev, { sender: "sakhi", content: "Research execution cancelled." }]);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to approve research plan";
+      setResearchError(message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: `I couldn't start deep research: ${message}`,
+        },
+      ]);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activePersonId, isRunning, researchPlan]);
+
+  const rejectResearchDemo = useCallback(async () => {
+    if (isRunning || !researchPlan) return;
+    setIsRunning(true);
+    setResearchError(null);
+
+    try {
+      const response = await fetch(
+        `/api/agent/plans/${encodeURIComponent(researchPlan.plan_id)}/cancel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ person_id: activePersonId }),
+        }
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(toErrorMessage(payload));
+      }
+
+      setResearchPlan((prev) => (prev ? { ...prev, status: "cancelled" } : prev));
+      setResearchStep("complete");
+      setMessages((prev) => [
+        ...prev,
+        { sender: "user", content: "Cancel this research request." },
+        { sender: "sakhi", content: "Done. I cancelled the research plan." },
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to cancel research plan";
+      setResearchError(message);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activePersonId, isRunning, researchPlan]);
+
+  // Recurring Tasks Demo (real plan + schedule scaffold + run logs)
   const runRecurringDemo = useCallback(async () => {
     if (isRunning) return;
     setIsRunning(true);
     setShowSubResults(false);
     setCurrentSubStep(0);
     setMessages([]);
+    setRecurringError(null);
+    setRecurringPlan(null);
 
-    // Step 1: User makes request
-    setRecurringStep("user_request");
-    setMessages([{ sender: "user", content: "Track all my subscriptions and what I'm paying" }]);
-    await delay(1500);
+    const task = DEFAULT_RECURRING_TASK;
 
-    // Step 2: Sakhi understands and shows configuration
-    setRecurringStep("configuring");
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "sakhi",
-        content: `I'll audit your subscriptions by checking:
+    try {
+      setRecurringStep("user_request");
+      setMessages([{ sender: "user", content: "Track all my subscriptions and what I'm paying each month." }]);
+      await delay(700);
 
-📬 Gmail for receipts & invoices
-🏦 Bank statements for recurring charges
-💳 Credit card transactions
+      setRecurringStep("configuring");
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: "I’m creating a recurring monthly audit scaffold and first-run plan.",
+          thinking: true,
+        },
+      ]);
+      await delay(600);
 
-I'll track:
-• Monthly/annual costs per service
-• Unused subscriptions (no logins)
-• Price increases
+      const response = await fetch("/api/agent/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: activePersonId,
+          task,
+          auto_execute: false,
+        }),
+      });
 
-Run this monthly on the 1st?`,
-      },
-    ]);
-    await delay(3000);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(toErrorMessage(payload));
+      }
 
-    // Step 3: User confirms recurring
-    setMessages((prev) => [
-      ...prev,
-      { sender: "user", content: "Yes, run it monthly" },
-    ]);
-    await delay(1000);
+      const plan = payload as TaskPlanResponse;
+      const stepList = (plan.steps || [])
+        .slice(0, 6)
+        .map((step) => `${step.step}. ${step.description || step.action}`)
+        .join("\n");
+      const nextRun = recurringNextRun || formatNextMonthlyRun();
+      setRecurringNextRun(nextRun);
+      setRecurringPlan(plan);
+      setRecurringStep("scheduled");
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "system",
+          content: `Recurring scaffold prepared:
+Cadence: Monthly (1st)
+Next run target: ${nextRun}
 
-    // Step 4: Scheduled
-    setRecurringStep("scheduled");
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "sakhi",
-        content: `✅ Monthly subscription audit scheduled!
+First-run plan (${plan.steps.length} steps):
+${stepList || "1. Respond to user"}
 
-📅 1st of every month
-🔔 I'll send you a spending report
-
-Running first audit now...`,
-      },
-    ]);
-    await delay(1500);
-
-    // Step 5: Running through audit steps
-    setRecurringStep("running");
-    for (let i = 0; i < SUBSCRIPTION_STEPS.length; i++) {
-      setCurrentSubStep(i);
-      await delay(SUBSCRIPTION_STEPS[i].duration);
+Status: ${plan.status}`,
+        },
+        {
+          sender: "sakhi",
+          content: "Approve to run the first subscription audit now.",
+        },
+      ]);
+      setShowSubResults(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create recurring plan";
+      setRecurringError(message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: `I couldn't set up recurring auditing: ${message}`,
+        },
+      ]);
+    } finally {
+      setIsRunning(false);
     }
+  }, [activePersonId, isRunning, recurringNextRun]);
 
-    // Step 6: Complete
-    setRecurringStep("complete");
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "sakhi",
-        content: `🎉 Subscription audit complete!
+  const approveRecurringDemo = useCallback(async () => {
+    if (isRunning || !recurringPlan) return;
+    setIsRunning(true);
+    setRecurringError(null);
+    setRecurringStep("running");
 
-💰 Monthly spend: $847
-📊 23 active subscriptions
-⚠️ 4 unused (potential savings: $67.98/mo)
+    const startedAt = new Date().toISOString();
+    const currentPlanId = recurringPlan.plan_id;
 
-I found Adobe CC unused for 3 months and Headspace unused for 6 months. Want me to cancel these?
+    try {
+      setMessages((prev) => [
+        ...prev,
+        { sender: "user", content: "Yes, schedule monthly and run the first audit now." },
+      ]);
 
-Next audit: March 1, 2026`,
-      },
-    ]);
-    setShowSubResults(true);
-    await delay(1000);
+      const approveResponse = await fetch(
+        `/api/agent/plans/${encodeURIComponent(currentPlanId)}/approve`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ person_id: activePersonId }),
+        }
+      );
 
-    setIsRunning(false);
-  }, [isRunning]);
+      const approvePayload = await approveResponse.json().catch(() => ({}));
+      if (!approveResponse.ok) {
+        throw new Error(toErrorMessage(approvePayload));
+      }
+
+      let latestPlan = approvePayload as TaskPlanResponse;
+      setRecurringPlan(latestPlan);
+      setRecurringEnabled(true);
+      setRecurringNextRun((prev) => prev || formatNextMonthlyRun());
+      setShowSubResults(true);
+      setMessages((prev) => [
+        ...prev,
+        { sender: "sakhi", content: "Recurring audit execution started. I’ll log this run and keep the schedule active." },
+      ]);
+
+      for (let attempt = 0; attempt < 30; attempt++) {
+        if (TERMINAL_STATUSES.has(latestPlan.status)) break;
+        await delay(1200);
+        const stateResponse = await fetch(`/api/agent/plans/${encodeURIComponent(latestPlan.plan_id)}`);
+        const statePayload = await stateResponse.json().catch(() => ({}));
+        if (!stateResponse.ok) {
+          throw new Error(toErrorMessage(statePayload));
+        }
+        latestPlan = statePayload as TaskPlanResponse;
+        setRecurringPlan(latestPlan);
+      }
+
+      if (latestPlan.status === "completed") {
+        const completedAt = new Date().toISOString();
+        setRecurringStep("complete");
+        setRecurringRunLogs((prev) => [
+          {
+            id: `${currentPlanId}-completed`,
+            planId: currentPlanId,
+            status: "completed",
+            startedAt,
+            completedAt,
+            summary: latestPlan.final_output || "Audit completed.",
+          },
+          ...prev,
+        ]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "sakhi",
+            content: `Subscription audit complete. Next run is scaffolded for ${recurringNextRun || formatNextMonthlyRun()}.`,
+          },
+        ]);
+      } else if (latestPlan.status === "failed") {
+        const completedAt = new Date().toISOString();
+        setRecurringStep("complete");
+        setRecurringError("Scheduled audit run failed.");
+        setRecurringRunLogs((prev) => [
+          {
+            id: `${currentPlanId}-failed`,
+            planId: currentPlanId,
+            status: "failed",
+            startedAt,
+            completedAt,
+            summary: "Execution failed",
+          },
+          ...prev,
+        ]);
+      } else if (latestPlan.status === "cancelled") {
+        const completedAt = new Date().toISOString();
+        setRecurringStep("complete");
+        setRecurringRunLogs((prev) => [
+          {
+            id: `${currentPlanId}-cancelled`,
+            planId: currentPlanId,
+            status: "cancelled",
+            startedAt,
+            completedAt,
+            summary: "Execution cancelled",
+          },
+          ...prev,
+        ]);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to approve recurring plan";
+      setRecurringError(message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "sakhi",
+          content: `I couldn't run the recurring audit: ${message}`,
+        },
+      ]);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activePersonId, isRunning, recurringNextRun, recurringPlan]);
+
+  const rejectRecurringDemo = useCallback(async () => {
+    if (isRunning || !recurringPlan) return;
+    setIsRunning(true);
+    setRecurringError(null);
+
+    try {
+      const response = await fetch(
+        `/api/agent/plans/${encodeURIComponent(recurringPlan.plan_id)}/cancel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ person_id: activePersonId }),
+        }
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(toErrorMessage(payload));
+      }
+
+      setRecurringPlan((prev) => (prev ? { ...prev, status: "cancelled" } : prev));
+      setRecurringStep("complete");
+      setRecurringRunLogs((prev) => [
+        {
+          id: `${recurringPlan.plan_id}-cancelled`,
+          planId: recurringPlan.plan_id,
+          status: "cancelled",
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          summary: "Plan cancelled before execution",
+        },
+        ...prev,
+      ]);
+      setMessages((prev) => [
+        ...prev,
+        { sender: "user", content: "Cancel this recurring setup." },
+        { sender: "sakhi", content: "Cancelled. No recurring audit was started." },
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to cancel recurring plan";
+      setRecurringError(message);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activePersonId, isRunning, recurringPlan]);
 
   const resetDemo = () => {
     setQuickStep("idle");
@@ -721,10 +1114,17 @@ Next audit: March 1, 2026`,
     setCurrentSubStep(0);
     setQuickPlan(null);
     setQuickError(null);
+    setResearchPlan(null);
+    setResearchError(null);
+    setRecurringPlan(null);
+    setRecurringError(null);
+    setRecurringEnabled(false);
+    setRecurringNextRun("");
+    setRecurringRunLogs([]);
   };
 
   const switchMode = (newMode: DemoMode) => {
-    if (isRunning) return;
+    if (isRunning || anyExecuting) return;
     setMode(newMode);
     resetDemo();
   };
@@ -744,6 +1144,28 @@ Next audit: March 1, 2026`,
       : quickIsTerminal
         ? "Run Again"
         : "Start Demo";
+  const researchPrimaryLabel = isRunning
+    ? researchNeedsApproval
+      ? "Approving..."
+      : researchIsExecuting
+        ? "Executing..."
+        : "Planning..."
+    : researchIsExecuting
+      ? "Execution In Progress"
+      : researchIsTerminal
+        ? "Run Again"
+        : "Start Demo";
+  const recurringPrimaryLabel = isRunning
+    ? recurringNeedsApproval
+      ? "Approving..."
+      : recurringIsExecuting
+        ? "Executing..."
+        : "Planning..."
+    : recurringIsExecuting
+      ? "Execution In Progress"
+      : recurringIsTerminal
+        ? "Run Again"
+        : "Start Demo";
 
   return (
     <main style={styles.container}>
@@ -760,11 +1182,13 @@ Next audit: March 1, 2026`,
         </p>
         <div style={styles.modeBadgeWrap}>
           <DemoModeBadge
-            mode={isQuickMode ? "production-ready" : "simulated"}
+            mode={isQuickMode || isResearchMode ? "production-ready" : "partial"}
             detail={
               isQuickMode
                 ? "Quick flow is connected to real plan APIs with explicit approval and execution states."
-                : "This tab is currently a simulated storyboard flow."
+                : isResearchMode
+                  ? "Deep research now runs through the real ask -> approve -> execute plan lifecycle."
+                  : "Recurring flow uses real plan execution with monthly schedule scaffolding and run logs."
             }
           />
         </div>
@@ -775,7 +1199,7 @@ Next audit: March 1, 2026`,
         <button
           onClick={() => switchMode("quick")}
           style={mode === "quick" ? styles.tabActive : styles.tab}
-          disabled={isRunning}
+          disabled={isRunning || anyExecuting}
         >
           <span style={styles.tabIcon}>⚡</span>
           Quick Search
@@ -783,7 +1207,7 @@ Next audit: March 1, 2026`,
         <button
           onClick={() => switchMode("research")}
           style={mode === "research" ? styles.tabActive : styles.tab}
-          disabled={isRunning}
+          disabled={isRunning || anyExecuting}
         >
           <span style={styles.tabIcon}>🔬</span>
           Deep Research
@@ -791,7 +1215,7 @@ Next audit: March 1, 2026`,
         <button
           onClick={() => switchMode("recurring")}
           style={mode === "recurring" ? styles.tabActive : styles.tab}
-          disabled={isRunning}
+          disabled={isRunning || anyExecuting}
         >
           <span style={styles.tabIcon}>🔄</span>
           Recurring Tasks
@@ -1157,96 +1581,98 @@ Next audit: March 1, 2026`,
               )}
             </>
           ) : isResearchMode ? (
-            // Deep research results
+            // Deep research (real plan lifecycle)
             <>
-              <h3 style={styles.panelTitle}>Research Findings</h3>
-              <p style={styles.panelSubtitle}>Deep analysis results</p>
+              <h3 style={styles.panelTitle}>Research Task Status</h3>
+              <p style={styles.panelSubtitle}>Real planner + approval + async execution</p>
 
-              {!showResearchResults ? (
+              {researchError && <div style={styles.quickErrorNotice}>⚠️ {researchError}</div>}
+
+              {!showResearchResults || !researchPlan ? (
                 <div style={styles.waitingResults}>
                   <span style={styles.waitingIcon}>
                     {researchStep === "idle" ? "🔬" : researchStep === "researching" ? "⏳" : "📋"}
                   </span>
                   <span style={styles.waitingText}>
                     {researchStep === "idle"
-                      ? "Waiting to start research..."
+                      ? "Waiting to start deep research..."
                       : researchStep === "researching"
-                        ? "Researching in background..."
-                        : "Analyzing..."}
+                        ? "Executing research steps..."
+                        : "Preparing proposal..."}
                   </span>
-                  {researchStep === "researching" && (
-                    <div style={styles.researchStats}>
-                      <span>Sources: {Math.min(Math.floor((currentResearchStep + 1) * 7), 47)}/47</span>
-                      <span>Reviews: {Math.min(Math.floor((currentResearchStep + 1) * 35), 234)}/234</span>
-                    </div>
-                  )}
                 </div>
               ) : (
-                <div style={styles.researchResultsList}>
-                  {/* Top Pick */}
-                  <div style={styles.topPickCard}>
-                    <div style={styles.topPickHeader}>
-                      <span style={styles.topPickBadge}>🏆 Top Pick</span>
-                      <span style={styles.topPickScore}>{RESEARCH_FINDINGS.topPick.matchScore}% match</span>
+                <div style={styles.quickPlanList}>
+                  <div style={styles.quickPlanCard}>
+                    <div style={styles.quickPlanHeader}>
+                      <span style={styles.quickPlanGoal}>{researchPlan.goal}</span>
+                      <span
+                        style={{
+                          ...styles.quickStatusBadge,
+                          borderColor: toStatusColor(researchPlan.status),
+                          color: toStatusColor(researchPlan.status),
+                        }}
+                      >
+                        {researchPlan.status}
+                      </span>
                     </div>
-                    <div style={styles.topPickMain}>
-                      <span style={styles.topPickImage}>{RESEARCH_FINDINGS.topPick.image}</span>
-                      <div style={styles.topPickInfo}>
-                        <span style={styles.topPickName}>{RESEARCH_FINDINGS.topPick.name}</span>
-                        <span style={styles.topPickPrice}>{RESEARCH_FINDINGS.topPick.price}</span>
-                      </div>
+                    <div style={styles.quickPlanMeta}>
+                      <span>Plan ID: {researchPlan.plan_id.slice(0, 8)}...</span>
+                      <span>Stage: {researchStep}</span>
+                      <span>Steps: {researchPlan.steps?.length || 0}</span>
                     </div>
-                    <p style={styles.topPickVerdict}>{RESEARCH_FINDINGS.topPick.verdict}</p>
-
-                    <div style={styles.prosConsList}>
-                      {RESEARCH_FINDINGS.topPick.pros.map((pro, i) => (
-                        <div key={i} style={styles.proItem}>
-                          <span style={styles.proIcon}>✓</span>
-                          <span>{pro}</span>
-                        </div>
-                      ))}
-                      {RESEARCH_FINDINGS.topPick.cons.map((con, i) => (
-                        <div key={i} style={styles.conItem}>
-                          <span style={styles.conIcon}>•</span>
-                          <span>{con}</span>
-                        </div>
-                      ))}
-                    </div>
+                    {researchPlan.status === "pending_approval" && (
+                      <p style={styles.quickInlineHint}>Awaiting your approval to execute.</p>
+                    )}
+                    {researchPlan.status === "executing" && (
+                      <p style={styles.quickInlineHint}>Deep research is running in background.</p>
+                    )}
                   </div>
 
-                  {/* Alternatives */}
-                  <div style={styles.alternativesSection}>
-                    <span style={styles.alternativesTitle}>Alternatives</span>
-                    {RESEARCH_FINDINGS.alternatives.map((alt, i) => (
-                      <div key={i} style={styles.altCard}>
-                        <div style={styles.altHeader}>
-                          <span style={styles.altName}>{alt.name}</span>
-                          <span style={styles.altScore}>{alt.matchScore}%</span>
+                  <div style={styles.quickStepsList}>
+                    {(researchPlan.steps || []).map((step) => (
+                      <article key={`${researchPlan.plan_id}-step-${step.step}`} style={styles.quickStepCard}>
+                        <div style={styles.quickStepHeader}>
+                          <span style={styles.quickStepIndex}>Step {step.step}</span>
+                          <span
+                            style={{
+                              ...styles.quickStepStatus,
+                              borderColor: toStatusColor(step.status),
+                              color: toStatusColor(step.status),
+                            }}
+                          >
+                            {step.status}
+                          </span>
                         </div>
-                        <div style={styles.altMeta}>
-                          <span>{alt.price}</span>
-                          <span style={styles.altNote}>{alt.note}</span>
-                        </div>
-                      </div>
+                        <p style={styles.quickStepAction}>{step.description || step.action}</p>
+                        {step.result !== undefined && step.result !== null && (
+                          <p style={styles.quickStepResult}>Result: {summarizeResult(step.result)}</p>
+                        )}
+                        {typeof step.error === "string" && step.error.length > 0 && (
+                          <p style={styles.quickStepError}>Error: {step.error}</p>
+                        )}
+                      </article>
                     ))}
                   </div>
 
-                  {/* Research Stats */}
-                  <div style={styles.researchStatsFinal}>
-                    <span>📊 {RESEARCH_FINDINGS.sourcesAnalyzed} sources analyzed</span>
-                    <span>💬 {RESEARCH_FINDINGS.reviewsRead} reviews read</span>
-                    <span>⏱️ {RESEARCH_FINDINGS.timeSpent}</span>
-                  </div>
+                  {researchPlan.final_output && (
+                    <div style={styles.quickFinalOutput}>
+                      <span style={styles.quickFinalTitle}>Final Output</span>
+                      <p style={styles.quickFinalText}>{researchPlan.final_output}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </>
           ) : (
-            // Subscription audit results
+            // Recurring subscription audit (real run + schedule scaffold)
             <>
-              <h3 style={styles.panelTitle}>Subscription Report</h3>
-              <p style={styles.panelSubtitle}>Your monthly spending breakdown</p>
+              <h3 style={styles.panelTitle}>Recurring Audit Status</h3>
+              <p style={styles.panelSubtitle}>Real execution loop + monthly scaffold + run logs</p>
 
-              {!showSubResults ? (
+              {recurringError && <div style={styles.quickErrorNotice}>⚠️ {recurringError}</div>}
+
+              {!showSubResults || !recurringPlan ? (
                 <div style={styles.waitingResults}>
                   <span style={styles.waitingIcon}>
                     {recurringStep === "idle" ? "💰" : recurringStep === "running" ? "⏳" : "📋"}
@@ -1258,60 +1684,98 @@ Next audit: March 1, 2026`,
                         ? "Auditing subscriptions..."
                         : "Processing..."}
                   </span>
-                  {recurringStep === "running" && (
-                    <div style={styles.researchStats}>
-                      <span>Step {currentSubStep + 1} of {SUBSCRIPTION_STEPS.length}</span>
-                    </div>
-                  )}
                 </div>
               ) : (
-                <div style={styles.subResultsList}>
-                  {/* Summary Stats */}
-                  <div style={styles.subSummary}>
-                    <div style={styles.subStatMain}>
-                      <span style={styles.subStatValue}>${SUBSCRIPTION_RESULTS.totalMonthly}</span>
-                      <span style={styles.subStatLabel}>Monthly Spend</span>
-                    </div>
-                    <div style={styles.subStatRow}>
-                      <div style={styles.subStatSmall}>
-                        <span style={styles.subStatSmallValue}>{SUBSCRIPTION_RESULTS.activeCount}</span>
-                        <span style={styles.subStatSmallLabel}>Active</span>
+                <div style={styles.quickPlanList}>
+                  {recurringEnabled && (
+                    <div style={styles.recurringScheduleCard}>
+                      <div style={styles.recurringScheduleRow}>
+                        <span style={styles.recurringScheduleLabel}>Cadence</span>
+                        <span style={styles.recurringScheduleValue}>Monthly on day 1</span>
                       </div>
-                      <div style={styles.subStatSmall}>
-                        <span style={{ ...styles.subStatSmallValue, color: palette.warning }}>{SUBSCRIPTION_RESULTS.unusedCount}</span>
-                        <span style={styles.subStatSmallLabel}>Unused</span>
+                      <div style={styles.recurringScheduleRow}>
+                        <span style={styles.recurringScheduleLabel}>Next run target</span>
+                        <span style={styles.recurringScheduleValue}>{recurringNextRun || "Pending schedule"}</span>
                       </div>
-                      <div style={styles.subStatSmall}>
-                        <span style={{ ...styles.subStatSmallValue, color: palette.success }}>${SUBSCRIPTION_RESULTS.savings}</span>
-                        <span style={styles.subStatSmallLabel}>Savings</span>
+                      <div style={styles.recurringScheduleRow}>
+                        <span style={styles.recurringScheduleLabel}>Runs logged</span>
+                        <span style={styles.recurringScheduleValue}>{recurringRunLogs.length}</span>
                       </div>
                     </div>
+                  )}
+
+                  <div style={styles.quickPlanCard}>
+                    <div style={styles.quickPlanHeader}>
+                      <span style={styles.quickPlanGoal}>{recurringPlan.goal}</span>
+                      <span
+                        style={{
+                          ...styles.quickStatusBadge,
+                          borderColor: toStatusColor(recurringPlan.status),
+                          color: toStatusColor(recurringPlan.status),
+                        }}
+                      >
+                        {recurringPlan.status}
+                      </span>
+                    </div>
+                    <div style={styles.quickPlanMeta}>
+                      <span>Plan ID: {recurringPlan.plan_id.slice(0, 8)}...</span>
+                      <span>Stage: {recurringStep}</span>
+                      <span>Steps: {recurringPlan.steps?.length || 0}</span>
+                    </div>
+                    {recurringPlan.status === "pending_approval" && (
+                      <p style={styles.quickInlineHint}>Approve to run the first audit and activate recurring scaffold.</p>
+                    )}
                   </div>
 
-                  {/* Subscriptions List */}
-                  <div style={styles.subListSection}>
-                    <span style={styles.subListTitle}>Subscriptions</span>
-                    {SUBSCRIPTION_RESULTS.subscriptions.map((sub, i) => (
-                      <div key={i} style={styles.subRow}>
-                        <span style={styles.subName}>{sub.name}</span>
-                        <span style={styles.subCost}>${sub.cost.toFixed(2)}</span>
-                        <span style={{
-                          ...styles.subStatus,
-                          color: sub.status === "Active" ? palette.success : palette.warning,
-                          background: sub.status === "Active" ? palette.successDim : palette.warningDim,
-                        }}>{sub.status}</span>
-                      </div>
+                  <div style={styles.quickStepsList}>
+                    {(recurringPlan.steps || []).map((step) => (
+                      <article key={`${recurringPlan.plan_id}-step-${step.step}`} style={styles.quickStepCard}>
+                        <div style={styles.quickStepHeader}>
+                          <span style={styles.quickStepIndex}>Step {step.step}</span>
+                          <span
+                            style={{
+                              ...styles.quickStepStatus,
+                              borderColor: toStatusColor(step.status),
+                              color: toStatusColor(step.status),
+                            }}
+                          >
+                            {step.status}
+                          </span>
+                        </div>
+                        <p style={styles.quickStepAction}>{step.description || step.action}</p>
+                        {step.result !== undefined && step.result !== null && (
+                          <p style={styles.quickStepResult}>Result: {summarizeResult(step.result)}</p>
+                        )}
+                        {typeof step.error === "string" && step.error.length > 0 && (
+                          <p style={styles.quickStepError}>Error: {step.error}</p>
+                        )}
+                      </article>
                     ))}
                   </div>
 
-                  {/* Next Run */}
-                  <div style={styles.nextRunCard}>
-                    <span style={styles.nextRunIcon}>🔄</span>
-                    <div style={styles.nextRunInfo}>
-                      <span style={styles.nextRunLabel}>Next audit</span>
-                      <span style={styles.nextRunTime}>{SUBSCRIPTION_RESULTS.nextRun}</span>
+                  {recurringRunLogs.length > 0 && (
+                    <div style={styles.recurringRunLogList}>
+                      <span style={styles.recurringRunLogTitle}>Run logs</span>
+                      {recurringRunLogs.slice(0, 5).map((log) => (
+                        <div key={log.id} style={styles.recurringRunLogRow}>
+                          <div style={styles.recurringRunLogMeta}>
+                            <span style={{ ...styles.recurringRunLogStatus, color: toStatusColor(log.status) }}>
+                              {log.status}
+                            </span>
+                            <span>{new Date(log.startedAt).toLocaleString("en-US")}</span>
+                          </div>
+                          {log.summary && <p style={styles.recurringRunLogSummary}>{log.summary}</p>}
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
+
+                  {recurringPlan.final_output && (
+                    <div style={styles.quickFinalOutput}>
+                      <span style={styles.quickFinalTitle}>Final Output</span>
+                      <p style={styles.quickFinalText}>{recurringPlan.final_output}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -1328,25 +1792,39 @@ Next audit: March 1, 2026`,
                 ? approveQuickDemo
                 : runQuickDemo
               : isResearchMode
-                ? runResearchDemo
-                : runRecurringDemo
+                ? researchNeedsApproval
+                  ? approveResearchDemo
+                  : runResearchDemo
+                : recurringNeedsApproval
+                  ? approveRecurringDemo
+                  : runRecurringDemo
           }
-          disabled={isRunning || (isQuickMode && quickIsExecuting)}
-          style={isRunning || (isQuickMode && quickIsExecuting) ? styles.buttonDisabled : styles.button}
+          disabled={
+            isRunning ||
+            (isQuickMode && quickIsExecuting) ||
+            (isResearchMode && researchIsExecuting) ||
+            (isRecurringMode && recurringIsExecuting)
+          }
+          style={
+            isRunning ||
+            (isQuickMode && quickIsExecuting) ||
+            (isResearchMode && researchIsExecuting) ||
+            (isRecurringMode && recurringIsExecuting)
+              ? styles.buttonDisabled
+              : styles.button
+          }
         >
           {isQuickMode
             ? quickPrimaryLabel
-            : isRunning
-              ? isResearchMode
-                ? "Researching..."
-                : "Organizing..."
-              : currentStep === "complete"
-                ? "Run Again"
-                : "Start Demo"}
+            : isResearchMode
+              ? researchPrimaryLabel
+              : recurringPrimaryLabel}
         </button>
-        {isQuickMode && quickNeedsApproval && (
+        {((isQuickMode && quickNeedsApproval) ||
+          (isResearchMode && researchNeedsApproval) ||
+          (isRecurringMode && recurringNeedsApproval)) && (
           <button
-            onClick={rejectQuickDemo}
+            onClick={isQuickMode ? rejectQuickDemo : isResearchMode ? rejectResearchDemo : rejectRecurringDemo}
             disabled={isRunning}
             style={isRunning ? styles.buttonDisabled : styles.buttonSecondary}
           >
@@ -1389,19 +1867,19 @@ Next audit: March 1, 2026`,
             <div style={styles.comparisonCard}>
               <span style={styles.comparisonHeader}>❌ DIY Research</span>
               <ul style={styles.comparisonList}>
-                <li>Open 15 browser tabs</li>
-                <li>Read conflicting reviews</li>
-                <li>Hours of comparison</li>
-                <li>Analysis paralysis</li>
+                <li>Open many tabs and manually reconcile tradeoffs</li>
+                <li>Lose time comparing conflicting opinions</li>
+                <li>No explicit execution state while work runs</li>
+                <li>Hard to audit what actually happened</li>
               </ul>
             </div>
             <div style={styles.comparisonCardGood}>
-              <span style={styles.comparisonHeader}>✅ Sakhi Research</span>
+              <span style={styles.comparisonHeader}>✅ Sakhi Deep Research (Live)</span>
               <ul style={styles.comparisonList}>
-                <li>Runs in background</li>
-                <li>Reads 234 reviews FOR you</li>
-                <li>Matches to YOUR priorities</li>
-                <li>Clear recommendation</li>
+                <li>Runs as a real approval-gated task plan</li>
+                <li>Shows live step statuses and results</li>
+                <li>Keeps full execution trace visible</li>
+                <li>Returns final output with accountability</li>
               </ul>
             </div>
           </div>
@@ -1410,19 +1888,19 @@ Next audit: March 1, 2026`,
             <div style={styles.comparisonCard}>
               <span style={styles.comparisonHeader}>❌ Manual Tracking</span>
               <ul style={styles.comparisonList}>
-                <li>Spreadsheets you forget to update</li>
-                <li>Miss price increases</li>
-                <li>Pay for unused services</li>
-                <li>No idea what you actually spend</li>
+                <li>No consistent monthly cadence</li>
+                <li>Little visibility into prior run outcomes</li>
+                <li>Execution depends on memory and manual effort</li>
+                <li>Hard to prove if the process is improving</li>
               </ul>
             </div>
             <div style={styles.comparisonCardGood}>
-              <span style={styles.comparisonHeader}>✅ Sakhi Subscription Audit</span>
+              <span style={styles.comparisonHeader}>✅ Sakhi Recurring Scaffold (Live)</span>
               <ul style={styles.comparisonList}>
-                <li>Auto-detects from email & bank</li>
-                <li>Flags unused subscriptions</li>
-                <li>Tracks every price change</li>
-                <li>Monthly report, zero effort</li>
+                <li>First run executes through real plan lifecycle</li>
+                <li>Monthly scaffold with explicit next-run target</li>
+                <li>Run logs preserve outcomes and failures</li>
+                <li>Approval gate remains explicit for execution</li>
               </ul>
             </div>
           </div>
@@ -1875,6 +2353,74 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.45,
     color: palette.fg,
     whiteSpace: "pre-wrap",
+  },
+  recurringScheduleCard: {
+    border: `1px solid ${palette.accent}`,
+    borderRadius: 10,
+    background: palette.accentDim,
+    padding: 12,
+    display: "grid",
+    gap: 8,
+  },
+  recurringScheduleRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  recurringScheduleLabel: {
+    fontSize: 11,
+    color: palette.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  recurringScheduleValue: {
+    fontSize: 12,
+    color: palette.fg,
+    fontWeight: 500,
+    textAlign: "right",
+  },
+  recurringRunLogList: {
+    border: `1px solid ${palette.divider}`,
+    borderRadius: 10,
+    background: "rgba(39, 39, 42, 0.5)",
+    padding: 12,
+    display: "grid",
+    gap: 8,
+  },
+  recurringRunLogTitle: {
+    fontSize: 11,
+    color: palette.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    fontWeight: 700,
+  },
+  recurringRunLogRow: {
+    border: `1px solid ${palette.divider}`,
+    borderRadius: 8,
+    background: "#121318",
+    padding: "8px 10px",
+    display: "grid",
+    gap: 5,
+  },
+  recurringRunLogMeta: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 8,
+    fontSize: 11,
+    color: palette.muted,
+  },
+  recurringRunLogStatus: {
+    color: palette.success,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    fontWeight: 700,
+  },
+  recurringRunLogSummary: {
+    margin: 0,
+    fontSize: 12,
+    lineHeight: 1.4,
+    color: palette.fg,
   },
   resultsList: {
     display: "flex",
