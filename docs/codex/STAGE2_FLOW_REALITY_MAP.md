@@ -10,7 +10,7 @@
 | Stage 2 task execution loop | `/experience/actions` | **Production-ready** | Real ask -> plan -> explicit approval -> execution states -> completion/failure surface | Coverage still limited to planner/tool path quality and tool reliability per task type |
 | Ayurvedic check-in loop | `/experience/checkin` | **Production-ready** | Real check-in, causal explanation, protocol options, follow-up + outcome logging | Broader protocol catalog and richer personalization still expanding |
 | Vision loop demo | `/demo/vision` | **Simulated** | Demo API hook and status labeling | Browser actions and screen loop are simulated in demo path |
-| Search demo (quick/research/recurring) | `/demo/search` | **Partially real** | Quick + deep research are real ask -> approve -> execute loops. Recurring uses real first-run execution with monthly scaffold and run logs. | True background scheduler and fully automated recurring re-runs are not yet wired end-to-end |
+| Search demo (quick/research/recurring) | `/demo/search` | **Production-ready** | Quick + deep research are real ask -> approve -> execute loops. Recurring now persists schedules, runs first execution through approval, logs outcomes, and auto-executes due runs via worker scheduler. | Cadence options are currently monthly-first; broader cadence templates can be added without changing core architecture |
 | Coordination demo | `/demo/coordination` | **Simulated** | UI story and sequence | Real multi-party negotiation and calendar transactions not wired in this path |
 | Restaurant customer demo | `/demo/dine` | **Simulated** | Consent narrative and payload examples | Real consent packet exchange with business systems not active in demo flow |
 | Restaurant dashboard demo | `/demo/restaurant` | **Simulated** | Business-side visualization | Real inbound mesh handoff and fulfillment integration not active |
@@ -29,7 +29,7 @@
 ## Phase B: Convert Demo Search to Real Loop
 1. Repoint `/demo/search` quick mode to Stage 2 task loop with real planning. ✅
 2. Keep deep research as async task plan with explicit status polling. ✅
-3. Replace static recurring simulation with real scheduled job scaffolding and logs. ✅ (scaffold + logs)
+3. Replace static recurring simulation with persisted schedules, run logs, and due-run worker execution. ✅
 4. Preserve demo UX but remove scripted result payloads from primary path. ✅
 
 ## Phase C: Convert Vision and Browser Execution
@@ -57,5 +57,9 @@
 3. `task_plan_cancelled`
 4. `task_plan_failed`
 5. `task_plan_completed`
+6. `recurring_schedule_created`
+7. `recurring_schedule_approved`
+8. `recurring_schedule_run_completed`
+9. `recurring_schedule_cancelled`
 
 These events should be queryable per user and per flow entry point (experience vs demo).

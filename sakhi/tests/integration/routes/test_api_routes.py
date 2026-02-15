@@ -13,7 +13,7 @@ Routes tested:
 """
 
 import json
-from datetime import date
+from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -555,6 +555,233 @@ class TestAgenticTaskPlanEndpoints:
             data = response.json()
             assert data["cancelled"] is True
             assert data["plan_id"] == "plan-cancel-1"
+            assert mock_cancel.await_count == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test: /api/v1/agent/recurring*
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.integration
+class TestAgenticRecurringEndpoints:
+    """Tests for recurring schedule endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_create_recurring_schedule_returns_first_plan(self, api_client):
+        from sakhi.apps.api.services.agentic.planner import TaskPlan, TaskStep, TaskStatus
+        from sakhi.apps.api.services.agentic.recurring import (
+            RecurringSchedule,
+            RecurringScheduleStatus,
+        )
+
+        first_plan = TaskPlan(
+            id="plan-recurring-1",
+            person_id=DEMO_USER_ID,
+            task_description="Track subscriptions monthly",
+            goal="Monthly subscription audit",
+            steps=[TaskStep(step=1, action="respond", description="Acknowledge recurring setup")],
+            status=TaskStatus.PENDING_APPROVAL,
+        )
+        schedule = RecurringSchedule(
+            id="8f4b8f5d-45ad-4d52-957a-5f9639c5fd40",
+            person_id=DEMO_USER_ID,
+            task_description="Track subscriptions monthly",
+            cadence="monthly",
+            cadence_interval=1,
+            run_timezone="UTC",
+            day_of_month=1,
+            run_hour=9,
+            run_minute=0,
+            status=RecurringScheduleStatus.PENDING_APPROVAL,
+            next_run_at=datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc),
+            created_plan_id=first_plan.id,
+            latest_plan_id=first_plan.id,
+        )
+
+        with patch("sakhi.apps.api.routes.agentic.create_recurring_schedule", new_callable=AsyncMock) as mock_create:
+            mock_create.return_value = (schedule, first_plan)
+
+            response = await api_client.post(
+                "/api/v1/agent/recurring",
+                params={"person_id": DEMO_USER_ID},
+                json={
+                    "task": "Track all my subscriptions each month",
+                    "cadence": "monthly",
+                    "day_of_month": 1,
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["schedule"]["schedule_id"] == schedule.id
+            assert data["schedule"]["status"] == "pending_approval"
+            assert data["first_run_plan"]["plan_id"] == first_plan.id
+            assert mock_create.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_approve_recurring_schedule_returns_plan_and_run_log(self, api_client):
+        from sakhi.apps.api.services.agentic.planner import (
+            TaskPlan,
+            TaskStep,
+            TaskStatus,
+            StepStatus,
+        )
+        from sakhi.apps.api.services.agentic.recurring import (
+            RecurringRunLog,
+            RecurringRunStatus,
+            RecurringSchedule,
+            RecurringScheduleStatus,
+        )
+
+        completed_plan = TaskPlan(
+            id="plan-recurring-approve-1",
+            person_id=DEMO_USER_ID,
+            task_description="Track subscriptions monthly",
+            goal="Monthly subscription audit",
+            steps=[
+                TaskStep(
+                    step=1,
+                    action="web_search",
+                    description="Collect recurring charges",
+                    status=StepStatus.COMPLETED,
+                    result={"subscriptions": 5},
+                ),
+                TaskStep(
+                    step=2,
+                    action="respond",
+                    description="Return summary",
+                    status=StepStatus.COMPLETED,
+                    result="Audit complete",
+                ),
+            ],
+            status=TaskStatus.COMPLETED,
+            final_output="Audit complete",
+        )
+        schedule = RecurringSchedule(
+            id="8f4b8f5d-45ad-4d52-957a-5f9639c5fd41",
+            person_id=DEMO_USER_ID,
+            task_description="Track subscriptions monthly",
+            cadence="monthly",
+            cadence_interval=1,
+            run_timezone="UTC",
+            day_of_month=1,
+            run_hour=9,
+            run_minute=0,
+            status=RecurringScheduleStatus.ACTIVE,
+            next_run_at=datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc),
+            latest_plan_id=completed_plan.id,
+        )
+        run_log = RecurringRunLog(
+            id="23f102e2-5f8f-40b3-bfd7-52df99b7b6d0",
+            schedule_id=schedule.id,
+            person_id=DEMO_USER_ID,
+            plan_id=completed_plan.id,
+            trigger_source="initial_approval",
+            status=RecurringRunStatus.COMPLETED,
+            started_at=datetime(2026, 2, 14, 1, 0, tzinfo=timezone.utc),
+            completed_at=datetime(2026, 2, 14, 1, 1, tzinfo=timezone.utc),
+            summary="Audit complete",
+        )
+
+        with patch("sakhi.apps.api.routes.agentic.approve_recurring_schedule", new_callable=AsyncMock) as mock_approve:
+            mock_approve.return_value = (schedule, completed_plan, run_log)
+
+            response = await api_client.post(
+                f"/api/v1/agent/recurring/{schedule.id}/approve",
+                params={"person_id": DEMO_USER_ID},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["schedule"]["schedule_id"] == schedule.id
+            assert data["schedule"]["status"] == "active"
+            assert data["plan"]["plan_id"] == completed_plan.id
+            assert data["plan"]["status"] == "completed"
+            assert data["run_log"]["status"] == "completed"
+            assert mock_approve.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_get_recurring_schedule_details_returns_logs(self, api_client):
+        from sakhi.apps.api.services.agentic.planner import TaskPlan, TaskStep, TaskStatus
+        from sakhi.apps.api.services.agentic.recurring import (
+            RecurringRunLog,
+            RecurringRunStatus,
+            RecurringSchedule,
+            RecurringScheduleStatus,
+        )
+
+        schedule = RecurringSchedule(
+            id="8f4b8f5d-45ad-4d52-957a-5f9639c5fd42",
+            person_id=DEMO_USER_ID,
+            task_description="Track subscriptions monthly",
+            cadence="monthly",
+            cadence_interval=1,
+            run_timezone="UTC",
+            day_of_month=1,
+            run_hour=9,
+            run_minute=0,
+            status=RecurringScheduleStatus.ACTIVE,
+            next_run_at=datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc),
+            latest_plan_id="plan-recurring-latest",
+        )
+        latest_plan = TaskPlan(
+            id="plan-recurring-latest",
+            person_id=DEMO_USER_ID,
+            task_description="Track subscriptions monthly",
+            goal="Monthly subscription audit",
+            steps=[TaskStep(step=1, action="respond", description="Summarize outcome")],
+            status=TaskStatus.COMPLETED,
+            final_output="Audit completed successfully",
+        )
+        run_log = RecurringRunLog(
+            id="8f4b8f5d-45ad-4d52-957a-5f9639c5fd43",
+            schedule_id=schedule.id,
+            person_id=DEMO_USER_ID,
+            plan_id=latest_plan.id,
+            trigger_source="scheduler",
+            status=RecurringRunStatus.COMPLETED,
+            started_at=datetime(2026, 2, 1, 9, 0, tzinfo=timezone.utc),
+            completed_at=datetime(2026, 2, 1, 9, 2, tzinfo=timezone.utc),
+            summary="Found 3 unused subscriptions",
+        )
+
+        with (
+            patch("sakhi.apps.api.routes.agentic.get_recurring_schedule", new_callable=AsyncMock) as mock_schedule,
+            patch("sakhi.apps.api.routes.agentic.get_recurring_schedule_runs", new_callable=AsyncMock) as mock_runs,
+            patch("sakhi.apps.api.routes.agentic.get_task_plan", new_callable=AsyncMock) as mock_plan,
+        ):
+            mock_schedule.return_value = schedule
+            mock_runs.return_value = [run_log]
+            mock_plan.return_value = latest_plan
+
+            response = await api_client.get(
+                f"/api/v1/agent/recurring/{schedule.id}",
+                params={"person_id": DEMO_USER_ID},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["schedule"]["schedule_id"] == schedule.id
+            assert data["latest_plan"]["plan_id"] == latest_plan.id
+            assert len(data["run_logs"]) == 1
+            assert data["run_logs"][0]["id"] == run_log.id
+            assert mock_schedule.await_count == 1
+            assert mock_runs.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_cancel_recurring_schedule_returns_cancelled_flag(self, api_client):
+        with patch("sakhi.apps.api.routes.agentic.cancel_recurring_schedule", new_callable=AsyncMock) as mock_cancel:
+            mock_cancel.return_value = True
+
+            response = await api_client.post(
+                "/api/v1/agent/recurring/8f4b8f5d-45ad-4d52-957a-5f9639c5fd44/cancel",
+                params={"person_id": DEMO_USER_ID},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["cancelled"] is True
+            assert data["schedule_id"] == "8f4b8f5d-45ad-4d52-957a-5f9639c5fd44"
             assert mock_cancel.await_count == 1
 
 

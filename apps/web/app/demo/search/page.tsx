@@ -52,13 +52,42 @@ type TaskPlanResponse = {
   final_output?: string | null;
 };
 
+type RecurringScheduleState = {
+  schedule_id: string;
+  person_id: string;
+  task_description: string;
+  cadence: string;
+  cadence_interval: number;
+  run_timezone: string;
+  day_of_month: number;
+  run_hour: number;
+  run_minute: number;
+  status: string;
+  is_running: boolean;
+  next_run_at?: string | null;
+  last_run_at?: string | null;
+  last_run_status?: string | null;
+  latest_plan_id?: string | null;
+};
+
+type RecurringRunApi = {
+  id: string;
+  plan_id?: string | null;
+  status: string;
+  started_at: string;
+  completed_at?: string | null;
+  summary?: string | null;
+  error?: string | null;
+};
+
 type RecurringRunLog = {
   id: string;
-  planId: string;
+  planId?: string | null;
   status: string;
   startedAt: string;
-  completedAt?: string;
-  summary?: string;
+  completedAt?: string | null;
+  summary?: string | null;
+  error?: string | null;
 };
 
 // User's scent preferences (for quick search)
@@ -260,6 +289,30 @@ function formatNextMonthlyRun(referenceDate = new Date()): string {
   });
 }
 
+function formatTimestamp(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function mapRecurringRunLog(log: RecurringRunApi): RecurringRunLog {
+  return {
+    id: log.id,
+    planId: log.plan_id,
+    status: log.status,
+    startedAt: log.started_at,
+    completedAt: log.completed_at,
+    summary: log.summary,
+    error: log.error,
+  };
+}
+
 // Color palette
 const palette = {
   bg: "#0e0f12",
@@ -295,6 +348,7 @@ export default function SearchDemo() {
   const [researchPlan, setResearchPlan] = useState<TaskPlanResponse | null>(null);
   const [researchError, setResearchError] = useState<string | null>(null);
   const [recurringPlan, setRecurringPlan] = useState<TaskPlanResponse | null>(null);
+  const [recurringSchedule, setRecurringSchedule] = useState<RecurringScheduleState | null>(null);
   const [recurringError, setRecurringError] = useState<string | null>(null);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringNextRun, setRecurringNextRun] = useState("");
@@ -432,6 +486,49 @@ export default function SearchDemo() {
       window.clearInterval(timer);
     };
   }, [isRunning, recurringPlan?.plan_id, recurringPlan?.status]);
+
+  useEffect(() => {
+    if (mode !== "recurring" || !recurringSchedule?.schedule_id) return;
+
+    let cancelled = false;
+    const pollSchedule = async () => {
+      try {
+        const response = await fetch(
+          `/api/agent/recurring/${encodeURIComponent(recurringSchedule.schedule_id)}?person_id=${encodeURIComponent(activePersonId)}`
+        );
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || cancelled) return;
+
+        const detail = payload as {
+          schedule?: RecurringScheduleState;
+          latest_plan?: TaskPlanResponse | null;
+          run_logs?: RecurringRunApi[];
+        };
+        if (detail.schedule) {
+          setRecurringSchedule(detail.schedule);
+          setRecurringEnabled(detail.schedule.status === "active");
+          if (detail.schedule.next_run_at) {
+            setRecurringNextRun(formatTimestamp(detail.schedule.next_run_at));
+          }
+        }
+        if (detail.latest_plan) {
+          setRecurringPlan(detail.latest_plan);
+        }
+        if (Array.isArray(detail.run_logs)) {
+          setRecurringRunLogs(detail.run_logs.map(mapRecurringRunLog));
+        }
+      } catch {
+        // intentionally silent for background refresh
+      }
+    };
+
+    const timer = window.setInterval(pollSchedule, 10000);
+    pollSchedule();
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [activePersonId, mode, recurringSchedule?.schedule_id]);
 
   useEffect(() => {
     if (!researchPlan?.steps?.length) return;
@@ -853,7 +950,7 @@ Status: ${plan.status}`,
     }
   }, [activePersonId, isRunning, researchPlan]);
 
-  // Recurring Tasks Demo (real plan + schedule scaffold + run logs)
+  // Recurring Tasks Demo (real schedule + first run + persistent logs)
   const runRecurringDemo = useCallback(async () => {
     if (isRunning) return;
     setIsRunning(true);
@@ -862,8 +959,13 @@ Status: ${plan.status}`,
     setMessages([]);
     setRecurringError(null);
     setRecurringPlan(null);
+    setRecurringSchedule(null);
+    setRecurringEnabled(false);
+    setRecurringRunLogs([]);
+    setRecurringNextRun("");
 
     const task = DEFAULT_RECURRING_TASK;
+    const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
     try {
       setRecurringStep("user_request");
@@ -875,19 +977,26 @@ Status: ${plan.status}`,
         ...prev,
         {
           sender: "sakhi",
-          content: "I’m creating a recurring monthly audit scaffold and first-run plan.",
+          content: "I’m creating a recurring monthly audit schedule and first-run plan.",
           thinking: true,
         },
       ]);
       await delay(600);
 
-      const response = await fetch("/api/agent/plans", {
+      const response = await fetch("/api/agent/recurring", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           person_id: activePersonId,
           task,
-          auto_execute: false,
+          cadence: "monthly",
+          day_of_month: 1,
+          run_hour: 9,
+          run_minute: 0,
+          run_timezone: detectedTimezone,
+          metadata: {
+            source: "demo_search_recurring",
+          },
         }),
       });
 
@@ -896,27 +1005,48 @@ Status: ${plan.status}`,
         throw new Error(toErrorMessage(payload));
       }
 
-      const plan = payload as TaskPlanResponse;
+      const recurringPayload = payload as {
+        schedule?: RecurringScheduleState;
+        first_run_plan?: TaskPlanResponse;
+        run_logs?: RecurringRunApi[];
+      };
+      const schedule = recurringPayload.schedule;
+      const plan = recurringPayload.first_run_plan;
+      if (!schedule || !plan) {
+        throw new Error("Recurring schedule response was incomplete");
+      }
+
       const stepList = (plan.steps || [])
         .slice(0, 6)
         .map((step) => `${step.step}. ${step.description || step.action}`)
         .join("\n");
-      const nextRun = recurringNextRun || formatNextMonthlyRun();
+      const nextRun = schedule.next_run_at
+        ? formatTimestamp(schedule.next_run_at)
+        : formatNextMonthlyRun();
       setRecurringNextRun(nextRun);
+      setRecurringSchedule(schedule);
       setRecurringPlan(plan);
+      setRecurringEnabled(schedule.status === "active");
+      setRecurringRunLogs(
+        Array.isArray(recurringPayload.run_logs)
+          ? recurringPayload.run_logs.map(mapRecurringRunLog)
+          : []
+      );
       setRecurringStep("scheduled");
       setMessages((prev) => [
         ...prev,
         {
           sender: "system",
-          content: `Recurring scaffold prepared:
-Cadence: Monthly (1st)
-Next run target: ${nextRun}
+          content: `Recurring schedule created:
+Schedule ID: ${schedule.schedule_id.slice(0, 8)}...
+Cadence: Monthly (day ${schedule.day_of_month})
+Timezone: ${schedule.run_timezone}
+Next run: ${nextRun}
 
 First-run plan (${plan.steps.length} steps):
 ${stepList || "1. Respond to user"}
 
-Status: ${plan.status}`,
+Status: ${schedule.status}`,
         },
         {
           sender: "sakhi",
@@ -937,16 +1067,15 @@ Status: ${plan.status}`,
     } finally {
       setIsRunning(false);
     }
-  }, [activePersonId, isRunning, recurringNextRun]);
+  }, [activePersonId, isRunning]);
 
   const approveRecurringDemo = useCallback(async () => {
-    if (isRunning || !recurringPlan) return;
+    if (isRunning || !recurringPlan || !recurringSchedule) return;
     setIsRunning(true);
     setRecurringError(null);
     setRecurringStep("running");
 
-    const startedAt = new Date().toISOString();
-    const currentPlanId = recurringPlan.plan_id;
+    const scheduleId = recurringSchedule.schedule_id;
 
     try {
       setMessages((prev) => [
@@ -955,7 +1084,7 @@ Status: ${plan.status}`,
       ]);
 
       const approveResponse = await fetch(
-        `/api/agent/plans/${encodeURIComponent(currentPlanId)}/approve`,
+        `/api/agent/recurring/${encodeURIComponent(scheduleId)}/approve`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -968,14 +1097,33 @@ Status: ${plan.status}`,
         throw new Error(toErrorMessage(approvePayload));
       }
 
-      let latestPlan = approvePayload as TaskPlanResponse;
+      const recurringResponse = approvePayload as {
+        schedule?: RecurringScheduleState;
+        plan?: TaskPlanResponse;
+        run_log?: RecurringRunApi;
+      };
+      const updatedSchedule = recurringResponse.schedule;
+      const approvedPlan = recurringResponse.plan;
+      if (!updatedSchedule || !approvedPlan) {
+        throw new Error("Approval response was incomplete");
+      }
+
+      let latestPlan = approvedPlan;
+      setRecurringSchedule(updatedSchedule);
       setRecurringPlan(latestPlan);
-      setRecurringEnabled(true);
-      setRecurringNextRun((prev) => prev || formatNextMonthlyRun());
+      setRecurringEnabled(updatedSchedule.status === "active");
+      const nextRunLabel = updatedSchedule.next_run_at
+        ? formatTimestamp(updatedSchedule.next_run_at)
+        : recurringNextRun || formatNextMonthlyRun();
+      setRecurringNextRun(nextRunLabel);
+      if (recurringResponse.run_log) {
+        const mapped = mapRecurringRunLog(recurringResponse.run_log);
+        setRecurringRunLogs((prev) => [mapped, ...prev.filter((item) => item.id !== mapped.id)]);
+      }
       setShowSubResults(true);
       setMessages((prev) => [
         ...prev,
-        { sender: "sakhi", content: "Recurring audit execution started. I’ll log this run and keep the schedule active." },
+        { sender: "sakhi", content: "Recurring audit execution started. I’ll keep this schedule active and logged." },
       ]);
 
       for (let attempt = 0; attempt < 30; attempt++) {
@@ -991,51 +1139,55 @@ Status: ${plan.status}`,
       }
 
       if (latestPlan.status === "completed") {
-        const completedAt = new Date().toISOString();
         setRecurringStep("complete");
-        setRecurringRunLogs((prev) => [
-          {
-            id: `${currentPlanId}-completed`,
-            planId: currentPlanId,
-            status: "completed",
-            startedAt,
-            completedAt,
-            summary: latestPlan.final_output || "Audit completed.",
-          },
-          ...prev,
-        ]);
+        if (latestPlan.final_output) {
+          setRecurringRunLogs((prev) => {
+            if (prev.some((item) => item.planId === latestPlan.plan_id && item.status === "completed")) {
+              return prev;
+            }
+            return [
+              {
+                id: `${latestPlan.plan_id}-completed`,
+                planId: latestPlan.plan_id,
+                status: "completed",
+                startedAt: new Date().toISOString(),
+                completedAt: new Date().toISOString(),
+                summary: latestPlan.final_output,
+              },
+              ...prev,
+            ];
+          });
+        }
         setMessages((prev) => [
           ...prev,
           {
             sender: "sakhi",
-            content: `Subscription audit complete. Next run is scaffolded for ${recurringNextRun || formatNextMonthlyRun()}.`,
+            content: `Subscription audit complete. Next run is scheduled for ${nextRunLabel}.`,
           },
         ]);
       } else if (latestPlan.status === "failed") {
-        const completedAt = new Date().toISOString();
         setRecurringStep("complete");
         setRecurringError("Scheduled audit run failed.");
         setRecurringRunLogs((prev) => [
           {
-            id: `${currentPlanId}-failed`,
-            planId: currentPlanId,
+            id: `${latestPlan.plan_id}-failed`,
+            planId: latestPlan.plan_id,
             status: "failed",
-            startedAt,
-            completedAt,
+            startedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString(),
             summary: "Execution failed",
           },
           ...prev,
         ]);
       } else if (latestPlan.status === "cancelled") {
-        const completedAt = new Date().toISOString();
         setRecurringStep("complete");
         setRecurringRunLogs((prev) => [
           {
-            id: `${currentPlanId}-cancelled`,
-            planId: currentPlanId,
+            id: `${latestPlan.plan_id}-cancelled`,
+            planId: latestPlan.plan_id,
             status: "cancelled",
-            startedAt,
-            completedAt,
+            startedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString(),
             summary: "Execution cancelled",
           },
           ...prev,
@@ -1054,16 +1206,16 @@ Status: ${plan.status}`,
     } finally {
       setIsRunning(false);
     }
-  }, [activePersonId, isRunning, recurringNextRun, recurringPlan]);
+  }, [activePersonId, isRunning, recurringNextRun, recurringPlan, recurringSchedule]);
 
   const rejectRecurringDemo = useCallback(async () => {
-    if (isRunning || !recurringPlan) return;
+    if (isRunning || !recurringPlan || !recurringSchedule) return;
     setIsRunning(true);
     setRecurringError(null);
 
     try {
       const response = await fetch(
-        `/api/agent/plans/${encodeURIComponent(recurringPlan.plan_id)}/cancel`,
+        `/api/agent/recurring/${encodeURIComponent(recurringSchedule.schedule_id)}/cancel`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1076,15 +1228,17 @@ Status: ${plan.status}`,
       }
 
       setRecurringPlan((prev) => (prev ? { ...prev, status: "cancelled" } : prev));
+      setRecurringSchedule((prev) => (prev ? { ...prev, status: "cancelled" } : prev));
+      setRecurringEnabled(false);
       setRecurringStep("complete");
       setRecurringRunLogs((prev) => [
         {
-          id: `${recurringPlan.plan_id}-cancelled`,
+          id: `${recurringSchedule.schedule_id}-cancelled`,
           planId: recurringPlan.plan_id,
           status: "cancelled",
           startedAt: new Date().toISOString(),
           completedAt: new Date().toISOString(),
-          summary: "Plan cancelled before execution",
+          summary: "Recurring schedule cancelled before execution",
         },
         ...prev,
       ]);
@@ -1099,7 +1253,7 @@ Status: ${plan.status}`,
     } finally {
       setIsRunning(false);
     }
-  }, [activePersonId, isRunning, recurringPlan]);
+  }, [activePersonId, isRunning, recurringPlan, recurringSchedule]);
 
   const resetDemo = () => {
     setQuickStep("idle");
@@ -1117,6 +1271,7 @@ Status: ${plan.status}`,
     setResearchPlan(null);
     setResearchError(null);
     setRecurringPlan(null);
+    setRecurringSchedule(null);
     setRecurringError(null);
     setRecurringEnabled(false);
     setRecurringNextRun("");
@@ -1182,13 +1337,13 @@ Status: ${plan.status}`,
         </p>
         <div style={styles.modeBadgeWrap}>
           <DemoModeBadge
-            mode={isQuickMode || isResearchMode ? "production-ready" : "partial"}
+            mode="production-ready"
             detail={
               isQuickMode
                 ? "Quick flow is connected to real plan APIs with explicit approval and execution states."
                 : isResearchMode
                   ? "Deep research now runs through the real ask -> approve -> execute plan lifecycle."
-                  : "Recurring flow uses real plan execution with monthly schedule scaffolding and run logs."
+                  : "Recurring flow now uses real schedule persistence, automated due-run execution, and durable run logs."
             }
           />
         </div>
@@ -1665,10 +1820,10 @@ Status: ${plan.status}`,
               )}
             </>
           ) : (
-            // Recurring subscription audit (real run + schedule scaffold)
+            // Recurring subscription audit (real schedule + automated runs)
             <>
               <h3 style={styles.panelTitle}>Recurring Audit Status</h3>
-              <p style={styles.panelSubtitle}>Real execution loop + monthly scaffold + run logs</p>
+              <p style={styles.panelSubtitle}>Real schedule + automated reruns + run logs</p>
 
               {recurringError && <div style={styles.quickErrorNotice}>⚠️ {recurringError}</div>}
 
@@ -1687,15 +1842,28 @@ Status: ${plan.status}`,
                 </div>
               ) : (
                 <div style={styles.quickPlanList}>
-                  {recurringEnabled && (
+                  {recurringEnabled && recurringSchedule && (
                     <div style={styles.recurringScheduleCard}>
                       <div style={styles.recurringScheduleRow}>
                         <span style={styles.recurringScheduleLabel}>Cadence</span>
-                        <span style={styles.recurringScheduleValue}>Monthly on day 1</span>
+                        <span style={styles.recurringScheduleValue}>
+                          {recurringSchedule.cadence === "monthly"
+                            ? `Monthly on day ${recurringSchedule.day_of_month}`
+                            : recurringSchedule.cadence}
+                        </span>
                       </div>
                       <div style={styles.recurringScheduleRow}>
-                        <span style={styles.recurringScheduleLabel}>Next run target</span>
-                        <span style={styles.recurringScheduleValue}>{recurringNextRun || "Pending schedule"}</span>
+                        <span style={styles.recurringScheduleLabel}>Status</span>
+                        <span style={styles.recurringScheduleValue}>{recurringSchedule.status}</span>
+                      </div>
+                      <div style={styles.recurringScheduleRow}>
+                        <span style={styles.recurringScheduleLabel}>Next run</span>
+                        <span style={styles.recurringScheduleValue}>
+                          {recurringNextRun ||
+                            (recurringSchedule.next_run_at
+                              ? formatTimestamp(recurringSchedule.next_run_at)
+                              : "Pending schedule")}
+                        </span>
                       </div>
                       <div style={styles.recurringScheduleRow}>
                         <span style={styles.recurringScheduleLabel}>Runs logged</span>
@@ -1723,7 +1891,7 @@ Status: ${plan.status}`,
                       <span>Steps: {recurringPlan.steps?.length || 0}</span>
                     </div>
                     {recurringPlan.status === "pending_approval" && (
-                      <p style={styles.quickInlineHint}>Approve to run the first audit and activate recurring scaffold.</p>
+                      <p style={styles.quickInlineHint}>Approve to run the first audit and activate recurring automation.</p>
                     )}
                   </div>
 
@@ -1765,6 +1933,9 @@ Status: ${plan.status}`,
                             <span>{new Date(log.startedAt).toLocaleString("en-US")}</span>
                           </div>
                           {log.summary && <p style={styles.recurringRunLogSummary}>{log.summary}</p>}
+                          {!log.summary && log.error && (
+                            <p style={styles.recurringRunLogSummary}>Error: {log.error}</p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1895,12 +2066,12 @@ Status: ${plan.status}`,
               </ul>
             </div>
             <div style={styles.comparisonCardGood}>
-              <span style={styles.comparisonHeader}>✅ Sakhi Recurring Scaffold (Live)</span>
+              <span style={styles.comparisonHeader}>✅ Sakhi Recurring Automation (Live)</span>
               <ul style={styles.comparisonList}>
                 <li>First run executes through real plan lifecycle</li>
-                <li>Monthly scaffold with explicit next-run target</li>
+                <li>Persistent schedule drives automatic reruns</li>
                 <li>Run logs preserve outcomes and failures</li>
-                <li>Approval gate remains explicit for execution</li>
+                <li>Approval gate remains explicit for first execution</li>
               </ul>
             </div>
           </div>

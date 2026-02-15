@@ -19,7 +19,6 @@ from sakhi.apps.worker.jobs import (
     consolidate_person_models,
     deliver_insight_to_presence_queue,
     run_daily_reflection,
-    run_weekly_summary,
 )
 from sakhi.apps.worker.jobs_presence import outreach
 from sakhi.apps.worker.tasks.reflect_person_memory import (
@@ -55,6 +54,7 @@ from sakhi.apps.worker.tasks.emotion_loop_refresh import emotion_loop_refresh
 from sakhi.apps.worker.tasks.forecast import run_forecast
 from sakhi.apps.worker.tasks.nudge_worker import run_nudge_check
 from sakhi.apps.worker.tasks.learning_jobs import run_mark_missed
+from sakhi.apps.worker.tasks.agent_recurring import run_due_recurring_schedules
 # ARCHIVED: alignment_refresh, narrative_arc_refresh, pattern_sense_refresh,
 # inner_dialogue_refresh, identity_drift_refresh, inner_conflict, coherence,
 # evening_closure_worker, morning_preview_worker, morning_ask_worker,
@@ -627,6 +627,11 @@ def schedule_nudge_checks() -> None:
     _enqueue(_analytics_queue, run_nudge_check, user_id)
 
 
+def schedule_agent_recurring_runs() -> None:
+    """Trigger due recurring task schedules."""
+    _enqueue(_analytics_queue, run_due_recurring_schedules, 10)
+
+
 # =============================================================================
 # Per-Turn Workers Moved to Daily Schedule (v2 Optimization)
 # These were previously running on every conversation turn but are now scheduled
@@ -705,6 +710,7 @@ if __name__ == "__main__":  # pragma: no cover
         # inner_dialogue, identity_drift, inner_conflict, coherence_state
         schedule_forecast_jobs()
         schedule_nudge_checks()
+        schedule_agent_recurring_runs()
         schedule_goal_evolver_weekly()
         # ARCHIVED: planner_summary_daily
         schedule_crystallization_daily()

@@ -42,6 +42,19 @@ from sakhi.apps.api.services.agentic.research import (
     ResearchSession,
 )
 
+from sakhi.apps.api.services.agentic.recurring import (
+    create_recurring_schedule,
+    get_recurring_schedule,
+    list_recurring_schedules,
+    get_recurring_schedule_runs,
+    approve_recurring_schedule,
+    cancel_recurring_schedule,
+    run_recurring_schedule_now,
+    execute_due_recurring_schedules,
+    RecurringSchedule,
+    RecurringRunLog,
+)
+
 __all__ = [
     # Search
     "web_search",
@@ -62,6 +75,17 @@ __all__ = [
     "cancel_task_plan",
     "TaskPlan",
     "TaskStep",
+    # Recurring
+    "create_recurring_schedule",
+    "get_recurring_schedule",
+    "list_recurring_schedules",
+    "get_recurring_schedule_runs",
+    "approve_recurring_schedule",
+    "cancel_recurring_schedule",
+    "run_recurring_schedule_now",
+    "execute_due_recurring_schedules",
+    "RecurringSchedule",
+    "RecurringRunLog",
     # Research
     "start_research",
     "add_research_source",

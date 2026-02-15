@@ -141,6 +141,50 @@ Generated from production database on 2026-02-03
 | started_at | timestamptz | NULL |  |
 | completed_at | timestamptz | NULL |  |
 
+## agent_task_schedules
+
+| Column | Type | Nullable | Constraints |
+|--------|------|----------|-------------|
+| id | uuid | NOT NULL | PK |
+| person_id | text | NOT NULL |  |
+| task_description | text | NOT NULL |  |
+| goal_hint | text | NULL |  |
+| cadence | text | NOT NULL |  |
+| cadence_interval | int4 | NOT NULL |  |
+| run_timezone | text | NOT NULL |  |
+| day_of_month | int4 | NOT NULL |  |
+| run_hour | int4 | NOT NULL |  |
+| run_minute | int4 | NOT NULL |  |
+| status | text | NOT NULL |  |
+| is_running | bool | NOT NULL |  |
+| next_run_at | timestamptz | NULL |  |
+| last_run_at | timestamptz | NULL |  |
+| last_run_status | text | NULL |  |
+| consecutive_failures | int4 | NOT NULL |  |
+| created_plan_id | text | NULL |  |
+| latest_plan_id | text | NULL |  |
+| metadata | jsonb | NOT NULL |  |
+| created_at | timestamptz | NOT NULL |  |
+| updated_at | timestamptz | NOT NULL |  |
+
+## agent_task_schedule_runs
+
+| Column | Type | Nullable | Constraints |
+|--------|------|----------|-------------|
+| id | uuid | NOT NULL | PK |
+| schedule_id | uuid | NOT NULL | FK → agent_task_schedules.id |
+| person_id | text | NOT NULL |  |
+| plan_id | text | NULL |  |
+| trigger_source | text | NOT NULL |  |
+| status | text | NOT NULL |  |
+| started_at | timestamptz | NOT NULL |  |
+| completed_at | timestamptz | NULL |  |
+| summary | text | NULL |  |
+| error | text | NULL |  |
+| metadata | jsonb | NOT NULL |  |
+| created_at | timestamptz | NOT NULL |  |
+| updated_at | timestamptz | NOT NULL |  |
+
 ## agent_versions
 
 | Column | Type | Nullable | Constraints |

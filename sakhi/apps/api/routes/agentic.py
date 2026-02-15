@@ -29,8 +29,18 @@ from sakhi.apps.api.services.agentic.planner import (
     get_task_plan,
     approve_task_plan,
     cancel_task_plan,
-    execute_task_plan,
     get_active_plans,
+)
+from sakhi.apps.api.services.agentic.recurring import (
+    RecurringRunLog,
+    RecurringSchedule,
+    approve_recurring_schedule,
+    cancel_recurring_schedule,
+    create_recurring_schedule,
+    get_recurring_schedule,
+    get_recurring_schedule_runs,
+    list_recurring_schedules,
+    run_recurring_schedule_now,
 )
 from sakhi.apps.api.services.agentic.research import (
     start_research,
@@ -108,6 +118,69 @@ class ResearchRequest(BaseModel):
 class ToolExecuteRequest(BaseModel):
     tool_name: str
     parameters: Dict[str, Any] = {}
+
+
+class RecurringScheduleRequest(BaseModel):
+    task: str
+    goal_hint: Optional[str] = None
+    cadence: str = "monthly"
+    cadence_interval: int = 1
+    run_timezone: str = "UTC"
+    day_of_month: int = 1
+    run_hour: int = 9
+    run_minute: int = 0
+    metadata: Dict[str, Any] = {}
+
+
+def _serialize_task_response(plan: Any) -> TaskResponse:
+    return TaskResponse(
+        plan_id=plan.id,
+        status=plan.status.value,
+        goal=plan.goal,
+        steps=[s.model_dump() for s in plan.steps],
+        requires_approval=plan.status.value == "pending_approval",
+        final_output=plan.final_output,
+    )
+
+
+def _serialize_recurring_schedule(schedule: RecurringSchedule) -> Dict[str, Any]:
+    return {
+        "schedule_id": schedule.id,
+        "person_id": schedule.person_id,
+        "task_description": schedule.task_description,
+        "goal_hint": schedule.goal_hint,
+        "cadence": schedule.cadence,
+        "cadence_interval": schedule.cadence_interval,
+        "run_timezone": schedule.run_timezone,
+        "day_of_month": schedule.day_of_month,
+        "run_hour": schedule.run_hour,
+        "run_minute": schedule.run_minute,
+        "status": schedule.status.value,
+        "is_running": schedule.is_running,
+        "next_run_at": schedule.next_run_at.isoformat() if schedule.next_run_at else None,
+        "last_run_at": schedule.last_run_at.isoformat() if schedule.last_run_at else None,
+        "last_run_status": schedule.last_run_status,
+        "consecutive_failures": schedule.consecutive_failures,
+        "created_plan_id": schedule.created_plan_id,
+        "latest_plan_id": schedule.latest_plan_id,
+        "metadata": schedule.metadata,
+    }
+
+
+def _serialize_recurring_run(run: RecurringRunLog) -> Dict[str, Any]:
+    return {
+        "id": run.id,
+        "schedule_id": run.schedule_id,
+        "person_id": run.person_id,
+        "plan_id": run.plan_id,
+        "trigger_source": run.trigger_source,
+        "status": run.status.value,
+        "started_at": run.started_at.isoformat(),
+        "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+        "summary": run.summary,
+        "error": run.error,
+        "metadata": run.metadata,
+    }
 
 
 # =============================================================================
@@ -327,6 +400,143 @@ async def get_active_tasks(person_id: str = Query(...)):
             for p in plans
         ],
         "count": len(plans),
+    }
+
+
+@router.post("/recurring")
+async def create_recurring_task(
+    request: RecurringScheduleRequest,
+    person_id: str = Query(...),
+):
+    """Create recurring schedule + initial pending approval plan."""
+    try:
+        schedule, first_plan = await create_recurring_schedule(
+            person_id=person_id,
+            task_description=request.task,
+            goal_hint=request.goal_hint,
+            cadence=request.cadence,
+            cadence_interval=request.cadence_interval,
+            run_timezone=request.run_timezone,
+            day_of_month=request.day_of_month,
+            run_hour=request.run_hour,
+            run_minute=request.run_minute,
+            metadata=request.metadata,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    await _log_stage2_event(
+        person_id,
+        "recurring_schedule_created",
+        {
+            "schedule_id": schedule.id,
+            "plan_id": first_plan.id,
+            "status": schedule.status.value,
+        },
+    )
+
+    return {
+        "schedule": _serialize_recurring_schedule(schedule),
+        "first_run_plan": _serialize_task_response(first_plan).model_dump(),
+        "run_logs": [],
+    }
+
+
+@router.get("/recurring")
+async def list_recurring_tasks(
+    person_id: str = Query(...),
+    include_inactive: bool = Query(False),
+):
+    schedules = await list_recurring_schedules(
+        person_id,
+        include_inactive=include_inactive,
+        limit=20,
+    )
+    return {
+        "schedules": [_serialize_recurring_schedule(s) for s in schedules],
+        "count": len(schedules),
+    }
+
+
+@router.get("/recurring/{schedule_id}")
+async def get_recurring_task(
+    schedule_id: str,
+    person_id: str = Query(...),
+):
+    schedule = await get_recurring_schedule(schedule_id, person_id=person_id)
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Recurring schedule not found")
+
+    run_logs = await get_recurring_schedule_runs(schedule_id, limit=10)
+    latest_plan = None
+    if schedule.latest_plan_id:
+        latest_plan = await get_task_plan(schedule.latest_plan_id)
+    elif schedule.created_plan_id:
+        latest_plan = await get_task_plan(schedule.created_plan_id)
+
+    return {
+        "schedule": _serialize_recurring_schedule(schedule),
+        "latest_plan": _serialize_task_response(latest_plan).model_dump() if latest_plan else None,
+        "run_logs": [_serialize_recurring_run(run) for run in run_logs],
+    }
+
+
+@router.post("/recurring/{schedule_id}/approve")
+async def approve_recurring_task(
+    schedule_id: str,
+    person_id: str = Query(...),
+):
+    try:
+        schedule, plan, run_log = await approve_recurring_schedule(schedule_id, person_id)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = 404 if "not found" in message.lower() else 400
+        raise HTTPException(status_code=status_code, detail=message) from exc
+
+    await _log_stage2_event(
+        person_id,
+        "recurring_schedule_first_run_completed",
+        {
+            "schedule_id": schedule.id,
+            "plan_id": plan.id,
+            "run_status": run_log.status.value,
+        },
+    )
+
+    return {
+        "schedule": _serialize_recurring_schedule(schedule),
+        "plan": _serialize_task_response(plan).model_dump(),
+        "run_log": _serialize_recurring_run(run_log),
+    }
+
+
+@router.post("/recurring/{schedule_id}/cancel")
+async def cancel_recurring_task(
+    schedule_id: str,
+    person_id: str = Query(...),
+):
+    cancelled = await cancel_recurring_schedule(schedule_id, person_id)
+    if not cancelled:
+        raise HTTPException(status_code=404, detail="Recurring schedule not found")
+    return {"cancelled": True, "schedule_id": schedule_id}
+
+
+@router.post("/recurring/{schedule_id}/run")
+async def run_recurring_task(
+    schedule_id: str,
+    person_id: str = Query(...),
+):
+    try:
+        schedule, plan, run_log = await run_recurring_schedule_now(schedule_id, person_id)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = 404 if "not found" in message.lower() else 409
+        raise HTTPException(status_code=status_code, detail=message) from exc
+
+    return {
+        "schedule": _serialize_recurring_schedule(schedule),
+        "plan": _serialize_task_response(plan).model_dump() if plan else None,
+        "run_log": _serialize_recurring_run(run_log),
     }
 
 
