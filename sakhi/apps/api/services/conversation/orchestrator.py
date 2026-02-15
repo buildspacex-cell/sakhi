@@ -40,11 +40,16 @@ async def orchestrate_turn(
     clarity_hint: str | None = None,
     *,
     capture_only: bool = False,
+    skip_llm: bool = False,
     ts: dt.datetime | str | None = None,
 ) -> Dict[str, Any]:
     """
     Run the journaling + intent/memory pipeline for a single turn.
     Returns the full metadata bundle used by the conversation engine.
+
+    When skip_llm=True, expensive operations (enrich, embedding, intent extraction)
+    are skipped here and deferred to workers. Lightweight ops (observe_entry, topic
+    extraction, emotion detection) still run inline.
     """
 
     result: Dict[str, Any] = {
@@ -109,6 +114,22 @@ async def orchestrate_turn(
         )
         return result
 
+    # --- Lightweight ops: always run (heuristic NLP, <10ms each) ---
+    topics = await extract_topics_for_entry(entry_id, text)
+    emotion = await detect_emotion_for_entry(entry_id, text) or {}
+    result["topics"] = topics or []
+    result["emotion"] = emotion or {}
+
+    if skip_llm:
+        # Expensive ops (enrich, embedding, intents) deferred to workers.
+        # Return early with lightweight results only.
+        LOGGER.info(
+            "[Turn Orchestrator] entry=%s skip_llm=True — topics=%s emotion=%s (LLM deferred to workers)",
+            entry_id, len(topics or []), bool(emotion),
+        )
+        return result
+
+    # --- Expensive ops: only run when skip_llm=False ---
     sync_enrich = os.getenv("SAKHI_SYNC_ENRICH", "0") == "1"
     if not minimal_write and sync_enrich:
         enrichment = await enrich_journal_entry(text, person_id=person_id)
@@ -120,11 +141,6 @@ async def orchestrate_turn(
     if entry_id:
         embedding = await generate_journal_embedding(entry_id, text, created_at=turn_ts) or []
     result["embedding"] = embedding
-
-    topics = await extract_topics_for_entry(entry_id, text)
-    emotion = await detect_emotion_for_entry(entry_id, text) or {}
-    result["topics"] = topics or []
-    result["emotion"] = emotion or {}
 
     if entry_id and not minimal_write:
         await enrich_short_term_memory(

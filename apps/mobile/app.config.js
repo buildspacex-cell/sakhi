@@ -20,7 +20,8 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.sakhi.app",
+      bundleIdentifier: "com.buildspacex.sakhi",
+      buildNumber: "11",
       usesAppleSignIn: true,
       infoPlist: {
         CFBundleURLTypes: [
@@ -30,6 +31,7 @@ module.exports = {
         ],
         NSHealthShareUsageDescription:
           "Sakhi uses your health data (sleep, heart rate, activity) to provide personalized Ayurvedic wellness guidance. Your data stays on your device and is never sold.",
+        ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {

@@ -26,13 +26,14 @@ function getConfig(key: string): string {
     return extra[key] as string;
   }
 
-  // Try camelCase version in extra
-  const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+  // Try camelCase version in extra: SUPABASE_URL → supabaseUrl
+  const camelKey = key.toLowerCase().replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
   if (extra?.[camelKey]) {
     return extra[camelKey] as string;
   }
 
-  throw new Error(`Missing config: ${key}. Ensure EXPO_PUBLIC_${snakeKey} is set in the root .env file.`);
+  console.error(`Missing config: ${key}. Ensure EXPO_PUBLIC_${snakeKey} is set in the root .env file.`);
+  return "";
 }
 
 // Configuration values

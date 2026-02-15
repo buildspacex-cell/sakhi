@@ -25,6 +25,7 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen name="soul" options={{ headerShown: false }} />
+        <Stack.Screen name="experience" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>
   );

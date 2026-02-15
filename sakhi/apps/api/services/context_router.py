@@ -231,11 +231,7 @@ async def llm_classify_context(text: str, emotion: str) -> Set[str]:
     Fast LLM call to classify which context modules are relevant.
     Used when deterministic classifier has low confidence.
     """
-    try:
-        from sakhi.apps.api.services.conversation_v2.llm import call_llm
-    except ImportError:
-        logger.warning("[context_router] Could not import call_llm, skipping LLM fallback")
-        return set()
+    from sakhi.apps.api.core.llm import call_llm
 
     prompt = (
         "Given this user message to their wellness companion Sakhi:\n"

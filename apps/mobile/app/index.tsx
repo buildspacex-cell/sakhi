@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,10 @@ import {
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "../lib/auth/AuthContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -47,9 +49,17 @@ const INTRO_CARDS = [
 
 export default function Index() {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const [showIntro, setShowIntro] = useState(false);
   const [currentCard, setCurrentCard] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Auto-redirect returning users to the main app
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/experience/converse" as never);
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -63,6 +73,18 @@ export default function Index() {
   };
 
   const isLastCard = currentCard === INTRO_CARDS.length - 1;
+
+  // Show loading while checking auth state
+  if (isLoading || isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color="#6366f1" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

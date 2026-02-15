@@ -53,6 +53,10 @@ async def _process(job_type: str, turn_id: str, person_id: str, payload: Dict[st
         await run_episodic_consolidation_v21(resolved_id, payload)
     elif job_type == "preference_learning":
         await _handle_preference_learning(turn_id, resolved_id, payload)
+    elif job_type == "journal_enrich":
+        await _handle_journal_enrich(turn_id, resolved_id, payload)
+    elif job_type == "intent_extraction":
+        await _handle_intent_extraction(turn_id, resolved_id, payload)
     else:
         LOGGER.warning("Unknown turn job type=%s (deep workers now run daily via scheduler)", job_type)
 
@@ -211,6 +215,51 @@ async def _handle_preference_learning(turn_id: str, person_id: str, payload: Dic
 
     except Exception as e:
         LOGGER.warning("[PatternLearning] Failed to process patterns: %s", e)
+
+
+async def _handle_journal_enrich(turn_id: str, person_id: str, payload: Dict[str, Any]) -> None:
+    """Enrich journal entry with LLM-extracted meaning (deferred from orchestrate_turn)."""
+    text = payload.get("text") or ""
+    entry_id = payload.get("entry_id") or turn_id
+    if not text:
+        return
+    try:
+        from sakhi.apps.api.services.journaling.enrich import enrich_journal_entry
+        from sakhi.apps.api.services.memory.embedding import generate_journal_embedding
+
+        # LLM enrichment
+        enrichment = await enrich_journal_entry(text, person_id=person_id)
+        LOGGER.info("[JournalEnrich] done entry=%s person=%s keys=%s", entry_id, person_id, list((enrichment or {}).keys()))
+
+        # Embedding generation (also skipped in skip_llm mode)
+        await generate_journal_embedding(entry_id, text)
+        LOGGER.info("[JournalEnrich] embedding done entry=%s", entry_id)
+
+    except Exception as exc:
+        LOGGER.exception("[JournalEnrich] failed entry=%s person=%s error=%s", entry_id, person_id, exc)
+
+
+async def _handle_intent_extraction(turn_id: str, person_id: str, payload: Dict[str, Any]) -> None:
+    """Extract intents from turn text (deferred from orchestrate_turn)."""
+    text = payload.get("text") or ""
+    entry_id = payload.get("entry_id") or turn_id
+    if not text:
+        return
+    try:
+        from sakhi.apps.worker.tasks.intent_extraction_worker import run_intent_extraction
+
+        result = await run_intent_extraction(
+            person_id=person_id,
+            text=text,
+            entry_id=entry_id,
+            source_type="turn",
+        )
+        LOGGER.info(
+            "[IntentExtraction] done entry=%s person=%s stored=%s",
+            entry_id, person_id, result.get("stored", 0),
+        )
+    except Exception as exc:
+        LOGGER.exception("[IntentExtraction] failed entry=%s person=%s error=%s", entry_id, person_id, exc)
 
 
 __all__ = ["process_turn_job", "process_turn_job_async"]

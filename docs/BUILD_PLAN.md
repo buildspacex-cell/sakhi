@@ -918,6 +918,28 @@ Conversation                    Learning Pipeline
 
 **Strategy**: Solve incrementally. APIs for work channels (Gmail done, add Outlook/Slack/Teams). "Share with Sakhi" bridges WhatsApp/Telegram/SMS (cross-platform, no API needed). Desktop agent covers B2C power users (reads WhatsApp Web etc. via screen capture — no platform restrictions on personal computers). Each layer builds the habit that pulls users toward Sakhi messaging long-term. Enterprise track runs in parallel once B2C is proven (company deploys via MDM, admin OAuth covers entire org).
 
+### ✅ E.4 Conversation Hardening Sprint (COMPLETE)
+
+| Status | Item | Description | Files |
+|--------|------|-------------|-------|
+| ✅ | P0: Fix "always asks" | Widen RESPOND mode for established users + help-first guardrails | `services/response/strategy.py`, `services/response/synthesizer.py` |
+| ✅ | P1: TurnResponse schema | Canonical product/debug response contract, gate debug output | `schemas/turn_response.py`, `routes/turn_v2.py` |
+| ✅ | P2: Voice alignment | Base prompt voice matches adaptive ("friend" not "companion") | `services/conversation_v2/conversation_reasoner.py` |
+| ✅ | P3: Frontend alignment | TypeScript types, debug_data fallback | `apps/web/lib/types/turn-response.ts`, `converse/page.tsx` |
+| ✅ | P4: Contract tests | 59 new tests: strategy, schema, quality, sensing | `tests/unit/services/test_response_*.py`, `test_turn_response_schema.py` |
+| ✅ | P5: Router import fix | LLM fallback router was silently broken (wrong import) | `services/context_router.py` |
+| ✅ | P6: Endpoint cleanup | `/chat` → `/dev/chat`, `/llm` → `/dev/llm` | `routes/chat.py`, `routes/llm.py` |
+| ⏳ | Deferred: Pattern writes | Move DB writes out of read-time context building | `services/patterns/detector.py` |
+
+**Test**: 445 unit tests pass. Send "my nose has been blocked for two days" → reply helps instead of just asking questions.
+
+**Key decisions**:
+- P0 is self-gating: Case 1b requires known_count ≥ 2 or inference_count ≥ 2, so new users still get assessment questions
+- P1 gates debug via `SAKHI_DEBUG_RESPONSE=1` env var or `?debug=1` query param (was hardcoded `True`)
+- P6 only re-prefixed `/chat` and `/llm` (superseded turn endpoints). Left `/conversation` and `/journal` (active features)
+
+**Docs**: [docs/features/conversation-turn-anatomy.md](features/conversation-turn-anatomy.md), [docs/features/context-routing.md](features/context-routing.md)
+
 ---
 
 ## PHASE F: Data Sovereignty (Week 11-12)

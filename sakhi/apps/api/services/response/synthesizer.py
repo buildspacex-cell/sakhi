@@ -116,6 +116,8 @@ JARGON_FREE_GUARDRAILS = [
     "If we already know something, reference it — don't re-ask.",
     "No diagnosis. You're a friend, not a doctor.",
     "Keep it short. 30-50 words usually. Say what matters.",
+    "If you have enough context to help, help first. Only ask a question if the answer would genuinely change your advice.",
+    "For new users: ask naturally to learn about them. For returning users: help with what you already know.",
 ]
 
 # Keep for backwards compatibility
@@ -850,7 +852,8 @@ Keep it short. 2-4 sentences total."""
         return """HOW TO SAY IT:
 1. Brief acknowledgment
 2. Connect to something we know ("I remember you mentioned...")
-3. Ask 1-2 things we need to know
+3. Only ask if the answer would change your advice — if not, offer help instead
+4. Max 1 question, framed naturally
 
 Keep it conversational. Not an interview."""
 

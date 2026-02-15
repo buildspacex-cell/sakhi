@@ -584,7 +584,9 @@ function ConverseContent() {
 
             // Get reasoning from adaptive response or reasoning field
             const adaptiveReasoning = data.adaptive_response?.strategy?.reasoning;
-            const directReasoning = data.reasoning?.summary || data.reasoning?.explanation;
+            const debugData = data.debug_data as Record<string, any> | undefined;
+            const directReasoning = data.reasoning?.summary || data.reasoning?.explanation
+              || debugData?.reasoning?.summary || debugData?.reasoning?.explanation;
             if (adaptiveReasoning || directReasoning) {
               insight.reasoning = adaptiveReasoning || directReasoning;
             }

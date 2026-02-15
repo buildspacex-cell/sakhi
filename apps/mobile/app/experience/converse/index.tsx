@@ -14,8 +14,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../lib/auth/AuthContext";
-import { config } from "../../lib/config";
+import { useAuth } from "../../../lib/auth/AuthContext";
+import { config } from "../../../lib/config";
 
 // =============================================================================
 // TYPES
@@ -80,15 +80,20 @@ export default function ConversationScreen() {
     setInputText("");
     setIsSending(true);
 
+    // AbortController for 30s timeout (turn endpoint makes multiple LLM calls)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/v2/turn?user=${encodeURIComponent(personId)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, source: "text" }),
-        }
-      );
+      const url = `${BACKEND_URL}/v2/turn?user=${encodeURIComponent(personId)}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, source: "text" }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
 
       if (res.ok) {
         const data = await res.json();
@@ -102,22 +107,30 @@ export default function ConversationScreen() {
           setMessages((prev) => [...prev, sakhiMessage]);
         }
       } else {
+        const statusText = await res.text().catch(() => "");
         const sakhiMessage: Message = {
           id: `error-${Date.now()}`,
           role: "sakhi",
-          content: "I couldn't process that right now. Try again in a moment.",
+          content: `Something went wrong (${res.status}). Try again.`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, sakhiMessage]);
+        console.error(`[turn] HTTP ${res.status}: ${statusText.slice(0, 200)}`);
       }
-    } catch {
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      const isTimeout = err instanceof Error && err.name === "AbortError";
+      const errorMsg = isTimeout
+        ? "That took too long. Try again — sometimes the first message is slow."
+        : `Connection issue: ${err instanceof Error ? err.message : "unknown"}`;
       const sakhiMessage: Message = {
         id: `error-${Date.now()}`,
         role: "sakhi",
-        content: "Connection issue. Make sure you're online and try again.",
+        content: errorMsg,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, sakhiMessage]);
+      console.error("[turn] fetch error:", err);
     } finally {
       setIsSending(false);
     }

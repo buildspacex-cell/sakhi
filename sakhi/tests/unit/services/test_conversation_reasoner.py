@@ -109,14 +109,14 @@ class TestCausalReasoningSection:
             },
         }
         result = build_prompt("Why am I feeling scattered?", _base_context(), _base_tone(), metadata=metadata)
-        assert "AYURVEDIC INSIGHT" in result
+        assert "WHY YOU MIGHT BE FEELING THIS WAY" in result
         assert "elevated Vata" in result
         assert "late dinners" in result
 
     def test_no_causal_section_when_absent(self):
         metadata = {}
         result = build_prompt("Hello", _base_context(), _base_tone(), metadata=metadata)
-        assert "AYURVEDIC INSIGHT" not in result
+        assert "WHY YOU MIGHT BE FEELING THIS WAY" not in result
 
     def test_causal_section_guidance_present(self):
         metadata = {
@@ -141,7 +141,7 @@ class TestBasePromptStructure:
     def test_prompt_contains_persona(self):
         result = build_prompt("Hello", _base_context(), _base_tone())
         assert "Sakhi" in result
-        assert "Reflective" in result
+        assert "friend" in result
 
     def test_prompt_contains_user_message(self):
         result = build_prompt("How are you?", _base_context(), _base_tone())
@@ -163,7 +163,7 @@ class TestBasePromptStructure:
         }
         result = build_prompt("Why is everything piling up?", _base_context(), _base_tone(), metadata=metadata)
         assert "EMAIL INTELLIGENCE" in result
-        assert "AYURVEDIC INSIGHT" in result
+        assert "WHY YOU MIGHT BE FEELING THIS WAY" in result
         assert "x@y.com" in result
         assert "Vata elevated" in result
         assert "User message:" in result
@@ -482,7 +482,7 @@ class TestFullIntegration:
 
         # Existing sections
         assert "EMAIL INTELLIGENCE" in result
-        assert "AYURVEDIC INSIGHT" in result
+        assert "WHY YOU MIGHT BE FEELING THIS WAY" in result
 
         # User message preserved
         assert "What should I do?" in result

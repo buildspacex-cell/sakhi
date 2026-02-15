@@ -91,6 +91,18 @@ def select_response_strategy(
         strategy.mode = ResponseMode.RESPOND
         strategy.reasoning = "User provided detailed information, no critical gaps"
 
+    # Case 1b: Medium specificity but strong existing knowledge — help directly
+    # This only fires for established users (known_count >= 2 or inference_count >= 2).
+    # New users with no personal_model/dosha_baseline have 0 known + 0 inferred,
+    # so they still fall through to CONNECT_AND_INQUIRE/INQUIRE for assessment.
+    elif (
+        sense.specificity == "medium"
+        and len(critical_unknowns) == 0
+        and (known_count >= 2 or inference_count >= 2)
+    ):
+        strategy.mode = ResponseMode.RESPOND
+        strategy.reasoning = "Medium detail + strong existing knowledge — enough context to help directly"
+
     # Case 2: We have known facts, can connect and inquire
     elif known_count > 0 or inference_count > 0:
         strategy.mode = ResponseMode.CONNECT_AND_INQUIRE
@@ -308,6 +320,11 @@ def adjust_strategy_for_urgency(
         if strategy.mode == ResponseMode.INQUIRE:
             strategy.mode = ResponseMode.CONNECT_AND_INQUIRE
             strategy.reasoning += " (escalated for high urgency)"
+        elif strategy.mode == ResponseMode.CONNECT_AND_INQUIRE and (
+            len(strategy.known_to_reference) >= 1 or len(strategy.inferences_to_include) >= 1
+        ):
+            strategy.mode = ResponseMode.RESPOND
+            strategy.reasoning += " (escalated for high urgency — enough context to help now)"
 
     return strategy
 

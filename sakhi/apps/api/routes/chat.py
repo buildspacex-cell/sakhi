@@ -49,7 +49,7 @@ from sakhi.apps.worker.tasks.update_conversation_state import (
 )
 from sakhi.libs.embeddings import embed_text
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/dev/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
 TOOLS = [CREATE_PLAN_TOOL]
 POLICY = load_policy()

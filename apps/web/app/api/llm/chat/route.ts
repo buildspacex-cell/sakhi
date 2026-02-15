@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     "Content-Type": "application/json",
   };
 
-  const upstream = await fetch(`${API_BASE}/llm/chat`, {
+  const upstream = await fetch(`${API_BASE}/dev/llm/chat`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),

@@ -168,3 +168,9 @@ Some modules activate regardless of routing when critical thresholds are met:
 | Hybrid deterministic + LLM | Keywords catch 80%+ of cases at ~0ms; LLM handles the ambiguous 20% |
 | `_SkipModule` exception pattern | Gates large try/except blocks in turn_v2.py without re-indenting 200+ lines |
 | Override thresholds for drift | Safety net: high friction drift always triggers causal/recommendations regardless of routing |
+
+---
+
+## Changelog
+
+- **2026-02-11**: Fixed LLM fallback import (was importing from non-existent `services/conversation_v2/llm`; corrected to `core/llm`). The LLM fallback for ambiguous messages was silently broken — now operational.

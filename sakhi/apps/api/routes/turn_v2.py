@@ -353,6 +353,173 @@ async def _turn_lightweight(body: TurnIn, user_id: str) -> Dict[str, Any]:
     }
 
 
+async def _run_post_reply_processing(
+    user_id: str,
+    text: str,
+    source: str,
+    clarity_phrase: str | None,
+    session_id: Any,
+    entry_id: Any,
+    reply_text: str,
+    tone_blueprint: Dict,
+    minimal_mode: bool,
+    behavior_profile: Dict,
+    emotion: Any,
+    tone_state: Any,
+    empathy_state: Any,
+    microreg_state: Any,
+    brain_state: Dict,
+    stored_intents: list,
+    topics: list,
+    generated_plans: list,
+    turn_context: Dict,
+    emotion_update: Dict,
+) -> None:
+    """Fire-and-forget post-reply processing. Runs in background after response is sent."""
+    try:
+        # 1. Persist conversation turns for continuity
+        if session_id:
+            try:
+                await append_turn(user_id=user_id, session_id=str(session_id), role="user", text=text, source=source)
+                if reply_text:
+                    await append_turn(
+                        user_id=user_id, session_id=str(session_id), role="assistant",
+                        text=reply_text, tone=tone_blueprint.get("style"), source=source,
+                    )
+            except Exception as exc:
+                logger.error("[turn_v2:bg] Turn persistence failed: %s", exc)
+
+        # 2. Update persona + topics
+        persona_update = None
+        topic_state: Dict[str, Any] = {}
+        try:
+            persona_update = await update_session_persona(user_id, text)
+        except Exception:
+            pass
+        try:
+            topic_state = await update_conversation_topics(user_id, text)
+        except Exception:
+            pass
+
+        # 3. Build dialog state and write turn memory
+        topics_for_signals = topic_state.get("topics") if isinstance(topic_state, dict) else []
+        if not topics_for_signals:
+            try:
+                topics_for_signals = await extract_topics(text)
+            except Exception:
+                topics_for_signals = []
+
+        response_preview = (reply_text or "").strip()[:120]
+        dialog_state = {
+            "intent": None,
+            "tone": tone_blueprint.get("style") or "auto",
+            "emotion": tone_blueprint.get("mirroring", {}).get("emotion"),
+            "context": {"clarity_hint": clarity_phrase},
+            "response_preview": response_preview,
+        }
+        try:
+            await _write_turn_memory(
+                person_id=user_id, dialog_state=dialog_state, reasoning=None,
+                entry_id=str(session_id) if session_id else user_id, user_text=text,
+            )
+        except Exception as exc:
+            logger.error("[turn_v2:bg] _write_turn_memory failed: %s", exc)
+
+        # 4. Update session continuity
+        try:
+            await update_continuity(
+                user_id,
+                {
+                    "type": "text_message",
+                    "text": text,
+                    "ts": datetime.datetime.utcnow().isoformat(),
+                    "emotion": emotion,
+                    "tone_state": tone_state,
+                    "empathy_state": empathy_state,
+                    "microreg_state": microreg_state,
+                    "forecast_state": brain_state.get("forecast_state") or {},
+                },
+                memory_short_term=[],
+                pattern_sense=brain_state.get("pattern_sense"),
+            )
+        except Exception:
+            pass
+
+        # 5. Publish memory event
+        try:
+            await publish(
+                MEMORY_EVENT,
+                {
+                    "person_id": user_id,
+                    "entry_id": str(entry_id) if entry_id else None,
+                    "text": text,
+                    "layer": "conversation",
+                    "ts": datetime.datetime.utcnow().isoformat(),
+                },
+            )
+        except Exception:
+            pass
+
+        # 6. Unified ingest (heavy memory processing)
+        if entry_id and not minimal_mode:
+            try:
+                schema_ok = await _unified_ingest_schema_ok()
+                if schema_ok:
+                    await ingest_heavy(
+                        person_id=user_id, entry_id=entry_id,
+                        text=text, ts=datetime.datetime.utcnow(),
+                    )
+            except Exception as exc:
+                logger.warning("[turn_v2:bg] ingest_heavy failed: %s", exc)
+
+        # 7. Enqueue worker jobs (CRITICAL — feeds background workers)
+        turn_id = str(entry_id) if entry_id else str(uuid4())
+        queued_jobs = [
+            "turn_memory_update",
+            "episodic_consolidation_v21",
+            "preference_learning",
+            "journal_enrich",
+            "intent_extraction",
+        ]
+        inferred_intent = stored_intents[0] if stored_intents else (
+            topics_for_signals[0] if topics_for_signals else None
+        )
+        facets_for_worker = {
+            "emotion": emotion,
+            "intents": stored_intents,
+            "intent": inferred_intent,
+            "topics": topics_for_signals or topics,
+            "plans": generated_plans,
+            "triage": turn_context.get("triage"),
+        }
+        disable_queue = os.getenv("SAKHI_DISABLE_QUEUE") == "1"
+        payload = {
+            "text": text,
+            "ts": datetime.datetime.utcnow().isoformat(),
+            "entry_id": str(entry_id) if entry_id else None,
+            "facets": facets_for_worker,
+            "thread_id": user_id,
+            "behavior_profile": behavior_profile,
+            "mode": "today",
+            "emotion_update": emotion_update,
+            "persona_update": persona_update,
+        }
+        if disable_queue:
+            from sakhi.apps.worker.pipelines.turn_updates.runner import process_turn_job_async
+            for job_type in queued_jobs:
+                try:
+                    await process_turn_job_async(job_type=job_type, turn_id=turn_id, person_id=user_id, payload=payload)
+                except Exception as exc:
+                    logger.warning("[turn_v2:bg] inline job failed type=%s err=%s", job_type, exc)
+        else:
+            enqueue_turn_jobs(turn_id, user_id, queued_jobs, payload)
+
+        logger.info("[turn_v2:bg] post-reply completed user=%s turn_id=%s jobs=%s", user_id, turn_id, queued_jobs)
+
+    except Exception as exc:
+        logger.error("[turn_v2:bg] post-reply processing failed: %s", exc, exc_info=True)
+
+
 @router.post("/turn")
 async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(default=None)):
     user_id, person_label, person_key = resolve_person(request, user)
@@ -600,6 +767,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             text=body.text,
             clarity_hint=body.clarity_phrase,
             capture_only=body.capture_only,
+            skip_llm=True,  # Defer LLM calls (enrich, embedding, intents) to workers
         )
     except Exception as orch_exc:
         logger.error("[turn_v2] orchestrate_turn failed: %s", orch_exc)
@@ -696,12 +864,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             },
         }
 
-    # Get brain state directly from personal_model (replaces legacy harmony orchestrator)
-    try:
-        brain_state = await _get_brain_state_from_personal_model(user_id)
-    except Exception as bs_exc:
-        logger.warning("[turn_v2] brain_state load failed: %s", bs_exc)
-        brain_state = {}
+    # Get brain state + internal state in parallel (independent DB reads)
     behavior_profile = {}  # Computed on-demand if needed
     planner_payload = None  # Planner runs in workers
     insight_bundle = None  # Insights generated by workers
@@ -718,11 +881,21 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "confidence": float((mood_affect or {}).get("score") or 0.5),
     }
 
-    try:
-        internal_state = await _load_internal_state(user_id)
-    except Exception as is_exc:
-        logger.warning("[turn_v2] internal_state load failed: %s", is_exc)
+    brain_state_result, internal_state_result = await asyncio.gather(
+        _get_brain_state_from_personal_model(user_id),
+        _load_internal_state(user_id),
+        return_exceptions=True,
+    )
+    if isinstance(brain_state_result, Exception):
+        logger.warning("[turn_v2] brain_state load failed: %s", brain_state_result)
+        brain_state = {}
+    else:
+        brain_state = brain_state_result
+    if isinstance(internal_state_result, Exception):
+        logger.warning("[turn_v2] internal_state load failed: %s", internal_state_result)
         internal_state = {}
+    else:
+        internal_state = internal_state_result
 
     # --- Context Router: determine which modules to activate ---
     try:
@@ -788,18 +961,16 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         nudge_state = {}
 
     # Always compute — DB side effects (writes to personal_model)
-    try:
-        microreg_state = await compute_microreg(user_id, body.text)
-    except Exception:
-        microreg_state = {}
-    try:
-        tone_state = await compute_tone(user_id)
-    except Exception:
-        tone_state = {}
-    try:
-        empathy_state = await compute_empathy(user_id, body.text)
-    except Exception:
-        empathy_state = {}
+    # Run all 3 in parallel (independent of each other)
+    microreg_result, tone_result, empathy_result = await asyncio.gather(
+        compute_microreg(user_id, body.text),
+        compute_tone(user_id),
+        compute_empathy(user_id, body.text),
+        return_exceptions=True,
+    )
+    microreg_state = {} if isinstance(microreg_result, Exception) else microreg_result
+    tone_state = {} if isinstance(tone_result, Exception) else tone_result
+    empathy_state = {} if isinstance(empathy_result, Exception) else empathy_result
 
     micro_goals_meta = None
     text_lower = (body.text or "").lower()
@@ -1840,13 +2011,17 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         pass
 
     try:
+        _return_debug = (
+            os.getenv("SAKHI_DEBUG_RESPONSE", "0") == "1"
+            or request.query_params.get("debug") == "1"
+        )
         reply_bundle = await generate_reply(
             person_id=user_id,
             user_text=body.text,
             metadata=metadata_payload,
             behavior_profile=behavior_profile,
             session_id=str(session_id) if session_id else "",
-            return_debug=True,  # Enable debug info for adaptive response
+            return_debug=_return_debug,
         )
     except Exception as reply_exc:
         logger.error("[turn_v2] CRITICAL - generate_reply failed for user=%s: %s", user_id, reply_exc, exc_info=True)
@@ -1858,429 +2033,64 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     adaptive_response = reply_bundle.get("adaptive_response")  # Adaptive Response Framework output
     reply_debug = reply_bundle.get("debug") or {}  # Full debug from conversation engine
 
-    # Persist conversation turns to database for continuity
-    if session_id:
-        try:
-            # Store user turn
-            await append_turn(
-                user_id=user_id,
-                session_id=str(session_id),
-                role="user",
-                text=body.text,
-                source=body.source,
-            )
-            # Store assistant turn (use 'assistant' for DB constraint compatibility)
-            if reply_text:
-                await append_turn(
-                    user_id=user_id,
-                    session_id=str(session_id),
-                    role="assistant",  # DB constraint requires 'user' or 'assistant'
-                    text=reply_text,
-                    tone=tone_blueprint.get("style"),
-                    source=body.source,  # Inherit source from user turn
-                )
-        except Exception as exc:
-            logger.error("[turn_v2] Turn persistence failed: %s", exc)
-
-    result = {
+    # ── OPTIMIZATION: Return response immediately, process rest in background ──
+    product = {
         "reply": reply_text,
         "sessionId": str(session_id) if session_id else user_id,
         "tone": tone_blueprint.get("style") or "auto",
         "toneBlueprint": tone_blueprint,
-        "tone_used": (tone_state or {}).get("final"),
-        "mood": tone_blueprint.get("mirroring", {}).get("emotion"),
-        "clarityHint": body.clarity_phrase,
-        "lastObjective": None,
-        "suggestions": [],
-        "decisions": [],
-        "journaling_ai": journaling_ai,
-        "behavior_profile": behavior_profile,
-        "internal_state": internal_state,
-        "cognitive_load": internal_state.get("cognitive_load"),
-        "priority": internal_state.get("priority"),
-        "priority_topics": internal_state.get("priority_topics"),
-        "soul_values": internal_state.get("soul_values"),
-        "soul_identity": internal_state.get("soul_identity"),
-        "life_themes": internal_state.get("life_themes"),
-        "identity_graph": internal_state.get("identity_graph"),
-        # Friction Framework context
-        "operating_system": internal_state.get("operating_system"),
-        "dosha_baseline": internal_state.get("dosha_baseline"),
-        "life_context": internal_state.get("life_context"),
-        "decision_profile": internal_state.get("decision_profile"),
-        "rhythm_soul_frame": fast_rhythm_soul,
-        "emotion_soul_rhythm_frame": fast_esr,
-        "identity_momentum_frame": fast_identity_momentum,
-        "identity_timeline_frame": fast_identity_timeline,
-        "inner_dialogue": inner_dialogue,
-        "tone_state": tone_state,
-        "nudge_state": nudge_state,
-        "empathy_state": empathy_state,
-        "continuity": continuity_state,
-        "micro_goals": micro_goals_meta,
-        "daily_reflection": daily_reflection,
-        "microreg_state": microreg_state,
-        "evening_closure": evening_closure,
-        "morning_preview": morning_preview,
-        "morning_ask": morning_ask,
-        "morning_momentum": morning_momentum,
-        "micro_momentum": micro_momentum,
-        "micro_recovery": micro_recovery,
-        "focus_path": focus_path,
-        "mini_flow": mini_flow,
-        "micro_journey": micro_journey,
-        "moment_model": moment_model,
-        "evidence_pack": evidence_pack,
-        "deliberation_scaffold": deliberation_scaffold,
-        # Personalized Recommendations (Ayurvedic + personal patterns)
+        "tone_blueprint": tone_blueprint,
+        "entry_id": entry_id,
         "friction_state": friction_state_computed,
         "personalized_recommendations": personalized_recommendations,
-        "recommendation_trigger": recommendation_trigger,
-        # Scheduling & Calendar Context
-        "scheduling_context": scheduling_context,
-        "scheduling_intent": scheduling_intent_detected.value if hasattr(scheduling_intent_detected, 'value') else scheduling_intent_detected,
-        "relationship_nudges": relationship_nudges,
-        "mesh_coordination": scheduling_context.get("mesh_coordination") if scheduling_context else None,
-        "vision_context": vision_context if vision_context else None,
-        "agentic_context": agentic_context if agentic_context else None,
-        "agentic_results": agentic_results if agentic_results else None,
-        # Agent Task context
-        "agent_task_context": agent_task_context if agent_task_context else None,
-        "agent_task_detected": agent_task_detected,
-        "agent_task_plan": agent_task_plan,
-        "agent_task_execution": agent_task_execution,
-    }
-
-    session_id = result.get("sessionId") or result.get("session_id")
-    reflection_hint = None
-    try:
-        summary_row = await q(
-            """
-            SELECT summary
-            FROM meta_reflections
-            WHERE person_id = $1
-            ORDER BY created_at DESC
-            LIMIT 1
-            """,
-            user_id,
-        )
-        if summary_row:
-            reflection_hint = (summary_row[0]["summary"] or "").strip()[:200]
-    except Exception:
-        reflection_hint = None
-
-    if minimal_mode:
-        mem_context = ""
-    else:
-        try:
-            mem_context = await synthesize_memory_context(
-                person_id=user_id,
-                user_query=body.text,
-                limit=350,
-            )
-        except Exception:
-            mem_context = ""
-
-    # Patch AA — unified reasoning engine
-    reasoning = {}
-    # Build 50: avoid heavy reasoning unless reflective/stress/growth
-    if behavior_profile.get("conversation_depth") == "reflective" or behavior_profile.get("session_context", {}).get("reason") in {"stress", "growth"}:
-        try:
-            reasoning = await run_reasoning(person_id=user_id, query=body.text, memory_context=mem_context)
-        except Exception as exc:  # pragma: no cover - do not break turn flow
-            reasoning = {
-                "insights": [],
-                "contradictions": [],
-                "opportunities": [],
-                "open_loops": [],
-                "error": str(exc),
-            }
-
-    # Patch DD — Memory recall (can be expensive: includes query embedding).
-    if minimal_mode:
-        recall = []
-    else:
-        try:
-            recall = await memory_recall(person_id=user_id, query=body.text, limit=5)
-        except Exception as exc:  # pragma: no cover - best effort
-            recall = {"error": str(exc)}
-
-    # Planner work is deferred to workers; keep payload None to avoid inline heavy calls.
-
-    try:
-        persona_update = await update_session_persona(user_id, body.text)
-    except Exception as exc:  # pragma: no cover - best effort
-        persona_update = {"error": str(exc)}
-
-    try:
-        topic_state = await update_conversation_topics(user_id, body.text)
-    except Exception as exc:  # pragma: no cover - best effort
-        topic_state = {"error": str(exc)}
-
-    # Backup topic extraction if state is empty for signals
-    topics_for_signals = topic_state.get("topics") if isinstance(topic_state, dict) else []
-    if not topics_for_signals:
-        try:
-            topics_for_signals = await extract_topics(body.text)
-        except Exception:
-            topics_for_signals = []
-
-    result["topics"] = topic_state
-
-    # Inline insight generation removed (Build 50); worker handles insight creation.
-    insight_bundle = None
-
-    response_text = (result.get("reply") or "").strip()
-    dialog_state = {
-        "intent": result.get("lastObjective"),
-        "tone": result.get("tone"),
-        "emotion": result.get("mood"),
-        "context": {
-            "reasoning": reasoning,
-            "clarity_hint": result.get("clarityHint"),
-            "suggestions": result.get("suggestions"),
-            "decisions": result.get("decisions"),
-            "reflection_hint": reflection_hint,
-        },
-        "response_preview": response_text[:120],
-    }
-
-    try:
-        memory_write = await _write_turn_memory(
-            person_id=user_id,
-            dialog_state=dialog_state,
-            reasoning=reasoning,
-            entry_id=session_id,
-            user_text=body.text,
-        )
-    except Exception as mem_exc:
-        logger.error("[turn_v2] _write_turn_memory failed: %s", mem_exc)
-        memory_write = {}
-
-    # Best-effort continuity update with latest emotion/tone/empathy/forecast snapshot
-    try:
-        await update_continuity(
-            user_id,
-            {
-                "type": "text_message",
-                "text": body.text,
-                "ts": datetime.datetime.utcnow().isoformat(),
-                "emotion": emotion,
-                "tone_state": tone_state,
-                "empathy_state": empathy_state,
-                "microreg_state": microreg_state,
-                "forecast_state": brain_state.get("forecast_state") or {},
-            },
-            memory_short_term=[],
-            pattern_sense=brain_state.get("pattern_sense"),
-        )
-    except Exception:
-        pass
-
-    # ----------------------------------------------------------------------
-    # Patch BB — Expose reasoning in the debug panel
-    # ----------------------------------------------------------------------
-    engine_snapshot = deepcopy(result)
-
-    debug_section = {
-        "input_text": body.text,
-        "raw_engine_output": engine_snapshot,
-        "reasoning": reasoning,
-        "topics": topic_state,
-        "behavior_profile": behavior_profile,
-        "activation": activation,
-        "triage": triage,
-        "insights": insight_bundle,
-        "flags": {
-            "clarity_hint_applied": bool(body.clarity_phrase),
-            "has_intents": bool(result.get("intents")),
-            "has_memory_updates": bool(result.get("memoryUpdate")),
-        },
-    }
-
-    if isinstance(result.get("debug"), dict):
-        existing = result["debug"]
-        existing.update(debug_section)
-        result["debug"] = existing
-    else:
-        result["debug"] = debug_section
-
-    api_debug = {
-        "reasoning": reasoning,
-        "engine_raw": engine_snapshot,
-        "loop_trace": debug_section,
-        "memory_context": mem_context,
-        "persona": persona_update,
-        "topics": topic_state,
-        "behavior_profile": behavior_profile,
-        "insights": insight_bundle,
-        "activation": activation,
-        "triage": triage,
-        "reflection_trace": reflection_trace_payload,
-        # Adaptive Response Framework debug
         "adaptive_response": adaptive_response,
-        "conversation_engine_debug": reply_debug,
-    }
-
-    human_insights = None  # Debug panel disabled by default
-
-    # ----------------------------------------------------------------------
-    # NEW: Narrative Trace (non-technical explanation)
-    # ----------------------------------------------------------------------
-    try:
-        from sakhi.libs.reasoning.narrative import build_narrative_trace
-    except Exception:  # pragma: no cover - import guards
-        build_narrative_trace = None
-
-    narrative_trace = None
-    unified_narrative = None
-    if build_narrative_trace:
-        try:
-            narrative_trace = await build_narrative_trace(
-                person_id=user_id,
-                text=body.text,
-                reply=response_text,
-                memory_context=mem_context,
-                reasoning=reasoning,
-                intents=stored_intents,
-                emotion=emotion,
-                topics=topics,
-            )
-        except Exception:  # pragma: no cover - best effort
-            narrative_trace = None
-
-    unified_narrative = None  # Debug narrative disabled by default
-
-    try:
-        await publish(
-            MEMORY_EVENT,
-            {
-                "person_id": user_id,
-                "entry_id": str(entry_id) if entry_id else None,
-                "text": body.text,
-                "layer": "conversation",
-                "ts": datetime.datetime.utcnow().isoformat(),
-            },
-        )
-    except Exception:
-        pass
-
-    # Unified ingest: queue heavy memory processing for background workers
-    if entry_id and not minimal_mode:
-        if not await _unified_ingest_schema_ok():
-            logger.warning("[UnifiedIngest] Skipping: schema not ready")
-        else:
-            try:
-                asyncio.create_task(
-                    ingest_heavy(
-                        person_id=user_id,
-                        entry_id=entry_id,
-                        text=body.text,
-                        ts=datetime.datetime.utcnow(),
-                    )
-                )
-            except Exception as exc:
-                logger.warning(
-                    "[UnifiedIngest] turn_v2 ingest_heavy enqueue failed user=%s entry=%s error=%s",
-                    user_id,
-                    entry_id,
-                    exc,
-                )
-
-    turn_id = str(entry_id) if entry_id else str(uuid4())
-    # Per-turn workers: Only essential memory capture + episodic consolidation
-    # Other state workers run on daily schedule - context comes from:
-    # conversation_history + memory_recall + memory_graph + personal_model (refreshed daily)
-    queued_jobs = [
-        "turn_memory_update",           # Essential: captures turn to memory
-        "episodic_consolidation_v21",   # Essential: creates episodes + state vectors + feeds memory graph
-        "preference_learning",          # Learn preferences from "I like..." statements
-    ]
-    # MOVED TO DAILY SCHEDULE (see scheduler.py):
-    # - ayurvedic_pipeline (daily 6am)
-    # - rhythm_forecast (daily 7am, also weekly)
-    # - identity_momentum_deep (daily 6am)
-    # - emotion_soul_rhythm_deep (daily 4am)
-    # - esr (daily 4am)
-    # - soul_refresh (daily 6am)
-    # - longitudinal_update (weekly - already scheduled)
-    # - rhythm_soul_deep (daily 6am, weekly 8am)
-    # DISABLED: journal_enrich until reviewed
-    # if entry_id:
-    #     queued_jobs.append("journal_enrich")
-    inferred_intent = stored_intents[0] if stored_intents else (topics_for_signals[0] if topics_for_signals else None)
-    facets_for_worker = {
-        "emotion": emotion,
-        "intents": stored_intents,
-        "intent": inferred_intent,
-        "topics": topics_for_signals or topics,
-        "plans": generated_plans,
-        "triage": turn_context.get("triage"),
-    }
-    disable_queue = os.getenv("SAKHI_DISABLE_QUEUE") == "1"
-    payload = {
-        "text": body.text,
-        "ts": datetime.datetime.utcnow().isoformat(),
-        "entry_id": str(entry_id) if entry_id else None,
-        "facets": facets_for_worker,
-        "thread_id": user_id,
-        "behavior_profile": behavior_profile,
-        "mode": "today",
-        "emotion_update": emotion_update,
-        "persona_update": persona_update,
-    }
-    logger.error(
-        "[turn_v2] dispatch mode=%s SAKHI_DISABLE_QUEUE=%s turn_id=%s jobs=%s",
-        "inline" if disable_queue else "queue",
-        "1" if disable_queue else "0",
-        turn_id,
-        queued_jobs,
-    )
-    if disable_queue:
-        logger.error("[turn_v2] queue disabled via SAKHI_DISABLE_QUEUE, running inline turn_id=%s", turn_id)
-        from sakhi.apps.worker.pipelines.turn_updates.runner import process_turn_job_async
-
-        for job_type in queued_jobs:
-            try:
-                await process_turn_job_async(job_type=job_type, turn_id=turn_id, person_id=user_id, payload=payload)
-            except Exception as exc:
-                logger.warning("[turn_v2] inline job failed type=%s turn_id=%s err=%s", job_type, turn_id, exc)
-    else:
-        enqueue_turn_jobs(turn_id, user_id, queued_jobs, payload)
-
-    logger.error(
-        "[turn_v2] response snapshot entry_id=%s session_id=%s minimal_mode=%s queued_jobs=%s",
-        entry_id,
-        session_id,
-        minimal_mode,
-        queued_jobs,
-    )
-
-    return {
-        **result,
-        "unified_fast": fast_ingest,
-        "entry_id": entry_id,
-        "topics_snapshot": topics,
-        "topic_state": topic_state,
-        "emotion": emotion,
-        "intents_detected": stored_intents,
-        "plans_generated": generated_plans,
-        "rhythm_triggered": rhythm_trigger_result,
-        "meta_reflection_triggered": meta_reflection_result,
-        "embedding_dim": len(embedding),
-        "orchestration": orchestration_snapshot,
-        "reasoning": reasoning,
-        "memory_write": memory_write,
-        "memory_recall": recall,
-        "memory_context": mem_context,
-        "reflection_hint": reflection_hint,
-        "planner": planner_payload,
-        "persona_update": persona_update,
-        "debug": api_debug,
-        "human_insights": human_insights,
-        "narrative_trace": narrative_trace,
-        "narrative": unified_narrative,
         "journaling_ai": journaling_ai,
-        "insight_bundle": insight_bundle,
-        "adaptive_response": adaptive_response,  # Adaptive Response Framework output
+        "memory_recall": [],  # Recall already done inside generate_reply
+        "agent_task_context": agent_task_context if agent_task_context else None,
     }
+
+    if _return_debug:
+        product["debug_data"] = {
+            "active_modules": sorted(active_modules),
+            "orchestration": orchestration_snapshot,
+            "conversation_engine_debug": reply_debug,
+            "entry_id": entry_id,
+            "topics": topics,
+            "emotion": emotion,
+            "intents_detected": stored_intents,
+            "friction_state": friction_state_computed,
+            "internal_state": internal_state,
+            "tone_state": tone_state,
+            "empathy_state": empathy_state,
+            "note": "Post-reply processing (memory, persona, topics, workers) runs in background",
+        }
+
+    # Fire-and-forget: all post-reply processing in background
+    asyncio.create_task(_run_post_reply_processing(
+        user_id=user_id,
+        text=body.text,
+        source=body.source,
+        clarity_phrase=body.clarity_phrase,
+        session_id=session_id,
+        entry_id=entry_id,
+        reply_text=reply_text,
+        tone_blueprint=tone_blueprint,
+        minimal_mode=minimal_mode,
+        behavior_profile=behavior_profile,
+        emotion=emotion,
+        tone_state=tone_state,
+        empathy_state=empathy_state,
+        microreg_state=microreg_state,
+        brain_state=brain_state,
+        stored_intents=stored_intents,
+        topics=topics,
+        generated_plans=generated_plans,
+        turn_context=turn_context,
+        emotion_update=emotion_update,
+    ))
+
+    logger.error(
+        "[turn_v2] response returned entry_id=%s session_id=%s (post-reply in background)",
+        entry_id, session_id,
+    )
+    return product

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ export default function AuthScreen() {
     signInWithApple,
     signInWithEmail,
     isAppleAuthAvailable,
+    isAuthenticated,
   } = useAuth();
 
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -37,30 +38,38 @@ export default function AuthScreen() {
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
+  const [waitingForSession, setWaitingForSession] = useState(false);
+
+  // Redirect when authenticated (after setSession completes in background)
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/experience/converse" as never);
+    }
+  }, [isAuthenticated, router]);
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
-      // OAuth will redirect - navigation happens via deep link callback
+      // setSession fires in background — show waiting state until onAuthStateChange fires
+      setWaitingForSession(true);
     } catch (error) {
       console.error("Google login failed:", error);
       Alert.alert("Sign In Failed", "Could not sign in with Google. Please try again.");
-    } finally {
       setIsGoogleLoading(false);
     }
+    // Don't clear loading — keep spinner until isAuthenticated triggers redirect
   };
 
   const handleAppleLogin = async () => {
     setIsAppleLoading(true);
     try {
       await signInWithApple();
-      // If successful, auth state change will trigger navigation
-      router.replace("/onboarding" as never);
+      // Apple sign-in awaits completion — auth state should update
+      setWaitingForSession(true);
     } catch (error) {
       console.error("Apple login failed:", error);
       Alert.alert("Sign In Failed", "Could not sign in with Apple. Please try again.");
-    } finally {
       setIsAppleLoading(false);
     }
   };
@@ -100,6 +109,19 @@ export default function AuthScreen() {
       router.back();
     }
   };
+
+  // Waiting for session to be set (after OAuth callback)
+  if (waitingForSession) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color="#6366f1" />
+          <Text style={[styles.subtitle, { marginTop: 24 }]}>Signing you in...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // Email sent confirmation screen
   if (emailSent) {

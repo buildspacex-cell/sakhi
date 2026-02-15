@@ -116,10 +116,14 @@ def build_context_scan(metadata: Dict[str, Any]) -> str:
     hrv = body_vitals.get("heart_rate_variability") or body_vitals.get("hrv_sdnn")
     if hrv:
         body_parts.append(f"hrv={hrv}")
-    if body.get("energy", {}).get("level"):
-        body_parts.append(f"energy={body['energy']['level']}")
-    if body.get("dosha_body", {}).get("dominant_imbalance"):
-        body_parts.append(f"dosha_body={body['dosha_body']['dominant_imbalance']}")
+    body_energy = body.get("energy")
+    if isinstance(body_energy, dict) and body_energy.get("level"):
+        body_parts.append(f"energy={body_energy['level']}")
+    elif isinstance(body_energy, (int, float)):
+        body_parts.append(f"energy={body_energy}")
+    body_dosha = body.get("dosha_body")
+    if isinstance(body_dosha, dict) and body_dosha.get("dominant_imbalance"):
+        body_parts.append(f"dosha_body={body_dosha['dominant_imbalance']}")
     # Health trends (longitudinal)
     trends = metadata.get("health_trends") or {}
     for trend_key in ("sleep_trend", "hrv_trend", "energy_trend"):
@@ -432,23 +436,25 @@ def _build_body_section(m: Dict[str, Any]) -> str:
             v_str += f" HRV={hrv}ms"
         parts.append(v_str)
 
-    energy = body.get("energy", {})
-    if energy.get("level"):
+    energy = body.get("energy")
+    if isinstance(energy, dict) and energy.get("level"):
         e_str = f"Energy: {energy['level']}"
         if energy.get("trend"):
             e_str += f" ({energy['trend']})"
         parts.append(e_str)
+    elif isinstance(energy, (int, float)):
+        parts.append(f"Energy: {energy}")
 
-    dosha = body.get("dosha_body", {})
-    if dosha.get("dominant_imbalance"):
+    dosha = body.get("dosha_body")
+    if isinstance(dosha, dict) and dosha.get("dominant_imbalance"):
         parts.append(f"Body dosha: {dosha['dominant_imbalance']} dominant")
 
-    agni = body.get("agni", {})
-    if agni.get("strength"):
+    agni = body.get("agni")
+    if isinstance(agni, dict) and agni.get("strength"):
         parts.append(f"Agni: {agni['strength']}")
 
-    ojas = body.get("ojas", {})
-    if isinstance(ojas.get("level"), (int, float)):
+    ojas = body.get("ojas")
+    if isinstance(ojas, dict) and isinstance(ojas.get("level"), (int, float)):
         parts.append(f"Ojas: {ojas['level']:.1f}")
 
     # Longitudinal trends
@@ -475,7 +481,7 @@ def _build_body_section(m: Dict[str, Any]) -> str:
         + "\n".join(parts)
         + "\n\nGuidance: Connect physical signals to emotional/behavioral patterns. "
         "Declining HRV + journal stress = corroborating evidence. Use trends, not just snapshots. "
-        "Poor sleep affects Vata; elevated HR signals Pitta stress; low energy suggests Kapha.\n"
+        "Poor sleep causes scattered energy; elevated HR signals stress response; low energy suggests stagnation.\n"
     )
 
 
@@ -567,9 +573,9 @@ def build_prompt(
             f"Constitution baseline: {dosha_str}\n"
             f"Strengths: {', '.join(os_def.get('strengths', []))}\n"
             f"Vulnerabilities: {', '.join(os_def.get('vulnerabilities', []))}\n"
-            "Guidance: Use this constitutional understanding to personalize your response. "
-            "Connect symptoms and patterns to their OS type naturally — don't lecture about doshas, "
-            "but let this inform what you suggest and how you frame things.\n"
+            "Guidance: Use this to personalize your response. "
+            "Connect symptoms and patterns to their natural tendencies — "
+            "let this inform what you suggest and how you frame things.\n"
         )
 
     journaling_ai = context.get("journaling_ai")
@@ -813,32 +819,27 @@ Do NOT force this. Only bring up if it flows naturally.
         dosha_ctx = causal.get("dosha_context") or ""
         explanation = causal.get("explanation_text") or ""
         causal_section = (
-            "\n[AYURVEDIC INSIGHT - Why you might be feeling this way]\n"
+            "\n[WHY YOU MIGHT BE FEELING THIS WAY]\n"
             f"{dosha_ctx}\n{explanation}\n\n"
             "Guidance: Use this to inform your understanding, not to lecture.\n"
             "- Connect the user's words to these patterns naturally\n"
-            "- Offer the Ayurvedic lens as a way to understand, not diagnose\n"
+            "- Offer insights about their natural patterns as a way to understand, not diagnose\n"
             "- If the user asks 'why am I feeling X', draw from this analysis\n"
-            "- Keep it grounded and practical, not overly spiritual\n"
+            "- Keep it grounded and practical\n"
         )
 
     return f"""
-You are Sakhi, an emotionally intelligent clarity companion.
-Persona mode: {persona_mode}
-Tone style: {tone_style} (pace={pace}, concise={str(concise).lower()}).
-Tone blueprint:
- - Micro-tone: {micro.get("focus", "gentle presence")} (temperature={micro.get("temperature", 0.4)})
- - Mirroring approach: {mirroring.get("strategy", "mirror emotion before guiding forward")}
- - Ritual phase: {ritual.get("phase", "daily")} (intent: {ritual.get("intent", "nurture calm transitions")})
- - Empathy focus: {empathy.get("focus", "validate and soften edges")} (mood anchor: {empathy.get("mood", "neutral")})
- - Persona stability: score {stability.get("score", 0.8)}, guidance: {stability.get("guidance", "stay consistent")}
- - Memory thread to honor: {memory_thread or "maintain continuity with their latest reflection"}
- - Rhythm pacing note: {pacing_rationale or "default pacing"}
+You are Sakhi — a friend who really gets this person. You understand their patterns.
 
-User clarity level: {clarity_level}
+VOICE: Talk like a friend. Not a therapist, not formal. Just real.
+- Simple words. Short sentences. Say what matters.
+- No Ayurvedic jargon ever (vata, pitta, kapha, dosha = never say these).
+- Warm but direct. Skip fluff.
+
+Tone: {tone_style} (pace={pace})
 Emotion state: {last_emotion}
 Energy level: {energy_level}
-
+Mirroring: {mirroring.get("strategy", "mirror emotion before guiding forward")}
 Active themes: {themes}
 
 Recent short-term thoughts:
@@ -859,17 +860,10 @@ Behavior cues:
 User message:
 {user_text.strip()}
 
-Respond in a way that:
- - aligns with the persona mode
- - respects their clarity and emotional state
- - gently improves clarity
- - mirrors their emotion before offering a supportive nudge
- - respects ritual phase guidance and rhythm pacing notes
- - ties response back to the stated memory thread
- - integrates recommendations naturally when triggered (follow the guidance above)
- - handles scheduling requests by suggesting options and ALWAYS asking for confirmation
- - never creates calendar events without explicit user approval ("yes", "confirm", "do it")
- - stays warm, grounded, and human (35-45 words, longer if sharing recommendations or scheduling options).
+Keep it short. 30-50 words usually. Say what matters.
+If you have enough context to help, help. Don't ask just to ask.
+Max 2 questions. Make them feel natural.
+For scheduling: suggest options and ALWAYS ask for confirmation before creating events.
 """.strip()
 
 

@@ -25,13 +25,16 @@
       }
     },
     "production": {
-      "autoIncrement": true,
       "ios": {
         "simulator": false
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "bundleIdentifier": "com.buildspacex.sakhi"
+      }
+    }
   }
 }

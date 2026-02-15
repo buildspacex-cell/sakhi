@@ -16,7 +16,7 @@ export async function POST(request: Request) {
         conversation_id: body?.conversation_id,
       };
 
-  const response = await fetch(`${API_BASE}/chat`, {
+  const response = await fetch(`${API_BASE}/dev/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

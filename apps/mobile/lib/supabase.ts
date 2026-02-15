@@ -42,11 +42,16 @@ const ExpoSecureStoreAdapter = {
 };
 
 // Create and export the Supabase client
-export const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey, {
+// Defensive: if config is missing, use placeholder to avoid crash on launch
+const url = config.supabaseUrl || "https://placeholder.supabase.co";
+const key = config.supabaseAnonKey || "placeholder";
+
+export const supabase = createClient(url, key, {
   auth: {
     storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: "implicit",
   },
 });

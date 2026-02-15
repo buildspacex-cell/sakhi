@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from sakhi.libs.llm_router import LLMRouter
 
-router = APIRouter(prefix="/llm", tags=["llm"])
+router = APIRouter(prefix="/dev/llm", tags=["llm"])
 
 
 class ChatMessageIn(BaseModel):
