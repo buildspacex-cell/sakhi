@@ -6,7 +6,6 @@ Workers tested:
 - brain_goals_themes_refresh: Refresh brain/goals/themes
 - update_relationship_arcs: Update relationship tracking
 - generate_clarity_actions: Generate clarity-focused actions
-- reflective_loop: Run reflective processing loop
 """
 
 import pytest
@@ -239,55 +238,3 @@ class TestGenerateClarityActions:
         assert result[0]["action"] == "journal"
 
 
-class TestReflectiveLoop:
-    """Tests for reflective_loop worker."""
-
-    @pytest.mark.asyncio
-    async def test_runs_reflection_cycle(self, mock_db):
-        """
-        Given: Reflection trigger occurs
-        When: reflective_loop runs
-        Then: Reflection cycle completes
-        """
-        mock_db.fetchrow.return_value = {
-            "person_id": DEMO_USER_ID,
-            "trigger": "daily",
-            "last_reflection": datetime.now(timezone.utc),
-        }
-
-        result = await mock_db.fetchrow()
-        assert result["trigger"] == "daily"
-        assert result["person_id"] == DEMO_USER_ID
-
-    @pytest.mark.asyncio
-    async def test_generates_insights(self, mock_db):
-        """
-        Given: Reflection data processed
-        When: reflective_loop runs
-        Then: Insights are generated
-        """
-        mock_db.fetch.return_value = [
-            {"insight": "Energy peaks in morning", "confidence": 0.9},
-            {"insight": "Stress increases before meetings", "confidence": 0.8},
-        ]
-
-        result = await mock_db.fetch()
-        assert len(result) == 2
-        assert result[0]["confidence"] == 0.9
-
-    @pytest.mark.asyncio
-    async def test_stores_reflection_output(self, mock_db):
-        """
-        Given: Reflection completes
-        When: reflective_loop runs
-        Then: Output is stored
-        """
-        mock_db.fetchrow.return_value = {
-            "reflection_id": "ref-123",
-            "stored": True,
-            "insights_count": 3,
-        }
-
-        result = await mock_db.fetchrow()
-        assert result["stored"] is True
-        assert result["insights_count"] == 3

@@ -93,6 +93,8 @@ TOPIC_KEYWORDS = {
     "mood": ["sad", "down", "depressed", "happy", "mood", "feeling"],
     "energy": ["energy", "fatigue", "exhausted", "drained", "tired", "low"],
     "pain": ["pain", "ache", "hurt", "sore", "tension"],
+    "skin": ["skin", "dry", "dryness", "rash", "itch", "itchy", "flaky", "rough", "acne"],
+    "digestion": ["digestion", "bloating", "constipation", "acidity", "stomach", "gut", "nausea"],
 }
 
 # Pronouns and references that indicate need for context resolution
@@ -178,7 +180,7 @@ async def load_state_vectors(person_id: str, ctx: ConstitutionContext) -> None:
             """
             SELECT state_vector, guna_vector, created_at
             FROM memory_episodic
-            WHERE person_id = $1 AND state_vector IS NOT NULL
+            WHERE user_id = $1 AND state_vector IS NOT NULL
             ORDER BY created_at DESC
             LIMIT 1
             """,
@@ -187,6 +189,8 @@ async def load_state_vectors(person_id: str, ctx: ConstitutionContext) -> None:
 
         if rows and rows[0].get("state_vector"):
             state = rows[0]["state_vector"]
+            if isinstance(state, str):
+                state = json.loads(state)
             if isinstance(state, dict):
                 dosha = state.get("dosha") or {}
                 if dosha:
@@ -199,6 +203,8 @@ async def load_state_vectors(person_id: str, ctx: ConstitutionContext) -> None:
 
         if rows and rows[0].get("guna_vector"):
             guna = rows[0]["guna_vector"]
+            if isinstance(guna, str):
+                guna = json.loads(guna)
             if isinstance(guna, dict):
                 # Determine dominant guna
                 max_guna = max(["sattva", "rajas", "tamas"], key=lambda g: guna.get(g, 0))
@@ -312,7 +318,7 @@ async def search_short_term_memory(
             """
             SELECT text, created_at
             FROM memory_short_term
-            WHERE person_id = $1
+            WHERE user_id = $1
             ORDER BY created_at DESC
             LIMIT 20
             """,
@@ -457,64 +463,444 @@ def generate_inferences(
 
 
 # =============================================================================
+# DETERMINISTIC INTELLIGENCE LOADING
+# =============================================================================
+
+async def _load_deterministic_intelligence(
+    person_id: str,
+    sense: SenseFrame,
+) -> Dict[str, Any]:
+    """
+    Load deterministic intelligence for this person's current symptom.
+
+    Queries (in parallel):
+    - personal_patterns: User-specific cause→effect chains (by effect_value, any type)
+    - behavior_log: Recent dosha-affecting behaviors (7 days)
+    - symptom_log: Past episodes of this symptom
+    - SYMPTOM_DOSHA_MAP: Deterministic dosha mapping
+
+    Runs in parallel with constitution + STM fetch, so net latency ≈ 0ms.
+    """
+    import asyncio as _asyncio
+    from sakhi.apps.api.services.ayurveda.causal_reasoning import (
+        map_symptom_to_dosha,
+        get_recent_behaviors,
+    )
+
+    symptom = sense.symptom or sense.sub_domain or ""
+    dosha = map_symptom_to_dosha(symptom) if symptom else None
+
+    async def _empty() -> list:
+        return []
+
+    try:
+        # All 3 DB queries run in parallel (~50ms total)
+        patterns, behaviors, past_episodes = await _asyncio.gather(
+            _get_personal_patterns_for_symptom(person_id, symptom) if symptom else _empty(),
+            get_recent_behaviors(person_id, hours_back=168),  # 7 days
+            _get_past_symptom_episodes(person_id, symptom, limit=3) if symptom else _empty(),
+        )
+    except Exception as e:
+        logger.warning("[_load_deterministic_intelligence] Error: %s", e)
+        patterns, behaviors, past_episodes = [], [], []
+
+    return {
+        "symptom_dosha": dosha,
+        "patterns": patterns or [],
+        "behaviors": behaviors or [],
+        "past_episodes": past_episodes or [],
+    }
+
+
+async def _get_personal_patterns_for_symptom(
+    person_id: str,
+    symptom: str,
+    min_confidence: float = 0.3,
+) -> List[Dict[str, Any]]:
+    """
+    Fetch personal patterns where effect_value matches the symptom.
+
+    Searches across ALL effect_types (mental, emotional, physical, etc.)
+    since the sensing domain taxonomy doesn't align 1:1 with pattern effect_types.
+    """
+    try:
+        rows = await q(
+            """
+            SELECT cause_type, cause_value, effect_type, effect_value,
+                   correlation_strength, confidence, observation_count,
+                   ayurvedic_explanation, related_dosha
+            FROM personal_patterns
+            WHERE person_id = $1
+              AND effect_value ILIKE $2
+              AND confidence >= $3
+            ORDER BY correlation_strength DESC, observation_count DESC
+            LIMIT 5
+            """,
+            person_id,
+            f"%{symptom}%",
+            min_confidence,
+        )
+        return [dict(r) for r in rows] if rows else []
+    except Exception as e:
+        logger.warning("[_get_personal_patterns_for_symptom] Error: %s", e)
+        return []
+
+
+async def _get_past_symptom_episodes(
+    person_id: str,
+    symptom: str,
+    limit: int = 3,
+) -> List[Dict[str, Any]]:
+    """Fetch past episodes of this symptom from symptom_log."""
+    try:
+        rows = await q(
+            """
+            SELECT symptom_name, severity, occurred_at, what_helped,
+                   what_didnt_help, source_text, likely_dosha
+            FROM symptom_log
+            WHERE person_id = $1
+              AND symptom_name ILIKE $2
+            ORDER BY occurred_at DESC
+            LIMIT $3
+            """,
+            person_id,
+            f"%{symptom}%",
+            limit,
+        )
+        return [dict(r) for r in rows] if rows else []
+    except Exception as e:
+        logger.warning("[_get_past_symptom_episodes] Error: %s", e)
+        return []
+
+
+def _integrate_deterministic_intelligence(
+    gap: "KnowledgeGap",
+    det_intel: Dict[str, Any],
+) -> None:
+    """
+    Convert deterministic intelligence into KnownFacts and Inferences.
+
+    - Personal patterns → Inferences (learned cause→effect correlations)
+    - Recent behaviors → KnownFacts (concrete actions in last 48h)
+    - Past symptom episodes → KnownFacts (what helped/didn't before)
+    - Symptom→dosha mapping → Inference
+    """
+    # Personal patterns → Inferences
+    for i, pattern in enumerate(det_intel.get("patterns", [])[:5]):
+        cause = pattern.get("cause_value", "")
+        effect = pattern.get("effect_value", "")
+        strength = pattern.get("correlation_strength", 0.5)
+        count = pattern.get("observation_count", 1)
+        explanation = pattern.get("ayurvedic_explanation", "")
+
+        gap.inferred[f"pattern_{i}"] = Inference(
+            topic="personal_pattern",
+            statement=(
+                f"Known pattern: {cause} tends to cause {effect} "
+                f"(observed {count}x, strength {strength:.0%})"
+                + (f" — {explanation}" if explanation else "")
+            ),
+            basis="personal_patterns",
+            confidence=min(0.9, strength),
+        )
+
+    # Recent behaviors → KnownFacts
+    for i, behavior in enumerate(det_intel.get("behaviors", [])[:5]):
+        name = behavior.get("behavior_name", "")
+        dosha_eff = behavior.get("dosha_effect", "")
+        direction = behavior.get("effect_direction", "")
+        occurred = behavior.get("occurred_at", "")
+        time_str = ""
+        if occurred:
+            try:
+                from datetime import datetime
+                if hasattr(occurred, "strftime"):
+                    time_str = f" — {occurred.strftime('%b %d')}"
+            except Exception:
+                pass
+
+        gap.known[f"behavior_{i}"] = KnownFact(
+            topic="recent_behavior",
+            value=f"{name} ({direction}s {dosha_eff}){time_str}",
+            source="behavior_log",
+            recency="recent",
+            confidence=0.9,
+        )
+
+    # Past symptom episodes → KnownFacts
+    for i, episode in enumerate(det_intel.get("past_episodes", [])[:3]):
+        parts = [f"Had {episode.get('symptom_name', '?')} (severity {episode.get('severity', '?')})"]
+
+        helped = episode.get("what_helped")
+        if helped:
+            if isinstance(helped, str):
+                try:
+                    helped = json.loads(helped)
+                except Exception:
+                    helped = []
+            if isinstance(helped, list) and helped:
+                parts.append(f"What helped: {', '.join(str(h) for h in helped[:3])}")
+
+        didnt = episode.get("what_didnt_help")
+        if didnt:
+            if isinstance(didnt, str):
+                try:
+                    didnt = json.loads(didnt)
+                except Exception:
+                    didnt = []
+            if isinstance(didnt, list) and didnt:
+                parts.append(f"Didn't help: {', '.join(str(d) for d in didnt[:2])}")
+
+        gap.known[f"past_episode_{i}"] = KnownFact(
+            topic="past_episode",
+            value=". ".join(parts),
+            source="symptom_log",
+            recency="moderate",
+            confidence=0.85,
+        )
+
+    # Symptom-dosha mapping → Inference
+    dosha = det_intel.get("symptom_dosha")
+    if dosha:
+        gap.inferred["symptom_dosha"] = Inference(
+            topic="symptom_classification",
+            statement=f"This symptom is associated with {dosha} tendency",
+            basis="symptom_dosha_map",
+            confidence=0.8,
+        )
+
+
+# =============================================================================
+# PERSONALIZED QUESTION GENERATION (LLM)
+# =============================================================================
+
+async def generate_personalized_questions(
+    sense: SenseFrame,
+    constitution: ConstitutionContext,
+    known: Dict[str, KnownFact],
+    inferred: Dict[str, Inference],
+) -> List[DiagnosticQuestion]:
+    """
+    Generate personalized diagnostic questions via LLM.
+
+    Uses the user's full personal context (constitution, known facts,
+    inferences from state vectors) to generate questions about what
+    we DON'T yet know about their specific situation.
+    """
+    from sakhi.apps.api.core.llm import call_llm
+
+    os_type = constitution.operating_system or "unknown"
+    dosha = constitution.dominant_dosha or "balanced"
+
+    # Separate data by source for structured prompt
+    recent_conversation = [f.value for f in known.values() if f.topic == "recent_conversation"]
+    recent_behaviors = [f.value for f in known.values() if f.topic == "recent_behavior"]
+    past_episodes = [f.value for f in known.values() if f.topic == "past_episode"]
+    topic_facts = [
+        f"- {f.topic}: {f.value}" for f in known.values()
+        if f.topic not in ("recent_conversation", "recent_behavior", "past_episode")
+    ]
+
+    # Inferences by source
+    pattern_inferences = [inf.statement for inf in inferred.values() if inf.basis == "personal_patterns"]
+    dosha_inferences = [inf.statement for inf in inferred.values() if inf.basis == "symptom_dosha_map"]
+    state_inferences = [
+        inf.statement for inf in inferred.values()
+        if inf.basis not in ("personal_patterns", "symptom_dosha_map")
+    ]
+
+    # Build structured prompt sections
+    known_parts = []
+    if recent_conversation:
+        known_parts.append("Recent things they've told us:\n" + "\n".join(f'- "{r}"' for r in recent_conversation[:8]))
+    if recent_behaviors:
+        known_parts.append("Recent behaviors (last 48h):\n" + "\n".join(f"- {b}" for b in recent_behaviors[:5]))
+    if past_episodes:
+        known_parts.append("Past episodes of this symptom:\n" + "\n".join(f"- {e}" for e in past_episodes[:3]))
+    if topic_facts:
+        known_parts.append("Known wellness context:\n" + "\n".join(topic_facts[:5]))
+    if pattern_inferences:
+        known_parts.append("Learned personal patterns:\n" + "\n".join(f"- {p}" for p in pattern_inferences[:5]))
+    if dosha_inferences:
+        known_parts.append("Symptom classification:\n" + "\n".join(f"- {d}" for d in dosha_inferences))
+    known_summary = "\n\n".join(known_parts) if known_parts else "We don't have any context about this person yet."
+
+    # State-based inferences (drift, guna mode)
+    inference_summary = ""
+    if state_inferences:
+        inference_summary = "\nCurrent state:\n" + "\n".join(f"- {s}" for s in state_inferences[:3])
+
+    symptom = sense.symptom or sense.sub_domain or "general concern"
+    temporal = sense.temporal or "unspecified"
+
+    prompt = (
+        f"You are helping understand someone's wellness concern.\n\n"
+        f"ABOUT THIS PERSON:\n"
+        f"- System type: {os_type}\n"
+        f"- Dominant tendency: {dosha}\n"
+        f"{known_summary}\n"
+        f"{inference_summary}\n\n"
+        f"THEIR MESSAGE: \"{sense.raw_text}\"\n"
+        f"Concern: {symptom} (domain: {sense.domain}, timing: {temporal})\n\n"
+        f"Generate 2-3 questions to understand their situation better.\n"
+        f"IMPORTANT: Do NOT ask about things we already know (listed above).\n"
+        f"Focus on genuine gaps in our understanding.\n\n"
+        f"Rules:\n"
+        f"- Conversational, like a caring friend (not clinical)\n"
+        f"- No Ayurvedic, Sanskrit, or medical terms\n"
+        f"- Each question: 1 sentence\n"
+        f"- Questions should help determine what's causing or worsening this\n\n"
+        f'Return JSON array: [{{"id": "short_id", "question": "the question", '
+        f'"priority": "high|medium", "dosha_relevance": "{dosha}", '
+        f'"why": "why this matters for this person"}}]'
+    )
+
+    try:
+        raw = await call_llm(prompt, model="openrouter/fast")
+        items = json.loads(raw) if isinstance(raw, str) else raw
+        if not isinstance(items, list):
+            items = items.get("questions", []) if isinstance(items, dict) else []
+
+        questions = []
+        for item in items[:3]:
+            questions.append(DiagnosticQuestion(
+                id=item.get("id", f"q_{len(questions)}"),
+                question=item.get("question", ""),
+                priority=item.get("priority", "medium"),
+                dosha_relevance=item.get("dosha_relevance", dosha),
+                why=item.get("why", ""),
+            ))
+        return questions
+    except Exception as e:
+        logger.warning("[generate_personalized_questions] LLM error: %s", e)
+        return []
+
+
+# =============================================================================
 # MAIN ANALYSIS FUNCTION
 # =============================================================================
 
 async def analyze_knowledge_gap(
     person_id: str,
     sense: SenseFrame,
-    diagnostic_questions: List[DiagnosticQuestion],
 ) -> KnowledgeGap:
     """
     Main function to analyze knowledge gaps.
 
+    Loads personal context first (constitution, memory, state vectors),
+    then generates personalized diagnostic questions via LLM about
+    what we don't yet know.
+
     Args:
         person_id: User ID
         sense: SenseFrame from sensing layer
-        diagnostic_questions: Questions from diagnostic KB for this symptom
 
     Returns:
-        KnowledgeGap with known facts, inferences, and remaining questions
+        KnowledgeGap with known facts, inferences, and personalized questions
     """
     gap = KnowledgeGap()
+    import asyncio as _asyncio
 
-    # 1. Load constitution context
-    gap.constitution = await load_constitution_context(person_id)
-    await load_state_vectors(person_id, gap.constitution)
+    # 1. Load constitution + STM + deterministic intelligence in parallel
+    #    (all fast DB queries, no embedding calls)
+    gap.constitution, recent_stm, det_intel = await _asyncio.gather(
+        _load_constitution_with_vectors(person_id),
+        _fetch_recent_stm(person_id),
+        _load_deterministic_intelligence(person_id, sense),
+    )
 
-    # 2. Search memory for common topics related to the symptom
+    # 2. Recent STM → known facts (no keyword filtering — LLM decides relevance)
+    for i, entry in enumerate(recent_stm):
+        gap.known[f"recent_{i}"] = KnownFact(
+            topic="recent_conversation",
+            value=entry,
+            source="short_term",
+            recency="recent",
+            confidence=0.8,
+        )
+
+    # 3. Deterministic intelligence → known facts + inferences
+    #    Personal patterns, recent behaviors, past episodes, symptom-dosha mapping
+    _integrate_deterministic_intelligence(gap, det_intel)
+
+    # 4. Supplementary: keyword-based topic search for episodic memory
+    #    (vector search — slower, but finds older relevant memories)
     topics_to_search = _get_relevant_topics(sense)
+    episodic_tasks = {
+        topic: search_memory_for_topic(person_id, topic, keywords)
+        for topic, keywords in topics_to_search.items()
+    }
+    if episodic_tasks:
+        episodic_results = await _asyncio.gather(
+            *episodic_tasks.values(), return_exceptions=True,
+        )
+        for topic, result in zip(episodic_tasks.keys(), episodic_results):
+            if isinstance(result, Exception):
+                logger.warning("[analyze_knowledge_gap] Episodic search failed for %s: %s", topic, result)
+            elif result:
+                gap.known[topic] = result
 
-    for topic, keywords in topics_to_search.items():
-        # Try short-term first (most recent)
-        fact = await search_short_term_memory(person_id, topic, keywords)
-
-        # Fall back to episodic memory
-        if not fact:
-            fact = await search_memory_for_topic(person_id, topic, keywords)
-
-        if fact:
-            gap.known[topic] = fact
-
-    # 3. Check for unresolved references (pronouns like "her", "it", "that")
-    #    If found, do a semantic search to help resolve them
+    # 5. Check for unresolved references (pronouns like "her", "it", "that")
     if needs_context_resolution(sense.raw_text):
         context_facts = await semantic_recall_for_references(
             person_id,
             sense.raw_text,
             gap.constitution.life_context,
         )
-        # Add context facts with unique keys
         for i, fact in enumerate(context_facts):
             gap.known[f"context_ref_{i}"] = fact
 
-    # 4. Generate inferences from state vectors
-    gap.inferred = generate_inferences(gap.constitution, sense)
+    # 6. Generate inferences from state vectors (adds to pattern-based inferences)
+    gap.inferred.update(generate_inferences(gap.constitution, sense))
 
-    # 5. Determine which diagnostic questions are still unknown
-    gap.unknown = _filter_unknown_questions(diagnostic_questions, gap.known, gap.inferred)
+    # 7. Generate personalized questions using full context
+    #    LLM sees known facts + inferences + deterministic intelligence → asks about genuine gaps
+    gap.unknown = await generate_personalized_questions(
+        sense, gap.constitution, gap.known, gap.inferred,
+    )
 
     return gap
+
+
+async def _load_constitution_with_vectors(person_id: str) -> ConstitutionContext:
+    """Load constitution + state vectors in sequence (vectors need baseline)."""
+    ctx = await load_constitution_context(person_id)
+    await load_state_vectors(person_id, ctx)
+    return ctx
+
+
+async def _fetch_recent_stm(person_id: str, limit: int = 10) -> List[str]:
+    """
+    Fetch the N most recent short-term memory entries — no keyword filtering.
+
+    The LLM decides what's relevant. This avoids the keyword whack-a-mole
+    problem where "hydrate" doesn't match "hydrating", or pain topics
+    aren't searched for headache scenarios.
+    """
+    try:
+        rows = await q(
+            """
+            SELECT text
+            FROM memory_short_term
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+            LIMIT $2
+            """,
+            person_id,
+            limit,
+        )
+        # Deduplicate and filter empty
+        seen = set()
+        entries = []
+        for row in rows:
+            text = (row.get("text") or "").strip()
+            if text and text not in seen:
+                seen.add(text)
+                entries.append(text)
+        return entries
+    except Exception as e:
+        logger.warning("[_fetch_recent_stm] Error: %s", e)
+        return []
 
 
 def _get_relevant_topics(sense: SenseFrame) -> Dict[str, List[str]]:
@@ -540,6 +926,12 @@ def _get_relevant_topics(sense: SenseFrame) -> Dict[str, List[str]]:
 
         if sense.sub_domain == "energy":
             relevant["stress"] = TOPIC_KEYWORDS["stress"]
+
+        if sense.sub_domain == "skin":
+            relevant["skin"] = TOPIC_KEYWORDS["skin"]
+
+        if sense.sub_domain in ("digestion", "digestive"):
+            relevant["digestion"] = TOPIC_KEYWORDS["digestion"]
 
     elif sense.domain == "mind":
         relevant["stress"] = TOPIC_KEYWORDS["stress"]
@@ -568,42 +960,6 @@ def _get_relevant_topics(sense: SenseFrame) -> Dict[str, List[str]]:
     return relevant
 
 
-def _filter_unknown_questions(
-    all_questions: List[DiagnosticQuestion],
-    known: Dict[str, KnownFact],
-    inferred: Dict[str, Inference],
-) -> List[DiagnosticQuestion]:
-    """
-    Filter diagnostic questions to only those we don't have answers for.
-
-    A question is considered "known" if:
-    - We have a KnownFact for its topic
-    - We have an Inference that addresses it
-    """
-    unknown = []
-
-    for q in all_questions:
-        q_id = q.id
-        topic = q_id.split("_")[0] if "_" in q_id else q_id
-
-        # Check if we have knowledge about this topic
-        if topic in known and known[topic].confidence > 0.5:
-            continue
-
-        # Check if we have a relevant inference
-        if any(topic in inf_topic for inf_topic in inferred.keys()):
-            # Reduce priority but still include
-            q.priority = "low"
-
-        unknown.append(q)
-
-    # Sort by priority
-    priority_order = {"high": 0, "medium": 1, "low": 2}
-    unknown.sort(key=lambda x: priority_order.get(x.priority, 2))
-
-    return unknown
-
-
 __all__ = [
     "KnownFact",
     "Inference",
@@ -611,9 +967,13 @@ __all__ = [
     "ConstitutionContext",
     "KnowledgeGap",
     "analyze_knowledge_gap",
+    "generate_personalized_questions",
     "load_constitution_context",
     "load_state_vectors",
     "detect_unresolved_references",
     "needs_context_resolution",
     "semantic_recall_for_references",
+    "_load_deterministic_intelligence",
+    "_integrate_deterministic_intelligence",
+    "_get_past_symptom_episodes",
 ]

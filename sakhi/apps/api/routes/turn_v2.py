@@ -28,9 +28,9 @@ from sakhi.apps.api.services.ingestion.unified_ingest import ingest_heavy
 from sakhi.libs.debug.narrative_unified import build_unified_narrative
 from sakhi.apps.api.services.turn.context_loader import load_memory_context
 from sakhi.apps.api.services.turn.deterministic_context_loader import (
+    DeterministicContext,
     load_deterministic_context,
     load_internal_state,
-    calculate_gap_hours,
 )
 from sakhi.apps.api.services.turn.reply_service import build_turn_reply
 from sakhi.apps.api.services.turn.async_triggers import enqueue_turn_jobs
@@ -45,7 +45,7 @@ from sakhi.core.soul.identity_momentum_engine import compute_fast_identity_momen
 from sakhi.core.soul.identity_timeline_engine import compute_fast_identity_timeline_frame
 from sakhi.apps.engine.inner_dialogue import engine as inner_dialogue_engine
 from sakhi.apps.engine.tone import compute_tone
-from sakhi.apps.engine.continuity import load_continuity, update_continuity, DEFAULT_STATE as CONTINUITY_DEFAULT
+from sakhi.apps.engine.continuity import update_continuity
 from sakhi.apps.engine.empathy import compute_empathy
 from sakhi.apps.engine.microreg.engine import compute_microreg
 from sakhi.apps.engine.moment_model.engine import compute_moment_model
@@ -57,17 +57,9 @@ from sakhi.apps.engine.reflection_trace.engine import (
 )
 from sakhi.apps.engine.focus_path.engine import generate_focus_path, persist_focus_path
 from sakhi.apps.engine.mini_flow.engine import generate_mini_flow, persist_mini_flow
-from sakhi.apps.engine.focus_path.engine import generate_focus_path, persist_focus_path
 from sakhi.apps.services import micro_goals_service
 from sakhi.apps.api.utils.person_resolver import resolve_person
 from sakhi.apps.api.ingest.extractor import extract
-from sakhi.apps.api.services.emotion_engine import compute as compute_emotion_state
-from sakhi.apps.api.services.mind_engine import compute as compute_mind_state
-from sakhi.apps.api.services.ayurveda.vikriti import (
-    compute_current_vikriti,
-    compute_baseline_drift,
-    classify_friction_state,
-)
 from sakhi.apps.api.services.recommendations import (
     build_recommendation_context,
     generate_personalized_recommendations,
@@ -103,7 +95,11 @@ from sakhi.apps.api.services.vision.context import (
     get_relevant_media_for_context,
     add_to_visual_context,
 )
-from sakhi.apps.api.services.context_router import route_context
+from sakhi.apps.api.services.context_router import (
+    ALL_MODULES,
+    map_triage_to_intents,
+    load_recent_intent_evolution,
+)
 from sakhi.apps.api.services.email.integration import (
     get_email_context_for_conversation,
     get_email_friction_contribution,
@@ -126,21 +122,11 @@ from sakhi.apps.api.services.vision.storage import (
     link_media_to_entry,
 )
 from sakhi.apps.api.services.vision.memory import learn_from_image
-from sakhi.apps.api.services.agentic.search import (
-    web_search,
-    summarize_search_results,
-)
-from sakhi.apps.api.services.agentic.tools import (
-    get_available_tools,
-    execute_tool,
-    can_auto_execute,
-)
 from sakhi.apps.api.services.memory.sessions import (
     ensure_session,
     append_turn,
     load_recent_turns,
     load_context_with_summary,
-    compress_older_turns_to_summary,
 )
 from sakhi.apps.api.services.agent.chat_bridge import (
     detect_agent_task_intent,
@@ -217,46 +203,6 @@ async def _load_internal_state(person_id: str) -> Dict[str, Any]:
     return await load_internal_state(person_id)
 
 
-def _ensure_dict(value: Any) -> Dict[str, Any]:
-    """Safely ensure a value is a dict."""
-    if isinstance(value, dict):
-        return value
-    if isinstance(value, str):
-        try:
-            import json
-            parsed = json.loads(value)
-            if isinstance(parsed, dict):
-                return parsed
-        except Exception:
-            pass
-    return {}
-
-
-async def _get_brain_state_from_personal_model(person_id: str) -> Dict[str, Any]:
-    """
-    Get brain state directly from personal_model (replaces legacy brain_engine).
-    Returns the key state fields used for context in turn processing.
-    """
-    row = await q(
-        """
-        SELECT operating_system, emotion_state, soul_state, rhythm_state,
-               longitudinal_state, identity_momentum_state
-        FROM personal_model
-        WHERE person_id = $1
-        """,
-        person_id,
-        one=True,
-    )
-    if not row:
-        return {}
-    return {
-        "operating_system": _ensure_dict(row.get("operating_system")),
-        "emotion_state": _ensure_dict(row.get("emotion_state")),
-        "soul_state": _ensure_dict(row.get("soul_state")),
-        "rhythm_state": _ensure_dict(row.get("rhythm_state")),
-        "longitudinal_state": _ensure_dict(row.get("longitudinal_state")),
-        "identity_momentum_state": _ensure_dict(row.get("identity_momentum_state")),
-    }
 
 
 async def _write_turn_memory(
@@ -523,11 +469,14 @@ async def _run_post_reply_processing(
 @router.post("/turn")
 async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(default=None)):
     user_id, person_label, person_key = resolve_person(request, user)
-    logger.error("[turn_v2] entry start user=%s person_id=%s label=%s", user, user_id, person_label)
+    logger.info("[turn_v2] entry start user=%s person_id=%s label=%s", user, user_id, person_label)
     logger.info("ACTIVE_DEV_PERSON", extra={"person_id": user_id, "person_label": person_label, "person_key": person_key})
 
     if not body.text.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty text")
+
+    # Stable turn identifier — used by reflection trace, worker enqueue, etc.
+    turn_id = str(uuid4())
 
     # Ensure conversation session and load history for context
     # Hybrid approach: recent turns verbatim + summary of older context
@@ -553,14 +502,18 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             session_summary = context_data.get("session_summary", "")
             total_turns = context_data.get("total_turns", 0)
 
-            # Trigger compression if we have many turns and no summary yet
+            # Enqueue compression to background if needed (avoid inline LLM call)
             if total_turns >= compress_threshold and not session_summary:
                 try:
-                    await compress_older_turns_to_summary(str(session_id), keep_recent=recent_limit)
-                    context_data = await load_context_with_summary(str(session_id), recent_limit=recent_limit)
-                    session_summary = context_data.get("session_summary", "")
+                    enqueue_turn_jobs(
+                        "session-compress",
+                        user_id,
+                        ["session_compress"],
+                        {"session_id": str(session_id), "keep_recent": recent_limit},
+                    )
+                    logger.info("[turn_v2] Enqueued session_compress for session=%s turns=%s", session_id, total_turns)
                 except Exception as comp_exc:
-                    logger.warning("[turn_v2] Failed to compress older turns: %s", comp_exc)
+                    logger.warning("[turn_v2] Failed to enqueue session_compress: %s", comp_exc)
         except Exception as exc:
             # Session exists but context loading failed - session_id is preserved for saving turns
             logger.warning("[turn_v2] Context load failed (session preserved): %s", exc)
@@ -663,102 +616,14 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         except Exception as vision_exc:
             logger.warning("[turn_v2] Vision processing failed: %s", vision_exc)
 
-    # ==========================================================
-    # AGENTIC CONTEXT: Detect and execute tools when needed
-    # ==========================================================
-    # Sakhi can automatically search the web, fetch URLs, or use tools
-    # when the user asks questions that need external information.
+    # NOTE: Agentic/web search disabled — was computed pre-LLM via keyword matching
+    # but never injected into the prompt. If web search is needed in the future,
+    # implement as an LLM tool call so the model decides when to search.
     agentic_context = {}
     agentic_results = []
 
-    try:
-        text_lower = (body.text or "").lower()
-
-        # Detect if the query needs external information
-        search_triggers = [
-            "search for", "find out", "look up", "google",
-            "what is the latest", "what's new", "current",
-            "news about", "latest on", "tell me about",
-            "who is", "what happened", "recent",
-            "how do i", "how to", "what are the best",
-        ]
-        question_patterns = [
-            "what is", "what are", "who is", "when is",
-            "where is", "how much", "how many",
-        ]
-
-        needs_search = any(trigger in text_lower for trigger in search_triggers)
-        is_factual_question = any(p in text_lower for p in question_patterns)
-
-        # Only auto-search for queries that clearly need external info
-        # and aren't about the user's personal life
-        personal_indicators = [
-            "i feel", "i'm feeling", "i want", "i need", "my ",
-            "i've been", "i have", "i am", "i think", "i believe",
-        ]
-        is_personal = any(p in text_lower for p in personal_indicators)
-
-        if needs_search and not is_personal:
-            # Execute web search
-            try:
-                search_results = await web_search(
-                    query=body.text,
-                    max_results=5,
-                )
-
-                if search_results:
-                    # Summarize results for context
-                    summary = await summarize_search_results(
-                        results=search_results,
-                        query=body.text,
-                    )
-
-                    agentic_context["web_search"] = {
-                        "query": body.text,
-                        "result_count": len(search_results),
-                        "summary": summary,
-                        "sources": [
-                            {
-                                "title": r.get("title"),
-                                "url": r.get("url"),
-                                "snippet": r.get("snippet", "")[:200],
-                            }
-                            for r in search_results[:3]
-                        ],
-                    }
-                    agentic_results.append({
-                        "tool": "web_search",
-                        "success": True,
-                        "summary": summary,
-                    })
-                    logger.info(
-                        "[turn_v2] Agentic: web search executed for '%s' - %d results",
-                        body.text[:50],
-                        len(search_results),
-                    )
-            except Exception as search_exc:
-                logger.warning("[turn_v2] Web search failed: %s", search_exc)
-                agentic_context["web_search_error"] = str(search_exc)
-
-        # Store available tools info for context
-        try:
-            available_tools = await get_available_tools(user_id)
-            agentic_context["available_tools"] = [
-                {
-                    "name": t.tool_name,
-                    "description": t.description,
-                    "category": t.category,
-                }
-                for t in available_tools[:5]  # Limit to top 5
-            ]
-        except Exception:
-            pass
-
-    except Exception as agentic_exc:
-        logger.warning("[turn_v2] Agentic context failed: %s", agentic_exc)
-
     minimal_mode = body.capture_only  # Full ingest by default
-    logger.info("[turn_v2] user_id=%s text_len=%s capture_only=%s vision=%s agentic=%s", user_id, len(body.text or ""), minimal_mode, bool(vision_context), bool(agentic_context))
+    logger.info("[turn_v2] user_id=%s text_len=%s capture_only=%s vision=%s", user_id, len(body.text or ""), minimal_mode, bool(vision_context))
 
     fast_ingest = {}  # Build 50: avoid ingest work in route; delegate to workers
     try:
@@ -785,6 +650,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     generated_plans = turn_context.get("plans") or []
     rhythm_trigger_result = turn_context.get("rhythm_triggers")
     meta_reflection_result = turn_context.get("meta_reflection_triggers")
+
 
     # ==========================================================
     # LINK VISION TO JOURNAL ENTRY
@@ -869,7 +735,6 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     planner_payload = None  # Planner runs in workers
     insight_bundle = None  # Insights generated by workers
     activation = {}  # No longer using legacy activation system
-    triage = {}  # No longer using legacy triage
     try:
         triage_local = extract(body.text, datetime.datetime.utcnow())
     except Exception as extract_exc:
@@ -881,37 +746,55 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "confidence": float((mood_affect or {}).get("score") or 0.5),
     }
 
-    brain_state_result, internal_state_result = await asyncio.gather(
-        _get_brain_state_from_personal_model(user_id),
-        _load_internal_state(user_id),
-        return_exceptions=True,
-    )
-    if isinstance(brain_state_result, Exception):
-        logger.warning("[turn_v2] brain_state load failed: %s", brain_state_result)
-        brain_state = {}
-    else:
-        brain_state = brain_state_result
-    if isinstance(internal_state_result, Exception):
-        logger.warning("[turn_v2] internal_state load failed: %s", internal_state_result)
-        internal_state = {}
-    else:
-        internal_state = internal_state_result
+    # Bridge triage mood_affect into emotion when orchestrator returned "neutral"
+    triage_label = (mood_affect or {}).get("label")
+    if triage_label and emotion.get("emotion") == "neutral":
+        emotion = {"emotion": triage_label}
 
-    # --- Context Router: determine which modules to activate ---
     try:
-        active_modules = await route_context(
-            text=body.text,
-            intents=stored_intents,
-            topics=topics,
-            emotion=(emotion or {}).get("label", "neutral") if isinstance(emotion, dict) else str(emotion or "neutral"),
-            hour=datetime.datetime.utcnow().hour,
-            has_image=bool(getattr(body, "image_data", None) or getattr(body, "media_ids", None)),
-            has_pending_task=bool(pending_agent_task) if "pending_agent_task" in locals() else False,
+        det_ctx = await load_deterministic_context(user_id, user_text=body.text)
+    except Exception as det_exc:
+        logger.warning("[turn_v2] deterministic context load failed: %s", det_exc)
+        det_ctx = DeterministicContext()
+    internal_state = det_ctx.internal_state
+
+    # Build brain_state dict from det_ctx (single personal_model query, no duplicate)
+    brain_state = {
+        "operating_system": det_ctx.emotion_state,  # kept for compat but unused downstream
+        "emotion_state": det_ctx.emotion_state,
+        "soul_state": det_ctx.soul_state,
+        "rhythm_state": det_ctx.rhythm_state,
+        "longitudinal_state": det_ctx.longitudinal_state,
+        "identity_momentum_state": det_ctx.identity_momentum_state,
+        "forecast_state": det_ctx.forecast_state,
+    }
+
+    # --- Parallel fetch: pending agent task + intent evolution ---
+    try:
+        pending_agent_task, evolution_intents = await asyncio.gather(
+            get_pending_agent_task(user_id),
+            load_recent_intent_evolution(user_id),
+            return_exceptions=True,
         )
-    except Exception as rc_exc:
-        logger.warning("[turn_v2] Context router failed: %s", rc_exc)
-        active_modules = set()
-    logger.info("[turn_v2] Context router: active_modules=%s", active_modules)
+        if isinstance(pending_agent_task, Exception):
+            pending_agent_task = None
+        if isinstance(evolution_intents, Exception):
+            evolution_intents = []
+    except Exception:
+        pending_agent_task = None
+        evolution_intents = []
+
+    # Build intent hints from triage (already computed above, zero cost)
+    triage_intents = map_triage_to_intents(triage_local)
+
+    # Combine all intent sources for the prompt's enriched_context
+    combined_intents = stored_intents + triage_intents + evolution_intents
+
+    # --- Load ALL modules unconditionally ---
+    # Every turn gets full context; conversation LLM decides what's relevant.
+    # Future: replace with local model selection from MODULE_REGISTRY.
+    active_modules = ALL_MODULES
+    logger.info("[turn_v2] All modules active (unconditional load), intents=%s", len(combined_intents))
 
     # --- Tier 1: Always-compute (cheap, feeds 360° context scan) ---
     fast_narrative = compute_fast_narrative([], brain_state.get("soul_state") or {})
@@ -984,248 +867,48 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         except Exception:
             micro_goals_meta = None
 
-    try:
-        continuity_state = await load_continuity(user_id)
-    except Exception:
-        continuity_state = CONTINUITY_DEFAULT
-    try:
-        today = datetime.date.today()
-        reflection_rows = await q(
-            """
-            SELECT summary, reflection_date, generated_at
-            FROM daily_reflection_cache
-            WHERE person_id = $1 AND reflection_date = $2
-            """,
-            user_id,
-            today,
-        )
-        daily_reflection = reflection_rows[0] if reflection_rows else None
-    except Exception:
-        daily_reflection = None
-    daily_reflection_guard = (
-        "Use this reflection only as surface context. "
-        "Do not infer emotions, causes, diagnoses, or psychological interpretations."
-    )
-    evening_closure = None
-    closure_guard = (
-        "Evening closure is surface-level only. "
-        "Do not infer emotions, causes, diagnoses, or psychological interpretations."
-    )
-    try:
-        if datetime.datetime.utcnow().hour >= 20:
-            closure_rows = await q(
-                """
-                SELECT completed, pending, signals, summary, closure_date, generated_at
-                FROM daily_closure_cache
-                WHERE person_id = $1 AND closure_date = $2
-                """,
-                user_id,
-                today,
-            )
-            evening_closure = closure_rows[0] if closure_rows else None
-    except Exception:
-        evening_closure = None
-    morning_preview = {}
-    morning_preview_guard = (
-        "Use morning preview only as surface-level context. "
-        "Do not infer mood, meaning, or causes."
-    )
-    morning_ask = {}
-    morning_ask_guard = (
-        "Use morning ask only as surface-level context. "
-        "Do not infer mood, meaning, or causes."
-    )
-    morning_momentum = {}
-    morning_momentum_guard = (
-        "Use morning momentum only as surface-level context. "
-        "Do not infer mood, meaning, or causes."
-    )
-    micro_momentum = {}
-    micro_momentum_guard = (
-        "Use micro momentum only as small optional suggestions. "
-        "Do not infer mood, meaning, or causes."
-    )
-    micro_recovery = {}
-    micro_recovery_guard = (
-        "Micro-recovery is optional and surface-level. "
-        "No emotion inference or meaning attribution."
-    )
-    mini_flow = {}
-    mini_flow_guard = (
-        "Mini-flow is a 10–20 minute routine. Use only as surface context; do not infer emotions or causes."
-    )
-    micro_journey = {}
-    micro_journey_guard = (
-        "Micro-journey is deterministic and read-only. Do not infer emotions, causes, or modify the flows."
-    )
-    micro_journey = {}
-    micro_journey_guard = (
-        "Micro-journey is deterministic and read-only. Do not infer emotions, causes, or modify the flows."
-    )
-    focus_path = {}
-    focus_path_guard = (
-        "Focus path is a simple 3-step plan. Use only as surface context; do not infer emotions or causes."
-    )
-    try:
-        if datetime.datetime.utcnow().hour <= 11:
-            preview_rows = await q(
-                """
-                SELECT focus_areas, key_tasks, reminders, rhythm_hint, summary, preview_date, generated_at
-                FROM morning_preview_cache
-                WHERE person_id = $1 AND preview_date = $2
-                """,
-                user_id,
-                today,
-            )
-            morning_preview = preview_rows[0] if preview_rows else {}
-            ask_rows = await q(
-                """
-                SELECT question, reason, ask_date, generated_at
-                FROM morning_ask_cache
-                WHERE person_id = $1 AND ask_date = $2
-                """,
-                user_id,
-                today,
-            )
-            morning_ask = ask_rows[0] if ask_rows else {}
-            momentum_rows = await q(
-                """
-                SELECT momentum_hint, suggested_start, reason, momentum_date, generated_at
-                FROM morning_momentum_cache
-                WHERE person_id = $1 AND momentum_date = $2
-                """,
-                user_id,
-                today,
-            )
-            morning_momentum = momentum_rows[0] if momentum_rows else {}
-    except Exception:
-        morning_preview = {}
-        morning_ask = {}
-        morning_momentum = {}
-    try:
-        if datetime.datetime.utcnow().hour <= 15:
-            micro_rows = await q(
-                """
-                SELECT nudge, reason, nudge_date, generated_at
-                FROM micro_momentum_cache
-                WHERE person_id = $1 AND nudge_date = $2
-                """,
-                user_id,
-                today,
-            )
-        micro_momentum = micro_rows[0] if micro_rows else {}
-    except Exception:
-        micro_momentum = {}
-    gap_hours = None
-    try:
-        text_lower = (body.text or "").lower()
-        restart_phrases = ["restart", "where were we", "how do i restart", "let's continue", "resume"]
-        gap_reason = any(p in text_lower for p in restart_phrases)
-        last_turn_row = await q(
-            "SELECT created_at FROM conversation_turns WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1",
-            user_id,
-            one=True,
-        )
-        if last_turn_row and last_turn_row.get("created_at"):
-            delta = datetime.datetime.utcnow() - last_turn_row["created_at"]
-            gap_hours = delta.total_seconds() / 3600.0
-        if gap_reason or (gap_hours is not None and gap_hours > 3) or datetime.datetime.utcnow().hour >= 14:
-            recovery_rows = await q(
-                """
-                SELECT nudge, reason, recovery_date, generated_at
-                FROM micro_recovery_cache
-                WHERE person_id = $1 AND recovery_date = $2
-                """,
-                user_id,
-                today,
-            )
-            micro_recovery = recovery_rows[0] if recovery_rows else {}
-    except Exception:
-        micro_recovery = {}
-    try:
-        text_lower = (body.text or "").lower()
+    # --- Deterministic context extraction (loaded in parallel above) ---
+    continuity_state = det_ctx.continuity_state
+    focus_path = det_ctx.focus_path or {}
+    mini_flow = det_ctx.mini_flow or {}
+    micro_journey = det_ctx.micro_journey or {}
+    gap_hours = det_ctx.gap_hours
+
+    # Guards
+    focus_path_guard = det_ctx.guards.get("focus_path", "")
+    mini_flow_guard = det_ctx.guards.get("mini_flow", "")
+    micro_journey_guard = det_ctx.guards.get("micro_journey", "")
+
+    # Brain states for moment_model (loaded by deterministic context)
+    state_row = {
+        "forecast_state": det_ctx.forecast_state,
+        "coherence_state": det_ctx.coherence_state,
+        "alignment_state": det_ctx.alignment_state,
+    }
+
+    # On-demand scaffold generation (overwrites cached values when triggered)
+    text_lower_scaffolds = (body.text or "").lower()
+    if "micro_flow" in active_modules:
         focus_patterns = ["help me focus", "where do i start", "work on", "help me begin", "focus on"]
-        trigger_focus = any(p in text_lower for p in focus_patterns)
-        if trigger_focus and "micro_flow" in active_modules:
-            path = await generate_focus_path(user_id, intent_text=body.text)
-            await persist_focus_path(user_id, path)
-            focus_path = path
-        if not focus_path:
-            path_rows = await q(
-                """
-                SELECT anchor_step, progress_step, closure_step, intent_source, path_date, generated_at
-                FROM focus_path_cache
-                WHERE person_id = $1 AND path_date = $2
-                """,
-                user_id,
-                today,
-            )
-            focus_path = path_rows[0] if path_rows else {}
-    except Exception:
-        focus_path = {}
-    try:
+        if any(p in text_lower_scaffolds for p in focus_patterns):
+            try:
+                path = await generate_focus_path(user_id, intent_text=body.text)
+                await persist_focus_path(user_id, path)
+                focus_path = path
+            except Exception:
+                pass
         flow_patterns = ["short routine", "start flow", "10 minute", "focus for 10", "give me a short routine"]
-        flow_trigger = any(p in (body.text or "").lower() for p in flow_patterns)
-        if flow_trigger and "micro_flow" in active_modules:
-            flow = await generate_mini_flow(user_id)
-            await persist_mini_flow(user_id, flow)
-            mini_flow = flow
-        if not mini_flow:
-            flow_rows = await q(
-                """
-                SELECT warmup_step, focus_block_step, closure_step, optional_reward, source, flow_date, generated_at, rhythm_slot
-                FROM mini_flow_cache
-                WHERE person_id = $1 AND flow_date = $2
-                """,
-                user_id,
-                today,
-            )
-            mini_flow = flow_rows[0] if flow_rows else {}
-    except Exception:
-        mini_flow = {}
-    try:
-        journey_rows = await q(
-            """
-            SELECT flow_count, rhythm_slot, journey, generated_at
-            FROM micro_journey_cache
-            WHERE person_id = $1
-            """,
-            user_id,
-        )
-        micro_journey = journey_rows[0] if journey_rows else {}
-    except Exception:
-        micro_journey = {}
-    try:
-        if isinstance(micro_journey, dict) and micro_journey.get("journey"):
-            structure = micro_journey.get("journey", {}).get("structure") or {}
-            micro_journey["total_estimated_minutes"] = structure.get("total_estimated_minutes")
-            micro_journey["pacing"] = structure.get("pacing") or {}
-    except Exception:
-        pass
-    try:
-        journey_rows = await q(
-            """
-            SELECT flow_count, rhythm_slot, journey, generated_at
-            FROM micro_journey_cache
-            WHERE person_id = $1
-            """,
-            user_id,
-        )
-        micro_journey = journey_rows[0] if journey_rows else {}
-    except Exception:
-        micro_journey = {}
-    try:
-        state_row = await q(
-            """
-            SELECT forecast_state, coherence_state, alignment_state
-            FROM personal_model
-            WHERE person_id = $1
-            """,
-            user_id,
-            one=True,
-        ) or {}
-    except Exception:
-        state_row = {}
+        if any(p in text_lower_scaffolds for p in flow_patterns):
+            try:
+                flow = await generate_mini_flow(user_id)
+                await persist_mini_flow(user_id, flow)
+                mini_flow = flow
+            except Exception:
+                pass
+
+    # Gap reason for moment_model restart detection
+    restart_phrases = ["restart", "where were we", "how do i restart", "let's continue", "resume"]
+    gap_reason = any(p in (body.text or "").lower() for p in restart_phrases)
 
     try:
         moment_model = compute_moment_model(
@@ -1236,7 +919,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             forecast_state=state_row.get("forecast_state") or {},
             continuity_state=continuity_state or {},
             gap_hours=gap_hours,
-            restart=gap_reason if "gap_reason" in locals() else False,
+            restart=gap_reason,
             active_scaffolds={
                 "focus_path": bool(focus_path),
                 "mini_flow": bool(mini_flow),
@@ -1268,7 +951,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             reflection_trace_payload = build_reflection_trace(
                 person_id=user_id,
                 turn_id=turn_id,
-                session_id=user_id,
+                session_id=str(session_id) if session_id else None,
                 moment_model=moment_model or {},
                 evidence_pack=evidence_pack or {},
                 deliberation_scaffold=deliberation_scaffold,
@@ -1285,33 +968,20 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     # Personalized Recommendations Integration
     # Surfaces recommendations based on: friction state, time of day, user request
     # ==========================================================================
-    friction_state_computed = {}
     personalized_recommendations = {}
     recommendation_trigger = None  # Why recommendations are being surfaced
-    drift_percentage = 0
+
+    # Friction state already computed by deterministic loader (no duplicate vikriti query)
+    drift_percentage = det_ctx.drift_percentage
+    friction_state_computed = {
+        "state": det_ctx.friction_state or "balanced",
+        "description": det_ctx.friction_info.get("description"),
+        "drift_percentage": drift_percentage,
+        "drift_direction": det_ctx.drift_direction,
+        "primary_contributor": det_ctx.primary_contributor,
+    }
 
     try:
-        # Build prakruti dict from internal_state for drift computation
-        # operating_system is a string (e.g. "Conservation"), dosha_baseline is the actual values
-        prakruti = {"dosha_baseline": internal_state.get("dosha_baseline") or {}}
-
-        # Compute current vikriti (present state deviation)
-        vikriti = await compute_current_vikriti(user_id)
-
-        # Compute drift from baseline (Prakruti)
-        drift = compute_baseline_drift(prakruti, vikriti)
-        drift_percentage = drift.get("drift_percentage", 0)
-
-        # Classify the friction state
-        friction = classify_friction_state(drift)
-        friction_state_computed = {
-            "state": friction.get("state", "Balanced"),
-            "description": friction.get("description"),
-            "drift_percentage": drift_percentage,
-            "drift_direction": drift.get("direction"),
-            "primary_contributor": drift.get("primary_contributor"),
-        }
-
         # Determine if recommendations should be proactively surfaced
         # Triggers:
         # 1. REACTIVE: User explicitly asks (detected via patterns)
@@ -1380,9 +1050,8 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             except Exception as rec_exc:
                 logger.warning("[turn_v2] Recommendation generation failed: %s", rec_exc)
                 personalized_recommendations = {}
-    except Exception as friction_exc:
-        logger.warning("[turn_v2] Friction state computation failed: %s", friction_exc)
-        friction_state_computed = {}
+    except Exception as rec_outer_exc:
+        logger.warning("[turn_v2] Recommendation pipeline failed: %s", rec_outer_exc)
 
     recommendation_guard = (
         "Recommendations are personalized based on Ayurvedic principles and personal patterns. "
@@ -1455,13 +1124,8 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         except Exception as causal_exc:
             logger.warning("[turn_v2] Causal reasoning failed: %s", causal_exc)
 
-    # --- Always compute: body_state (cheap DB read from personal_model) ---
-    body_state = {}
-    try:
-        from sakhi.apps.api.services.body.state_engine import get_body_state
-        body_state = await get_body_state(user_id)
-    except Exception:
-        pass
+    # Body state already loaded by deterministic context (no duplicate query)
+    body_state = det_ctx.body_state_full or {}
 
     # --- Tier 2 gating: health trends (only when body module active) ---
     health_trends = {}
@@ -1756,8 +1420,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         text_lower = (body.text or "").lower()
 
         # 1. CHECK FOR TASK CONFIRMATION: Did user confirm/reject a pending task?
-        pending_agent_task = await get_pending_agent_task(user_id)
-
+        # (pending_agent_task already fetched before router for has_pending_task signal)
         if pending_agent_task:
             confirmation = detect_task_confirmation(body.text)
 
@@ -1892,29 +1555,20 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "CRITICAL: Never execute agent tasks without explicit user confirmation."
     )
 
-    agentic_guard = (
-        "When agentic_context contains web_search results: "
-        "1. Use the search summary to inform your response naturally - don't just list sources. "
-        "2. Cite specific facts from the search when relevant. "
-        "3. If asked, mention you searched the web for current information. "
-        "4. For factual questions, prioritize search results over general knowledge. "
-        "5. If search results are empty or irrelevant, rely on your own knowledge. "
-        "6. Never make up information that wasn't in search results or your training. "
-        "7. For personal questions about the user, DON'T use web search - use their history."
-    )
+    agentic_guard = ""  # Agentic/web search disabled — see note above
 
     metadata_payload = {
         "active_modules": sorted(active_modules),  # Context router — tells conversation_reasoner which tier 2 sections to build
         "entry_id": entry_id,
         "topics": topics,
         "emotion": emotion,
-        "intents": stored_intents,
+        "intents": combined_intents,
         "plans": generated_plans,
         "rhythm_triggers": rhythm_trigger_result,
         "meta_reflection_triggers": meta_reflection_result,
         "behavior_profile": behavior_profile,
         "activation": activation,
-        "triage": triage,
+        "triage": triage_local,
         "emotion_update": emotion_update,
         "internal_state": internal_state,
         "cognitive_load": internal_state.get("cognitive_load"),
@@ -1941,21 +1595,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "empathy_state": empathy_state,
         "continuity": continuity_state,
         "micro_goals": micro_goals_meta,
-        "daily_reflection": daily_reflection,
         "microreg_state": microreg_state,
-        "daily_reflection_guard": daily_reflection_guard,
-        "evening_closure": evening_closure,
-        "evening_closure_guard": closure_guard,
-        "morning_preview": morning_preview,
-        "morning_preview_guard": morning_preview_guard,
-        "morning_ask": morning_ask,
-        "morning_ask_guard": morning_ask_guard,
-        "morning_momentum": morning_momentum,
-        "morning_momentum_guard": morning_momentum_guard,
-        "micro_momentum": micro_momentum,
-        "micro_momentum_guard": micro_momentum_guard,
-        "micro_recovery": micro_recovery,
-        "micro_recovery_guard": micro_recovery_guard,
         "focus_path": focus_path,
         "focus_path_guard": focus_path_guard,
         "mini_flow": mini_flow,
@@ -2089,7 +1729,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         emotion_update=emotion_update,
     ))
 
-    logger.error(
+    logger.info(
         "[turn_v2] response returned entry_id=%s session_id=%s (post-reply in background)",
         entry_id, session_id,
     )

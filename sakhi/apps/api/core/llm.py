@@ -55,20 +55,13 @@ async def call_llm(
     base_messages: list[Mapping[str, Any]] = list(messages)
 
     context_payload: dict[str, Any] | None = None
-    if person_id:
-        try:
-            meta_context = await build_meta_context(person_id)
-        except Exception as exc:  # pragma: no cover
-            logging.getLogger(__name__).warning(
-                "[LLM] Context build failed for %s: %s", person_id, exc
-            )
-            meta_context = {}
-
-        if context:
-            context_payload = _coerce_json(dict(meta_context, **context))
-        else:
-            context_payload = _coerce_json(dict(meta_context))
-    elif context:
+    # NOTE: build_meta_context disabled to eliminate duplicate pattern computation.
+    # conversation_engine already loads full personal context via
+    # build_conversation_context + adaptive pipeline + deterministic intelligence.
+    # build_meta_context was running build_patterns_context a second time per turn,
+    # causing duplicate DB reads/writes to pattern_stats.
+    # Caller-supplied context (if any) is still honoured below.
+    if context:
         context_payload = _coerce_json(dict(context))
 
     context_message = None

@@ -225,14 +225,6 @@ class TestContextScan:
         assert "Friction: Mild Friction" in scan
         assert "drift=18%" in scan
 
-    def test_scan_with_morning_data(self):
-        metadata = {
-            "morning_preview": {"focus_areas": "deep work", "key_tasks": "review PRs"},
-        }
-        scan = build_context_scan(metadata)
-        assert "Morning:" in scan
-        assert "deep work" in scan
-
     def test_scan_with_micro_flow_data(self):
         metadata = {
             "focus_path": {"anchor_step": "review"},
@@ -357,48 +349,6 @@ class TestTier2MomentSection:
         assert section == ""
 
 
-class TestTier2MorningSection:
-    """Tests for morning ritual deep context."""
-
-    def test_morning_section_appears(self):
-        metadata = {
-            "morning_preview": {"focus_areas": "deep work, client call", "key_tasks": "review PR, email boss"},
-            "morning_ask": {"question": "What's your intention for today?", "reason": "fresh start"},
-            "morning_momentum": {"momentum_hint": "Start with the PR review", "suggested_start": "9am"},
-        }
-        section = build_tier2_section("morning_ritual", metadata)
-        assert "MORNING CONTEXT" in section
-        assert "deep work" in section
-        assert "intention for today" in section
-        assert "PR review" in section
-
-    def test_morning_section_absent_without_data(self):
-        section = build_tier2_section("morning_ritual", {})
-        assert section == ""
-
-
-class TestTier2EveningSection:
-    """Tests for evening closure deep context."""
-
-    def test_evening_section_appears(self):
-        metadata = {
-            "evening_closure": {
-                "completed": ["finished report", "replied to boss"],
-                "pending": ["gym session"],
-                "signals": "productive day",
-                "summary": "Good progress on key tasks",
-            },
-        }
-        section = build_tier2_section("evening_ritual", metadata)
-        assert "EVENING CLOSURE" in section
-        assert "finished report" in section
-        assert "gym session" in section
-
-    def test_evening_section_absent_without_data(self):
-        section = build_tier2_section("evening_ritual", {})
-        assert section == ""
-
-
 class TestTier2MicroFlowSection:
     """Tests for micro flow deep context."""
 
@@ -411,32 +361,16 @@ class TestTier2MicroFlowSection:
         assert "review notes" in section
         assert "write summary" in section
 
-    def test_micro_flow_section_with_momentum(self):
+    def test_micro_flow_section_with_mini_flow(self):
         metadata = {
-            "micro_momentum": {"nudge": "Keep going, you're on a roll!"},
+            "mini_flow": {"warmup_step": "breathe", "focus_block_step": "write", "closure_step": "review"},
         }
         section = build_tier2_section("micro_flow", metadata)
         assert "MICRO FLOW" in section
-        assert "on a roll" in section
+        assert "breathe" in section
 
     def test_micro_flow_section_absent_without_data(self):
         section = build_tier2_section("micro_flow", {})
-        assert section == ""
-
-
-class TestTier2ReflectionSection:
-    """Tests for daily reflection deep context."""
-
-    def test_reflection_section_appears(self):
-        metadata = {
-            "daily_reflection": "Today I noticed I was most energized during creative work.",
-        }
-        section = build_tier2_section("reflection", metadata)
-        assert "DAILY REFLECTION" in section
-        assert "energized during creative work" in section
-
-    def test_reflection_section_absent_without_data(self):
-        section = build_tier2_section("reflection", {})
         assert section == ""
 
 

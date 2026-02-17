@@ -7,6 +7,8 @@ import {
   Area as _Area,
   LineChart as _LineChart,
   Line as _Line,
+  BarChart as _BarChart,
+  Bar as _Bar,
   XAxis as _XAxis,
   YAxis as _YAxis,
   CartesianGrid as _CartesianGrid,
@@ -17,11 +19,14 @@ import {
   Radar as _Radar,
   PolarGrid as _PolarGrid,
   PolarAngleAxis as _PolarAngleAxis,
+  PolarRadiusAxis as _PolarRadiusAxis,
 } from "recharts";
 const AreaChart = _AreaChart as any;
 const Area = _Area as any;
 const LineChart = _LineChart as any;
 const Line = _Line as any;
+const BarChart = _BarChart as any;
+const Bar = _Bar as any;
 const XAxis = _XAxis as any;
 const YAxis = _YAxis as any;
 const CartesianGrid = _CartesianGrid as any;
@@ -32,6 +37,7 @@ const RadarChart = _RadarChart as any;
 const Radar = _Radar as any;
 const PolarGrid = _PolarGrid as any;
 const PolarAngleAxis = _PolarAngleAxis as any;
+const PolarRadiusAxis = _PolarRadiusAxis as any;
 import type {
   SimulationData,
   StateSnapshot,
@@ -39,6 +45,10 @@ import type {
   PhaseBoundary,
   CheckpointResult,
   JournalEntry,
+  BrainStates,
+  ConversationDemo,
+  ThemeSnapshot,
+  CrystallizedPattern,
 } from "./types";
 
 // ============================================================================
@@ -657,7 +667,36 @@ export default function SimulationDemoClient() {
         </div>
       </div>
 
-      {/* 10. Checkpoint Cards */}
+      {/* 10. Deep-Dive Brain Sections */}
+      <CoherenceMapSection
+        snapshots={data.snapshots}
+        currentDay={currentDay}
+        phaseBoundaries={phaseBoundaries}
+      />
+      <AlignmentTensionSection
+        snapshots={data.snapshots}
+        currentDay={currentDay}
+        phaseBoundaries={phaseBoundaries}
+      />
+      <IdentityMomentumSection
+        snapshots={data.snapshots}
+        currentDay={currentDay}
+        phaseBoundaries={phaseBoundaries}
+      />
+      <ThemeEvolutionSection
+        snapshots={data.snapshots}
+        currentDay={currentDay}
+      />
+
+      {/* 11. Conversation Demo */}
+      {data.conversation_demo && data.conversation_demo.length > 0 && (
+        <ConversationDemoSection
+          demos={data.conversation_demo}
+          personaName={data.persona.name}
+        />
+      )}
+
+      {/* 12. Checkpoint Cards */}
       <CheckpointCards
         checkpoints={data.persona.checkpoints}
         results={data.checkpoint_results}
@@ -2681,6 +2720,657 @@ function KnowledgeRings({
         processed
       </text>
     </svg>
+  );
+}
+
+// ============================================================================
+// Coherence Map — 6-dimension radar + fragmentation + score trend
+// ============================================================================
+
+function CoherenceMapSection({
+  snapshots,
+  currentDay,
+  phaseBoundaries,
+}: {
+  snapshots: StateSnapshot[];
+  currentDay: number;
+  phaseBoundaries: PhaseBoundary[];
+}) {
+  const visibleSnapshots = snapshots.filter((s) => s.day <= currentDay);
+  const currentSnapshot = visibleSnapshots.length > 0 ? visibleSnapshots[visibleSnapshots.length - 1] : null;
+  const coherence = currentSnapshot?.brain_states?.coherence_state;
+  if (!coherence) return null;
+
+  const map = coherence.coherence_map;
+  const dimensions = ["thought", "emotion", "behavior", "identity", "alignment", "narrative"];
+  const dimensionLabels: Record<string, string> = {
+    thought: "Thought", emotion: "Emotion", behavior: "Behavior",
+    identity: "Identity", alignment: "Alignment", narrative: "Narrative",
+  };
+
+  // Radar data from coherence_map
+  const radarData = dimensions.map((d) => ({
+    dimension: dimensionLabels[d] || d,
+    value: map ? Math.round((map[d] ?? 0) * 100) : 0,
+    fullMark: 100,
+  }));
+
+  // Trend data: coherence_score + fragmentation over time
+  const trendData = visibleSnapshots
+    .filter((s) => s.brain_states?.coherence_state)
+    .map((s) => ({
+      day: s.day,
+      coherence: Math.round((s.brain_states!.coherence_state!.coherence_score ?? 0) * 100),
+      fragmentation: Math.round((s.brain_states!.coherence_state!.fragmentation_index ?? 0) * 100),
+    }));
+
+  return (
+    <div style={{ ...styles.card, marginBottom: 16 }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+        Coherence Map
+      </div>
+      <div style={{ fontSize: 12, color: palette.muted, marginBottom: 16 }}>
+        How consistent is this person across 6 dimensions of self?
+      </div>
+
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        {/* Radar chart */}
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <ResponsiveContainer width="100%" height={240}>
+            <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
+              <PolarGrid stroke={palette.border} />
+              <PolarAngleAxis dataKey="dimension" fontSize={11} stroke={palette.muted} />
+              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+              <Radar
+                name="Coherence"
+                dataKey="value"
+                stroke={palette.balanced}
+                fill={palette.balanced}
+                fillOpacity={0.2}
+                strokeWidth={2}
+                isAnimationActive={false}
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+          {/* Score + fragmentation badges */}
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 4 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: palette.balanced }}>
+              Score: {Math.round((coherence.coherence_score ?? 0) * 100)}%
+            </span>
+            {coherence.fragmentation_index != null && (
+              <span style={{ fontSize: 12, fontWeight: 600, color: palette.intensity }}>
+                Fragmentation: {Math.round(coherence.fragmentation_index * 100)}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Trend line */}
+        {trendData.length > 1 && (
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: palette.text, marginBottom: 8 }}>
+              Coherence Over Time
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={palette.border} />
+                <XAxis dataKey="day" stroke={palette.muted} fontSize={10} />
+                <YAxis domain={[0, 100]} stroke={palette.muted} fontSize={10} tickFormatter={(v: number) => `${v}%`} />
+                <RTooltip
+                  contentStyle={{ background: palette.card, border: `1px solid ${palette.border}`, borderRadius: 8, fontSize: 11 }}
+                  formatter={(v: number, name: string) => [`${v}%`, name === "coherence" ? "Coherence" : "Fragmentation"]}
+                  labelFormatter={(d: number) => `Day ${d}`}
+                />
+                {phaseBoundaries.slice(1).map((b) =>
+                  b.start <= currentDay ? (
+                    <ReferenceLine key={b.start} x={b.start} stroke={palette.muted} strokeDasharray="4 4" strokeOpacity={0.4} />
+                  ) : null,
+                )}
+                <Area type="monotone" dataKey="coherence" stroke={palette.balanced} fill={palette.balanced}
+                  fillOpacity={0.15} strokeWidth={2} isAnimationActive={false} />
+                <Line type="monotone" dataKey="fragmentation" stroke={palette.intensity}
+                  dot={false} strokeWidth={1.5} strokeDasharray="4 4" isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 4 }}>
+              <LegendDot color={palette.balanced} label="Coherence" />
+              <LegendDot color={palette.intensity} label="Fragmentation" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Summary text */}
+      {coherence.summary && (
+        <div style={{
+          marginTop: 12, padding: 10, background: palette.cardAlt,
+          borderRadius: 8, fontSize: 12, color: palette.text, lineHeight: 1.5,
+        }}>
+          {coherence.summary}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Alignment & Tension — score trends + conflict zones + suggestions
+// ============================================================================
+
+function AlignmentTensionSection({
+  snapshots,
+  currentDay,
+  phaseBoundaries,
+}: {
+  snapshots: StateSnapshot[];
+  currentDay: number;
+  phaseBoundaries: PhaseBoundary[];
+}) {
+  const visibleSnapshots = snapshots.filter((s) => s.day <= currentDay);
+  const currentSnapshot = visibleSnapshots.length > 0 ? visibleSnapshots[visibleSnapshots.length - 1] : null;
+  const alignment = currentSnapshot?.brain_states?.alignment_state;
+  if (!alignment) return null;
+
+  // Trend data
+  const trendData = visibleSnapshots
+    .filter((s) => s.brain_states?.alignment_state)
+    .map((s) => ({
+      day: s.day,
+      alignment: Math.round((s.brain_states!.alignment_state!.alignment_score ?? 0) * 100),
+      tension: Math.round((s.brain_states!.alignment_state!.tension_score ?? 0) * 100),
+    }));
+
+  const alignColor = palette.balanced;
+  const tensionColor = palette.chaos;
+
+  return (
+    <div style={{ ...styles.card, marginBottom: 16 }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+        Alignment & Tension
+      </div>
+      <div style={{ fontSize: 12, color: palette.muted, marginBottom: 16 }}>
+        Are this person&apos;s actions aligned with their values and intentions?
+      </div>
+
+      {/* Score gauges */}
+      <div style={{ display: "flex", gap: 24, marginBottom: 16, flexWrap: "wrap" }}>
+        <ScoreRing label="Alignment" value={alignment.alignment_score ?? 0} color={alignColor} />
+        <ScoreRing label="Tension" value={alignment.tension_score ?? 0} color={tensionColor} />
+        {alignment.energy_profile && (
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>Energy</div>
+            <span style={{
+              padding: "4px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600,
+              background: alignment.energy_profile === "high" ? "#e0f0e0" : alignment.energy_profile === "low" ? "#fde0d0" : palette.accentLight,
+              color: palette.text,
+            }}>{String(alignment.energy_profile)}</span>
+          </div>
+        )}
+        {alignment.focus_profile && (
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>Focus</div>
+            <span style={{
+              padding: "4px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600,
+              background: alignment.focus_profile === "clear" ? "#e0f0e0" : alignment.focus_profile === "overloaded" ? "#fde0d0" : palette.accentLight,
+              color: palette.text,
+            }}>{String(alignment.focus_profile)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Trend chart */}
+      {trendData.length > 1 && (
+        <div style={{ marginBottom: 16 }}>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={palette.border} />
+              <XAxis dataKey="day" stroke={palette.muted} fontSize={10} />
+              <YAxis domain={[0, 100]} stroke={palette.muted} fontSize={10} tickFormatter={(v: number) => `${v}%`} />
+              <RTooltip
+                contentStyle={{ background: palette.card, border: `1px solid ${palette.border}`, borderRadius: 8, fontSize: 11 }}
+                formatter={(v: number, name: string) => [`${v}%`, name === "alignment" ? "Alignment" : "Tension"]}
+                labelFormatter={(d: number) => `Day ${d}`}
+              />
+              {phaseBoundaries.slice(1).map((b) =>
+                b.start <= currentDay ? (
+                  <ReferenceLine key={b.start} x={b.start} stroke={palette.muted} strokeDasharray="4 4" strokeOpacity={0.4} />
+                ) : null,
+              )}
+              <Line type="monotone" dataKey="alignment" stroke={alignColor} strokeWidth={2} dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="tension" stroke={tensionColor} strokeWidth={2} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 4 }}>
+            <LegendDot color={alignColor} label="Alignment" />
+            <LegendDot color={tensionColor} label="Tension" />
+          </div>
+        </div>
+      )}
+
+      {/* Conflict zones + suggestions */}
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        {alignment.conflict_zones && alignment.conflict_zones.length > 0 && (
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: palette.text, marginBottom: 6 }}>Conflict Zones</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {alignment.conflict_zones.map((zone, i) => (
+                <span key={i} style={{
+                  padding: "3px 10px", background: "#fde0d0", borderRadius: 12,
+                  fontSize: 11, color: palette.text,
+                }}>
+                  {zone}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {alignment.action_suggestions && alignment.action_suggestions.length > 0 && (
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: palette.text, marginBottom: 6 }}>Suggested Actions</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {alignment.action_suggestions.map((action, i) => (
+                <span key={i} style={{
+                  padding: "3px 10px", background: "#e0f0e0", borderRadius: 12,
+                  fontSize: 11, color: palette.text,
+                }}>
+                  {action}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Identity Momentum — direction + magnitude + stability over time
+// ============================================================================
+
+function IdentityMomentumSection({
+  snapshots,
+  currentDay,
+  phaseBoundaries,
+}: {
+  snapshots: StateSnapshot[];
+  currentDay: number;
+  phaseBoundaries: PhaseBoundary[];
+}) {
+  const visibleSnapshots = snapshots.filter((s) => s.day <= currentDay);
+  const currentSnapshot = visibleSnapshots.length > 0 ? visibleSnapshots[visibleSnapshots.length - 1] : null;
+  const momentum = currentSnapshot?.brain_states?.identity_momentum_state;
+  if (!momentum) return null;
+
+  // Trend data
+  const trendData = visibleSnapshots
+    .filter((s) => s.brain_states?.identity_momentum_state)
+    .map((s) => {
+      const m = s.brain_states!.identity_momentum_state!;
+      return {
+        day: s.day,
+        magnitude: Math.round((m.magnitude ?? 0) * 100),
+        stability: Math.round((m.stability ?? 0) * 100),
+        confidence: Math.round((m.confidence ?? 0) * 100),
+      };
+    });
+
+  const directionColors: Record<string, string> = {
+    toward: palette.balanced,
+    away: palette.chaos,
+    oscillating: palette.intensity,
+    unclear: palette.muted,
+  };
+  const directionColor = directionColors[momentum.direction] || palette.muted;
+  const directionLabels: Record<string, string> = {
+    toward: "Growing toward self",
+    away: "Moving away from self",
+    oscillating: "Searching / oscillating",
+    unclear: "Direction unclear",
+  };
+
+  return (
+    <div style={{ ...styles.card, marginBottom: 16, borderLeft: `4px solid ${directionColor}` }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+        Identity Momentum
+      </div>
+      <div style={{ fontSize: 12, color: palette.muted, marginBottom: 16 }}>
+        Is this person growing toward who they want to be?
+      </div>
+
+      {/* Direction + scores */}
+      <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{
+          padding: "8px 16px", borderRadius: 12, background: `${directionColor}18`,
+          border: `1px solid ${directionColor}40`,
+        }}>
+          <div style={{ fontSize: 11, color: palette.muted, marginBottom: 2 }}>Direction</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: directionColor }}>
+            {directionLabels[momentum.direction] || momentum.direction}
+          </div>
+        </div>
+        <ScoreRing label="Magnitude" value={momentum.magnitude ?? 0} color={palette.accent} />
+        <ScoreRing label="Stability" value={momentum.stability ?? 0} color={palette.vata} />
+        <ScoreRing label="Confidence" value={momentum.confidence ?? 0} color={palette.balanced} />
+      </div>
+
+      {/* Trend chart */}
+      {trendData.length > 1 && (
+        <div style={{ marginBottom: 12 }}>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={palette.border} />
+              <XAxis dataKey="day" stroke={palette.muted} fontSize={10} />
+              <YAxis domain={[0, 100]} stroke={palette.muted} fontSize={10} tickFormatter={(v: number) => `${v}%`} />
+              <RTooltip
+                contentStyle={{ background: palette.card, border: `1px solid ${palette.border}`, borderRadius: 8, fontSize: 11 }}
+                formatter={(v: number, name: string) => [`${v}%`, name.charAt(0).toUpperCase() + name.slice(1)]}
+                labelFormatter={(d: number) => `Day ${d}`}
+              />
+              {phaseBoundaries.slice(1).map((b) =>
+                b.start <= currentDay ? (
+                  <ReferenceLine key={b.start} x={b.start} stroke={palette.muted} strokeDasharray="4 4" strokeOpacity={0.4} />
+                ) : null,
+              )}
+              <Line type="monotone" dataKey="magnitude" stroke={palette.accent} strokeWidth={2} dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="stability" stroke={palette.vata} strokeWidth={1.5} dot={false} strokeDasharray="4 4" isAnimationActive={false} />
+              <Line type="monotone" dataKey="confidence" stroke={palette.balanced} strokeWidth={1.5} dot={false} strokeDasharray="2 2" isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 4 }}>
+            <LegendDot color={palette.accent} label="Magnitude" />
+            <LegendDot color={palette.vata} label="Stability" />
+            <LegendDot color={palette.balanced} label="Confidence" />
+          </div>
+        </div>
+      )}
+
+      {/* Evidence summary */}
+      {momentum.evidence_summary && (
+        <div style={{
+          padding: 10, background: palette.cardAlt,
+          borderRadius: 8, fontSize: 12, color: palette.text, lineHeight: 1.5,
+        }}>
+          {momentum.evidence_summary}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Theme Evolution — themes discovered + crystallized patterns
+// ============================================================================
+
+function ThemeEvolutionSection({
+  snapshots,
+  currentDay,
+}: {
+  snapshots: StateSnapshot[];
+  currentDay: number;
+}) {
+  const visibleSnapshots = snapshots.filter((s) => s.day <= currentDay);
+  const currentSnapshot = visibleSnapshots.length > 0 ? visibleSnapshots[visibleSnapshots.length - 1] : null;
+
+  const themes = currentSnapshot?.themes;
+  const patterns = currentSnapshot?.crystallized_patterns;
+  if (!themes?.length && !patterns?.length) return null;
+
+  // Theme bar chart data — top 8 by clarity
+  const themeBarData = (themes || []).slice(0, 8).map((t) => ({
+    name: t.theme.length > 18 ? t.theme.slice(0, 16) + "..." : t.theme,
+    clarity: Math.round(t.clarity_score * 100),
+  }));
+
+  // Pattern breakdown by type
+  const patternsByType: Record<string, CrystallizedPattern[]> = {};
+  for (const p of patterns || []) {
+    const type = p.pattern_type || "unknown";
+    if (!patternsByType[type]) patternsByType[type] = [];
+    patternsByType[type].push(p);
+  }
+
+  const trajectoryColors: Record<string, string> = {
+    improving: palette.balanced,
+    emerging: palette.vata,
+    stable: palette.muted,
+    worsening: palette.chaos,
+    fading: "#c4bdb5",
+  };
+
+  // Count trends over time
+  const countData = visibleSnapshots
+    .filter((s) => s.themes?.length || s.crystallized_patterns?.length)
+    .map((s) => ({
+      day: s.day,
+      themes: s.themes?.length ?? 0,
+      patterns: s.crystallized_patterns?.length ?? 0,
+    }));
+
+  return (
+    <div style={{ ...styles.card, marginBottom: 16 }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+        Theme & Pattern Evolution
+      </div>
+      <div style={{ fontSize: 12, color: palette.muted, marginBottom: 16 }}>
+        Life themes and behavioral patterns Sakhi has crystallized
+      </div>
+
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        {/* Theme clarity chart */}
+        {themeBarData.length > 0 && (
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: palette.text, marginBottom: 8 }}>
+              Active Themes ({themes?.length ?? 0})
+            </div>
+            <ResponsiveContainer width="100%" height={Math.max(themeBarData.length * 32, 120)}>
+              <BarChart data={themeBarData} layout="vertical" margin={{ left: 0, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={palette.border} horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} stroke={palette.muted} fontSize={10}
+                  tickFormatter={(v: number) => `${v}%`} />
+                <YAxis type="category" dataKey="name" width={110} stroke={palette.muted} fontSize={10} />
+                <RTooltip
+                  contentStyle={{ background: palette.card, border: `1px solid ${palette.border}`, borderRadius: 8, fontSize: 11 }}
+                  formatter={(v: number) => [`${v}%`, "Clarity"]}
+                />
+                <Bar dataKey="clarity" fill={palette.accent} radius={[0, 4, 4, 0]} barSize={16}
+                  isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Crystallized patterns by type */}
+        {Object.keys(patternsByType).length > 0 && (
+          <div style={{ flex: 1, minWidth: 260 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: palette.text, marginBottom: 8 }}>
+              Crystallized Patterns ({patterns?.length ?? 0})
+            </div>
+            {Object.entries(patternsByType).map(([type, items]) => (
+              <div key={type} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: palette.muted, fontWeight: 500, marginBottom: 4, textTransform: "capitalize" }}>
+                  {type} ({items.length})
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {items.slice(0, 5).map((p, i) => (
+                    <span key={i} style={{
+                      padding: "3px 10px",
+                      background: `${trajectoryColors[p.trajectory] || palette.muted}20`,
+                      border: `1px solid ${trajectoryColors[p.trajectory] || palette.muted}40`,
+                      borderRadius: 12, fontSize: 10, color: palette.text,
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                    }}>
+                      <span style={{
+                        width: 6, height: 6, borderRadius: 3,
+                        background: trajectoryColors[p.trajectory] || palette.muted,
+                      }} />
+                      {p.pattern_value.length > 24 ? p.pattern_value.slice(0, 22) + "..." : p.pattern_value}
+                      <span style={{ fontSize: 9, color: palette.muted }}>
+                        {Math.round(p.confidence * 100)}%
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {/* Trajectory legend */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+              {Object.entries(trajectoryColors).slice(0, 4).map(([label, color]) => (
+                <LegendDot key={label} color={color} label={label} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Discovery trend over time */}
+      {countData.length > 1 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: palette.text, marginBottom: 8 }}>
+            Discovery Over Time
+          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <AreaChart data={countData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={palette.border} />
+              <XAxis dataKey="day" stroke={palette.muted} fontSize={10} />
+              <YAxis stroke={palette.muted} fontSize={10} allowDecimals={false} />
+              <RTooltip
+                contentStyle={{ background: palette.card, border: `1px solid ${palette.border}`, borderRadius: 8, fontSize: 11 }}
+                labelFormatter={(d: number) => `Day ${d}`}
+              />
+              <Area type="stepAfter" dataKey="themes" stroke={palette.accent} fill={palette.accent}
+                fillOpacity={0.15} strokeWidth={2} isAnimationActive={false} />
+              <Area type="stepAfter" dataKey="patterns" stroke={palette.balanced} fill={palette.balanced}
+                fillOpacity={0.1} strokeWidth={1.5} isAnimationActive={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 4 }}>
+            <LegendDot color={palette.accent} label="Themes" />
+            <LegendDot color={palette.balanced} label="Patterns" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Shared: Score Ring gauge
+// ============================================================================
+
+function ScoreRing({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{ position: "relative", width: 56, height: 56, margin: "0 auto 6px" }}>
+        <svg width={56} height={56} viewBox="0 0 56 56">
+          <circle cx={28} cy={28} r={24} fill="none" stroke={palette.border} strokeWidth={4} />
+          <circle
+            cx={28} cy={28} r={24}
+            fill="none" stroke={color} strokeWidth={4}
+            strokeDasharray={`${value * 150.8} 150.8`}
+            strokeLinecap="round"
+            transform="rotate(-90 28 28)"
+          />
+        </svg>
+        <div style={{
+          position: "absolute", top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          fontSize: 13, fontWeight: 700, color: palette.text,
+        }}>
+          {(value * 100).toFixed(0)}
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: palette.muted, fontWeight: 500 }}>{label}</div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Conversation Demo — shows personalized Q&A from the full brain
+// ============================================================================
+
+function ConversationDemoSection({
+  demos,
+  personaName,
+}: {
+  demos: ConversationDemo[];
+  personaName: string;
+}) {
+  return (
+    <div style={{ ...styles.card, marginBottom: 16, borderLeft: `4px solid ${palette.accent}` }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: palette.text }}>
+          Personalization Demo
+        </div>
+        <div style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>
+          Real responses from Sakhi using {personaName}&apos;s fully-built brain state
+        </div>
+      </div>
+
+      {demos.map((demo, i) => (
+        <div
+          key={i}
+          style={{
+            marginBottom: i < demos.length - 1 ? 16 : 0,
+            padding: 14,
+            background: palette.cardAlt,
+            borderRadius: 10,
+          }}
+        >
+          {/* Question */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <span style={{
+              width: 24, height: 24, borderRadius: 12,
+              background: palette.accent, color: "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 12, fontWeight: 700, flexShrink: 0,
+            }}>
+              Q
+            </span>
+            <div style={{ fontSize: 13, fontWeight: 600, color: palette.text, lineHeight: 1.5 }}>
+              {demo.question}
+            </div>
+          </div>
+
+          {/* Response */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <span style={{
+              width: 24, height: 24, borderRadius: 12,
+              background: palette.balanced, color: "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 12, fontWeight: 700, flexShrink: 0,
+            }}>
+              S
+            </span>
+            <div style={{
+              fontSize: 13, color: palette.text, lineHeight: 1.6,
+              whiteSpace: "pre-wrap",
+            }}>
+              {demo.error ? (
+                <span style={{ color: palette.chaos, fontStyle: "italic" }}>{demo.error}</span>
+              ) : (
+                demo.response
+              )}
+            </div>
+          </div>
+
+          {/* Debug context badges */}
+          {demo.debug?.context_used && demo.debug.context_used.length > 0 && (
+            <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {demo.debug.context_used.slice(0, 6).map((ctx, j) => (
+                <span key={j} style={{
+                  padding: "2px 6px", background: palette.card,
+                  border: `1px solid ${palette.border}`,
+                  borderRadius: 8, fontSize: 9, color: palette.muted,
+                }}>
+                  {ctx}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -251,10 +251,17 @@ def compute_baseline_drift(
     # Normalize to percentage (max ~115% → scale to 100%)
     drift_percentage = round(min(100, euclidean * 87), 1)  # 87 ≈ 100/1.15
 
-    # Find primary contributor (largest positive deviation)
-    abs_distances = {k: abs(v) for k, v in distances.items()}
-    primary_contributor = max(abs_distances, key=abs_distances.get)
-    direction = "elevated" if distances[primary_contributor] > 0 else "depleted"
+    # Find primary contributor — prefer elevated doshas (positive deviation)
+    # because elevated doshas drive friction states (chaos/intensity/stagnation).
+    elevated = {k: v for k, v in distances.items() if v > 0}
+    if elevated:
+        primary_contributor = max(elevated, key=elevated.get)
+        direction = "elevated"
+    else:
+        # All doshas depleted or zero — pick largest absolute deviation
+        abs_distances = {k: abs(v) for k, v in distances.items()}
+        primary_contributor = max(abs_distances, key=abs_distances.get)
+        direction = "depleted"
 
     return {
         "drift_percentage": drift_percentage,

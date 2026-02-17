@@ -5,11 +5,11 @@
 The Adaptive Response Framework is Sakhi's approach to forming intelligent, personalized responses. Instead of generic replies or overwhelming users with possibilities, Sakhi responds like a skilled Ayurvedic practitioner:
 
 1. **Constitution-aware** — Uses the user's Operating System (dosha baseline) to prioritize likely causes
-2. **Memory-informed** — Checks what we already know before asking questions
-3. **Targeted inquiry** — Asks maximum 2 questions per turn, chosen for diagnostic value
+2. **Memory-informed** — Loads what we already know BEFORE forming questions
+3. **Personally targeted inquiry** — LLM generates questions specific to THIS person's situation and gaps
 4. **Domain-adaptive** — Adjusts approach based on whether the concern is Body, Mind, or Life
 
-**Core Principle:** Never ramble with 10 possibilities. Pick the most likely 2-3 based on their constitution and ask targeted questions.
+**Core Principle:** Never ramble with 10 possibilities. Load everything we know about this person, then ask only about what we genuinely don't know yet.
 
 ---
 
@@ -36,22 +36,27 @@ User Message: "I keep getting headaches recently"
      │
      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  2. KNOWLEDGE GAP ANALYSIS                                                   │
-│     ├── Load user's Operating System (constitution)                          │
-│     ├── Determine diagnostic questions for symptom + constitution            │
-│     ├── Query memory sources for each question                               │
-│     ├── Check state vectors for inferences                                   │
-│     └── Compile: KNOWN / INFERRED / UNKNOWN                                  │
+│  2. KNOWLEDGE GAP ANALYSIS  (context first, then questions)                  │
+│     ├── Load constitution + state vectors  ──┐                              │
+│     ├── Fetch recent STM entries (10)        ├─ parallel                    │
+│     ├── Load deterministic intelligence:     ┘                              │
+│     │     ├── personal_patterns (cause→effect chains)                       │
+│     │     ├── behavior_log (recent dosha-affecting actions)                 │
+│     │     ├── symptom_log (past episodes, what helped)                      │
+│     │     └── symptom→dosha mapping                                         │
+│     ├── Search episodic memory for older relevant facts                      │
+│     ├── Generate inferences from drift + patterns + guna                    │
+│     └── LLM generates personalized questions using ALL above context        │
 │                                                                              │
-│     Output: KnowledgeGap { known, inferred, to_ask }                        │
+│     Output: KnowledgeGap { known, inferred, personalized_questions }        │
 └─────────────────────────────────────────────────────────────────────────────┘
      │
      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  3. RESPONSE STRATEGY SELECTION                                              │
-│     ├── If UNKNOWN is empty → RESPOND mode (enough info)                    │
-│     ├── If UNKNOWN has items → INQUIRY mode (need more info)                │
-│     ├── Select max 2 questions to ask (prioritized by constitution)         │
+│     ├── If questions empty → RESPOND mode (enough info)                     │
+│     ├── If questions exist → INQUIRY or CONNECT_AND_INQUIRE mode            │
+│     ├── Select max 2 questions to ask                                       │
 │     └── Choose response template                                             │
 │                                                                              │
 │     Output: ResponseStrategy { mode, questions, template }                   │
@@ -62,6 +67,7 @@ User Message: "I keep getting headaches recently"
 │  4. CONTEXT SYNTHESIS                                                        │
 │     ├── Compress known facts into prompt-ready format                        │
 │     ├── Frame inferences with appropriate confidence                         │
+│     ├── Symptom protocol from knowledge graph (+ LLM fallback)              │
 │     ├── Include constitution-specific guidance                               │
 │     └── Add response guardrails                                              │
 │                                                                              │
@@ -112,64 +118,122 @@ class SenseFrame:
 
 ## 2. Knowledge Gap Analysis
 
-### Memory Sources
+### Core Principle: Context First, Then Questions
 
-The system queries four layers of knowledge:
+The knowledge gap stage **loads everything we know about this person first**, then asks an LLM to generate questions about genuine gaps. This inversion (context → questions, not questions → filter) means:
 
-#### Layer 1: Foundational (Onboarding)
+- Questions are inherently personalized — the LLM sees the full picture
+- No keyword whack-a-mole — no need to maintain keyword lists for every possible symptom
+- Any symptom gets questions — not limited to pre-built diagnostic paths
 
-Always available from `personal_model`:
+### Data Loading (Parallel)
 
-| Field | Contains | Usage |
-|-------|----------|-------|
-| `operating_system.dosha_baseline` | {vata, pitta, kapha} percentages | Prioritize likely causes |
-| `operating_system.type` | "Adaptive-Performance" etc. | Frame responses |
-| `life_context` | age, roles, life_phase | Avoid inappropriate advice |
-| `decision_profile` | risk_tendency, energy_tradeoff | Understand preferences |
+Three groups of queries run concurrently via `asyncio.gather`:
 
-#### Layer 2: State Vectors (Recent Episodes)
+#### Constitution + State Vectors
 
-From `memory_episodic`:
+From `personal_model` and `memory_episodic`:
 
-| Field | Contains | Usage |
-|-------|----------|-------|
-| `state_vector.dosha` | Current dosha levels | Detect drift from baseline |
-| `guna_vector` | {sattva, rajas, tamas} | Operating mode |
-| `emotional_state` | Recent emotional patterns | Emotional context |
-| `rhythm_state` | Energy, stress, fatigue | Physical state |
+| Data | Source | Usage |
+|------|--------|-------|
+| `operating_system.type` | `personal_model` | Frame responses (e.g., "Conservation OS") |
+| `operating_system.dosha_baseline` | `personal_model` | {vata, pitta, kapha} percentages |
+| `life_context` | `personal_model` | Age, roles, life_phase |
+| `state_vector.dosha` | `memory_episodic` (latest) | Detect drift from baseline |
+| `guna_vector` | `memory_episodic` (latest) | Operating mode (sattva/rajas/tamas) |
 
-#### Layer 3: Episodic Memory
+State vectors are compared against the dosha baseline to compute **drift** — e.g., "vata elevated 8% from baseline." Drift feeds into the inference engine.
 
-From `memory_episodic`, `memory_short_term`, `context_recalls`:
+#### Recent Short-Term Memory (Keyword-Free)
 
-- Semantic search using embeddings
-- Keyword matching
-- Recency-weighted retrieval
-
-#### Layer 4: Derived Intelligence
-
-From deep workers stored in `personal_model`:
-
-| Worker | Provides |
-|--------|----------|
-| `identity_momentum_deep` | Identity evolution patterns |
-| `emotion_soul_rhythm_deep` | Integrated ESR state |
-| `longitudinal_update` | Weekly/monthly patterns |
-| `rhythm_soul_deep` | Rhythm-soul integration |
-
-### Query Strategy
-
-For each diagnostic question, query memory with:
+From `memory_short_term` — the 10 most recent entries, **without keyword filtering**:
 
 ```python
-@dataclass
-class KnowledgeQuery:
-    question_id: str              # "sleep_quality"
-    keywords: List[str]           # ["sleep", "insomnia", "tired", "rest"]
-    semantic_query: str           # "how has their sleep been recently"
-    recency_days: int             # How far back to search
-    min_confidence: float         # Threshold to consider "found"
+async def _fetch_recent_stm(person_id: str, limit: int = 10) -> List[str]:
+    """Fetch N most recent STM entries — LLM decides relevance."""
+    rows = await q(
+        "SELECT text FROM memory_short_term WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2",
+        person_id, limit,
+    )
+    # Deduplicate and return
 ```
+
+**Why no keywords?** Keyword matching is brittle — "hydrate" doesn't match "hydrating", and topic selection can't anticipate every symptom. By fetching recent context and letting the LLM decide relevance, we avoid false negatives.
+
+#### Deterministic Intelligence
+
+Loaded via `_load_deterministic_intelligence()` — queries the Ayurvedic causal reasoning layer for structured, high-confidence data:
+
+| Data | Source | What It Provides |
+|------|--------|------------------|
+| Personal patterns | `personal_patterns` table | "skipped_exercise → scattered (3x, 71%)" |
+| Recent behaviors | `behavior_log` table (7 days) | "caffeine_evening (aggravates vata)" |
+| Past symptom episodes | `symptom_log` table | "scattered 3 days ago, severity 0.7, meditation helped" |
+| Symptom→dosha mapping | `SYMPTOM_DOSHA_MAP` (causal_reasoning.py) | "scattered = vata" |
+
+Pattern query uses `ILIKE` on `effect_value` across all `effect_type` categories (mental, emotional, physical) so it catches patterns regardless of how they were originally classified.
+
+**Integration:** `_integrate_deterministic_intelligence()` converts raw DB data into structured `KnownFact` and `Inference` objects:
+
+- **Personal patterns** → `Inference` (topic="personal_pattern", basis="personal_patterns") — learned cause→effect correlations with observation count and Ayurvedic explanation
+- **Recent behaviors** → `KnownFact` (topic="recent_behavior", source="behavior_log") — concrete dosha-affecting actions
+- **Past episodes** → `KnownFact` (topic="past_episode", source="symptom_log") — includes what helped/didn't help (JSONB parsing)
+- **Symptom→dosha** → `Inference` (topic="symptom_classification", basis="symptom_dosha_map")
+
+**Graceful degradation:** If any table is empty (new users) or queries fail, the pipeline continues with whatever data is available. Questions just become less targeted.
+
+**Data population:** These tables are populated per conversation turn by the `preference_learning` worker:
+```
+turn_v2.py → enqueue "preference_learning" job
+→ _handle_preference_learning() → Phase 3: process_entry_for_patterns()
+  → extract_behaviors_and_symptoms() (LLM)
+  → log_behavior() → behavior_log
+  → log_symptom() → symptom_log
+  → detect_patterns() → personal_patterns
+```
+Plus daily/weekly/monthly crystallization strengthens recurring patterns.
+
+### Supplementary: Episodic Memory Search
+
+After the primary STM fetch, a keyword-based episodic search runs for **older relevant memories** using `recall_advanced` (embedding-based). This uses `TOPIC_KEYWORDS` to find topic-specific facts from beyond the recent STM window.
+
+### Inference Engine
+
+Generates inferences from dosha drift and guna mode:
+
+| Signal | Inference |
+|--------|-----------|
+| Vata elevated > 5% | "May indicate irregularity, anxiety, or overstimulation" |
+| Pitta elevated > 5% | "May indicate intensity, heat, or frustration" |
+| Kapha elevated > 5% | "May indicate sluggishness or stagnation" |
+| Rajas dominant | "High activation, may be pushing or stressed" |
+| Tamas dominant | "Low energy, may be depleted or withdrawn" |
+
+### LLM Question Generation
+
+All loaded context flows into `generate_personalized_questions()`:
+
+```python
+async def generate_personalized_questions(
+    sense: SenseFrame,
+    constitution: ConstitutionContext,
+    known: Dict[str, KnownFact],
+    inferred: Dict[str, Inference],
+) -> List[DiagnosticQuestion]:
+    """LLM generates 2-3 questions about genuine gaps."""
+```
+
+The LLM prompt includes structured sections:
+- Constitution (OS type, dominant dosha)
+- **Recent things they've told us** — recent STM conversation entries
+- **Recent behaviors (last 7 days)** — from behavior_log (e.g., "caffeine_evening (aggravates vata)")
+- **Past episodes of this symptom** — from symptom_log (what helped/didn't)
+- **Known wellness context** — topic-specific memories from episodic search
+- **Learned personal patterns** — from personal_patterns (e.g., "caffeine → scattered, 8x, 80%")
+- **Symptom classification** — deterministic dosha mapping
+- **Current state** — drift/guna inferences from state vectors
+- The user's current message and concern
+- Explicit instruction: "Do NOT ask about things we already know"
 
 ### Knowledge Gap Output
 
@@ -178,120 +242,46 @@ class KnowledgeQuery:
 class KnowledgeGap:
     known: Dict[str, KnownFact]        # What we already know
     inferred: Dict[str, Inference]      # What we can deduce
-    unknown: List[DiagnosticQuestion]   # What we need to ask
-    constitution_context: ConstitutionContext
+    unknown: List[DiagnosticQuestion]   # Personalized questions from LLM
+    constitution: ConstitutionContext
 ```
 
 ---
 
 ## 3. Diagnostic Knowledge Base
 
-### Structure
+### Role Change (February 2026)
 
-The system maintains domain-specific diagnostic trees:
+The Diagnostic Knowledge Base (`diagnostic_kb.py`) previously drove question generation with static `DIAGNOSTIC_PATHS`. As of February 2026, **question generation is handled by the LLM** (see Section 2). The knowledge base now serves two purposes:
 
-```python
-@dataclass
-class DiagnosticPath:
-    domain: str                           # "body"
-    sub_domain: str                       # "head_neurological"
-    symptom: str                          # "headaches"
+1. **Protocol path** (Stage 4) — `get_symptom_from_sense()` → `match_symptom()` → `get_symptom_insight()` provide constitution-specific guidance for response synthesis
+2. **Constitution guidance** — `get_constitution_guidance()` provides dosha-specific tone, likely causes, and things to avoid
 
-    # Dosha-specific questions (ordered by priority)
-    dosha_questions: Dict[str, List[DiagnosticQuestion]]
+### Symptom Routing
 
-    # Keywords to search in memory
-    memory_queries: List[KnowledgeQuery]
+`get_symptom_from_sense()` routes symptoms through a three-tier fallback:
 
-    # State vector signals to check
-    state_signals: List[str]
-
-    # Follow-up paths based on answers
-    follow_ups: Dict[str, "DiagnosticPath"]
+```
+1. DIAGNOSTIC_PATHS match     (8 symptoms: headache, sleep, anxiety, etc.)
+2. SYMPTOM_DOSHA_MAP match    (48 symptoms from causal_reasoning.py)
+3. Domain default             (body→energy, mind→stress, life→work)
 ```
 
-### Example: Headaches
+This routing is used by the **protocol path** in Stage 4 to find constitution-specific insights, not for question generation.
 
-```yaml
-headaches:
-  domain: body
-  sub_domain: head_neurological
+### Constitution Guidance (Still Active)
 
-  dosha_questions:
-    vata:
-      priority_1:
-        id: pain_quality
-        question: "Is the pain more throbbing or pulsing?"
-        why: "Throbbing suggests vata aggravation"
-      priority_2:
-        id: anxiety_connection
-        question: "Does it come on when you're feeling anxious or scattered?"
-        why: "Vata headaches often linked to anxiety"
+The knowledge base provides dosha-specific response guidance:
 
-    pitta:
-      priority_1:
-        id: pain_quality
-        question: "Is the pain sharp or burning?"
-        why: "Sharp/burning suggests pitta aggravation"
-      priority_2:
-        id: heat_trigger
-        question: "Does it come on after intense focus or heat exposure?"
-        why: "Pitta headaches often heat/intensity related"
+| Dosha | Likely Causes | Tone | Avoid Suggesting |
+|-------|---------------|------|------------------|
+| **Vata** | anxiety, irregular routine, cold/dry, overstimulation | Grounding, calming | Intense exercise, stimulants |
+| **Pitta** | intensity, heat, skipped meals, overwork | Cooling, measured | More pushing, competition |
+| **Kapha** | sinus, sluggishness, oversleep, heavy food | Energizing, clear | More rest, heavy foods |
 
-    kapha:
-      priority_1:
-        id: pain_quality
-        question: "Is the pain more dull, heavy, or pressure-like?"
-        why: "Dull/heavy suggests kapha/sinus involvement"
-      priority_2:
-        id: congestion
-        question: "Is there any sinus pressure or congestion with it?"
-        why: "Kapha headaches often sinus-related"
+### DIAGNOSTIC_PATHS (Reference Only)
 
-  memory_queries:
-    - id: sleep_quality
-      keywords: [sleep, insomnia, tired, rest, night, woke]
-      semantic: "how has their sleep been"
-      recency_days: 14
-
-    - id: meals_hydration
-      keywords: [lunch, dinner, meal, eat, skip, water, drink, hungry]
-      semantic: "eating and hydration patterns"
-      recency_days: 7
-
-    - id: stress_work
-      keywords: [stress, work, deadline, pressure, busy, overwhelm]
-      semantic: "stress and work pressure"
-      recency_days: 14
-
-    - id: screen_time
-      keywords: [screen, computer, phone, eyes, strain]
-      semantic: "screen and eye strain"
-      recency_days: 7
-
-  state_signals:
-    - dosha_drift_pitta    # Check if pitta elevated
-    - dosha_drift_vata     # Check if vata elevated
-    - rajas_dominant       # High activation mode
-    - fatigue_high         # From rhythm_state
-    - stress_rising        # From rhythm_state
-
-  constitution_guidance:
-    vata_dominant:
-      likely_causes: [anxiety, irregular_routine, cold_dry, overstimulation]
-      tone: grounding, calming
-      avoid_suggesting: intense_exercise, stimulants
-
-    pitta_dominant:
-      likely_causes: [intensity, heat, skipped_meals, overwork]
-      tone: cooling, measured
-      avoid_suggesting: more_pushing, competition
-
-    kapha_dominant:
-      likely_causes: [sinus, sluggishness, oversleep, heavy_food]
-      tone: energizing, clear
-      avoid_suggesting: more_rest, heavy_foods
-```
+The 8 pre-built diagnostic paths (headaches, sleep, anxiety, energy, digestion, skin, stress, mood) remain in code for reference and constitution guidance lookups. They are **no longer used for question generation** — that's handled by `generate_personalized_questions()` in `knowledge_gap.py`.
 
 ---
 
@@ -457,24 +447,25 @@ Respond using the template: ACKNOWLEDGE → CONNECT (if data exists) → INQUIRE
 
 ## 7. Implementation Phases
 
-### Phase 1: MVP
+### Phase 1: MVP (Complete)
 
-1. **Sensing Layer** — Basic domain classification + symptom extraction
-2. **Knowledge Gap** — Query episodic memory + state vectors
-3. **Response Strategy** — Simple INQUIRE vs RESPOND mode
-4. **Templates** — 3 basic templates
+1. **Sensing Layer** — LLM-powered domain classification + symptom extraction
+2. **Knowledge Gap** — Constitution loading + state vectors + memory search
+3. **Response Strategy** — INQUIRE / CONNECT_AND_INQUIRE / RESPOND modes
+4. **Templates** — 3 response templates with tone adaptation
 
-### Phase 2: Diagnostic Trees
+### Phase 2: LLM-Powered Questions (Complete — February 2026)
 
-1. **Build diagnostic paths** for common symptoms (headaches, sleep, anxiety, energy)
-2. **Constitution-specific questions** for each symptom
-3. **Follow-up paths** based on answers
+1. **Inverted flow** — Load personal context first, then generate questions via LLM
+2. **Keyword-free STM** — Recent memory fetched without keyword filtering
+3. **SYMPTOM_DOSHA_MAP routing** — 48-symptom fallback for protocol path
+4. **JSONB parsing fixes** — State vectors correctly parsed from asyncpg strings
 
-### Phase 3: Learning
+### Phase 3: Learning (Planned)
 
 1. **Track question effectiveness** — Did the question lead to useful info?
-2. **Refine memory queries** — Improve recall precision
-3. **Personalize diagnostic paths** — Learn individual patterns
+2. **Refine memory recall** — Improve what context gets loaded
+3. **Feedback loop** — User responses inform future question quality
 
 ---
 
@@ -500,20 +491,23 @@ OUTPUT: SenseFrame with domain, symptom, tone, specificity
 
 ```
 INPUT: SenseFrame + User's person_id
-PROCESS:
-  1. Load constitution from personal_model.operating_system
-  2. Load state vectors from memory_episodic
-  3. Search short-term and episodic memory for relevant topics
-  4. Generate inferences from dosha drift and guna mode
-DECISION: Classify each diagnostic topic as KNOWN/INFERRED/UNKNOWN
-OUTPUT: KnowledgeGap with constitution context
+PROCESS (parallel):
+  1a. Load constitution + state vectors (personal_model + memory_episodic)
+  1b. Fetch 10 most recent STM entries (no keyword filtering)
+THEN (sequential):
+  2. Episodic memory search for older topic-specific facts (embedding-based)
+  3. Check for unresolved references (pronouns → semantic search)
+  4. Generate inferences from dosha drift + guna mode
+  5. LLM generates personalized questions using ALL above context
+DECISION: LLM determines what's unknown based on full personal context
+OUTPUT: KnowledgeGap { known facts, inferences, personalized questions }
 ```
 
 **Key factors:**
-- Dosha baseline (vata/pitta/kapha percentages)
+- Constitution (dosha baseline, OS type, life context)
 - Current state vs baseline (drift detection)
-- Recency of known facts (recent > moderate > old)
-- Confidence threshold for "known" (> 0.5)
+- Recent conversation context (keyword-free STM)
+- LLM sees everything — generates questions about genuine gaps only
 
 ### Stage 3: Response Strategy Selection
 
@@ -566,13 +560,14 @@ OUTPUT: Complete LLM prompt
 | File | Purpose |
 |------|---------|
 | **Backend (Pipeline)** | |
-| `sakhi/apps/api/services/response/sensing.py` | Domain classification, SenseFrame |
-| `sakhi/apps/api/services/response/knowledge_gap.py` | Memory queries, gap analysis |
-| `sakhi/apps/api/services/response/diagnostic_kb.py` | Diagnostic knowledge base |
-| `sakhi/apps/api/services/response/strategy.py` | Response mode selection |
-| `sakhi/apps/api/services/response/synthesizer.py` | Context synthesis for LLM |
+| `sakhi/apps/api/services/response/sensing.py` | LLM-powered domain classification, SenseFrame extraction |
+| `sakhi/apps/api/services/response/knowledge_gap.py` | Context loading (constitution, STM, deterministic intelligence, episodic), inference engine, LLM question generation |
+| `sakhi/apps/api/services/response/diagnostic_kb.py` | Symptom routing (DIAGNOSTIC_PATHS + SYMPTOM_DOSHA_MAP), constitution guidance for synthesis |
+| `sakhi/apps/api/services/response/strategy.py` | Response mode selection (INQUIRE / CONNECT_AND_INQUIRE / RESPOND) |
+| `sakhi/apps/api/services/response/synthesizer.py` | Context synthesis — 3-block cognitive architecture prompt for final LLM call |
 | `sakhi/apps/api/services/response/templates.py` | Response templates |
-| `sakhi/apps/api/services/response/pipeline.py` | Main orchestration |
+| `sakhi/apps/api/services/response/pipeline.py` | Main orchestration — 5-stage pipeline |
+| `sakhi/apps/api/services/ayurveda/causal_reasoning.py` | SYMPTOM_DOSHA_MAP (48 symptoms), `get_recent_behaviors()`, `map_symptom_to_dosha()` — feeds knowledge gap + diagnostic_kb |
 | **Frontend (Debug)** | |
 | `apps/web/app/experience/converse/DebugPanel.tsx` | Debug panel component |
 | `apps/web/app/experience/converse/page.tsx` | Converse page with debug integration |
@@ -618,27 +613,34 @@ The Debug Panel provides a "glass pane" view of the entire execution flow. It's 
 
 ## 11. Examples
 
-### Example 1: First Interaction — Headaches
+### Example 1: New User — Joints Hurt (No History)
 
-**User:** "I keep getting headaches recently"
+**User:** "my joints hurt"
 
 **SenseFrame:**
 - Domain: BODY
-- Symptom: headaches
-- Temporal: recurring
+- Symptom: joints
+- Temporal: unspecified
 - Specificity: low
 
-**Knowledge Gap:**
-- Operating System: Pitta-dominant (45% pitta)
-- Known: (nothing — first interaction post-onboarding)
-- Unknown: pain_quality, timing, sleep, meals
+**Knowledge Gap (context loaded first):**
+- Constitution: Vata-dominant (42%), Adaptive OS
+- Recent STM: (empty — new user)
+- Episodic: (empty)
+- Inferences: (none — no state vectors yet)
+
+**LLM generates questions seeing:** empty personal context, vata constitution, joint pain
+
+**Questions generated:**
+1. "Is the stiffness worse in the morning, or does it build through the day?" *(high — vata pattern: morning stiffness vs activity-related)*
+2. "Has anything changed recently — sleep, activity, weather?" *(medium — vata triggers)*
 
 **Response (INQUIRE mode):**
-> "Headaches can tell us a lot. Given your nature, I'd want to understand a bit more. Is the pain more sharp and concentrated, or dull and heavy? And does it tend to come on after intense work or screen time?"
+> "Joint discomfort can tell us a lot. Is the stiffness worse when you first get up, or does it build through the day? And has anything changed recently — sleep, activity level, or even the weather?"
 
 ---
 
-### Example 2: Returning User — Headaches
+### Example 2: Returning User — Headaches (Rich History)
 
 **User:** "I keep getting headaches recently"
 
@@ -648,20 +650,30 @@ The Debug Panel provides a "glass pane" view of the entire execution flow. It's 
 - Temporal: recurring
 - Specificity: low
 
-**Knowledge Gap:**
-- Operating System: Pitta-dominant (45% pitta)
-- Current State: Pitta elevated (+7%), Rajas dominant
-- Known:
-  - Sleep: "mentioned poor sleep 3 days ago"
-  - Meals: "skipped lunch twice this week"
-- Unknown: pain_quality, timing specifics
+**Knowledge Gap (context loaded first):**
+- Constitution: Kapha-dominant (40%), Conservation OS
+- Recent STM (keyword-free, 10 entries):
+  - "my skin has been very dry lately"
+  - "I've been drinking more water but still feel dehydrated"
+  - "some congestion and back stiffness"
+  - "I had a headache yesterday afternoon"
+  - "I've been sleeping about 7 hours"
+- Inferences: (no recent episodic entries with state vectors)
+
+**LLM generates questions seeing:** kapha constitution, dry skin, hydration efforts, congestion, previous headache, sleep data
+
+**Questions generated:**
+1. "Is the headache more of a dull pressure, especially around the forehead or sinuses?" *(high — kapha pattern + knows about congestion)*
+2. "Does it tend to come on in the afternoon, or is it there when you wake up?" *(medium — timing unknown, previous one was afternoon)*
+
+Note: LLM does NOT ask about sleep (knows: 7 hours), hydration (knows: drinking more water), or skin (not relevant to headaches).
 
 **Response (CONNECT_AND_INQUIRE mode):**
-> "Headaches again... I'm noticing you mentioned sleep has been rough, and you've been skipping meals during busy stretches. For your system, that combination often shows up as head tension. Is the pain more sharp, or more of a dull pressure?"
+> "Headaches again... I'm noticing you mentioned some congestion earlier, and your system tends toward that kind of buildup. Is the pain more of a dull pressure, especially around the forehead? And does it tend to hit in the afternoon, like the one yesterday?"
 
 ---
 
-### Example 3: Enough Information
+### Example 3: Enough Information — Detailed Message
 
 **User:** "I keep getting headaches recently — sharp pain at my temples, usually after long meetings"
 
@@ -671,14 +683,14 @@ The Debug Panel provides a "glass pane" view of the entire execution flow. It's 
 - Temporal: recurring
 - Specificity: HIGH (location, quality, timing given)
 
-**Knowledge Gap:**
-- Operating System: Pitta-dominant
-- Known:
-  - Pain: sharp, temples (from message)
-  - Timing: after meetings (from message)
-  - Sleep: poor (from memory)
-  - Meals: irregular (from memory)
-- Unknown: (nothing critical)
+**Knowledge Gap (context loaded first):**
+- Constitution: Pitta-dominant (45%)
+- Recent STM: "mentioned poor sleep", "skipped lunch twice", "been in back-to-back meetings"
+- Inferences: Pitta elevated +7%, Rajas dominant
+
+**LLM generates questions seeing:** pitta constitution, poor sleep, skipped meals, meetings, AND the message already says sharp/temples/after meetings
+
+**Questions generated:** (empty or only low-priority — user already gave specifics)
 
 **Response (RESPOND mode):**
 > "Sharp pain at the temples after long meetings — that's a classic intensity pattern for your system. The combination of mental heat from focused work, plus the sleep and meal gaps you've mentioned, is likely building pressure. A few things that often help: step outside for 2 minutes between meetings for cooler air, and try not to skip lunch even if it's quick. Does that feel doable?"
@@ -711,6 +723,6 @@ The Debug Panel provides a "glass pane" view of the entire execution flow. It's 
 
 ---
 
-*Document Version: 1.1*
+*Document Version: 2.1*
 *Created: January 2026*
-*Updated: January 2026 — Added Debug Panel, Decision-Making Flow*
+*Updated: February 2026 — Deterministic intelligence wired into knowledge gap pipeline (personal patterns, behavior log, symptom episodes, symptom→dosha mapping). LLM-powered personalized questions, keyword-free STM, inverted knowledge gap flow.*

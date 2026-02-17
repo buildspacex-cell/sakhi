@@ -112,6 +112,7 @@ SYMPTOM_DOSHA_MAP = {
     "heartburn": "pitta",
     "inflammation": "pitta",
     "acne": "pitta",
+    "rash": "pitta",
     "overheated": "pitta",
     "competitive": "pitta",
     "critical": "pitta",

@@ -663,6 +663,97 @@ GENERAL_PATH = DiagnosticPath(
 )
 
 
+# Skin / dryness diagnostic path
+SKIN_DRYNESS_PATH = DiagnosticPath(
+    symptom="dry_skin",
+    domain="body",
+    sub_domain="skin",
+    dosha_questions={
+        "vata": [
+            DiagnosticQuestion(
+                id="skin_seasonal",
+                question="Does the dryness get worse in colder or drier weather?",
+                priority="high",
+                dosha_relevance="vata",
+                why="Vata dryness amplified by cold/dry environment",
+            ),
+            DiagnosticQuestion(
+                id="skin_routine",
+                question="Has your daily routine been irregular — meals, sleep, hydration?",
+                priority="high",
+                dosha_relevance="vata",
+                why="Irregular routine depletes moisture retention",
+            ),
+            DiagnosticQuestion(
+                id="skin_oil_intake",
+                question="Have you been eating mostly dry or light foods — salads, crackers, raw veggies?",
+                priority="medium",
+                dosha_relevance="vata",
+                why="Dry foods increase internal dryness",
+            ),
+        ],
+        "pitta": [
+            DiagnosticQuestion(
+                id="skin_heat",
+                question="Is the dryness accompanied by redness, irritation, or a burning sensation?",
+                priority="high",
+                dosha_relevance="pitta",
+                why="Pitta skin dryness often inflammatory",
+            ),
+            DiagnosticQuestion(
+                id="skin_sun_heat",
+                question="Have you had more sun exposure or been in hot environments recently?",
+                priority="medium",
+                dosha_relevance="pitta",
+                why="Heat depletes skin's natural moisture barrier",
+            ),
+        ],
+        "kapha": [
+            DiagnosticQuestion(
+                id="skin_circulation",
+                question="Does the dry skin feel thick or rough rather than thin and flaky?",
+                priority="high",
+                dosha_relevance="kapha",
+                why="Kapha dryness relates to poor circulation, not lack of oil",
+            ),
+            DiagnosticQuestion(
+                id="skin_movement",
+                question="Have you been more sedentary than usual?",
+                priority="medium",
+                dosha_relevance="kapha",
+                why="Stagnation reduces blood flow to skin",
+            ),
+        ],
+    },
+    constitution_guidance={
+        "vata": ConstitutionGuidance(
+            likely_causes=["cold_dry_climate", "irregular_routine", "insufficient_oils_in_diet", "raw_dry_foods", "dehydration"],
+            tone="warming, nourishing, consistent",
+            avoid_suggesting=["cold_foods", "raw_salads", "harsh_soaps", "skipping_meals"],
+        ),
+        "pitta": ConstitutionGuidance(
+            likely_causes=["heat_exposure", "inflammation", "spicy_foods", "harsh_products", "sun_damage"],
+            tone="cooling, gentle, protective",
+            avoid_suggesting=["hot_showers", "spicy_foods", "harsh_skincare", "direct_sun"],
+        ),
+        "kapha": ConstitutionGuidance(
+            likely_causes=["poor_circulation", "sluggish_metabolism", "sedentary_habits", "heavy_foods"],
+            tone="stimulating, warming, activating",
+            avoid_suggesting=["more_oils", "heavy_moisturizers", "staying_still"],
+        ),
+    },
+    universal_questions=[
+        DiagnosticQuestion(
+            id="skin_duration",
+            question="How long has this been going on — days, weeks, or longer?",
+            priority="medium",
+            dosha_relevance="universal",
+            why="Duration distinguishes acute trigger from chronic pattern",
+        ),
+    ],
+)
+
+
 # =============================================================================
 # PATH REGISTRY
 # =============================================================================
@@ -679,6 +770,15 @@ DIAGNOSTIC_PATHS: Dict[str, DiagnosticPath] = {
     "fatigue": ENERGY_PATH,
     "energy": ENERGY_PATH,
     "exhausted": ENERGY_PATH,
+    # Skin domain
+    "dry_skin": SKIN_DRYNESS_PATH,
+    "skin": SKIN_DRYNESS_PATH,
+    "dryness": SKIN_DRYNESS_PATH,
+    "dry": SKIN_DRYNESS_PATH,
+    "rash": SKIN_DRYNESS_PATH,
+    "itch": SKIN_DRYNESS_PATH,
+    "itchy": SKIN_DRYNESS_PATH,
+    "acne": SKIN_DRYNESS_PATH,
     # Mind domain
     "anxiety": ANXIETY_PATH,
     "anxious": ANXIETY_PATH,
@@ -825,6 +925,21 @@ def get_symptom_from_sense(sense: SenseFrame) -> str:
         if kw in DIAGNOSTIC_PATHS:
             return kw
 
+    # Try alias matching on symptom, sub_domain, and keywords
+    for candidate in [sense.symptom, sense.sub_domain] + (sense.keywords or []):
+        if candidate:
+            canonical = match_symptom(candidate)
+            if canonical and canonical in DIAGNOSTIC_PATHS:
+                return canonical
+
+    # Check SYMPTOM_DOSHA_MAP (48 symptoms — broader than DIAGNOSTIC_PATHS)
+    from sakhi.apps.api.services.ayurveda.causal_reasoning import SYMPTOM_DOSHA_MAP
+    for candidate in [sense.symptom, sense.sub_domain] + (sense.keywords or []):
+        if candidate:
+            key = candidate.lower().replace(" ", "_")
+            if key in SYMPTOM_DOSHA_MAP:
+                return key
+
     # Fallback to domain-based default
     domain_defaults = {
         "body": "energy",
@@ -891,6 +1006,13 @@ _SYMPTOM_ALIASES = {
     "sore_throat": "sore_throat", "sore throat": "sore_throat",
     "throat pain": "sore_throat", "scratchy throat": "sore_throat",
     "throat": "sore_throat",
+    # Skin / Dryness
+    "dry_skin": "dry_skin", "dry skin": "dry_skin", "skin dry": "dry_skin",
+    "dryness": "dry_skin", "skin dryness": "dry_skin", "flaky skin": "dry_skin",
+    "rough skin": "dry_skin", "itchy skin": "dry_skin", "skin itch": "dry_skin",
+    "skin": "dry_skin",
+    "rash": "rash", "skin rash": "rash", "hives": "rash",
+    "acne": "acne", "pimples": "acne", "breakout": "acne",
 }
 
 # OS-dosha insight templates: explain WHY this dosha-type symptom makes sense
@@ -943,6 +1065,12 @@ def match_symptom(symptom: str) -> Optional[str]:
     for alias, can in _SYMPTOM_ALIASES.items():
         if alias in key:
             return can
+
+    # Check SYMPTOM_DOSHA_MAP directly (48 symptoms)
+    from sakhi.apps.api.services.ayurveda.causal_reasoning import SYMPTOM_DOSHA_MAP
+    normalized = key.replace(" ", "_")
+    if normalized in SYMPTOM_DOSHA_MAP:
+        return normalized
 
     return None
 

@@ -4,7 +4,6 @@ Unit tests for Priority 3 reflection workers.
 Workers tested:
 - reflect_morning_presence: Morning awareness and task summarization
 - reflect_value_alignment: Value-theme alignment scoring
-- reflective_loop: Legacy shim/adapter
 - reflect_person_memory: Journal summarization and embedding (partial)
 """
 
@@ -355,31 +354,6 @@ class TestReflectValueAlignment:
             assert record["person_id"] == DEMO_USER_ID
             assert record["latest_comment"] == "Values diverge"
             assert record["last_score"] == 0.4
-
-
-# =============================================================================
-# reflective_loop Tests
-# =============================================================================
-
-class TestReflectiveLoop:
-    """Tests for reflective_loop shim module."""
-
-    def test_import_raises_when_legacy_missing(self):
-        """Should raise ImportError when legacy module is missing."""
-        # The reflective_loop module will try to import from legacy namespace
-        # Since that doesn't exist, it should raise ImportError
-        with pytest.raises(ImportError) as exc_info:
-            # Force re-import to trigger the ImportError
-            import importlib
-            import sys
-
-            # Remove cached module if present
-            if "sakhi.apps.worker.tasks.reflective_loop" in sys.modules:
-                del sys.modules["sakhi.apps.worker.tasks.reflective_loop"]
-
-            from sakhi.apps.worker.tasks import reflective_loop
-
-        assert "apps.worker.tasks.reflective_loop" in str(exc_info.value)
 
 
 # =============================================================================

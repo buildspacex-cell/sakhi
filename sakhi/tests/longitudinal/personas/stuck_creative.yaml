@@ -1,0 +1,233 @@
+# Stuck Creative Persona
+# Creative person dealing with stagnation and loss of motivation
+
+id: stuck_creative
+name: Alex
+description: >
+  A 28-year-old graphic designer who used to love their work.
+  After a difficult year (pandemic isolation, relationship ending),
+  they've lost their spark. Feels stuck but knows something needs
+  to change. Kapha-dominant, currently in stagnation friction.
+
+dosha_baseline:
+  vata: 0.20
+  pitta: 0.30
+  kapha: 0.50
+
+rhythm:
+  morning: low
+  afternoon: medium
+  evening: medium
+  best_work_time: afternoon
+  sleep_quality: oversleeping
+
+traits:
+  - name: creative
+    description: Naturally artistic, sees beauty in things
+    intensity: 0.70
+    journal_patterns:
+      - "noticed something beautiful"
+      - "had an idea for"
+      - "inspired by"
+      - "want to create"
+
+  - name: introspective
+    description: Naturally reflective, thinks deeply
+    intensity: 0.75
+    journal_patterns:
+      - "been thinking about"
+      - "wondering if"
+      - "realized"
+      - "makes me think"
+
+  - name: comfort_seeking
+    description: Tends toward comfort over growth
+    intensity: 0.65
+    journal_patterns:
+      - "stayed in"
+      - "easier to just"
+      - "didn't feel like"
+      - "comfortable but"
+
+  - name: emotionally_deep
+    description: Feels things deeply, processes slowly
+    intensity: 0.80
+    journal_patterns:
+      - "still processing"
+      - "the grief"
+      - "miss them"
+      - "hard to let go"
+
+life_context:
+  occupation: Freelance Graphic Designer
+  relationships:
+    ex: ended 8 months ago, still healing
+    sister: supportive, lives in another city
+    client_friend: Jake, became friends through work
+  current_challenges:
+    - Lost motivation for design work
+    - Apartment feels empty
+    - Turning down client work
+    - Weight gain from inactivity
+  values:
+    - Authenticity
+    - Beauty
+    - Connection
+    - Meaning
+  hobbies:
+    - drawing (haven't touched sketchbook in weeks)
+    - hiking (used to go with ex)
+    - cooking (only making comfort food now)
+
+arc:
+  name: Awakening from Stagnation
+  description: >
+    Starts deep in stagnation - unmotivated, isolated, stuck in routines.
+    Slowly begins to reengage with life through small steps.
+    Rediscovers creative spark through new connections.
+
+  phases:
+    - name: Deep Stagnation
+      duration_days: 21
+      emotional_state: numb and stuck
+      energy_modifier: 0.6
+      dosha_shift:
+        vata: 0.15
+        pitta: 0.20
+        kapha: 0.65
+      themes:
+        - same routine
+        - no motivation
+        - what's the point
+        - comfortable numbness
+      events:
+        - Turned down another client
+        - Ordered takeout again
+        - Canceled plans with sister
+      entry_frequency: 0.5
+
+    - name: Glimmers
+      duration_days: 14
+      emotional_state: curious but hesitant
+      energy_modifier: 0.7
+      dosha_shift:
+        vata: 0.20
+        pitta: 0.25
+        kapha: 0.55
+      themes:
+        - small sparks of interest
+        - remembering who I was
+        - tiny steps forward
+        - mixed feelings
+      events:
+        - Went for a short walk
+        - Opened sketchbook briefly
+        - Sister visited for weekend
+      entry_frequency: 0.8
+
+    - name: Active Engagement
+      duration_days: 14
+      emotional_state: effortful but hopeful
+      energy_modifier: 0.85
+      dosha_shift:
+        vata: 0.25
+        pitta: 0.35
+        kapha: 0.40
+      themes:
+        - trying new things
+        - discomfort as growth
+        - energy returning
+        - social reconnection
+      events:
+        - Joined local art meetup
+        - Took on small design project
+        - Went hiking alone
+        - Cooked a real meal
+      entry_frequency: 1.0
+
+    - name: Momentum Building
+      duration_days: 21
+      emotional_state: engaged and growing
+      energy_modifier: 1.0
+      dosha_shift:
+        vata: 0.25
+        pitta: 0.40
+        kapha: 0.35
+      themes:
+        - creative ideas returning
+        - enjoying work again
+        - new connections
+        - gratitude for change
+      events:
+        - Finished design project, felt good
+        - Made a new friend at art meetup
+        - Started morning walks
+        - Created art just for fun
+      entry_frequency: 1.2
+
+writing_style: introspective
+typical_entry_length: medium
+entry_times:
+  - afternoon
+  - evening
+
+checkpoints:
+  # Week 1-2: Deep stagnation detection
+  - day: 14
+    name: Stagnation Detection
+    assertions:
+      friction_state:
+        expected: stagnation
+        min_confidence: 0.65
+      theme_emerged:
+        keywords: ["stuck", "motivation", "routine"]
+        min_occurrences: 4
+
+  # Week 3: Still in stagnation
+  - day: 21
+    name: Prolonged Stagnation
+    assertions:
+      dosha_drift:
+        dosha: kapha
+        direction: elevated
+        min_percentage: 15
+      pattern_crystallized:
+        type: behavior
+        value: avoidance
+        min_occurrences: 4
+
+  # Week 5: Glimmers starting
+  - day: 35
+    name: Early Movement
+    assertions:
+      theme_emerged:
+        keywords: ["walk", "tried", "maybe"]
+        min_occurrences: 2
+
+  # Week 7: Active engagement
+  - day: 49
+    name: Engagement Phase
+    assertions:
+      friction_state:
+        expected_in: [stagnation, balanced]
+        min_confidence: 0.5
+      rhythm_shift:
+        slot: morning
+        direction: improving
+
+  # Week 10: Momentum
+  - day: 70
+    name: Recovery Evidence
+    assertions:
+      friction_state:
+        expected_in: [balanced, intensity]  # Healthy pitta returning
+        min_confidence: 0.5
+      pattern_crystallized:
+        type: behavior
+        value: creative_engagement
+        min_occurrences: 4
+      theme_emerged:
+        keywords: ["create", "design", "art", "inspired"]
+        min_occurrences: 5
+
+version: "1.0"

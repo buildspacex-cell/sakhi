@@ -91,7 +91,7 @@ async def build_conversation_context(person_id: str) -> Dict[str, Any]:
 
     personal_rows = await dbfetch(
         """
-        SELECT mind_state, emotion_state, rhythm_state, short_term, goals_state, data
+        SELECT mind_state, emotion_state, rhythm_state, short_term, goals_state, body_state, soul_state, data
         FROM personal_model
         WHERE person_id = $1
         """,
@@ -106,6 +106,8 @@ async def build_conversation_context(person_id: str) -> Dict[str, Any]:
         personal.setdefault("rhythm_state", data_blob.get("rhythm_state"))
         personal.setdefault("short_term", data_blob.get("short_term"))
         personal.setdefault("goals_state", data_blob.get("goals_state"))
+        personal.setdefault("body_state", data_blob.get("body_state"))
+        personal.setdefault("soul_state", data_blob.get("soul_state"))
 
     conversation_rows = await dbfetch(
         """
@@ -206,6 +208,8 @@ async def build_conversation_context(person_id: str) -> Dict[str, Any]:
         "emotion": _ensure_mapping(personal.get("emotion_state")),
         "rhythm": _ensure_mapping(personal.get("rhythm_state")),
         "goals": _ensure_mapping(personal.get("goals_state")),
+        "body": _ensure_mapping(personal.get("body_state")),
+        "soul": _ensure_mapping(personal.get("soul_state")),
         "short_term": _ensure_mapping(personal.get("short_term")),
         "conversation": conversation,
         "continuity": continuity,

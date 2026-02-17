@@ -17,12 +17,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from sakhi.apps.api.services.response.diagnostic_kb import (
-    get_diagnostic_questions,
-    get_symptom_from_sense,
-)
 from sakhi.apps.api.services.response.knowledge_gap import (
-    DiagnosticQuestion,
     KnowledgeGap,
     analyze_knowledge_gap,
 )
@@ -125,26 +120,10 @@ async def stage_2_knowledge_gap(
     """
     Stage 2: Knowledge Gap Analysis
 
-    Loads constitution context, searches memory, generates inferences,
-    and identifies diagnostic questions to ask.
+    Loads personal context (constitution, memory, state vectors),
+    then generates personalized diagnostic questions via LLM.
     """
-    # Get symptom for diagnostic lookup
-    symptom = get_symptom_from_sense(sense)
-
-    # Get diagnostic questions for this symptom and constitution
-    # Note: We need to load constitution first, so we do a preliminary load
-    from sakhi.apps.api.services.response.knowledge_gap import load_constitution_context
-
-    constitution = await load_constitution_context(person_id)
-    diagnostic_questions = get_diagnostic_questions(
-        symptom,
-        constitution.dominant_dosha,
-    )
-
-    # Run full knowledge gap analysis
-    gap = await analyze_knowledge_gap(person_id, sense, diagnostic_questions)
-
-    return gap
+    return await analyze_knowledge_gap(person_id, sense)
 
 
 def stage_3_strategy(

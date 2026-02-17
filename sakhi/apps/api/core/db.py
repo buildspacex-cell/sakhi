@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import uuid
 from typing import Any, Sequence
@@ -8,6 +9,24 @@ import json
 import asyncpg
 
 POOL: asyncpg.Pool | None = None
+_POOL_LOOP_ID: int | None = None  # id() of the event loop that created POOL
+
+
+async def reset_pool() -> None:
+    """Close and discard the current pool.
+
+    Must be called when the event loop changes (e.g. between successive
+    ``asyncio.run()`` calls in the RQ worker).  The next ``get_pool()``
+    call will create a fresh pool on the current loop.
+    """
+    global POOL, _POOL_LOOP_ID
+    if POOL is not None:
+        try:
+            await POOL.close()
+        except Exception:
+            pass
+        POOL = None
+        _POOL_LOOP_ID = None
 
 
 def _normalize_arg(val: Any) -> Any:
@@ -17,7 +36,19 @@ def _normalize_arg(val: Any) -> Any:
 
 
 async def get_pool() -> asyncpg.Pool:
-    global POOL
+    global POOL, _POOL_LOOP_ID
+
+    # Detect stale pool: if the event loop changed (e.g. new asyncio.run()
+    # in an RQ worker), the old pool's connections are unusable.
+    current_loop_id = id(asyncio.get_running_loop())
+    if POOL is not None and _POOL_LOOP_ID != current_loop_id:
+        try:
+            await POOL.close()
+        except Exception:
+            pass
+        POOL = None
+        _POOL_LOOP_ID = None
+
     if POOL is None:
         dsn = os.getenv("DATABASE_URL")
         if not dsn:
@@ -77,6 +108,7 @@ async def get_pool() -> asyncpg.Pool:
             statement_cache_size=0,
             init=_register_codecs,
         )
+        _POOL_LOOP_ID = current_loop_id
     return POOL
 
 

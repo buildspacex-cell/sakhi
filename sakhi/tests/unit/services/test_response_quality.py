@@ -1,10 +1,11 @@
 """
-Tests for response quality guardrails.
+Tests for response quality guardrails and prompt architecture.
 
 Ensures:
-- Help-first guardrail is present
-- New vs returning user guardrail is present
+- Legacy guardrails list still has expected entries
+- Adaptive prompt uses 3-block cognitive architecture
 - Adaptive prompt contains no Ayurvedic jargon (except the "never say" instruction)
+- SAKHI_INSTRUCTIONS contains friction framework, practice rule, examples
 - Base prompt voice is aligned with adaptive
 """
 
@@ -12,6 +13,7 @@ import pytest
 
 from sakhi.apps.api.services.response.synthesizer import (
     JARGON_FREE_GUARDRAILS,
+    SAKHI_INSTRUCTIONS,
     build_adaptive_prompt,
     SynthesizedContext,
 )
@@ -19,7 +21,7 @@ from sakhi.apps.api.services.conversation_v2.conversation_reasoner import build_
 
 
 class TestGuardrails:
-    """Verify the guardrail list has the expected entries."""
+    """Verify the legacy guardrail list has the expected entries."""
 
     def test_help_first_guardrail_present(self):
         """P0 fix: help-first guardrail must be in the list."""
@@ -33,7 +35,6 @@ class TestGuardrails:
 
     def test_no_ayurvedic_jargon_in_guardrails(self):
         """Guardrails themselves should not use jargon except to say 'never use these'."""
-        # The one guardrail that mentions jargon is the "NEVER use" instruction
         for g in JARGON_FREE_GUARDRAILS:
             if "NEVER" in g and "vata" in g.lower():
                 continue  # This is the prohibition guardrail — it names them to ban them
@@ -42,12 +43,86 @@ class TestGuardrails:
             assert "kapha" not in g.lower(), f"Jargon found in guardrail: {g}"
 
     def test_guardrail_count(self):
-        """Should have 10 guardrails after P0 additions."""
+        """Should have 10 guardrails."""
         assert len(JARGON_FREE_GUARDRAILS) == 10
 
 
-class TestAdaptivePromptJargonFree:
-    """Verify the adaptive prompt output is jargon-free."""
+class TestSakhiInstructions:
+    """Verify the static SAKHI_INSTRUCTIONS block contains all required sections."""
+
+    def test_has_identity(self):
+        assert "Sakhi" in SAKHI_INSTRUCTIONS
+        assert "Personal Clarity and Rhythm Companion" in SAKHI_INSTRUCTIONS
+
+    def test_has_friction_framework(self):
+        assert "FRICTION FRAMEWORK" in SAKHI_INSTRUCTIONS
+        assert "Running Hot" in SAKHI_INSTRUCTIONS
+        assert "All Over the Place" in SAKHI_INSTRUCTIONS
+        assert "Stuck" in SAKHI_INSTRUCTIONS
+        assert "Good" in SAKHI_INSTRUCTIONS
+
+    def test_friction_has_action_vectors(self):
+        """Each friction state must have a response direction."""
+        assert "cool, slow, ease intensity" in SAKHI_INSTRUCTIONS
+        assert "ground, simplify, steady" in SAKHI_INSTRUCTIONS
+        assert "gently mobilize and lighten" in SAKHI_INSTRUCTIONS
+        assert "affirm and maintain" in SAKHI_INSTRUCTIONS
+
+    def test_has_reasoning_chain(self):
+        assert "REASONING CHAIN" in SAKHI_INSTRUCTIONS
+        assert "STEP 1" in SAKHI_INSTRUCTIONS
+        assert "STEP 5" in SAKHI_INSTRUCTIONS
+
+    def test_has_precision_practice_rule(self):
+        assert "PRECISION PRACTICE RULE" in SAKHI_INSTRUCTIONS
+        assert "ONE specific practice" in SAKHI_INSTRUCTIONS
+        assert "plain English" in SAKHI_INSTRUCTIONS
+
+    def test_has_recommendation_selection_rule(self):
+        """Must instruct LLM to pick ONE suggestion, not list everything."""
+        assert "Pick ONE suggestion" in SAKHI_INSTRUCTIONS
+        assert "Do NOT list everything" in SAKHI_INSTRUCTIONS
+
+    def test_has_behavioral_contract(self):
+        assert "Insightful, not informative" in SAKHI_INSTRUCTIONS
+        assert "Pattern-aware, not generic" in SAKHI_INSTRUCTIONS
+
+    def test_has_examples(self):
+        assert "Example 1" in SAKHI_INSTRUCTIONS
+        assert "Example 2" in SAKHI_INSTRUCTIONS
+        assert "Example 3" in SAKHI_INSTRUCTIONS
+        assert "Example 4" in SAKHI_INSTRUCTIONS
+
+    def test_bans_ayurvedic_jargon(self):
+        """Instructions should ban jargon explicitly."""
+        assert "Never use words like vata, pitta, kapha, dosha" in SAKHI_INSTRUCTIONS
+
+    def test_tone_and_length(self):
+        assert "60-120 words" in SAKHI_INSTRUCTIONS
+        assert "No more than 1 question per response" in SAKHI_INSTRUCTIONS
+
+    def test_has_friction_enforcement_rule(self):
+        """Friction state must be mandatory, not optional."""
+        assert "FRICTION ENFORCEMENT RULE" in SAKHI_INSTRUCTIONS
+        assert "You MUST explicitly reference it" in SAKHI_INSTRUCTIONS
+
+    def test_has_no_soft_hedging_rule(self):
+        """Must ban hedging language."""
+        assert "NO SOFT HEDGING RULE" in SAKHI_INSTRUCTIONS
+        assert "It might be" in SAKHI_INSTRUCTIONS
+
+    def test_has_pattern_integration_rule(self):
+        """Must require cross-symptom integration."""
+        assert "PATTERN INTEGRATION RULE" in SAKHI_INSTRUCTIONS
+        assert "ONE systemic explanation" in SAKHI_INSTRUCTIONS
+
+    def test_has_anti_generic_test(self):
+        """Must include the 'would this apply to anyone' test."""
+        assert "Would this advice apply to ANY person" in SAKHI_INSTRUCTIONS
+
+
+class TestAdaptivePromptArchitecture:
+    """Verify the adaptive prompt uses the 3-block cognitive architecture."""
 
     def _build_minimal_synth(self) -> SynthesizedContext:
         from sakhi.apps.api.services.response.translation import build_jargon_free_context
@@ -69,21 +144,69 @@ class TestAdaptivePromptJargonFree:
         ctx.guardrails = JARGON_FREE_GUARDRAILS.copy()
         return ctx
 
-    def test_adaptive_prompt_says_friend(self):
+    def test_has_three_blocks(self):
+        """Prompt must have SAKHI INSTRUCTIONS, THIS PERSON, THIS CONVERSATION blocks."""
         prompt = build_adaptive_prompt("my head hurts", self._build_minimal_synth())
-        assert "friend" in prompt.lower()
+        assert "FRICTION FRAMEWORK" in prompt
+        assert "THIS PERSON" in prompt
+        assert "THIS CONVERSATION" in prompt
 
-    def test_adaptive_prompt_bans_jargon(self):
+    def test_person_block_has_who_they_are(self):
         prompt = build_adaptive_prompt("my head hurts", self._build_minimal_synth())
-        # "vata, pitta, kapha, dosha" should only appear in the "never say" instruction
+        assert "WHO THEY ARE" in prompt
+
+    def test_person_block_has_right_now(self):
+        prompt = build_adaptive_prompt("my head hurts", self._build_minimal_synth())
+        assert "RIGHT NOW" in prompt
+        assert "Friction:" in prompt
+
+    def test_conversation_block_has_response_direction(self):
+        prompt = build_adaptive_prompt("my head hurts", self._build_minimal_synth())
+        assert "Response direction:" in prompt
+
+    def test_prompt_bans_jargon(self):
+        prompt = build_adaptive_prompt("my head hurts", self._build_minimal_synth())
         lines = prompt.split("\n")
         for line in lines:
-            if "never" in line.lower() and "say" in line.lower():
-                continue  # The ban instruction
+            if "never" in line.lower() and ("use" in line.lower() or "say" in line.lower()):
+                continue
             if "NEVER" in line and "jargon" in line.lower():
-                continue  # Another ban line
-            # These should not appear elsewhere
+                continue
             assert "dosha" not in line.lower() or "never" in line.lower(), f"Jargon leaked: {line}"
+
+    def test_prompt_ends_with_user_message(self):
+        prompt = build_adaptive_prompt("my head hurts", self._build_minimal_synth())
+        assert "THEY SAID: my head hurts" in prompt
+
+    def test_session_summary_included_when_present(self):
+        ctx = self._build_minimal_synth()
+        ctx.session_summary = "User mentioned headaches last week"
+        prompt = build_adaptive_prompt("my head hurts", ctx)
+        assert "EARLIER IN CONVERSATION" in prompt
+        assert "headaches last week" in prompt
+
+    def test_session_summary_absent_when_empty(self):
+        ctx = self._build_minimal_synth()
+        ctx.session_summary = ""
+        prompt = build_adaptive_prompt("my head hurts", ctx)
+        # The phrase appears in SAKHI_INSTRUCTIONS (Pattern Integration Rule),
+        # but should NOT appear in the THIS PERSON data block
+        person_block = prompt.split("THIS PERSON")[1].split("THIS CONVERSATION")[0]
+        assert "EARLIER IN CONVERSATION" not in person_block
+
+    def test_known_facts_displayed(self):
+        ctx = self._build_minimal_synth()
+        ctx.known_facts = ["Recently mentioned: sleeping 5 hours"]
+        prompt = build_adaptive_prompt("my head hurts", ctx)
+        assert "sleeping 5 hours" in prompt
+        assert "WHAT WE KNOW" in prompt
+
+    def test_connections_shown_when_present(self):
+        ctx = self._build_minimal_synth()
+        ctx.related_context = ["Connection: meditation supports sleep"]
+        prompt = build_adaptive_prompt("my head hurts", ctx)
+        assert "CONNECTIONS" in prompt
+        assert "meditation supports sleep" in prompt
 
 
 class TestBasePromptVoiceAlignment:

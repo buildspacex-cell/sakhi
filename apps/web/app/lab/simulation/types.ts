@@ -87,6 +87,76 @@ export interface FrictionState {
   };
 }
 
+export interface BrainStates {
+  coherence_state?: {
+    coherence_score: number;
+    fragmentation_index?: number;
+    coherence_map?: Record<string, any>;
+    summary?: string;
+  };
+  alignment_state?: {
+    alignment_score: number;
+    tension_score: number;
+    conflict_zones: string[];
+    action_suggestions?: string[];
+    energy_profile?: string;
+    focus_profile?: string;
+    self_care_suggestions?: string[];
+    alignment_map?: Record<string, any>;
+  };
+  emotion_state?: Record<string, any>;
+  soul_state?: {
+    longing?: any[];
+    friction?: any[];
+    aversions?: any[];
+    conflicts?: any[];
+  };
+  rhythm_state?: { slots?: Record<string, string> };
+  identity_momentum_state?: {
+    direction: string;
+    magnitude: number;
+    stability: number;
+    confidence: number;
+    evidence_summary?: string;
+    window_days?: number;
+  };
+  forecast_state?: Record<string, any>;
+  body_state?: Record<string, any>;
+  operating_system?: Record<string, any>;
+}
+
+export interface WorkerResult {
+  ok: boolean;
+  result?: string;
+  error?: string;
+}
+
+export interface ConversationDemo {
+  question: string;
+  response: string;
+  debug?: {
+    context_used: string[];
+    tone: Record<string, any>;
+  };
+  error?: string;
+}
+
+export interface ThemeSnapshot {
+  theme: string;
+  clarity_score: number;
+  updated_at?: string;
+}
+
+export interface CrystallizedPattern {
+  pattern_type: string;
+  pattern_value: string;
+  confidence: number;
+  trajectory: string;
+  status: string;
+  mention_count: number;
+  distinct_days: number;
+}
+
 export interface StateSnapshot {
   day: number;
   timestamp: string;
@@ -104,6 +174,10 @@ export interface StateSnapshot {
     graph_nodes: number;
     graph_edges: number;
   };
+  brain_states?: BrainStates;
+  worker_results?: Record<string, WorkerResult>;
+  themes?: ThemeSnapshot[];
+  crystallized_patterns?: CrystallizedPattern[];
 }
 
 export interface CheckpointResult {
@@ -135,6 +209,8 @@ export interface SimulationData {
   // Real pipeline metadata (set by export_real_simulation.py)
   real_pipeline?: boolean;
   generated_at?: string;
+  // Conversation demo Q&A pairs (v2 — full brain)
+  conversation_demo?: ConversationDemo[];
 }
 
 // Phase boundary for timeline visualization

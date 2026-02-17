@@ -1,0 +1,260 @@
+# Anxious Achiever Persona
+# High-achieving professional who pushes hard and burns out
+
+id: anxious_achiever
+name: Maya
+description: >
+  A 32-year-old product manager at a fast-growing startup.
+  Highly capable and driven, but struggles with perfectionism
+  and anxiety. Tends to overcommit and ignore warning signs
+  until burnout hits.
+
+dosha_baseline:
+  vata: 0.25
+  pitta: 0.50
+  kapha: 0.25
+
+rhythm:
+  morning: high
+  afternoon: medium
+  evening: low
+  best_work_time: morning
+  sleep_quality: poor
+
+traits:
+  - name: perfectionist
+    description: Sets impossibly high standards, harsh self-critic
+    intensity: 0.85
+    journal_patterns:
+      - "should have done better"
+      - "not good enough"
+      - "could have been faster"
+      - "missed the mark"
+
+  - name: overachiever
+    description: Takes on too much, can't say no
+    intensity: 0.80
+    journal_patterns:
+      - "took on another project"
+      - "couldn't say no"
+      - "so much to do"
+      - "overwhelmed but managing"
+
+  - name: anxiety_prone
+    description: Worries about future, catastrophizes
+    intensity: 0.75
+    journal_patterns:
+      - "what if"
+      - "worried about"
+      - "can't stop thinking"
+      - "worst case scenario"
+
+  - name: growth_oriented
+    description: Genuinely wants to improve, open to change
+    intensity: 0.70
+    journal_patterns:
+      - "learning to"
+      - "trying to be better"
+      - "realized today"
+      - "making progress"
+
+life_context:
+  occupation: Product Manager at tech startup
+  relationships:
+    partner: supportive but concerned
+    mom: calls weekly
+    best_friend: Sarah, old college friend
+    manager: demanding but fair
+  current_challenges:
+    - Major product launch in 6 weeks
+    - Team is understaffed
+    - Partner wants to talk about work-life balance
+    - Sleep has been terrible
+  values:
+    - Excellence
+    - Growth
+    - Connection
+    - Impact
+  hobbies:
+    - yoga (used to do regularly, now sporadic)
+    - reading (haven't finished a book in months)
+    - cooking (stress relief)
+
+arc:
+  name: Burnout and Recovery
+  description: >
+    Classic high-achiever burnout cycle. Starts overworking,
+    hits breaking point, finally acknowledges need for change,
+    slowly recovers with better boundaries.
+
+  phases:
+    - name: Pushing Through
+      duration_days: 14
+      emotional_state: driven but stressed
+      energy_modifier: 1.2
+      dosha_shift:
+        vata: 0.20
+        pitta: 0.60
+        kapha: 0.20
+      themes:
+        - work pressure
+        - deadlines
+        - proving self
+        - ignoring fatigue
+      events:
+        - Big presentation went well
+        - Took on extra project from departing colleague
+        - Skipped yoga for third week
+      entry_frequency: 0.8
+
+    - name: Cracks Showing
+      duration_days: 10
+      emotional_state: anxious and exhausted
+      energy_modifier: 0.9
+      dosha_shift:
+        vata: 0.40
+        pitta: 0.45
+        kapha: 0.15
+      themes:
+        - racing thoughts
+        - sleep problems
+        - irritability
+        - physical symptoms
+      events:
+        - Snapped at partner
+        - Headaches becoming frequent
+        - Forgot important meeting
+      entry_frequency: 1.2
+
+    - name: Breaking Point
+      duration_days: 7
+      emotional_state: overwhelmed and scared
+      energy_modifier: 0.6
+      dosha_shift:
+        vata: 0.55
+        pitta: 0.35
+        kapha: 0.10
+      themes:
+        - anxiety attacks
+        - can't cope
+        - need help
+        - questioning everything
+      events:
+        - Panic attack at work
+        - Called in sick
+        - Partner had serious talk
+      entry_frequency: 1.5
+
+    - name: Recognition
+      duration_days: 14
+      emotional_state: vulnerable but aware
+      energy_modifier: 0.7
+      dosha_shift:
+        vata: 0.40
+        pitta: 0.35
+        kapha: 0.25
+      themes:
+        - acknowledging limits
+        - asking for help
+        - setting boundaries
+        - self-compassion attempts
+      events:
+        - Talked to manager about workload
+        - Started therapy
+        - Told partner the truth about stress
+      entry_frequency: 1.3
+
+    - name: Gradual Recovery
+      duration_days: 21
+      emotional_state: hopeful but cautious
+      energy_modifier: 0.85
+      dosha_shift:
+        vata: 0.30
+        pitta: 0.45
+        kapha: 0.25
+      themes:
+        - small wins
+        - boundaries holding
+        - returning to self-care
+        - gratitude moments
+      events:
+        - Back to yoga twice a week
+        - Said no to extra project
+        - Slept 7 hours several nights
+        - Finished a book
+      entry_frequency: 1.0
+
+writing_style: reflective
+typical_entry_length: medium
+entry_times:
+  - evening
+  - morning
+
+checkpoints:
+  # Week 1: Should detect high-achieving patterns
+  - day: 7
+    name: Initial Pattern Detection
+    assertions:
+      theme_emerged:
+        keywords: ["work", "deadline", "project"]
+        min_occurrences: 3
+      dosha_state:
+        primary: pitta
+        min_percentage: 45
+
+  # Week 2: Intensity friction should be detected
+  - day: 14
+    name: Intensity Friction Onset
+    assertions:
+      friction_state:
+        expected: intensity
+        min_confidence: 0.6
+
+  # Week 3-4: Chaos friction as anxiety rises
+  - day: 24
+    name: Anxiety Escalation
+    assertions:
+      friction_state:
+        expected: chaos
+        min_confidence: 0.65
+      pattern_crystallized:
+        type: emotion
+        value: anxiety
+        min_occurrences: 5
+
+  # Breaking point
+  - day: 31
+    name: Breaking Point Detection
+    assertions:
+      friction_state:
+        expected: chaos
+        min_confidence: 0.75
+      dosha_drift:
+        dosha: vata
+        direction: elevated
+        min_percentage: 25
+
+  # Recognition phase
+  - day: 45
+    name: Recovery Signals
+    assertions:
+      theme_emerged:
+        keywords: ["boundary", "help", "self-care"]
+        min_occurrences: 3
+
+  # End of simulation
+  - day: 66
+    name: Recovery Progress
+    assertions:
+      friction_state:
+        expected_in: [balanced, intensity]  # Either is acceptable
+        min_confidence: 0.5
+      pattern_crystallized:
+        type: behavior
+        value: boundary_setting
+        min_occurrences: 3
+      rhythm_learned:
+        slot: morning
+        expected: high
+
+version: "1.0"

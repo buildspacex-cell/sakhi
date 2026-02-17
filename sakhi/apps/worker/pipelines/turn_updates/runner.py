@@ -8,6 +8,7 @@ import datetime as dt
 
 from sakhi.apps.api.services.ingestion.unified_ingest import ingest_heavy
 from sakhi.apps.api.core.person_utils import resolve_person_id
+from sakhi.apps.api.core.db import reset_pool as _reset_db_pool
 from sakhi.apps.worker.tasks.episodic_consolidation_v21 import run_episodic_consolidation_v21
 
 # NOTE: Deep workers (ayurvedic_pipeline, identity_momentum, emotion_soul_rhythm,
@@ -32,6 +33,11 @@ async def process_turn_job_async(*, job_type: str, turn_id: str, person_id: str,
 
 
 async def _process(job_type: str, turn_id: str, person_id: str, payload: Dict[str, Any]) -> None:
+    # Each asyncio.run() creates a new event loop, so the previous pool's
+    # connections are attached to a stale loop.  Reset it so get_pool()
+    # creates a fresh pool on the current loop.
+    await _reset_db_pool()
+
     resolved_id = await resolve_person_id(person_id) or person_id
     job_key = f"{job_type}:{turn_id}"
     if job_key in _processed_set:
@@ -57,6 +63,8 @@ async def _process(job_type: str, turn_id: str, person_id: str, payload: Dict[st
         await _handle_journal_enrich(turn_id, resolved_id, payload)
     elif job_type == "intent_extraction":
         await _handle_intent_extraction(turn_id, resolved_id, payload)
+    elif job_type == "session_compress":
+        await _handle_session_compress(turn_id, resolved_id, payload)
     else:
         LOGGER.warning("Unknown turn job type=%s (deep workers now run daily via scheduler)", job_type)
 
@@ -260,6 +268,22 @@ async def _handle_intent_extraction(turn_id: str, person_id: str, payload: Dict[
         )
     except Exception as exc:
         LOGGER.exception("[IntentExtraction] failed entry=%s person=%s error=%s", entry_id, person_id, exc)
+
+
+async def _handle_session_compress(turn_id: str, person_id: str, payload: Dict[str, Any]) -> None:
+    """Compress older conversation turns into a session summary (moved from inline)."""
+    session_id = payload.get("session_id")
+    keep_recent = payload.get("keep_recent", 8)
+    if not session_id:
+        LOGGER.warning("[SessionCompress] No session_id in payload, skipping")
+        return
+    try:
+        from sakhi.apps.api.services.memory.sessions import compress_older_turns_to_summary
+
+        summary = await compress_older_turns_to_summary(session_id, keep_recent=keep_recent)
+        LOGGER.info("[SessionCompress] done session=%s summary_len=%s", session_id, len(summary or ""))
+    except Exception as exc:
+        LOGGER.exception("[SessionCompress] failed session=%s error=%s", session_id, exc)
 
 
 __all__ = ["process_turn_job", "process_turn_job_async"]

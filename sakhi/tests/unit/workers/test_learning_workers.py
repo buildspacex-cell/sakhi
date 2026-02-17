@@ -4,7 +4,6 @@ Unit tests for learning/evolution workers.
 Workers tested:
 - weekly_learning_worker: Weekly pattern learning
 - goal_evolver: Goal adaptation based on progress
-- reinforcement_calibration: Adjust based on feedback
 """
 
 import pytest
@@ -122,56 +121,6 @@ class TestGoalEvolver:
         result = await mock_db.fetchrow()
         # User meeting target exactly
         assert result["actual_avg"] == result["target"]
-
-
-class TestReinforcementCalibration:
-    """Tests for reinforcement_calibration worker."""
-
-    @pytest.mark.asyncio
-    async def test_positive_feedback_increases_confidence(self, mock_db):
-        """
-        Given: User gives positive feedback on recommendation
-        When: reinforcement_calibration runs
-        Then: Recommendation confidence increases
-        """
-        mock_db.fetchrow.return_value = {
-            "recommendation_type": "activity",
-            "feedback": "positive",
-            "current_confidence": 0.6,
-        }
-
-        result = await mock_db.fetchrow()
-        assert result["feedback"] == "positive"
-        # Would increase confidence above 0.6
-
-    @pytest.mark.asyncio
-    async def test_negative_feedback_adjusts_model(self, mock_db):
-        """
-        Given: User gives negative feedback
-        When: reinforcement_calibration runs
-        Then: Model adjusts to avoid similar recommendations
-        """
-        mock_db.fetchrow.return_value = {
-            "recommendation_type": "food",
-            "feedback": "negative",
-            "reason": "too_spicy",
-        }
-
-        result = await mock_db.fetchrow()
-        assert result["feedback"] == "negative"
-        assert "reason" in result
-
-    @pytest.mark.asyncio
-    async def test_tracks_feedback_history(self, mock_db):
-        """
-        Given: Feedback is processed
-        When: reinforcement_calibration runs
-        Then: Feedback is stored for future learning
-        """
-        mock_db.execute.return_value = "INSERT 1"
-
-        result = await mock_db.execute("INSERT INTO feedback_log ...")
-        assert result is not None
 
 
 class TestLearningJobs:

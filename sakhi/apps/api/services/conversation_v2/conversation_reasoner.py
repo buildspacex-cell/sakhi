@@ -66,30 +66,12 @@ def build_context_scan(metadata: Dict[str, Any]) -> str:
     if mom_parts:
         lines.append("Moment: " + ", ".join(mom_parts))
 
-    # Morning
-    preview = metadata.get("morning_preview") or {}
-    if preview.get("focus_areas") or preview.get("key_tasks"):
-        focus = preview.get("focus_areas", "")
-        tasks = preview.get("key_tasks", "")
-        lines.append(f"Morning: focus={focus}, tasks={tasks}" if focus else f"Morning: tasks={tasks}")
-
-    # Evening
-    closure = metadata.get("evening_closure")
-    if closure and isinstance(closure, dict):
-        done = len(closure.get("completed") or [])
-        pending = len(closure.get("pending") or [])
-        lines.append(f"Evening: {done} done, {pending} pending")
-
-    # Micro flow
+    # Micro flow scaffolds (generated on-demand)
     micro_parts = []
     if metadata.get("focus_path"):
         micro_parts.append("focus_path=ready")
     if metadata.get("mini_flow"):
         micro_parts.append("mini_flow=ready")
-    if metadata.get("micro_momentum"):
-        micro_parts.append("momentum=available")
-    if metadata.get("micro_recovery"):
-        micro_parts.append("recovery=available")
     if metadata.get("micro_journey"):
         micro_parts.append("journey=active")
     if micro_parts:
@@ -132,10 +114,6 @@ def build_context_scan(metadata: Dict[str, Any]) -> str:
             body_parts.append(f"{trend_key}={val}")
     if body_parts:
         lines.append("Body: " + ", ".join(body_parts))
-
-    # Reflection
-    if metadata.get("daily_reflection"):
-        lines.append("Reflection: available")
 
     if not lines:
         return ""
@@ -285,88 +263,12 @@ def _build_moment_section(m: Dict[str, Any]) -> str:
     )
 
 
-def _build_morning_section(m: Dict[str, Any]) -> str:
-    preview = m.get("morning_preview") or {}
-    ask = m.get("morning_ask") or {}
-    momentum = m.get("morning_momentum") or {}
-
-    if not any([preview, ask, momentum]):
-        return ""
-
-    parts = []
-    if preview.get("focus_areas"):
-        parts.append(f"Preview: {preview['focus_areas']}")
-    if preview.get("key_tasks"):
-        parts.append(f"Tasks: {preview['key_tasks']}")
-    if preview.get("rhythm_hint"):
-        parts.append(f"Rhythm hint: {preview['rhythm_hint']}")
-    if ask.get("question"):
-        parts.append(f'Question: "{ask["question"]}" ({ask.get("reason", "")})')
-    if momentum.get("momentum_hint"):
-        parts.append(f"Momentum: {momentum['momentum_hint']} — Start: {momentum.get('suggested_start', '?')}")
-
-    if not parts:
-        return ""
-
-    guards = " ".join(filter(None, [
-        m.get("morning_preview_guard", ""),
-        m.get("morning_ask_guard", ""),
-        m.get("morning_momentum_guard", ""),
-    ]))
-
-    return (
-        "\n[MORNING CONTEXT]\n"
-        + "\n".join(parts)
-        + f"\n\nGuidance: Weave morning context naturally. Help start the day with intention.\n{guards}\n"
-    )
-
-
-def _build_evening_section(m: Dict[str, Any]) -> str:
-    closure = m.get("evening_closure")
-    if not closure or not isinstance(closure, dict):
-        return ""
-
-    parts = []
-    if closure.get("completed"):
-        items = closure["completed"]
-        if isinstance(items, list):
-            parts.append("Done: " + ", ".join(str(i) for i in items[:5]))
-        else:
-            parts.append(f"Done: {items}")
-    if closure.get("pending"):
-        items = closure["pending"]
-        if isinstance(items, list):
-            parts.append("Pending: " + ", ".join(str(i) for i in items[:5]))
-        else:
-            parts.append(f"Pending: {items}")
-    if closure.get("signals"):
-        parts.append(f"Signals: {closure['signals']}")
-    if closure.get("summary"):
-        parts.append(f"Summary: {closure['summary']}")
-
-    if not parts:
-        return ""
-
-    guard = m.get("evening_closure_guard", "")
-    return (
-        "\n[EVENING CLOSURE]\n"
-        + "\n".join(parts)
-        + f"\n\nGuidance: Help close the day. Acknowledge what was done, gently release what wasn't.\n{guard}\n"
-    )
-
-
 def _build_micro_flow_section(m: Dict[str, Any]) -> str:
-    momentum = m.get("micro_momentum") or {}
-    recovery = m.get("micro_recovery") or {}
     focus = m.get("focus_path") or {}
     flow = m.get("mini_flow") or {}
     journey = m.get("micro_journey") or {}
 
     parts = []
-    if momentum.get("nudge"):
-        parts.append(f"Momentum: {momentum['nudge']}")
-    if recovery.get("nudge"):
-        parts.append(f"Recovery: {recovery['nudge']}")
     if focus.get("anchor_step"):
         parts.append(f"Focus path: anchor={focus['anchor_step']}, progress={focus.get('progress_step', '?')}, closure={focus.get('closure_step', '?')}")
     if flow.get("warmup_step"):
@@ -378,7 +280,6 @@ def _build_micro_flow_section(m: Dict[str, Any]) -> str:
         return ""
 
     guards = " ".join(filter(None, [
-        m.get("micro_momentum_guard", ""),
         m.get("focus_path_guard", ""),
         m.get("mini_flow_guard", ""),
         m.get("micro_journey_guard", ""),
@@ -388,21 +289,7 @@ def _build_micro_flow_section(m: Dict[str, Any]) -> str:
         "\n[MICRO FLOW — Active Scaffolds]\n"
         + "\n".join(parts)
         + "\n\nGuidance: Use whichever scaffold fits. Focus path for 'where do I start?',\n"
-        f"mini flow for short routines, recovery for gaps, momentum for a push.\n{guards}\n"
-    )
-
-
-def _build_reflection_section(m: Dict[str, Any]) -> str:
-    reflection = m.get("daily_reflection")
-    if not reflection:
-        return ""
-
-    content = reflection if isinstance(reflection, str) else json.dumps(json_safe(reflection), ensure_ascii=False)
-    guard = m.get("daily_reflection_guard", "")
-
-    return (
-        f"\n[DAILY REFLECTION]\n{content}\n\n"
-        f"Guidance: Help process the day. No new tasks or pressure.\n{guard}\n"
+        f"mini flow for short routines.\n{guards}\n"
     )
 
 
@@ -490,10 +377,7 @@ _TIER2_BUILDERS: Dict[str, Any] = {
     "identity": _build_identity_section,
     "emotional_depth": _build_emotional_section,
     "moment": _build_moment_section,
-    "morning_ritual": _build_morning_section,
-    "evening_ritual": _build_evening_section,
     "micro_flow": _build_micro_flow_section,
-    "reflection": _build_reflection_section,
     "body": _build_body_section,
 }
 
@@ -828,12 +712,34 @@ Do NOT force this. Only bring up if it flows naturally.
             "- Keep it grounded and practical\n"
         )
 
+    # Vision Context (images the user shared in this conversation)
+    vision_section = ""
+    vision = metadata_payload.get("vision_context")
+    if vision:
+        parts = []
+        current = vision.get("current_image")
+        if current:
+            desc = current.get("description") or ""
+            text_extract = current.get("extracted_text") or ""
+            parts.append(f"Image shared: {desc}")
+            if text_extract:
+                parts.append(f"Text in image: {text_extract}")
+        for ref in vision.get("referenced_media", []):
+            if ref.get("analysis"):
+                parts.append(f"Earlier image: {ref['analysis'].get('description', '')}")
+        if parts:
+            vision_section = (
+                "\n[VISUAL CONTEXT]\n"
+                + "\n".join(f"- {p}" for p in parts) + "\n"
+                "Guidance: Reference what you see naturally. Don't describe the image back unless asked.\n"
+            )
+
     return f"""
 You are Sakhi — a friend who really gets this person. You understand their patterns.
 
 VOICE: Talk like a friend. Not a therapist, not formal. Just real.
 - Simple words. Short sentences. Say what matters.
-- No Ayurvedic jargon ever (vata, pitta, kapha, dosha = never say these).
+- Never use Ayurvedic jargon in your reply (vata, pitta, kapha, dosha = internal context only, never say these to the user).
 - Warm but direct. Skip fluff.
 
 Tone: {tone_style} (pace={pace})
@@ -857,6 +763,7 @@ Behavior cues:
 {tier2_sections}
 {email_section}
 {causal_section}
+{vision_section}
 User message:
 {user_text.strip()}
 

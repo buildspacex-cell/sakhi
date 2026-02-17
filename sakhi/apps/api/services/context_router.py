@@ -1,12 +1,17 @@
 """
-Context Router — Intelligent context module selection for conversation turns.
+Context Router — Context module definitions and selection for conversation turns.
 
-Hybrid approach: deterministic keyword/signal classification first,
-fast LLM fallback for ambiguous messages.
+Current strategy (Option A): Load ALL modules unconditionally.
+Every turn gets full context; the conversation LLM decides what's relevant.
 
-Modules gate which context sections appear in the LLM prompt:
+Future strategy: Replace with a local model that selects modules from
+MODULE_REGISTRY descriptions, then load only those. The registry and
+classify_context_needs() are preserved for that transition.
+
+Module lifecycle:
 - Tier 1 (always): Cheap computations feed a compact 360° context scan
-- Tier 2 (router-gated): Expensive computations run only when the router activates them
+- Tier 2 (all loaded): DB-backed enrichments (inner dialogue, evidence,
+  recommendations, scheduling, email, causal reasoning, health trends)
 """
 
 from __future__ import annotations
@@ -18,25 +23,61 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 logger = logging.getLogger(__name__)
 
 # =============================================================================
-# Module Definitions
+# Module Registry — descriptions for future local-model routing
 # =============================================================================
 
-CONTEXT_MODULES = {
-    "identity",         # narrative_trace, alignment, rhythm_soul, identity_momentum, identity_timeline
-    "emotional_depth",  # inner_dialogue, empathy_state, microreg_state, nudge_state
-    "moment",           # moment_model, evidence_pack, deliberation_scaffold
-    "recommendations",  # friction state, personalized recommendations
-    "scheduling",       # calendar, scheduling, relationship nudges
-    "email",            # email context, contact preferences
-    "causal",           # causal reasoning (why am I feeling X)
-    "morning_ritual",   # morning_preview, morning_ask, morning_momentum
-    "evening_ritual",   # evening_closure
-    "micro_flow",       # micro_momentum, micro_recovery, focus_path, mini_flow, micro_journey
-    "reflection",       # daily_reflection
-    "vision",           # image processing
-    "agentic",          # web search, agent tasks
-    "body",             # health/body/sleep/exercise/physical state from HealthKit
+MODULE_REGISTRY: Dict[str, str] = {
+    "identity": (
+        "User explores who they are, values, purpose, growth, or transformation. "
+        "Loads narrative_trace, alignment, rhythm_soul, identity_momentum, identity_timeline."
+    ),
+    "emotional_depth": (
+        "User is in emotional distress, sharing feelings, or needs deep support. "
+        "Loads inner_dialogue, empathy_state, microreg_state, nudge_state."
+    ),
+    "moment": (
+        "User is at a decision point, weighing options, or facing a crossroads. "
+        "Loads evidence_pack, deliberation_scaffold, reflection_trace."
+    ),
+    "recommendations": (
+        "User wants wellness advice, feels off-balance, or asks what to do. "
+        "Loads friction state, personalized Ayurvedic food/practice/herb recommendations."
+    ),
+    "scheduling": (
+        "User wants to schedule, check calendar, plan time, or mentions meetings. "
+        "Loads calendar events, scheduling pipeline, relationship nudges."
+    ),
+    "email": (
+        "User asks about email, inbox, messages, or communication patterns. "
+        "Loads email context, contact preferences."
+    ),
+    "causal": (
+        "User asks WHY they feel a certain way or what's causing a symptom. "
+        "Loads causal reasoning: personal patterns, behaviors, Ayurvedic knowledge, seasonal influence."
+    ),
+    "micro_flow": (
+        "User needs focus help, feels stuck, wants next steps, or asks where to start. "
+        "Generates focus_path, mini_flow scaffolds on demand."
+    ),
+    "vision": (
+        "User has shared an image or document in the conversation. "
+        "Loads image processing context."
+    ),
+    "agentic": (
+        "User wants web search, research, or has a pending agent task. "
+        "Loads agent task context."
+    ),
+    "body": (
+        "User mentions sleep, tiredness, exercise, heart rate, physical symptoms, or health. "
+        "Loads body state, health trends, symptom-based causal reasoning."
+    ),
 }
+
+CONTEXT_MODULES = set(MODULE_REGISTRY.keys())
+
+# All modules — used by turn_v2 to load everything unconditionally.
+# Future: replaced by local model selection from MODULE_REGISTRY descriptions.
+ALL_MODULES = frozenset(CONTEXT_MODULES)
 
 
 # =============================================================================
@@ -73,10 +114,6 @@ _MICRO_FLOW_KEYWORDS = [
     "focus", "stuck", "momentum", "flow", "next step", "what now",
     "where do i start", "help me begin", "work on", "get started",
 ]
-_REFLECTION_KEYWORDS = [
-    "reflect", "how was my day", "journal", "look back",
-    "what did i learn", "end of day", "wind down",
-]
 _AGENTIC_KEYWORDS = [
     "search for", "look up", "find out", "research",
     "google", "browse", "find me",
@@ -92,6 +129,39 @@ _BODY_KEYWORDS = [
     "stiff", "tense", "tension", "inflammation", "swollen",
     "burning", "throbbing", "numb", "cold", "hot",
 ]
+
+
+# =============================================================================
+# Intent Policy Map — declarative intent-name → module mapping
+# =============================================================================
+
+INTENT_POLICY: Dict[str, Dict[str, Any]] = {
+    # Existing intent routing (was ad-hoc if-chain)
+    "schedule":  {"modules": {"scheduling"}, "confidence": 0.8},
+    "calendar":  {"modules": {"scheduling"}, "confidence": 0.8},
+    "email":     {"modules": {"email"}, "confidence": 0.8},
+    "inbox":     {"modules": {"email"}, "confidence": 0.8},
+    "health":    {"modules": {"recommendations", "causal"}, "confidence": 0.8},
+    "ayurved":   {"modules": {"recommendations", "causal"}, "confidence": 0.8},
+    "dosha":     {"modules": {"recommendations", "causal"}, "confidence": 0.8},
+    "identity":  {"modules": {"identity"}, "confidence": 0.8},
+    "purpose":   {"modules": {"identity"}, "confidence": 0.8},
+    "growth":    {"modules": {"identity"}, "confidence": 0.8},
+    "decision":  {"modules": {"moment"}, "confidence": 0.8},
+    "choice":    {"modules": {"moment"}, "confidence": 0.8},
+    # New entries
+    "body":      {"modules": {"body"}, "confidence": 0.8},
+    "sleep":     {"modules": {"body"}, "confidence": 0.8},
+    "emotion":   {"modules": {"emotional_depth"}, "confidence": 0.8},
+    "reflect":   {"modules": {"emotional_depth"}, "confidence": 0.8},
+    # Triage-derived intent hints (from map_triage_to_intents)
+    "action_intent":      {"modules": {"micro_flow"}, "confidence": 0.7},
+    "emotion_reflection": {"modules": {"emotional_depth"}, "confidence": 0.7},
+    "finance_planning":   {"modules": {"micro_flow"}, "confidence": 0.7},
+    "goal_pursuit":       {"modules": {"micro_flow", "identity"}, "confidence": 0.7},
+    "schedule_planning":  {"modules": {"scheduling"}, "confidence": 0.8},
+    "emotion_support":    {"modules": {"emotional_depth"}, "confidence": 0.7},
+}
 
 
 # =============================================================================
@@ -155,10 +225,6 @@ def classify_context_needs(
         modules.add("micro_flow")
         confidence = max(confidence, 0.7)
 
-    if _match(_REFLECTION_KEYWORDS):
-        modules.add("reflection")
-        confidence = max(confidence, 0.8)
-
     if _match(_AGENTIC_KEYWORDS):
         modules.add("agentic")
         confidence = max(confidence, 0.8)
@@ -166,16 +232,6 @@ def classify_context_needs(
     if _match(_BODY_KEYWORDS):
         modules.add("body")
         confidence = max(confidence, 0.8)
-
-    # --- Time-based routing ---
-
-    if 5 <= hour <= 11:
-        modules.add("morning_ritual")
-        confidence = max(confidence, 0.6)
-
-    if hour >= 20:
-        modules.add("evening_ritual")
-        confidence = max(confidence, 0.6)
 
     # --- Structural triggers ---
 
@@ -187,27 +243,15 @@ def classify_context_needs(
         modules.add("agentic")
         confidence = max(confidence, 0.8)
 
-    # --- Intent-based routing ---
+    # --- Intent-based routing (declarative policy map) ---
 
     for intent in (intents or []):
         intent_name = intent.get("name", "") if isinstance(intent, dict) else str(intent)
         intent_lower = intent_name.lower()
-        if "schedule" in intent_lower or "calendar" in intent_lower:
-            modules.add("scheduling")
-            confidence = max(confidence, 0.8)
-        if "email" in intent_lower or "inbox" in intent_lower:
-            modules.add("email")
-            confidence = max(confidence, 0.8)
-        if "health" in intent_lower or "ayurved" in intent_lower or "dosha" in intent_lower:
-            modules.add("recommendations")
-            modules.add("causal")
-            confidence = max(confidence, 0.8)
-        if "identity" in intent_lower or "purpose" in intent_lower or "growth" in intent_lower:
-            modules.add("identity")
-            confidence = max(confidence, 0.8)
-        if "decision" in intent_lower or "choice" in intent_lower:
-            modules.add("moment")
-            confidence = max(confidence, 0.8)
+        for keyword, policy in INTENT_POLICY.items():
+            if keyword in intent_lower:
+                modules.update(policy["modules"])
+                confidence = max(confidence, policy["confidence"])
 
     # --- Confidence fallback ---
 
@@ -270,6 +314,65 @@ async def llm_classify_context(text: str, emotion: str) -> Set[str]:
 
 
 # =============================================================================
+# Intent Helpers — triage mapping + DB-backed intent evolution
+# =============================================================================
+
+
+def map_triage_to_intents(triage: Dict[str, Any]) -> List[Dict[str, str]]:
+    """
+    Convert inline triage signals to intent hints for the router.
+    Zero LLM cost — uses the deterministic extractor output.
+    """
+    hints: List[Dict[str, str]] = []
+    for signal in triage.get("triage", []):
+        sig_type = signal.get("type", "")
+        if sig_type == "intent_action":
+            hints.append({"name": "action_intent"})
+        elif sig_type == "reflection_observation":
+            hints.append({"name": "emotion_reflection"})
+        elif sig_type == "finance":
+            hints.append({"name": "finance_planning"})
+
+    slots = triage.get("slots", {})
+    if slots.get("goal"):
+        hints.append({"name": "goal_pursuit"})
+    if slots.get("time_window"):
+        hints.append({"name": "schedule_planning"})
+    if slots.get("mood_affect"):
+        hints.append({"name": "emotion_support"})
+
+    return hints
+
+
+async def load_recent_intent_evolution(
+    person_id: str,
+    limit: int = 5,
+    min_strength: float = 0.3,
+) -> List[Dict[str, Any]]:
+    """
+    Load strong recent intents from intent_evolution table.
+    Returns intent-like dicts for the router.
+    """
+    from sakhi.apps.api.core.db import q as _q
+
+    try:
+        rows = await _q(
+            """
+            SELECT intent_name, strength, trend
+            FROM intent_evolution
+            WHERE person_id = $1 AND strength >= $2
+            ORDER BY strength DESC
+            LIMIT $3
+            """,
+            person_id, min_strength, limit,
+        )
+        return [{"name": r["intent_name"], "strength": r.get("strength", 0)} for r in (rows or [])]
+    except Exception as exc:
+        logger.warning("[context_router] Failed to load intent_evolution: %s", exc)
+        return []
+
+
+# =============================================================================
 # Main Router Entry Point
 # =============================================================================
 
@@ -313,4 +416,13 @@ async def route_context(
     return modules
 
 
-__all__ = ["classify_context_needs", "route_context", "CONTEXT_MODULES"]
+__all__ = [
+    "classify_context_needs",
+    "route_context",
+    "CONTEXT_MODULES",
+    "ALL_MODULES",
+    "MODULE_REGISTRY",
+    "INTENT_POLICY",
+    "map_triage_to_intents",
+    "load_recent_intent_evolution",
+]

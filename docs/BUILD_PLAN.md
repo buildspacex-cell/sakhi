@@ -940,6 +940,16 @@ Conversation                    Learning Pipeline
 
 **Docs**: [docs/features/conversation-turn-anatomy.md](features/conversation-turn-anatomy.md), [docs/features/context-routing.md](features/context-routing.md)
 
+### ⏳ E.5 Turn V2 Audit Follow-ups
+
+From the Feb 2026 turn-v2 conversation audit. Items already fixed are in E.4; these remain.
+
+| Status | Item | Description | Risk | Files |
+|--------|------|-------------|------|-------|
+| ⏳ | Fire-and-forget hardening | `asyncio.create_task` for post-reply processing means critical writes (turn persistence, STM, worker enqueue) are lost on deploy/restart. Move `append_turn` + `enqueue_turn_jobs` before response return; keep non-critical steps fire-and-forget. | Data loss on redeploy (~200ms window) | `routes/turn_v2.py` lines 347-511, 1800-1802 |
+| ✅ | Undefined `entry_id` in session compression enqueue | Fixed: replaced `entry_id` (undefined at enqueue time) with static `"session-compress"` placeholder. Worker only uses `session_id` from payload. | Was: broken enqueue (NameError swallowed) | `routes/turn_v2.py` line 554 |
+| ✅ | Undefined `turn_id` in reflection trace | Fixed: `turn_id = str(uuid4())` generated early in `turn_v2()`. Also fixed `session_id=user_id` → `session_id=str(session_id)`. | Was: silent data loss — reflection traces dropped | `routes/turn_v2.py` lines 524, 1016 |
+
 ---
 
 ## PHASE F: Data Sovereignty (Week 11-12)

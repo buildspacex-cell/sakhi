@@ -64,10 +64,15 @@ async def generate_reply(
         tone["style"] = "reflective, spacious, thoughtful"
         tone["pace"] = "balanced"
 
-    emotion_label = (emotion_hint.get("label") or "").lower()
-    if emotion_label in {"tired", "sad", "anxious", "overwhelmed"}:
+    emotion_label = (emotion_hint.get("label") or emotion_hint.get("emotion") or "").lower()
+    if emotion_label in {"tired", "sad", "anxious", "overwhelmed", "scared", "confused", "frustrated"}:
         tone["style"] = "gentle, steady, compassionate"
         tone["pace"] = "slow"
+        # Update mirroring to reflect the current emotion (overrides stored state)
+        if tone.get("mirroring"):
+            tone["mirroring"]["emotion"] = emotion_label
+        if tone.get("empathy"):
+            tone["empathy"]["mood"] = emotion_label
 
     journaling_ai = None
     try:
@@ -99,39 +104,63 @@ async def generate_reply(
     adaptive_error = None  # Track top-level errors
     use_adaptive = os.getenv("SAKHI_USE_ADAPTIVE_RESPONSE", "1") == "1"
 
-    if use_adaptive and should_use_adaptive_pipeline(user_text):
-        try:
-            adaptive_context = await run_adaptive_pipeline(person_id, user_text, session_id=session_id)
-            if adaptive_context.pipeline_stages.get("prompt"):
-                adaptive_prompt = adaptive_context.adaptive_prompt
-                logger.debug(
-                    "[generate_reply] Using adaptive pipeline: mode=%s, symptom=%s",
-                    adaptive_context.strategy.mode,
-                    adaptive_context.sense.symptom,
-                )
-            elif adaptive_context.errors:
-                # Pipeline ran but didn't complete - errors are already in context
-                logger.warning(
-                    "[generate_reply] Adaptive pipeline incomplete, errors: %s",
-                    adaptive_context.errors,
-                )
-        except Exception as e:
-            adaptive_error = f"Pipeline exception: {type(e).__name__}: {str(e)}"
-            logger.warning("[generate_reply] Adaptive pipeline failed, falling back: %s", e)
-            adaptive_prompt = None
+    # Run adaptive pipeline, recall, and patterns IN PARALLEL
+    # These are independent operations that each involve embedding/DB calls
+    import asyncio
+
+    async def _run_adaptive():
+        if not (use_adaptive and should_use_adaptive_pipeline(user_text)):
+            return None
+        return await run_adaptive_pipeline(person_id, user_text, session_id=session_id)
+
+    async def _run_recall():
+        return await build_recall_context(person_id, user_text)
+
+    async def _run_patterns():
+        return await build_patterns_context(person_id)
+
+    adaptive_result, recall_result, pattern_result = await asyncio.gather(
+        _run_adaptive(),
+        _run_recall(),
+        _run_patterns(),
+        return_exceptions=True,
+    )
+
+    # Process adaptive pipeline result
+    if isinstance(adaptive_result, Exception):
+        adaptive_error = f"Pipeline exception: {type(adaptive_result).__name__}: {str(adaptive_result)}"
+        logger.warning("[generate_reply] Adaptive pipeline failed, falling back: %s", adaptive_result)
+    elif adaptive_result is not None:
+        adaptive_context = adaptive_result
+        if adaptive_context.pipeline_stages.get("prompt"):
+            adaptive_prompt = adaptive_context.adaptive_prompt
+            logger.debug(
+                "[generate_reply] Using adaptive pipeline: mode=%s, symptom=%s",
+                adaptive_context.strategy.mode,
+                adaptive_context.sense.symptom,
+            )
+        elif adaptive_context.errors:
+            logger.warning(
+                "[generate_reply] Adaptive pipeline incomplete, errors: %s",
+                adaptive_context.errors,
+            )
+
+    # Process recall result
+    if isinstance(recall_result, Exception):
+        logger.warning("[generate_reply] build_recall_context failed for %s: %s", person_id, recall_result)
+        recall_ctx = ""
+    else:
+        recall_ctx = recall_result or ""
+
+    # Process patterns result
+    if isinstance(pattern_result, Exception):
+        logger.warning("[generate_reply] build_patterns_context failed for %s: %s", person_id, pattern_result)
+        pattern_ctx = ""
+    else:
+        pattern_ctx = pattern_result or ""
 
     # Build prompts
     base_prompt = build_prompt(user_text, context, tone, metadata=metadata_payload)
-    try:
-        recall_ctx = await build_recall_context(person_id, user_text)
-    except Exception as recall_exc:
-        logger.warning("[generate_reply] build_recall_context failed for %s: %s", person_id, recall_exc)
-        recall_ctx = ""
-    try:
-        pattern_ctx = await build_patterns_context(person_id)
-    except Exception as pat_exc:
-        logger.warning("[generate_reply] build_patterns_context failed for %s: %s", person_id, pat_exc)
-        pattern_ctx = ""
     system_ctx = f"{recall_ctx}\n\nPatterns:\n{pattern_ctx}"
 
     # Build message history for LLM context continuity
