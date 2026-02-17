@@ -94,61 +94,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initialize auth state
+  // Initialize auth state — onAuthStateChange is the single source of truth.
+  // Supabase fires INITIAL_SESSION immediately when subscribed (handles cached
+  // tokens, token refresh, and no-session equally), so we don't need a separate
+  // getSession() call that can race/conflict.
   useEffect(() => {
     let mounted = true;
-
-    const initAuth = async () => {
-      try {
-        // Timeout getSession — if Supabase hangs refreshing an old token, don't block forever
-        const sessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
-        ]);
-
-        const existingSession = sessionResult
-          ? (sessionResult as { data: { session: Session | null } }).data.session
-          : null;
-
-        if (mounted && existingSession) {
-          setSession(existingSession);
-          const authUser = transformUser(existingSession.user);
-          if (authUser) {
-            // Try cached personId first (instant) — show UI immediately
-            let personId: string | undefined;
-            try {
-              personId = (await SecureStore.getItemAsync(PERSON_ID_KEY)) || undefined;
-            } catch {}
-
-            if (personId) {
-              // Cache hit — user is ready instantly
-              setUser({ ...authUser, personId });
-              if (mounted) setIsLoading(false);
-            } else {
-              // No cache — show UI immediately, fetch personId in background
-              setUser(authUser);
-              if (mounted) setIsLoading(false);
-
-              // Fetch and update in background
-              const fetchedId = await fetchAndCachePersonId(existingSession.user.id);
-              if (mounted && fetchedId) {
-                setUser((prev) => prev ? { ...prev, personId: fetchedId } : prev);
-              }
-            }
-            return;
-          }
-        }
-      } catch {
-        // Silent fail — user will see login screen
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
-    initAuth();
+    let initialResolved = false;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      async (_event, newSession) => {
         if (!mounted) return;
 
         setSession(newSession);
@@ -156,13 +111,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (newSession?.user) {
           const authUser = transformUser(newSession.user);
           if (authUser) {
-            // Set user immediately, fetch personId in background
-            setUser(authUser);
-            setIsLoading(false);
+            // Try cached personId first for instant load
+            let personId: string | undefined;
+            try {
+              personId = (await SecureStore.getItemAsync(PERSON_ID_KEY)) || undefined;
+            } catch {}
 
-            const personId = await fetchAndCachePersonId(newSession.user.id);
-            if (mounted && personId) {
-              setUser((prev) => prev ? { ...prev, personId } : prev);
+            if (personId) {
+              setUser({ ...authUser, personId });
+            } else {
+              setUser(authUser);
+            }
+
+            // Resolve loading on first event
+            if (!initialResolved) {
+              initialResolved = true;
+              setIsLoading(false);
+            }
+
+            // Fetch personId in background if not cached
+            if (!personId) {
+              const fetchedId = await fetchAndCachePersonId(newSession.user.id);
+              if (mounted && fetchedId) {
+                setUser((prev) => prev ? { ...prev, personId: fetchedId } : prev);
+              }
             }
           }
         } else {
@@ -171,12 +143,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try { await SecureStore.deleteItemAsync(PERSON_ID_KEY); } catch {}
         }
 
-        setIsLoading(false);
+        // Always resolve loading after first auth event (signed in or not)
+        if (!initialResolved) {
+          initialResolved = true;
+          setIsLoading(false);
+        }
       }
     );
 
+    // Safety timeout — if onAuthStateChange never fires (e.g. network issue),
+    // don't leave the user stuck on splash forever
+    const timeout = setTimeout(() => {
+      if (!initialResolved && mounted) {
+        initialResolved = true;
+        setIsLoading(false);
+      }
+    }, 5000);
+
     return () => {
       mounted = false;
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, [transformUser, fetchAndCachePersonId]);

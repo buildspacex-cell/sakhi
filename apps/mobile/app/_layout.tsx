@@ -1,10 +1,22 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { AuthProvider } from '../lib/auth/AuthContext';
+import * as SplashScreen from 'expo-splash-screen';
+import { AuthProvider, useAuth } from '../lib/auth/AuthContext';
 
-export default function RootLayout() {
+// Keep splash visible until auth resolves
+SplashScreen.preventAutoHideAsync();
+
+function AppContent() {
+  const { isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading) {
+      SplashScreen.hideAsync();
+    }
+  }, [isLoading]);
+
   return (
-    <AuthProvider>
-      <Stack
+    <Stack
         screenOptions={{
           headerTitleAlign: 'center',
           headerStyle: { backgroundColor: '#0e0f12' },
@@ -26,7 +38,14 @@ export default function RootLayout() {
         />
         <Stack.Screen name="soul" options={{ headerShown: false }} />
         <Stack.Screen name="experience" options={{ headerShown: false }} />
-      </Stack>
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
