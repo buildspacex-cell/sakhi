@@ -24,19 +24,21 @@ _processed_set: set[str] = set()
 
 def process_turn_job(*, job_type: str, turn_id: str, person_id: str, payload: Dict[str, Any]) -> None:
     """Sync wrapper - use process_turn_job_async when already in an async context."""
-    asyncio.run(_process(job_type, turn_id, person_id, payload))
+    asyncio.run(_process(job_type, turn_id, person_id, payload, _reset_pool=True))
 
 
 async def process_turn_job_async(*, job_type: str, turn_id: str, person_id: str, payload: Dict[str, Any]) -> None:
     """Async version for use within existing event loop (e.g., FastAPI handlers)."""
-    await _process(job_type, turn_id, person_id, payload)
+    await _process(job_type, turn_id, person_id, payload, _reset_pool=False)
 
 
-async def _process(job_type: str, turn_id: str, person_id: str, payload: Dict[str, Any]) -> None:
-    # Each asyncio.run() creates a new event loop, so the previous pool's
-    # connections are attached to a stale loop.  Reset it so get_pool()
-    # creates a fresh pool on the current loop.
-    await _reset_db_pool()
+async def _process(job_type: str, turn_id: str, person_id: str, payload: Dict[str, Any], *, _reset_pool: bool = False) -> None:
+    # Only reset the pool when called from sync wrapper (process_turn_job)
+    # which creates a new event loop via asyncio.run(). When called from
+    # an existing async context (process_turn_job_async), the pool is
+    # already on the correct loop and must NOT be closed.
+    if _reset_pool:
+        await _reset_db_pool()
 
     resolved_id = await resolve_person_id(person_id) or person_id
     job_key = f"{job_type}:{turn_id}"

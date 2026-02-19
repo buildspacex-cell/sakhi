@@ -71,3 +71,4 @@ _archive/
 sakhi/apps/desktop-agent/release/
 sakhi/apps/desktop-agent/dist/
 *.dmg
+apps/mobile/ios/fastlane/keys/

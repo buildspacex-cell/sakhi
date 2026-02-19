@@ -204,6 +204,7 @@ class SimulationHarness:
         snapshot_interval: int = 7,  # Snapshot every N days
         run_workers: bool = True,
         daily_worker_interval: int = 3,  # Run daily workers every N days
+        production_parity: bool = False,  # Route through /v2/turn endpoint
     ):
         """
         Initialize simulation harness.
@@ -216,6 +217,9 @@ class SimulationHarness:
             snapshot_interval: Days between state snapshots
             run_workers: Whether to run workers after entries
             daily_worker_interval: Run daily workers every N simulated days
+            production_parity: If True, route entries through the real /v2/turn
+                endpoint (same code path as production) instead of direct DB
+                inserts + manual worker calls.
         """
         self.persona = persona
         self.db_query = db_query
@@ -226,6 +230,7 @@ class SimulationHarness:
         self.snapshot_interval = snapshot_interval
         self.run_workers = run_workers
         self.daily_worker_interval = daily_worker_interval
+        self.production_parity = production_parity
 
         self.user_id: Optional[str] = None
         self.result: Optional[SimulationResult] = None
@@ -233,6 +238,7 @@ class SimulationHarness:
         self._raw_entries: List[Dict[str, Any]] = []
         self._last_entry_content: str = ""
         self._last_entry_ts: datetime = datetime.now(timezone.utc)
+        self._parity_client: Optional[Any] = None  # httpx.AsyncClient for parity mode
 
     async def setup(self) -> str:
         """
@@ -324,13 +330,69 @@ class SimulationHarness:
         else:
             return "Steady"  # Kapha-dominant
 
+    async def _init_parity_client(self) -> None:
+        """Initialize httpx AsyncClient + ASGITransport for production parity mode.
+
+        Uses the same pattern as e2e tests: routes through the real FastAPI app
+        with full lifespan initialization (LLM router, queues, etc.).
+
+        Sets SAKHI_DISABLE_QUEUE=1 so all per-turn workers run inline
+        (deterministic, no Redis dependency).
+        """
+        import os
+        os.environ["SAKHI_DISABLE_QUEUE"] = "1"
+
+        from httpx import AsyncClient, ASGITransport
+        from sakhi.apps.api.main import app, lifespan
+
+        # Enter lifespan context (initializes LLM router, etc.)
+        self._lifespan_cm = lifespan(app)
+        await self._lifespan_cm.__aenter__()
+
+        transport = ASGITransport(app=app)
+        self._parity_client = AsyncClient(
+            transport=transport,
+            base_url="http://test",
+            timeout=120.0,  # Workers can be slow under LLM load
+        )
+        LOGGER.info("[Simulation] Production parity client initialized (SAKHI_DISABLE_QUEUE=1)")
+
+    async def _close_parity_client(self) -> None:
+        """Shut down the parity client and lifespan."""
+        if self._parity_client:
+            await self._parity_client.aclose()
+            self._parity_client = None
+        if hasattr(self, "_lifespan_cm") and self._lifespan_cm:
+            try:
+                await self._lifespan_cm.__aexit__(None, None, None)
+            except Exception:
+                pass
+            self._lifespan_cm = None
+
     async def cleanup(self) -> None:
         """Clean up test data after simulation."""
+        # Close parity client if it was initialized
+        await self._close_parity_client()
+
         if not self.user_id:
             return
 
         # Delete in reverse dependency order — includes all tables real workers write to
+        # and tables that /v2/turn production flow writes to (sessions, dialog, etc.)
         tables = [
+            # Production /v2/turn writes (parity mode)
+            "conversation_turns",
+            "conversation_sessions",
+            "dialog_state",
+            "reflection_traces",
+            "micro_goals",
+            "focus_paths",
+            "mini_flows",
+            "user_intents",
+            "user_preferences",
+            "behavior_symptom_log",
+            "pattern_stats",
+            # Worker output tables
             "theme_states",
             "pattern_occurrences",
             "crystallized_patterns",
@@ -399,6 +461,10 @@ class SimulationHarness:
         if not self.user_id:
             await self.setup()
 
+        # Initialize production parity client if enabled
+        if self.production_parity:
+            await self._init_parity_client()
+
         total_days = max_days or self.persona.arc.total_days
         self.result = SimulationResult(
             persona_id=self.persona.id,
@@ -437,6 +503,9 @@ class SimulationHarness:
                     "type": type(exc).__name__,
                 })
 
+        # Let background tasks (soul_extract, context_refresh) drain before daily workers
+        await asyncio.sleep(2)
+
         # Run all daily workers one final time to ensure brain is fully populated
         if self.run_workers:
             final_worker_results = await self._run_daily_workers(total_days)
@@ -470,23 +539,43 @@ class SimulationHarness:
         )
 
         for time_of_day, entry_text in entries:
-            entry_id = await self._create_entry(day, time_of_day, entry_text)
-            self._created_entries.append(entry_id)
+            timestamp = get_entry_timestamp(self.simulation_start, day, time_of_day)
+            self._last_entry_content = entry_text
+            self._last_entry_ts = timestamp
+
+            if self.production_parity:
+                # Route through real /v2/turn endpoint — full production code path
+                entry_id = await self._process_entry_parity(day, time_of_day, entry_text, timestamp)
+            else:
+                # Legacy path: direct DB insert + manual worker calls
+                entry_id = await self._create_entry(day, time_of_day, entry_text)
+                if self.run_workers:
+                    await self._process_entry(entry_id)
+
+            if entry_id:
+                self._created_entries.append(entry_id)
             self._raw_entries.append({
                 "day": day,
                 "time_of_day": time_of_day,
                 "content": entry_text,
-                "timestamp": self._last_entry_ts.isoformat(),
+                "timestamp": timestamp.isoformat(),
             })
             self.result.total_entries += 1
-
-            if self.run_workers:
-                await self._process_entry(entry_id)
 
         # Run ALL production daily workers every N simulated days.
         # These are the same functions scheduler.py enqueues in production.
         if self.run_workers and day % self.daily_worker_interval == 0:
+            # Drain any lingering background tasks from the last parity turn
+            # before running daily workers. Without this, undrained tasks can
+            # hold DB pool connections and starve daily workers.
+            if self.production_parity:
+                self._tasks_before_turn = self._snapshot_tasks()
+                await self._drain_background_tasks(timeout=15.0)
             worker_results = await self._run_daily_workers(day)
+            # Drain any background tasks spawned by daily workers themselves
+            if self.production_parity:
+                self._tasks_before_turn = self._snapshot_tasks()
+                await self._drain_background_tasks(timeout=15.0)
             # Store for provenance in next snapshot
             self._last_worker_results = worker_results
 
@@ -502,7 +591,7 @@ class SimulationHarness:
         time_of_day: str,
         content: str,
     ) -> str:
-        """Create a journal entry in the database."""
+        """Create a journal entry in the database (legacy path)."""
         entry_id = str(uuid.uuid4())
         timestamp = get_entry_timestamp(self.simulation_start, day, time_of_day)
 
@@ -519,20 +608,20 @@ class SimulationHarness:
             timestamp,
         )
 
-        # Store for payload construction in _process_entry
-        self._last_entry_content = content
-        self._last_entry_ts = timestamp
-
         return entry_id
 
     async def _process_entry(self, entry_id: str) -> None:
         """
         Process an entry through the REAL worker pipeline.
 
-        Runs both per-turn workers synchronously:
+        Runs all 5 per-turn workers synchronously (same as production):
         1. turn_memory_update  → ingest_heavy (STM, embeddings, personal model)
         2. episodic_consolidation_v21 → soul/emotion/rhythm extraction, patterns, memory graph
+        3. preference_learning → extract preferences + feedback + behavior→symptom patterns
+        4. journal_enrich → LLM enrichment of journal entry
+        5. intent_extraction → extract user intents
         """
+        self._tasks_before_turn = self._snapshot_tasks()
         try:
             from sakhi.apps.worker.pipelines.turn_updates.runner import (
                 process_turn_job_async,
@@ -566,6 +655,30 @@ class SimulationHarness:
                 payload=payload,
             )
 
+            # 3) Preference learning: "I like X" + feedback + behavior→symptom patterns
+            await process_turn_job_async(
+                job_type="preference_learning",
+                turn_id=f"{entry_id}_pref",
+                person_id=self.user_id,
+                payload=payload,
+            )
+
+            # 4) Journal enrichment: LLM extracts meaning, annotations
+            await process_turn_job_async(
+                job_type="journal_enrich",
+                turn_id=f"{entry_id}_enrich",
+                person_id=self.user_id,
+                payload=payload,
+            )
+
+            # 5) Intent extraction: LLM extracts intents ("I want to...", "I plan to...")
+            await process_turn_job_async(
+                job_type="intent_extraction",
+                turn_id=f"{entry_id}_intent",
+                person_id=self.user_id,
+                payload=payload,
+            )
+
             # Mark entry as processed
             await self.db_exec(
                 """
@@ -576,12 +689,267 @@ class SimulationHarness:
                 entry_id,
             )
 
+            # Drain fire-and-forget background tasks (soul_extract_worker,
+            # soul_refresh_worker, context_refresh_worker) spawned by
+            # ingest_heavy via asyncio.create_task(). Without this, these
+            # tasks hold DB pool connections indefinitely, eventually
+            # exhausting the pool and deadlocking the simulation.
+            await self._drain_background_tasks()
+
         except Exception as exc:
             LOGGER.warning(
                 f"[Simulation] Worker processing failed for {entry_id}: {exc}",
                 exc_info=True,
             )
             # Continue simulation even if individual entry fails
+
+    async def _process_entry_parity(
+        self,
+        day: int,
+        time_of_day: str,
+        content: str,
+        timestamp: datetime,
+    ) -> Optional[str]:
+        """
+        Process an entry through the REAL /v2/turn endpoint.
+
+        This is production parity mode: the entry goes through the exact same
+        code path as a real user message — orchestrate_turn, triage, deterministic
+        context loading, generate_reply, post-reply processing (sessions, memory,
+        workers). SAKHI_DISABLE_QUEUE=1 ensures workers run inline.
+
+        After the turn completes, we backdate the journal entry timestamp to the
+        simulated date (since TurnIn doesn't accept a timestamp field).
+
+        Returns:
+            The entry_id created by orchestrate_turn, or None on failure.
+        """
+        if not self._parity_client:
+            LOGGER.error("[Simulation] Parity client not initialized")
+            return None
+
+        # Snapshot existing episodic IDs before turn (for precise backdating)
+        existing_episodic_ids: set = set()
+        try:
+            rows = await self.db_query(
+                "SELECT id FROM memory_episodic WHERE user_id = $1",
+                self.user_id,
+            )
+            existing_episodic_ids = {str(r["id"]) for r in (rows or [])}
+        except Exception:
+            pass
+
+        self._tasks_before_turn = self._snapshot_tasks()
+
+        try:
+            response = await self._parity_client.post(
+                "/v2/turn",
+                params={"user": self.user_id},
+                json={"text": content},
+            )
+
+            if response.status_code != 200:
+                LOGGER.warning(
+                    f"[Simulation][Parity] /v2/turn returned {response.status_code} "
+                    f"(day {day}, {time_of_day}): {response.text[:200]}"
+                )
+                return None
+
+            data = response.json()
+            entry_id = data.get("entry_id")
+            reply = data.get("reply", "")
+
+            LOGGER.info(
+                f"[Simulation][Parity] day {day} {time_of_day}: "
+                f"entry={entry_id}, reply_len={len(reply)}"
+            )
+
+            # Drain background tasks spawned by post-reply processing
+            # (asyncio.create_task in turn_v2.py: _run_post_reply_processing,
+            # plus ingest_heavy's soul_extract_worker, etc.)
+            await self._drain_background_tasks()
+
+            # Backdate all rows created by this turn to the simulated timestamp.
+            # /v2/turn uses datetime.utcnow(), but simulation needs entries
+            # spread across a 60+ day arc. Without backdating, the deterministic
+            # context loader sees zero time gaps between turns (it reads
+            # conversation_turns.created_at for gap logic).
+            if entry_id:
+                await self._backdate_turn_rows(
+                    entry_id=str(entry_id),
+                    timestamp=timestamp,
+                    existing_episodic_ids=existing_episodic_ids,
+                )
+
+            return str(entry_id) if entry_id else None
+
+        except Exception as exc:
+            LOGGER.warning(
+                f"[Simulation][Parity] Failed day {day} {time_of_day}: {exc}",
+                exc_info=True,
+            )
+            return None
+
+    async def _backdate_turn_rows(
+        self,
+        entry_id: str,
+        timestamp: datetime,
+        existing_episodic_ids: set,
+    ) -> None:
+        """Backdate all DB rows created by a parity turn to the simulated timestamp.
+
+        Covers: journal_entries, conversation_turns, conversation_sessions,
+        memory_short_term, and memory_episodic.
+        """
+        # journal_entries
+        await self.db_exec(
+            """
+            UPDATE journal_entries
+            SET ts = $2, created_at = $2, updated_at = $2
+            WHERE id = $1
+            """,
+            entry_id,
+            timestamp,
+        )
+
+        # conversation_turns — critical for deterministic_context_loader gap logic
+        try:
+            await self.db_exec(
+                """
+                UPDATE conversation_turns
+                SET created_at = $2
+                WHERE user_id = $1
+                  AND created_at > NOW() - INTERVAL '30 seconds'
+                  AND created_at <= NOW()
+                """,
+                self.user_id,
+                timestamp,
+            )
+        except Exception:
+            pass
+
+        # conversation_sessions.last_active_at — used for session continuity
+        try:
+            await self.db_exec(
+                """
+                UPDATE conversation_sessions
+                SET last_active_at = $2, created_at = LEAST(created_at, $2)
+                WHERE user_id = $1
+                  AND last_active_at > NOW() - INTERVAL '30 seconds'
+                """,
+                self.user_id,
+                timestamp,
+            )
+        except Exception:
+            pass
+
+        # memory_short_term
+        try:
+            await self.db_exec(
+                """
+                UPDATE memory_short_term
+                SET created_at = $2
+                WHERE entry_id = $1
+                """,
+                entry_id,
+                timestamp,
+            )
+        except Exception:
+            pass
+
+        # memory_episodic — precise ID diff (no time heuristic)
+        try:
+            all_rows = await self.db_query(
+                "SELECT id FROM memory_episodic WHERE user_id = $1",
+                self.user_id,
+            )
+            new_ids = [
+                str(r["id"]) for r in (all_rows or [])
+                if str(r["id"]) not in existing_episodic_ids
+            ]
+            for eid in new_ids:
+                await self.db_exec(
+                    "UPDATE memory_episodic SET created_at = $2 WHERE id = $1",
+                    eid,
+                    timestamp,
+                )
+        except Exception:
+            pass
+
+    def _snapshot_tasks(self) -> set:
+        """Capture the current set of asyncio tasks (for diffing after a turn)."""
+        current = asyncio.current_task()
+        return {t for t in asyncio.all_tasks() if t is not current and not t.done()}
+
+    async def _drain_background_tasks(self, timeout: float = 30.0) -> None:
+        """Await background tasks spawned since the last snapshot.
+
+        Only drains tasks that were NOT present before the turn started,
+        avoiding accidental cancellation of unrelated long-running tasks
+        (e.g. lifespan, ASGI server internals).
+
+        If no snapshot was taken (legacy path), falls back to draining all
+        non-current pending tasks.
+        """
+        current = asyncio.current_task()
+        baseline = getattr(self, "_tasks_before_turn", None)
+
+        if baseline is not None:
+            # Only drain tasks that are new since the snapshot
+            new_tasks = {
+                t for t in asyncio.all_tasks()
+                if t is not current and not t.done() and t not in baseline
+            }
+        else:
+            # Fallback: drain all pending (legacy path without snapshot)
+            new_tasks = {
+                t for t in asyncio.all_tasks()
+                if t is not current and not t.done()
+            }
+
+        if new_tasks:
+            done, still_pending = await asyncio.wait(
+                new_tasks, timeout=timeout
+            )
+            for t in still_pending:
+                t.cancel()
+            # Suppress CancelledError from cancelled tasks
+            for t in done | still_pending:
+                if t.done():
+                    try:
+                        t.result()
+                    except (asyncio.CancelledError, Exception):
+                        pass
+
+    # Canonical list of brain-state workers that the simulation runs.
+    # These are the production daily workers (from scheduler.py) that write
+    # to personal_model or tables the conversation engine reads.
+    #
+    # NOT included (by design):
+    #   - Notification/presence workers (outreach, nudge, evening_summary, etc.)
+    #   - Workers that write to non-existent tables (dead code in scheduler)
+    #   - Batch workers with no person_id arg (consolidate_person_models, etc.)
+    #   - Weekly/monthly aggregation (covered by daily equivalents)
+    #
+    # If you add a new daily worker to scheduler.py that writes brain state,
+    # add it here too. Count: 15.
+    DAILY_WORKER_SPECS = [
+        ("daily_reflection", "sakhi.apps.worker.tasks.daily_reflection_worker", "run_daily_reflection"),
+        ("ayurvedic_pipeline", "sakhi.apps.worker.tasks.ayurvedic_pipeline", "run_ayurvedic_pipeline"),
+        ("esr", "sakhi.apps.worker.tasks.esr_worker", "run_emotion_state_refresh"),
+        ("soul_refresh", "sakhi.apps.worker.tasks.soul_refresh_worker", "soul_refresh_worker"),
+        ("identity_momentum", "sakhi.apps.worker.identity_momentum_deep", "run_identity_momentum_deep"),
+        ("emotion_soul_rhythm", "sakhi.apps.worker.tasks.emotion_soul_rhythm_deep", "run_emotion_soul_rhythm_deep"),
+        ("rhythm_soul", "sakhi.apps.worker.rhythm_soul_deep", "run_rhythm_soul_deep"),
+        ("alignment_refresh", "sakhi.apps.worker.tasks.alignment_refresh", "run_alignment_refresh"),
+        ("coherence_refresh", "sakhi.apps.worker.tasks.coherence_refresh", "run_coherence_refresh"),
+        ("crystallization", "sakhi.apps.worker.tasks.pattern_crystallization_worker", "run_daily_crystallization"),
+        ("theme_uprank", "sakhi.apps.worker.tasks.theme_inference", "run_theme_inference_incremental"),
+        ("intent_decay", "sakhi.apps.worker.tasks.intent_evolution_decay", "intent_evolution_decay"),
+        ("emotion_loop", "sakhi.apps.worker.tasks.emotion_loop_refresh", "emotion_loop_refresh"),
+        ("task_weaver", "sakhi.apps.worker.tasks.task_weaver_refresh", "task_weaver_refresh"),
+        ("forecast", "sakhi.apps.worker.tasks.forecast", "run_forecast"),
+    ]
 
     async def _run_daily_workers(self, day: int) -> Dict[str, Any]:
         """
@@ -590,52 +958,41 @@ class SimulationHarness:
         Calls the same functions that scheduler.py enqueues in production.
         Every function takes (person_id: str) and writes to personal_model.
         Non-fatal: each worker is try/except'd so simulation continues.
-        """
-        # Exact same imports as scheduler.py — production code, not stubs
-        from sakhi.apps.worker.tasks.ayurvedic_pipeline import run_ayurvedic_pipeline
-        from sakhi.apps.worker.tasks.esr_worker import run_emotion_state_refresh
-        from sakhi.apps.worker.tasks.soul_refresh_worker import soul_refresh_worker
-        from sakhi.apps.worker.tasks.alignment_refresh import run_alignment_refresh
-        from sakhi.apps.worker.tasks.coherence_refresh import run_coherence_refresh
-        from sakhi.apps.worker.identity_momentum_deep import run_identity_momentum_deep
-        from sakhi.apps.worker.tasks.emotion_soul_rhythm_deep import run_emotion_soul_rhythm_deep
-        from sakhi.apps.worker.rhythm_soul_deep import run_rhythm_soul_deep
-        from sakhi.apps.worker.tasks.daily_reflection_worker import run_daily_reflection
-        from sakhi.apps.worker.tasks.pattern_crystallization_worker import run_daily_crystallization
-        from sakhi.apps.worker.tasks.theme_inference import run_theme_inference_incremental
-        from sakhi.apps.worker.tasks.intent_evolution_decay import intent_evolution_decay
-        from sakhi.apps.worker.tasks.emotion_loop_refresh import emotion_loop_refresh
-        from sakhi.apps.worker.tasks.task_weaver_refresh import task_weaver_refresh
-        from sakhi.apps.worker.tasks.forecast import run_forecast
 
-        # Order matches scheduler.py — dependencies respected
-        workers = [
-            ("daily_reflection", run_daily_reflection),
-            ("ayurvedic_pipeline", run_ayurvedic_pipeline),
-            ("esr", run_emotion_state_refresh),
-            ("soul_refresh", soul_refresh_worker),
-            ("identity_momentum", run_identity_momentum_deep),
-            ("emotion_soul_rhythm", run_emotion_soul_rhythm_deep),
-            ("rhythm_soul", run_rhythm_soul_deep),
-            ("alignment_refresh", run_alignment_refresh),
-            ("coherence_refresh", run_coherence_refresh),
-            ("crystallization", run_daily_crystallization),
-            ("theme_uprank", run_theme_inference_incremental),
-            ("intent_decay", intent_evolution_decay),
-            ("emotion_loop", emotion_loop_refresh),
-            ("task_weaver", task_weaver_refresh),
-            ("forecast", run_forecast),
-        ]
+        Uses (module_path, function_name) tuples with lazy imports so that
+        a broken import in one worker doesn't block the others.
+        """
+        worker_specs = self.DAILY_WORKER_SPECS
+
+        import importlib
+
+        # Build workers list with lazy import — skip workers that fail to import
+        workers = []
+        for name, mod_path, fn_name in worker_specs:
+            try:
+                mod = importlib.import_module(mod_path)
+                fn = getattr(mod, fn_name)
+                workers.append((name, fn))
+            except Exception as exc:
+                LOGGER.warning(f"[Simulation] Could not import {name} ({mod_path}.{fn_name}): {exc}")
+                workers.append((name, None))  # Mark as failed import
 
         LOGGER.info(f"[Simulation] Running {len(workers)} production workers (day {day})")
         results: Dict[str, Any] = {}
         succeeded = 0
+        worker_timeout = 60.0  # Max seconds per worker — prevents hanging
         for name, fn in workers:
+            if fn is None:
+                results[name] = {"ok": False, "error": "import failed"}
+                continue
             try:
-                result = await fn(self.user_id)
+                result = await asyncio.wait_for(fn(self.user_id), timeout=worker_timeout)
                 results[name] = {"ok": True, "result": str(result)[:200] if result else None}
                 succeeded += 1
                 LOGGER.info(f"[Simulation]   {name} OK (day {day})")
+            except asyncio.TimeoutError:
+                results[name] = {"ok": False, "error": f"timeout ({worker_timeout}s)"}
+                LOGGER.warning(f"[Simulation]   {name} TIMEOUT (day {day}): exceeded {worker_timeout}s")
             except Exception as exc:
                 results[name] = {"ok": False, "error": str(exc)}
                 LOGGER.warning(f"[Simulation]   {name} FAILED (day {day}): {exc}")
@@ -651,13 +1008,12 @@ class SimulationHarness:
         """
         Ask demo questions through the real conversation engine.
 
+        In production_parity mode, routes through /v2/turn (full endpoint).
+        Otherwise, calls generate_reply directly.
+
         After the simulation builds a rich brain, this shows how Sakhi's
         responses are personalized based on the accumulated brain state.
         """
-        from sakhi.apps.api.services.conversation_v2.conversation_engine import (
-            generate_reply,
-        )
-
         demo_questions = questions or [
             "I'm feeling stuck today, any suggestions?",
             "Should I push through or take a break?",
@@ -667,24 +1023,59 @@ class SimulationHarness:
         results: List[Dict[str, Any]] = []
         for question in demo_questions:
             try:
-                response = await generate_reply(
-                    person_id=self.user_id,
-                    user_text=question,
-                    return_debug=True,
-                )
-                results.append({
-                    "question": question,
-                    "response": response.get("reply", ""),
-                    "debug": {
-                        "context_used": list(
-                            response.get("debug", {}).get("context_keys", [])
-                        ),
-                        "tone": response.get("debug", {}).get("tone", {}),
-                    },
-                })
+                if self.production_parity and self._parity_client:
+                    # Snapshot before each demo turn so drain is scoped
+                    self._tasks_before_turn = self._snapshot_tasks()
+                    # Route through real /v2/turn endpoint
+                    resp = await self._parity_client.post(
+                        "/v2/turn",
+                        params={"user": self.user_id, "debug": "1"},
+                        json={"text": question},
+                    )
+                    await self._drain_background_tasks()
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        results.append({
+                            "question": question,
+                            "response": data.get("reply", ""),
+                            "debug": {
+                                "context_used": list(
+                                    (data.get("debug_data") or {}).get("active_modules", [])
+                                ),
+                                "tone": (data.get("toneBlueprint") or {}),
+                            },
+                        })
+                    else:
+                        results.append({
+                            "question": question,
+                            "response": f"[HTTP {resp.status_code}]",
+                            "error": resp.text[:200],
+                        })
+                else:
+                    # Direct call to conversation engine
+                    from sakhi.apps.api.services.conversation_v2.conversation_engine import (
+                        generate_reply,
+                    )
+                    response = await generate_reply(
+                        person_id=self.user_id,
+                        user_text=question,
+                        return_debug=True,
+                    )
+                    results.append({
+                        "question": question,
+                        "response": response.get("reply", ""),
+                        "debug": {
+                            "context_used": list(
+                                response.get("debug", {}).get("context_keys", [])
+                            ),
+                            "tone": response.get("debug", {}).get("tone", {}),
+                        },
+                    })
+
+                reply_text = results[-1].get("response", "")
                 LOGGER.info(
                     f"[Simulation] Conversation demo: '{question[:40]}...' -> "
-                    f"{len(response.get('reply', ''))} chars"
+                    f"{len(reply_text)} chars"
                 )
             except Exception as exc:
                 results.append({

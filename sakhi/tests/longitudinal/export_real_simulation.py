@@ -30,6 +30,9 @@ Usage:
 
     # Custom demo questions for conversation demo
     python -m sakhi.tests.longitudinal.export_real_simulation --persona anxious_achiever --demo-questions "How am I doing?" "What should I prioritize?"
+
+    # Production parity mode: route entries through /v2/turn (exact production code path)
+    python -m sakhi.tests.longitudinal.export_real_simulation --persona anxious_achiever --parity --days 10
 """
 
 from __future__ import annotations
@@ -60,6 +63,72 @@ from sakhi.tests.longitudinal.simulation_harness import (
 
 LOGGER = logging.getLogger(__name__)
 
+
+def _init_llm_router() -> None:
+    """
+    Initialize the global LLM router for simulation runs.
+
+    Replicates the router setup from FastAPI lifespan so that workers
+    and conversation demo can call call_llm() outside the web server.
+    """
+    import os
+    from sakhi.libs.llm_router import BaseProvider, LLMResponse, LLMRouter, Task
+    from sakhi.apps.api.core.llm import set_router
+
+    router = LLMRouter()
+
+    # Stub fallback
+    class _Stub(BaseProvider):
+        def __init__(self):
+            super().__init__(name="stub")
+
+        async def chat(self, *, messages, model, tools=None, **kw) -> LLMResponse:
+            last = messages[-1] if messages else {"role": "assistant", "content": ""}
+            return LLMResponse(model=model, task=Task.CHAT, text=last.get("content", ""))
+
+    router.register_provider("stub", _Stub())
+    chat_providers: list[str] = []
+    tool_providers: list[str] = []
+
+    # OpenAI direct
+    try:
+        from sakhi.libs.llm_router.openai_provider import make_openai_provider_from_env
+        openai_prov = make_openai_provider_from_env()
+        if openai_prov:
+            router.register_provider("openai", openai_prov, daily_budget=None)
+            chat_providers.append("openai")
+            tool_providers.append("openai")
+    except Exception as exc:
+        LOGGER.warning("OpenAI provider init failed: %s", exc)
+
+    # OpenRouter
+    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+    if api_key:
+        try:
+            from sakhi.libs.llm_router.openrouter import OpenRouterProvider
+            openrouter_prov = OpenRouterProvider(
+                api_key=api_key,
+                base_url=os.getenv("OPENROUTER_BASE_URL"),
+                tenant=os.getenv("OPENROUTER_TENANT"),
+            )
+            router.register_provider("openrouter", openrouter_prov)
+            chat_providers.append("openrouter")
+            tool_providers.append("openrouter")
+        except Exception as exc:
+            LOGGER.warning("OpenRouter provider init failed: %s", exc)
+
+    chat_providers.append("stub")
+    tool_providers.append("stub")
+    router.set_policy(Task.CHAT, chat_providers)
+    router.set_policy(Task.TOOL, tool_providers)
+
+    set_router(router)
+    LOGGER.info(
+        "LLM router initialized for simulation (providers: %s)",
+        list(router._providers.keys()),
+    )
+
+
 # Output directory for demo JSON files
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_DIR = PROJECT_ROOT / "apps" / "web" / "public" / "simulation"
@@ -72,6 +141,7 @@ async def run_and_export(
     daily_worker_interval: int = 3,  # Run daily workers every N days
     cleanup: bool = True,
     output_dir: Path = OUTPUT_DIR,
+    production_parity: bool = False,  # Route through /v2/turn
 ) -> Path:
     """
     Run a real simulation and export to JSON.
@@ -83,6 +153,7 @@ async def run_and_export(
         daily_worker_interval: Run daily workers every N simulated days
         cleanup: Whether to delete test data from DB after export
         output_dir: Where to write the JSON file
+        production_parity: If True, route entries through /v2/turn endpoint
 
     Returns:
         Path to the exported JSON file
@@ -92,7 +163,8 @@ async def run_and_export(
     persona = load_persona(persona_id)
     total_days = max_days or persona.arc.total_days
 
-    LOGGER.info(f"Starting real simulation: {persona.name} ({persona_id}), {total_days} days")
+    mode_label = "PRODUCTION PARITY" if production_parity else "REAL WORKERS"
+    LOGGER.info(f"Starting simulation [{mode_label}]: {persona.name} ({persona_id}), {total_days} days")
 
     harness = SimulationHarness(
         persona=persona,
@@ -101,6 +173,7 @@ async def run_and_export(
         snapshot_interval=snapshot_interval,
         run_workers=True,
         daily_worker_interval=daily_worker_interval,
+        production_parity=production_parity,
     )
 
     try:
@@ -116,6 +189,7 @@ async def run_and_export(
         export_data = result.to_dict(include_persona=True)
         export_data["generated_at"] = datetime.now(timezone.utc).isoformat()
         export_data["real_pipeline"] = True  # Flag that this used real workers
+        export_data["production_parity"] = production_parity  # True if routed through /v2/turn
 
         with open(output_path, "w") as f:
             json.dump(export_data, f, indent=2, default=str)
@@ -231,6 +305,12 @@ async def main():
         action="store_true",
         help="List available personas",
     )
+    parser.add_argument(
+        "--parity",
+        action="store_true",
+        help="Production parity mode: route entries through /v2/turn endpoint "
+             "(same code path as production, not direct DB inserts)",
+    )
 
     args = parser.parse_args()
 
@@ -239,6 +319,11 @@ async def main():
         level=level,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
+
+    # Initialize LLM router so workers + conversation demo can call call_llm()
+    # In parity mode, the FastAPI lifespan handles this instead.
+    if not args.parity:
+        _init_llm_router()
 
     if args.list:
         personas = list_available_personas()
@@ -270,6 +355,7 @@ async def main():
                 daily_worker_interval=args.daily_interval,
                 cleanup=not args.no_cleanup,
                 output_dir=output_dir,
+                production_parity=args.parity,
             )
         except Exception as exc:
             LOGGER.error(f"Failed to export {pid}: {exc}", exc_info=True)
@@ -277,6 +363,10 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+    # Force exit — background asyncio tasks (soul_extract_worker etc.)
+    # can hold DB pool connections that prevent clean shutdown.
+    import sys
+    sys.exit(0)
 
 
 __all__ = ["run_and_export"]

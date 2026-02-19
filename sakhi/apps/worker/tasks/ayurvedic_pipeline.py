@@ -4,7 +4,9 @@ from typing import Dict, Any
 from uuid import UUID
 
 from sakhi.apps.api.core.db import q as dbq
-from core.rhythm.constants import MIN_WEEKLY_SIGNALS
+
+# Previously imported from core.rhythm.constants (legacy path, now archived)
+MIN_WEEKLY_SIGNALS = 5
 
 logger = logging.getLogger(__name__)
 
