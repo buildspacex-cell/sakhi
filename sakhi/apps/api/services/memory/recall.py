@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-import logging
 import asyncio
+import logging
 from typing import Any, Dict, List, Tuple
-import numpy as np
+
+from kala.memory.vector_math import cosine_similarity as _sim
+from kala.memory.vector_math import diversity_filter as _diversity_filter_raw
+from kala.memory.vector_math import parse_vector as _parse_vec
+from kala.memory.vector_math import recency_weight as _recency_weight_raw
 
 from sakhi.apps.api.core.db import q
 from sakhi.apps.api.services.memory.graph_reinforcement import reinforce_recall_graph
@@ -31,49 +35,8 @@ async def _get_embedding(text: str) -> List[float]:
         return [0.0] * 1536
 
 
-def _parse_vec(raw: Any) -> List[float]:
-    if not raw:
-        return []
-    if isinstance(raw, list):
-        return [float(x) for x in raw]
-    if isinstance(raw, str) and raw.startswith("[") and raw.endswith("]"):
-        body = raw[1:-1].strip()
-        if not body:
-            return []
-        try:
-            return [float(piece) for piece in body.split(",")]
-        except ValueError:
-            return []
-    return []
-
-
-def _sim(a: List[float], b: List[float]) -> float:
-    try:
-        va = np.array(a, dtype=float)
-        vb = np.array(b, dtype=float)
-        denom = float(np.linalg.norm(va) * np.linalg.norm(vb))
-        if denom == 0:
-            return 0.0
-        return float(np.dot(va, vb) / denom)
-    except Exception:
-        return 0.0
-
-
 def _recency_weight(ts: Any) -> float:
-    import datetime
-
-    if not ts:
-        return 1.0
-    if isinstance(ts, str):
-        try:
-            ts = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        except ValueError:
-            return 1.0
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=datetime.timezone.utc)
-    now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-    age_days = (now - ts).days
-    return float(0.5 ** (age_days / RECENCY_HALFLIFE_DAYS))
+    return _recency_weight_raw(ts, halflife_days=RECENCY_HALFLIFE_DAYS)
 
 
 def _chunk_text(text: str, max_len: int = 280) -> List[str]:
@@ -90,31 +53,7 @@ def _chunk_text(text: str, max_len: int = 280) -> List[str]:
 
 
 def _diversity_filter(scored_items: List[Tuple[float, Dict[str, Any]]], top_k: int) -> List[Dict[str, Any]]:
-    selected: List[Dict[str, Any]] = []
-    vecs: List[List[float]] = []
-
-    for score, item in scored_items:
-        if len(selected) >= top_k:
-            break
-        vec = item.get("vec")
-        if not vec:
-            continue
-        diverse = True
-        for prev in vecs:
-            if _sim(prev, vec) > 0.92:
-                diverse = False
-                break
-        if diverse:
-            selected.append({"score": score, **item})
-            vecs.append(vec)
-    if len(selected) < top_k:
-        for score, item in scored_items:
-            if len(selected) >= top_k:
-                break
-            candidate = {"score": score, **item}
-            if candidate not in selected:
-                selected.append(candidate)
-    return selected[:top_k]
+    return _diversity_filter_raw(scored_items, top_k=top_k, threshold=0.92)
 
 
 async def _fetch_sources(person_id: str) -> List[Dict[str, Any]]:

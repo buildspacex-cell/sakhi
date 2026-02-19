@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from kala.memory.vector_math import cosine_similarity as _cosine_similarity
+
 from sakhi.libs.embeddings import embed_text, parse_pgvector
 from sakhi.libs.schemas.db import get_async_pool
 
@@ -64,12 +66,3 @@ async def best_match(user_id: str, text: str) -> Tuple[Optional[Dict], float]:
     return best, best_score
 
 
-def _cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
-    if not a or not b:
-        return 0.0
-    numerator = sum(x * y for x, y in zip(a, b))
-    denom_a = sum(x * x for x in a) ** 0.5
-    denom_b = sum(y * y for y in b) ** 0.5
-    if denom_a == 0 or denom_b == 0:
-        return 0.0
-    return numerator / (denom_a * denom_b)
