@@ -1642,6 +1642,73 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "health_trends": health_trends,
     }
 
+    # ── GOVERNANCE GATE ──────────────────────────────────────────────────
+    # Evaluate constraints, drift, contradictions via kala GovernanceGate.
+    # Non-fatal: if governance fails the turn proceeds normally.
+    governance_decision = None
+    governance_guard = ""
+    action_type = "conversation_turn"
+    try:
+        from sakhi.apps.api.services.governance.service import (
+            classify_action_type,
+            evaluate_turn,
+            build_governance_guard,
+            log_turn_event,
+        )
+
+        action_type = classify_action_type(
+            body.text,
+            friction_state_computed.get("state"),
+        )
+
+        # Use IST for demo (person timezone when available)
+        import pytz
+        _person_tz = pytz.timezone("Asia/Kolkata")
+        local_now = datetime.datetime.now(_person_tz)
+        proposed_hour = local_now.hour
+
+        gov_action_context = {
+            "entity_id": user_id,
+            "proposed_action": action_type,
+            "proposed_hour": proposed_hour,
+            "user_text": body.text,
+            "friction_state": friction_state_computed.get("state", "balanced"),
+            "drift_percentage": drift_percentage or 0,
+        }
+
+        # Log PROPOSED event (before gate evaluation)
+        await log_turn_event(
+            person_id=user_id,
+            action=action_type,
+            event_type="proposed",
+            actor="llm",
+            data=gov_action_context,
+        )
+
+        gov_drift_data = {
+            "drift_percentage": drift_percentage or 0,
+            "severity": friction_state_computed.get("state", "balanced"),
+        } if drift_percentage else None
+
+        governance_decision = await evaluate_turn(
+            person_id=user_id,
+            action_context=gov_action_context,
+            drift_data=gov_drift_data,
+        )
+        governance_guard = build_governance_guard(governance_decision)
+        metadata_payload["governance_decision"] = governance_decision
+        metadata_payload["governance_guard"] = governance_guard
+
+        logger.info(
+            "[turn_v2] governance: action=%s decision=%s violations=%d",
+            action_type,
+            governance_decision.get("action", "allow"),
+            len(governance_decision.get("violations", [])),
+        )
+
+    except Exception as gov_exc:
+        logger.warning("[turn_v2] Governance evaluation failed (non-fatal): %s", gov_exc)
+
     # background task routing refresh when new task intent might be present
     try:
         if stored_intents:
@@ -1673,6 +1740,38 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     adaptive_response = reply_bundle.get("adaptive_response")  # Adaptive Response Framework output
     reply_debug = reply_bundle.get("debug") or {}  # Full debug from conversation engine
 
+    # ── GOVERNANCE POST-CHECK ────────────────────────────────────────────
+    # If governance blocked but LLM still violated, replace with safe template.
+    if governance_decision and governance_decision.get("action") == "block":
+        try:
+            from sakhi.apps.api.services.governance.service import enforce_block
+            reply_text = enforce_block(reply_text, governance_decision)
+        except Exception:
+            pass  # Non-fatal — let original reply through
+
+    # ── GOVERNANCE EVENT LOG (post-reply) ────────────────────────────────
+    try:
+        from sakhi.apps.api.services.governance.service import (
+            log_turn_event,
+            map_decision_to_event_type,
+        )
+        gov_action = (governance_decision or {}).get("action", "allow")
+        await log_turn_event(
+            person_id=user_id,
+            action=action_type,
+            event_type=map_decision_to_event_type(gov_action),
+            actor="llm",
+            data={
+                "governance_action": gov_action,
+                "had_violations": bool(
+                    governance_decision and governance_decision.get("violations")
+                ),
+            },
+            reason=reply_text[:200],
+        )
+    except Exception:
+        pass  # Non-fatal
+
     # ── OPTIMIZATION: Return response immediately, process rest in background ──
     product = {
         "reply": reply_text,
@@ -1687,6 +1786,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "journaling_ai": journaling_ai,
         "memory_recall": [],  # Recall already done inside generate_reply
         "agent_task_context": agent_task_context if agent_task_context else None,
+        "governance": governance_decision,
     }
 
     if _return_debug:
@@ -1702,6 +1802,8 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             "internal_state": internal_state,
             "tone_state": tone_state,
             "empathy_state": empathy_state,
+            "governance_decision": governance_decision,
+            "governance_guard": governance_guard,
             "note": "Post-reply processing (memory, persona, topics, workers) runs in background",
         }
 

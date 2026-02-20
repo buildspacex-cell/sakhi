@@ -1,55 +1,23 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
-from typing import Any, Sequence, List
+from typing import Any, List
 
 import numpy as np
 
+from kala.memory.vector_math import normalize_vector as _normalize_vector_raw
+from kala.memory.vector_math import parse_vector as _coerce_vector
+
 from sakhi.apps.api.core.db import dbfetchrow, exec as dbexec
-import logging
 
 logger = logging.getLogger(__name__)
 EXPECTED_DIM = 1024  # canonical dimension for text-embedding-3-small
 
 
 def _normalize_vector(vec: Any) -> List[float]:
-    """
-    Ensure the vector is a flat list of floats with EXPECTED_DIM elements.
-    Pads or trims as needed.
-    """
-    if not isinstance(vec, (list, tuple)):
-        return [0.0] * EXPECTED_DIM
-
-    candidate = vec
-    if len(candidate) == 1 and isinstance(candidate[0], (list, tuple)):
-        candidate = candidate[0]
-
-    try:
-        candidate = [float(x) for x in candidate]
-    except Exception:
-        return [0.0] * EXPECTED_DIM
-
-    if len(candidate) > EXPECTED_DIM:
-        return candidate[:EXPECTED_DIM]
-    if len(candidate) < EXPECTED_DIM:
-        return candidate + [0.0] * (EXPECTED_DIM - len(candidate))
-    return candidate
-
-
-def _coerce_vector(candidate: Any) -> list[float]:
-    if isinstance(candidate, (list, tuple)):
-        items: Sequence[Any] = candidate  # type: ignore[assignment]
-    else:
-        return []
-
-    if items and isinstance(items[0], (list, tuple)):
-        items = items[0]  # type: ignore[assignment]
-
-    try:
-        return [float(value) for value in items]  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return []
+    return _normalize_vector_raw(vec, dim=EXPECTED_DIM)
 
 
 def _coerce_record(payload: Any) -> dict[str, Any]:

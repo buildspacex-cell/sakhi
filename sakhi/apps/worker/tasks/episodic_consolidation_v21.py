@@ -27,11 +27,11 @@ from sakhi.libs.schemas import get_settings
 # Memory Graph wiring for cross-entity relationships
 try:
     from sakhi.apps.api.services.memory_graph.wiring import (
-        wire_soul_signals_to_graph,
+        ensure_time_slots,
+        wire_activity_to_time_slot,
         wire_soul_conflict_to_graph,
         wire_soul_friction_to_graph,
-        wire_activity_to_time_slot,
-        ensure_time_slots,
+        wire_soul_signals_to_graph,
     )
     MEMORY_GRAPH_ENABLED = True
 except ImportError:
@@ -206,47 +206,8 @@ async def _embed_summary(text: str) -> tuple[Sequence[float], bool]:
     return vector, True
 
 
-# context_tags are weak deterministic signals used by longitudinal learning
-def extract_context_tags(text: str) -> List[Dict[str, str]]:
-    if not isinstance(text, str) or not text.strip():
-        return []
-    lowered = text.lower()
-    tags: List[Dict[str, str]] = []
-
-    def add_tag(dimension: str, signal_key: str, polarity: str, intensity: str = "medium"):
-        if len(tags) >= 5:
-            return
-        tags.append(
-            {
-                "dimension": dimension,
-                "signal_key": signal_key,
-                "polarity": polarity,
-                "intensity": intensity,
-            }
-        )
-
-    if any(k in lowered for k in ["sleep", "rested", "fatigue", "tired", "exhausted"]):
-        add_tag("body", "energy_rest", "neutral")
-    if any(k in lowered for k in ["back pain", "stiff neck", "ache", "sore"]):
-        add_tag("body", "discomfort", "up")
-    if any(k in lowered for k in ["stress", "anxiety", "overwhelm"]):
-        add_tag("emotion", "stress", "up")
-    if any(k in lowered for k in ["calm", "relief", "grounded"]):
-        add_tag("emotion", "calm", "down")
-    if any(k in lowered for k in ["energized", "productive", "focus"]):
-        add_tag("energy", "activation", "up")
-    if any(k in lowered for k in ["sluggish", "drained", "tired"]):
-        add_tag("energy", "activation", "down")
-    if any(k in lowered for k in ["meeting", "deadline", "calls", "workload"]):
-        add_tag("work", "load", "up")
-    if any(k in lowered for k in ["break", "walk", "rest"]):
-        add_tag("work", "recovery", "down")
-    if any(k in lowered for k in ["clarity", "plan", "organized"]):
-        add_tag("mind", "clarity", "up")
-    if any(k in lowered for k in ["scattered", "distracted", "fragmented"]):
-        add_tag("mind", "clarity", "down")
-
-    return tags
+# context_tags — canonical implementation now lives in kala
+from kala.signals.context_tags import extract_context_tags  # noqa: E402
 
 
 async def wire_episode_to_memory_graph(
@@ -672,210 +633,27 @@ Return JSON only with:
         return {}
 
 
+# Dosha state computation — canonical implementation now lives in kala
+from kala.state.dosha import compute_dosha_state as _compute_dosha_state  # noqa: E402
+
+
 async def extract_state_vector(
     summary_text: str,
     emotional_state: Dict[str, Any],
     rhythm_state: Dict[str, Any],
     body_dosha: Dict[str, float] | None = None,
 ) -> Dict[str, Any]:
-    """
-    Compute dosha state vector for Friction Framework from episode summary.
+    """Async wrapper for kala.state.dosha.compute_dosha_state."""
+    return _compute_dosha_state(summary_text, emotional_state, rhythm_state, body_dosha)
 
-    Dosha mapping:
-    - Vata (Adaptive): scattered, anxious, variable, creative, quick-thinking
-    - Pitta (Performance): intense, focused, irritable, driven, goal-oriented
-    - Kapha (Conservation): steady, slow, heavy, calm, resistant to change
 
-    If body_dosha is provided (from HealthKit/body_state_history), blends
-    60% journal-derived scores with 40% body-derived dosha scores.
-
-    Returns normalized dosha scores that sum to 1.0
-    """
-    if not summary_text or not summary_text.strip():
-        return {"dosha": {"vata": 0.33, "pitta": 0.33, "kapha": 0.34}, "confidence": 0.3}
-
-    # Deterministic keyword-based computation (fast, no LLM)
-    lowered = summary_text.lower()
-    scores = {"vata": 0.0, "pitta": 0.0, "kapha": 0.0}
-
-    # Vata signals (Adaptive - scattered, anxious, creative)
-    vata_keywords = [
-        "scattered", "anxious", "worry", "racing", "overwhelmed", "distracted",
-        "creative", "ideas", "brainstorm", "change", "varied", "variable",
-        "restless", "insomnia", "couldn't sleep", "mind racing", "jumping"
-    ]
-    for kw in vata_keywords:
-        if kw in lowered:
-            scores["vata"] += 0.15
-
-    # Pitta signals (Performance - intense, focused, driven)
-    pitta_keywords = [
-        "intense", "focused", "productive", "deadline", "accomplished", "driven",
-        "irritable", "frustrated", "angry", "impatient", "critical", "perfection",
-        "competitive", "goal", "achievement", "pushed", "hard work"
-    ]
-    for kw in pitta_keywords:
-        if kw in lowered:
-            scores["pitta"] += 0.15
-
-    # Kapha signals (Conservation - steady, slow, heavy)
-    kapha_keywords = [
-        "steady", "calm", "grounded", "stable", "routine", "consistent",
-        "tired", "heavy", "sluggish", "drained", "stuck", "unmotivated",
-        "rest", "comfort", "relaxed", "slow", "peaceful"
-    ]
-    for kw in kapha_keywords:
-        if kw in lowered:
-            scores["kapha"] += 0.15
-
-    # Integrate emotional state signals
-    if emotional_state:
-        activation = float(emotional_state.get("activation", 0.5))
-        stability = float(emotional_state.get("stability", 0.5))
-        valence = float(emotional_state.get("valence", 0.0))
-
-        # High activation + negative valence = elevated Pitta
-        if activation > 0.6 and valence < -0.2:
-            scores["pitta"] += 0.2
-        # Low activation = elevated Kapha
-        if activation < 0.4:
-            scores["kapha"] += 0.15
-        # Low stability = elevated Vata
-        if stability < 0.4:
-            scores["vata"] += 0.2
-
-    # Integrate rhythm state signals
-    if rhythm_state:
-        energy = float(rhythm_state.get("energy_level", 0.5))
-        structure = float(rhythm_state.get("structure", 0.5))
-
-        # Low energy = Kapha elevated
-        if energy < 0.4:
-            scores["kapha"] += 0.15
-        # High energy + low structure = Vata elevated
-        if energy > 0.6 and structure < 0.4:
-            scores["vata"] += 0.15
-
-    # Normalize journal-derived scores to sum to 1.0
-    total = sum(scores.values())
-    if total > 0:
-        scores = {k: round(v / total, 2) for k, v in scores.items()}
-    else:
-        scores = {"vata": 0.33, "pitta": 0.33, "kapha": 0.34}
-
-    # Blend with body dosha if available (60% journal + 40% body)
-    if body_dosha and all(k in body_dosha for k in ("vata", "pitta", "kapha")):
-        # Normalize body dosha to sum to 1.0
-        body_total = sum(body_dosha.values())
-        if body_total > 0:
-            norm_body = {k: v / body_total for k, v in body_dosha.items()}
-            scores = {
-                k: round(scores[k] * 0.6 + norm_body.get(k, 0.33) * 0.4, 3)
-                for k in scores
-            }
-            # Re-normalize
-            blend_total = sum(scores.values())
-            if blend_total > 0:
-                scores = {k: round(v / blend_total, 2) for k, v in scores.items()}
-
-    # Ensure exactly 1.0
-    adjustment = 1.0 - sum(scores.values())
-    scores["kapha"] = round(scores["kapha"] + adjustment, 2)
-
-    confidence = min(0.85, 0.3 + total * 0.1)  # Higher confidence with more signals
-    if body_dosha:
-        confidence = min(0.95, confidence + 0.1)  # Body data boosts confidence
-
-    return {
-        "dosha": scores,
-        "confidence": round(confidence, 2),
-        "computed_at": datetime.now(timezone.utc).isoformat()
-    }
+# Guna state computation — canonical implementation now lives in kala
+from kala.state.guna import compute_guna_state as _compute_guna_state  # noqa: E402
 
 
 async def extract_guna_vector(summary_text: str, emotional_state: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Compute guna state vector for Operating Mode from episode summary.
-
-    Guna mapping (Operating Modes):
-    - Sattva (Clarity): balanced, clear, peaceful, aligned
-    - Rajas (Activation): active, driven, restless, ambitious
-    - Tamas (Recovery): heavy, slow, foggy, resistant
-
-    Returns normalized guna scores that sum to 1.0
-    """
-    if not summary_text or not summary_text.strip():
-        return {"sattva": 0.33, "rajas": 0.34, "tamas": 0.33, "confidence": 0.3}
-
-    lowered = summary_text.lower()
-    scores = {"sattva": 0.0, "rajas": 0.0, "tamas": 0.0}
-
-    # Sattva signals (Clarity mode)
-    sattva_keywords = [
-        "clarity", "clear", "peaceful", "balanced", "aligned", "centered",
-        "grateful", "content", "harmony", "flow", "present", "mindful",
-        "insight", "understanding", "calm focus", "serene"
-    ]
-    for kw in sattva_keywords:
-        if kw in lowered:
-            scores["sattva"] += 0.2
-
-    # Rajas signals (Activation mode)
-    rajas_keywords = [
-        "busy", "active", "productive", "rushing", "deadline", "meetings",
-        "ambitious", "driven", "restless", "anxious", "scattered", "racing",
-        "stressed", "overwhelmed", "too much", "multitasking"
-    ]
-    for kw in rajas_keywords:
-        if kw in lowered:
-            scores["rajas"] += 0.2
-
-    # Tamas signals (Recovery mode)
-    tamas_keywords = [
-        "tired", "heavy", "sluggish", "unmotivated", "foggy", "drained",
-        "stuck", "resistant", "avoidant", "procrastinating", "low energy",
-        "need rest", "exhausted", "burnt out", "numb"
-    ]
-    for kw in tamas_keywords:
-        if kw in lowered:
-            scores["tamas"] += 0.2
-
-    # Integrate emotional state
-    if emotional_state:
-        valence = float(emotional_state.get("valence", 0.0))
-        activation = float(emotional_state.get("activation", 0.5))
-        stability = float(emotional_state.get("stability", 0.5))
-
-        # Positive valence + high stability = Sattva
-        if valence > 0.2 and stability > 0.6:
-            scores["sattva"] += 0.25
-        # High activation + instability = Rajas
-        if activation > 0.6 and stability < 0.5:
-            scores["rajas"] += 0.25
-        # Low activation + negative valence = Tamas
-        if activation < 0.4 and valence < 0:
-            scores["tamas"] += 0.25
-
-    # Normalize to sum to 1.0
-    total = sum(scores.values())
-    if total > 0:
-        scores = {k: round(v / total, 2) for k, v in scores.items()}
-    else:
-        scores = {"sattva": 0.33, "rajas": 0.34, "tamas": 0.33}
-
-    # Ensure exactly 1.0
-    adjustment = 1.0 - sum(scores.values())
-    scores["tamas"] = round(scores["tamas"] + adjustment, 2)
-
-    confidence = min(0.85, 0.3 + total * 0.1)
-
-    return {
-        "sattva": scores["sattva"],
-        "rajas": scores["rajas"],
-        "tamas": scores["tamas"],
-        "confidence": round(confidence, 2),
-        "computed_at": datetime.now(timezone.utc).isoformat()
-    }
+    """Async wrapper for kala.state.guna.compute_guna_state."""
+    return _compute_guna_state(summary_text, emotional_state)
 
 
 async def extract_episodic_emotional_state(summary_text: str) -> Dict[str, Any]:

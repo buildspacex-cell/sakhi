@@ -462,6 +462,12 @@ def build_prompt(
             "let this inform what you suggest and how you frame things.\n"
         )
 
+    # --- Governance Guard Section (MANDATORY when present) ---
+    governance_guard = metadata_payload.get("governance_guard", "")
+    governance_section = ""
+    if governance_guard:
+        governance_section = f"\n{governance_guard}\n"
+
     journaling_ai = context.get("journaling_ai")
     journal_section = ""
     if journaling_ai:
@@ -760,6 +766,7 @@ Behavior cues:
 {scheduling_section}
 {context_scan}
 {os_section}
+{governance_section}
 {tier2_sections}
 {email_section}
 {causal_section}

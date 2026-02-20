@@ -13,17 +13,21 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
+from kala.pattern.thresholds import (
+    CRYSTALLIZATION_THRESHOLDS,
+    calculate_decay,
+    check_threshold,
+)
+from kala.pattern.trajectory import (
+    CrystallizationResult,
+    PatternCandidate,
+    calculate_trajectory,
+)
 from sakhi.apps.api.core.db import exec as dbexec
 from sakhi.apps.api.core.db import q as dbfetch
-from sakhi.apps.api.services.crystallization.thresholds import (
-    CRYSTALLIZATION_THRESHOLDS,
-    check_threshold,
-    calculate_decay,
-)
 
 # Memory Graph wiring for cross-entity relationships
 try:
@@ -33,34 +37,6 @@ except ImportError:
     MEMORY_GRAPH_ENABLED = False
 
 LOGGER = logging.getLogger(__name__)
-
-
-@dataclass
-class PatternCandidate:
-    """A pattern candidate aggregated from occurrences."""
-    pattern_type: str
-    pattern_value: str
-    mention_count: int
-    distinct_days: int
-    avg_confidence: float
-    first_seen: datetime
-    last_seen: datetime
-    evidence_ids: List[str]
-    evidence_snippets: List[Dict[str, Any]]
-
-
-@dataclass
-class CrystallizationResult:
-    """Result of a crystallization run."""
-    person_id: str
-    run_type: str  # daily, weekly, monthly
-    window_days: int
-    patterns_checked: int
-    patterns_crystallized: int
-    patterns_updated: int
-    patterns_decayed: int
-    new_patterns: List[str]
-    updated_patterns: List[str]
 
 
 async def aggregate_pattern_occurrences(
@@ -128,32 +104,7 @@ async def aggregate_pattern_occurrences(
     return candidates
 
 
-def calculate_trajectory(
-    current_mentions: int,
-    previous_mentions: int,
-    span_days: int,
-) -> str:
-    """
-    Calculate pattern trajectory based on mention frequency.
-
-    Returns: 'improving', 'worsening', 'stable', 'emerging', 'fading'
-    """
-    if previous_mentions == 0:
-        return "emerging"
-
-    if current_mentions == 0:
-        return "fading"
-
-    # Calculate mentions per day
-    current_rate = current_mentions / max(1, span_days)
-    previous_rate = previous_mentions / max(1, span_days)
-
-    if current_rate > previous_rate * 1.2:
-        return "improving"
-    elif current_rate < previous_rate * 0.8:
-        return "worsening"
-    else:
-        return "stable"
+# calculate_trajectory imported from kala.pattern.trajectory (see top of file)
 
 
 async def crystallize_pattern(

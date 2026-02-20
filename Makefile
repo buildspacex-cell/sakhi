@@ -31,11 +31,11 @@ status:
 # ─────────────────────────────────────────────────────────────────────────────
 
 format:
-	$(POETRY) run black sakhi
-	$(POETRY) run ruff format sakhi
+	$(POETRY) run black sakhi kala
+	$(POETRY) run ruff format sakhi kala
 
 lint:
-	$(POETRY) run ruff check sakhi
+	$(POETRY) run ruff check sakhi kala
 
 typecheck:
 	@echo "Checking Python imports..."

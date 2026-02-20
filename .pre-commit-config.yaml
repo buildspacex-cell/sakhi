@@ -8,17 +8,17 @@ repos:
     rev: 24.3.0
     hooks:
       - id: black
-        files: ^sakhi/
+        files: ^(sakhi|kala)/
         language_version: python3.11
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.3.4
     hooks:
       - id: ruff
-        files: ^sakhi/
+        files: ^(sakhi|kala)/
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
-        files: ^sakhi/
+        files: ^(sakhi|kala)/
 
   # Python type checking (optional, can be slow)
   # - repo: https://github.com/pre-commit/mirrors-mypy
@@ -72,6 +72,14 @@ repos:
         language: system
         pass_filenames: false
         stages: [push]
+
+      # Kala boundary enforcement
+      - id: kala-boundary
+        name: Kala must not import from Sakhi
+        entry: bash -c 'grep -rn "from sakhi" kala/ && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        files: ^kala/
 
       # TypeScript type check (on push only)
       - id: typescript-check

@@ -7,66 +7,22 @@ to persist/reinforce nodes/edges inside the relational memory graph.
 
 from __future__ import annotations
 
-import uuid
 import json
+import uuid
 from typing import Any, Dict, List
 
-
-def create_node(kind: str, label: str, data: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    return {
-        "id": str(uuid.uuid4()),
-        "kind": kind,
-        "label": label,
-        "data": data or {},
-    }
-
-
-def create_edge(src: Dict[str, Any], dst: Dict[str, Any], relation: str = "relates_to") -> Dict[str, Any]:
-    return {
-        "src": src["id"],
-        "dst": dst["id"],
-        "relation": relation,
-    }
-
-
-def build_graph_from_enrichment(enrichment: Dict[str, Any]) -> Dict[str, Any]:
-    facets = enrichment.get("facets") or {}
-    themes = enrichment.get("themes") or []
-    meaning = enrichment.get("meaning") or ""
-
-    nodes: List[Dict[str, Any]] = []
-    edges: List[Dict[str, Any]] = []
-
-    reflection_node = create_node("reflection", meaning[:40] or "reflection", {"meaning": meaning})
-    nodes.append(reflection_node)
-
-    emotion = facets.get("emotion")
-    if emotion:
-        emotion_node = create_node("emotion", emotion)
-        nodes.append(emotion_node)
-        edges.append(create_edge(reflection_node, emotion_node, "influences"))
-
-    for theme in themes:
-        theme_node = create_node("theme", theme)
-        nodes.append(theme_node)
-        edges.append(create_edge(reflection_node, theme_node, "relates_to"))
-
-    return {"nodes": nodes, "edges": edges}
-
-
-def reason_about_graph(graph: Dict[str, Any]) -> Dict[str, Any]:
-    nodes = graph.get("nodes", [])
-    edges = graph.get("edges", [])
-
-    themes = [n for n in nodes if n.get("kind") == "theme"]
-    emotions = [n for n in nodes if n.get("kind") == "emotion"]
-
-    return {
-        "dominant_theme": themes[0]["label"] if themes else None,
-        "emotion": emotions[0]["label"] if emotions else None,
-        "graph_size": len(nodes),
-        "edge_count": len(edges),
-    }
+from kala.graph.core import (  # noqa: F401
+    build_graph_from_enrichment,
+    create_edge,
+    create_node,
+    reason_about_graph,
+)
+from kala.graph.schema import (
+    VALID_KINDS,  # noqa: F401
+    VALID_RELATIONS,  # noqa: F401
+    sanitize_kind as _sanitize_kind,
+    sanitize_relation as _sanitize_relation,
+)
 
 
 async def get_or_create_node(
@@ -158,60 +114,6 @@ async def upsert_edge(
         weight,
     )
     return new_id
-
-
-# =============================================================================
-# VALID NODE KINDS (expanded for cross-entity relationships)
-# =============================================================================
-
-VALID_KINDS = {
-    # Original types
-    "reflection",
-    "thought",
-    "plan",
-    "insight",
-    "event",
-    # Expanded types for memory graph
-    "goal",        # User's stated objectives
-    "pattern",     # Recurring behaviors/themes (from crystallization)
-    "person",      # People mentioned in conversations
-    "value",       # Core values extracted from reflection
-    "theme",       # Recurring topics
-    "time_slot",   # Morning, afternoon, evening, night
-    "activity",    # Specific activities (yoga, work, meditation)
-    "emotion",     # Emotional states
-}
-
-# Valid edge relations
-VALID_RELATIONS = {
-    "supports",           # A enables or helps B
-    "blocks",             # A conflicts with or prevents B
-    "competes_with",      # A and B compete for same resource (time, energy)
-    "enables",            # A makes B possible
-    "relates_to",         # General connection
-    "influences",         # A affects B's state
-    "scheduled_for",      # Activity/goal linked to time_slot
-    "mentions",           # Conversation mentions entity
-    "crystallized_from",  # Pattern emerged from repeated occurrences
-    "part_of",            # A is part of B
-    "opposite_of",        # A is opposite of B
-}
-
-
-def _sanitize_kind(kind: str) -> str:
-    """Normalize and validate node kind."""
-    if not kind:
-        return "reflection"
-    core = kind.split(":", 1)[0].strip().lower()
-    return core if core in VALID_KINDS else "reflection"
-
-
-def _sanitize_relation(relation: str) -> str:
-    """Normalize and validate edge relation."""
-    if not relation:
-        return "relates_to"
-    core = relation.strip().lower().replace(" ", "_")
-    return core if core in VALID_RELATIONS else "relates_to"
 
 
 # =============================================================================

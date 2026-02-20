@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List
 
-import numpy as np
+from kala.memory.vector_math import cosine_similarity as _sim
+from kala.memory.vector_math import parse_vector as _parse_vec
 
 from sakhi.apps.api.core.db import q
 
@@ -12,33 +13,6 @@ LOGGER = logging.getLogger(__name__)
 SIM_THRESHOLD = 0.87
 MERGE_THRESHOLD = 0.93
 MAX_BATCH = 200
-
-
-def _sim(a: List[float], b: List[float]) -> float:
-    if not a or not b:
-        return 0.0
-    va = np.array(a, dtype=float)
-    vb = np.array(b, dtype=float)
-    denom = float(np.linalg.norm(va) * np.linalg.norm(vb))
-    if denom == 0:
-        return 0.0
-    return float(np.dot(va, vb) / denom)
-
-
-def _parse_vec(raw: Any) -> List[float]:
-    if not raw:
-        return []
-    if isinstance(raw, list):
-        return [float(x) for x in raw]
-    if isinstance(raw, str) and raw.startswith("["):
-        body = raw[1:-1].strip()
-        if not body:
-            return []
-        try:
-            return [float(val) for val in body.split(",")]
-        except Exception:
-            return []
-    return []
 
 
 async def fetch_memory_nodes(person_id: str) -> List[Dict[str, Any]]:
