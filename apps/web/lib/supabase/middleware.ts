@@ -54,13 +54,26 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // If refresh token is invalid/used, clear cookies and force re-auth
+  // But skip redirect if already on an auth route to prevent infinite redirect loops
+  const isOnAuthRoute = ["/auth/login", "/auth/callback"].some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+
   if (authError?.message?.toLowerCase().includes("refresh token")) {
+    // Clear all Supabase auth cookies (they use the pattern sb-<ref>-auth-token*)
+    const supabaseCookies = request.cookies
+      .getAll()
+      .filter((c) => c.name.startsWith("sb-"));
+    if (isOnAuthRoute) {
+      // Already on login page — just clear cookies and let the page render
+      supabaseResponse = NextResponse.next({ request });
+      supabaseCookies.forEach((c) => supabaseResponse.cookies.delete(c.name));
+      return supabaseResponse;
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     supabaseResponse = NextResponse.redirect(url);
-    ["sb-access-token", "sb-refresh-token"].forEach((name) =>
-      supabaseResponse.cookies.delete(name)
-    );
+    supabaseCookies.forEach((c) => supabaseResponse.cookies.delete(c.name));
     return supabaseResponse;
   }
 
@@ -68,12 +81,6 @@ export async function updateSession(request: NextRequest) {
   // Note: /experience itself is the public welcome screen; only sub-routes are protected
   const protectedRoutes = ["/experience/onboarding", "/experience/converse"];
   const isProtectedRoute = protectedRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  );
-
-  // Define auth routes (login, signup, etc.)
-  const authRoutes = ["/auth/login", "/auth/callback"];
-  const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
 
@@ -86,7 +93,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // If already authenticated and trying to access login, honour the redirect param
-  if (isAuthRoute && user && request.nextUrl.pathname === "/auth/login") {
+  if (isOnAuthRoute && user && request.nextUrl.pathname === "/auth/login") {
     const url = request.nextUrl.clone();
     const redirectParam = request.nextUrl.searchParams.get("redirect");
     if (redirectParam && redirectParam.startsWith("/")) {
