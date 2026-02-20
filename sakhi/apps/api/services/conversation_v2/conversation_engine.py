@@ -167,16 +167,19 @@ async def generate_reply(
     conversation_history = metadata_payload.get("conversation_history") or []
     session_summary = metadata_payload.get("session_summary") or ""
 
-    # Use adaptive prompt if available, otherwise use base prompt
+    # Use adaptive prompt if available, otherwise use base prompt.
+    # The adaptive prompt is the PRIMARY instruction set — it MUST come first
+    # so the LLM treats it as the governing system prompt. The recall/pattern
+    # context is supplementary data that enriches it.
     if adaptive_prompt:
         messages = [
-            {"role": "system", "content": system_ctx},
             {"role": "system", "content": adaptive_prompt},
+            {"role": "system", "content": f"[SUPPLEMENTARY MEMORY CONTEXT — use this data to personalize your response per the instructions above]\n{system_ctx}"},
         ]
     else:
         messages = [
-            {"role": "system", "content": system_ctx},
             {"role": "system", "content": base_prompt},
+            {"role": "system", "content": system_ctx},
         ]
 
     # Add session summary as compressed older context (if available)
