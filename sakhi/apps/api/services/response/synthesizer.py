@@ -952,7 +952,32 @@ def build_adaptive_prompt(
 
     conversation_block = "\n".join(conv_parts)
 
-    # ── Assemble the 3 blocks ──
+    # ── PERSONALIZATION ENFORCEMENT block ──
+    # Repeats key facts right before the user message to combat "lost in the middle"
+    # (LLMs weight the beginning and end of prompts most heavily; facts in the
+    # middle get deprioritized during generation)
+
+    personalization_lines = []
+    for fact in (synth.known_facts or [])[:5]:
+        personalization_lines.append(f"  • {fact}")
+    for inf in (synth.inferences or [])[:3]:
+        personalization_lines.append(f"  • {inf}")
+
+    if personalization_lines:
+        facts_block = "\n".join(personalization_lines)
+        personalization_section = f"""
+═══════════════════════════════════════════════════════════════════════════════
+BEFORE YOU RESPOND — USE THESE FACTS
+═══════════════════════════════════════════════════════════════════════════════
+{facts_block}
+
+Your response MUST reference at least 2 of these specific facts.
+Every remedy or suggestion MUST explain why it fits THIS person — not just why it works in general.
+If a search engine would give the same response, rewrite it."""
+    else:
+        personalization_section = ""
+
+    # ── Assemble the blocks ──
 
     prompt = f"""{SAKHI_INSTRUCTIONS}
 
@@ -967,7 +992,7 @@ THIS CONVERSATION
 ═══════════════════════════════════════════════════════════════════════════════
 
 {conversation_block}
-
+{personalization_section}
 ═══════════════════════════════════════════════════════════════════════════════
 THEY SAID: {user_text.strip()}
 ═══════════════════════════════════════════════════════════════════════════════"""

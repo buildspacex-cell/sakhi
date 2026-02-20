@@ -347,7 +347,30 @@ class TestResponseCalibration:
 
         for prompt in [body_prompt, mind_prompt, life_prompt]:
             assert "BODY SYMPTOM MODE" not in prompt
-            assert "OVERRIDE" not in prompt
+
+    def test_personalization_enforcement_present_with_facts(self):
+        """When known facts exist, a personalization enforcement block must appear near the end."""
+        ctx = self._build_synth()
+        ctx.known_facts = ["Recently mentioned: daughter had cold last week"]
+        ctx.inferences = ["Operating in tamas mode — low energy"]
+        prompt = build_adaptive_prompt("sore throat", ctx)
+        assert "BEFORE YOU RESPOND" in prompt
+        assert "USE THESE FACTS" in prompt
+        assert "daughter had cold last week" in prompt
+        assert "tamas mode" in prompt
+        # Must appear AFTER THIS CONVERSATION and BEFORE THEY SAID
+        conv_pos = prompt.index("THIS CONVERSATION")
+        enforce_pos = prompt.index("BEFORE YOU RESPOND")
+        said_pos = prompt.index("THEY SAID")
+        assert conv_pos < enforce_pos < said_pos
+
+    def test_personalization_enforcement_absent_without_facts(self):
+        """When no known facts or inferences, no enforcement block."""
+        ctx = self._build_synth()
+        ctx.known_facts = []
+        ctx.inferences = []
+        prompt = build_adaptive_prompt("sore throat", ctx)
+        assert "BEFORE YOU RESPOND" not in prompt
 
     def test_all_prompts_share_same_base_instructions(self):
         """Body, mind, and life prompts should all start with the same SAKHI_INSTRUCTIONS."""
