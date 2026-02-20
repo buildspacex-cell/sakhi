@@ -5,7 +5,7 @@ Ensures:
 - Legacy guardrails list still has expected entries
 - Adaptive prompt uses 3-block cognitive architecture
 - Adaptive prompt contains no Ayurvedic jargon (except the "never say" instruction)
-- SAKHI_INSTRUCTIONS contains friction framework, practice rule, examples
+- SAKHI_INSTRUCTIONS contains friction framework, response calibration, examples
 - Base prompt voice is aligned with adaptive
 """
 
@@ -16,7 +16,6 @@ from sakhi.apps.api.services.response.synthesizer import (
     SAKHI_INSTRUCTIONS,
     build_adaptive_prompt,
     SynthesizedContext,
-    _is_physical_health_symptom,
 )
 from sakhi.apps.api.services.conversation_v2.conversation_reasoner import build_prompt
 
@@ -69,24 +68,56 @@ class TestSakhiInstructions:
         assert "gently mobilize and lighten" in SAKHI_INSTRUCTIONS
         assert "affirm and maintain" in SAKHI_INSTRUCTIONS
 
+    def test_friction_is_for_understanding(self):
+        """Friction framework should be framed as thinking model, not mandatory framing."""
+        assert "How You Think" in SAKHI_INSTRUCTIONS
+        assert "UNDERSTAND" in SAKHI_INSTRUCTIONS
+
     def test_has_reasoning_chain(self):
         assert "REASONING CHAIN" in SAKHI_INSTRUCTIONS
         assert "STEP 1" in SAKHI_INSTRUCTIONS
         assert "STEP 5" in SAKHI_INSTRUCTIONS
 
-    def test_has_precision_practice_rule(self):
-        assert "PRECISION PRACTICE RULE" in SAKHI_INSTRUCTIONS
-        assert "ONE specific practice" in SAKHI_INSTRUCTIONS
-        assert "plain English" in SAKHI_INSTRUCTIONS
+    def test_reasoning_chain_determines_needs(self):
+        """Reasoning chain must determine what the person needs before responding."""
+        assert "Determine what they need" in SAKHI_INSTRUCTIONS
+        assert "Practical help" in SAKHI_INSTRUCTIONS
+        assert "Response Calibration" in SAKHI_INSTRUCTIONS
 
-    def test_has_recommendation_selection_rule(self):
-        """Must instruct LLM to pick ONE suggestion, not list everything."""
-        assert "Pick ONE suggestion" in SAKHI_INSTRUCTIONS
-        assert "Do NOT list everything" in SAKHI_INSTRUCTIONS
+    def test_has_response_calibration(self):
+        """Must have Response Calibration section with per-type guidance."""
+        assert "RESPONSE CALIBRATION" in SAKHI_INSTRUCTIONS
+        assert "How to Respond" in SAKHI_INSTRUCTIONS
+
+    def test_response_calibration_has_physical_symptom(self):
+        """Physical symptom guidance must exist in calibration."""
+        assert "PHYSICAL SYMPTOM" in SAKHI_INSTRUCTIONS
+        assert "practical remedies" in SAKHI_INSTRUCTIONS
+        assert "Bullet points OK" in SAKHI_INSTRUCTIONS
+        assert "100-250 words" in SAKHI_INSTRUCTIONS
+
+    def test_response_calibration_has_emotional_friction(self):
+        """Emotional friction guidance must exist in calibration."""
+        assert "EMOTIONAL / MENTAL FRICTION" in SAKHI_INSTRUCTIONS
+        assert "pattern insight" in SAKHI_INSTRUCTIONS
+        assert "ONE specific shift" in SAKHI_INSTRUCTIONS
+        assert "60-150 words" in SAKHI_INSTRUCTIONS
+
+    def test_response_calibration_has_celebration(self):
+        """Celebration/casual guidance must exist in calibration."""
+        assert "CELEBRATION / CASUAL CHECK-IN" in SAKHI_INSTRUCTIONS
+        assert "40-100 words" in SAKHI_INSTRUCTIONS
+
+    def test_response_calibration_has_multi_symptom(self):
+        """Multi-symptom pattern guidance must exist."""
+        assert "MULTI-SYMPTOM PATTERN" in SAKHI_INSTRUCTIONS
+        assert "ONE systemic explanation" in SAKHI_INSTRUCTIONS
 
     def test_has_behavioral_contract(self):
         assert "Insightful, not informative" in SAKHI_INSTRUCTIONS
         assert "Pattern-aware, not generic" in SAKHI_INSTRUCTIONS
+        assert "Practical when they need practical" in SAKHI_INSTRUCTIONS
+        assert "Reflective when they need reflection" in SAKHI_INSTRUCTIONS
 
     def test_has_examples(self):
         assert "Example 1" in SAKHI_INSTRUCTIONS
@@ -98,14 +129,9 @@ class TestSakhiInstructions:
         """Instructions should ban jargon explicitly."""
         assert "Never use words like vata, pitta, kapha, dosha" in SAKHI_INSTRUCTIONS
 
-    def test_tone_and_length(self):
-        assert "60-120 words" in SAKHI_INSTRUCTIONS
-        assert "No more than 1 question per response" in SAKHI_INSTRUCTIONS
-
-    def test_has_friction_enforcement_rule(self):
-        """Friction state must be mandatory, not optional."""
-        assert "FRICTION ENFORCEMENT RULE" in SAKHI_INSTRUCTIONS
-        assert "You MUST explicitly reference it" in SAKHI_INSTRUCTIONS
+    def test_has_quality_rules(self):
+        """Must have consolidated quality rules section."""
+        assert "QUALITY RULES" in SAKHI_INSTRUCTIONS
 
     def test_has_no_soft_hedging_rule(self):
         """Must ban hedging language."""
@@ -115,11 +141,34 @@ class TestSakhiInstructions:
     def test_has_pattern_integration_rule(self):
         """Must require cross-symptom integration."""
         assert "PATTERN INTEGRATION RULE" in SAKHI_INSTRUCTIONS
-        assert "ONE systemic explanation" in SAKHI_INSTRUCTIONS
 
     def test_has_anti_generic_test(self):
         """Must include the 'would this apply to anyone' test."""
         assert "Would this advice apply to ANY person" in SAKHI_INSTRUCTIONS
+
+    def test_has_always_rules(self):
+        """Must have universal rules."""
+        assert "No more than 1 question per response" in SAKHI_INSTRUCTIONS
+        assert "No medical diagnosis language" in SAKHI_INSTRUCTIONS
+
+    def test_no_rigid_word_count(self):
+        """Instructions should NOT have a single rigid word count for all responses."""
+        # The old "60-120 words" was too rigid. Now each calibration type has its own range.
+        # Check that we DON'T have the old blanket rule.
+        assert "60-120 words unless they ask for depth" not in SAKHI_INSTRUCTIONS
+
+    def test_no_friction_enforcement_rule(self):
+        """Friction should not be mandatory in every response (old FRICTION ENFORCEMENT RULE removed)."""
+        assert "FRICTION ENFORCEMENT RULE" not in SAKHI_INSTRUCTIONS
+        assert "You MUST explicitly reference it" not in SAKHI_INSTRUCTIONS
+
+    def test_examples_include_practical_body(self):
+        """At least one example must show practical health advice with bullets."""
+        assert "salt water gargle" in SAKHI_INSTRUCTIONS
+
+    def test_examples_include_emotional_pattern(self):
+        """At least one example must show emotional friction with pattern insight."""
+        assert "Irritation is usually the first signal" in SAKHI_INSTRUCTIONS
 
 
 class TestAdaptivePromptArchitecture:
@@ -256,10 +305,15 @@ class TestBasePromptVoiceAlignment:
         assert "Persona mode:" not in result
 
 
-class TestBodyHealthOverride:
-    """Verify body-domain physical symptoms get practical health instructions."""
+class TestResponseCalibration:
+    """Verify response calibration works for all domain types without overrides.
 
-    def _build_body_synth(self, symptom="sore_throat", domain="body") -> SynthesizedContext:
+    The base SAKHI_INSTRUCTIONS should be flexible enough to handle ANY
+    conversation type (body, mind, life, celebration) without domain-specific
+    override blocks being injected into the prompt.
+    """
+
+    def _build_synth(self, symptom="sore_throat", domain="body") -> SynthesizedContext:
         from sakhi.apps.api.services.response.translation import build_jargon_free_context
         jf = build_jargon_free_context(
             operating_system="Adaptive-Performance",
@@ -280,113 +334,85 @@ class TestBodyHealthOverride:
         ctx.known_facts = ["Recently mentioned: daughter had cold last week"]
         return ctx
 
-    def _build_mind_synth(self) -> SynthesizedContext:
-        from sakhi.apps.api.services.response.translation import build_jargon_free_context
-        jf = build_jargon_free_context(
-            operating_system="Balanced",
-            dosha_baseline={},
-            friction_state="balanced",
-            drift_percentage=0,
-            energy_mode="sattva",
-        )
-        ctx = SynthesizedContext()
-        ctx.jargon_free = jf
-        ctx.response_mode = "RESPOND"
-        ctx.domain = "mind"
-        ctx.symptom = "anxiety"
-        ctx.temporal = "recurring"
-        ctx.specificity = "medium"
-        ctx.tone_guidance = "warm, grounding"
-        ctx.guardrails = JARGON_FREE_GUARDRAILS.copy()
-        return ctx
+    def test_no_domain_specific_override_injected(self):
+        """No domain-specific override block should be injected into ANY prompt."""
+        body_prompt = build_adaptive_prompt("sore throat", self._build_synth())
+        mind_prompt = build_adaptive_prompt("anxious", self._build_synth(symptom="anxiety", domain="mind"))
+        life_prompt = build_adaptive_prompt("work stress", self._build_synth(symptom="work", domain="life"))
 
-    def test_body_symptom_gets_override(self):
-        """Physical symptom prompt must contain BODY SYMPTOM MODE override."""
-        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
-        assert "BODY SYMPTOM MODE" in prompt
-        assert "150-250 words" in prompt
+        for prompt in [body_prompt, mind_prompt, life_prompt]:
+            assert "BODY SYMPTOM MODE" not in prompt
+            assert "OVERRIDE" not in prompt
 
-    def test_body_symptom_allows_bullets(self):
-        """Override must explicitly allow bullet points."""
-        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
-        assert "Bullet points ARE appropriate" in prompt
+    def test_all_prompts_share_same_base_instructions(self):
+        """Body, mind, and life prompts should all start with the same SAKHI_INSTRUCTIONS."""
+        body_prompt = build_adaptive_prompt("sore throat", self._build_synth())
+        mind_prompt = build_adaptive_prompt("anxious", self._build_synth(symptom="anxiety", domain="mind"))
 
-    def test_body_symptom_mentions_practical_remedies(self):
-        """Override must instruct practical remedies."""
-        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
-        assert "PRACTICAL REMEDIES" in prompt
+        # Both should contain the RESPONSE CALIBRATION section
+        assert "RESPONSE CALIBRATION" in body_prompt
+        assert "RESPONSE CALIBRATION" in mind_prompt
 
-    def test_body_symptom_has_timeline_instruction(self):
-        """Override must mention timeline."""
-        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
-        assert "TIMELINE" in prompt
+        # Both should contain physical AND emotional guidance
+        assert "PHYSICAL SYMPTOM" in body_prompt
+        assert "PHYSICAL SYMPTOM" in mind_prompt
+        assert "EMOTIONAL / MENTAL FRICTION" in body_prompt
+        assert "EMOTIONAL / MENTAL FRICTION" in mind_prompt
 
-    def test_body_symptom_has_red_flag_instruction(self):
-        """Override must mention when to see a doctor."""
-        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
-        assert "RED FLAG" in prompt
+    def test_instructions_have_practical_remedy_guidance(self):
+        """Base instructions must guide practical remedies for physical symptoms."""
+        assert "practical remedies" in SAKHI_INSTRUCTIONS
+        assert "Bullet points OK" in SAKHI_INSTRUCTIONS
+        assert "diagnostic question" in SAKHI_INSTRUCTIONS
 
-    def test_mind_symptom_does_not_get_override(self):
-        """Mental/emotional concerns should NOT get body override."""
-        prompt = build_adaptive_prompt("I feel anxious", self._build_mind_synth())
-        assert "BODY SYMPTOM MODE" not in prompt
+    def test_instructions_have_emotional_pattern_guidance(self):
+        """Base instructions must guide pattern insight for emotional friction."""
+        assert "pattern insight" in SAKHI_INSTRUCTIONS
+        assert "ONE specific shift" in SAKHI_INSTRUCTIONS
 
-    def test_headache_gets_override(self):
-        """Headache is a physical symptom."""
-        prompt = build_adaptive_prompt("I have a headache", self._build_body_synth(symptom="headache"))
-        assert "BODY SYMPTOM MODE" in prompt
+    def test_instructions_have_flexible_word_counts(self):
+        """Each conversation type should have its own word count range."""
+        assert "100-250 words" in SAKHI_INSTRUCTIONS   # physical
+        assert "60-150 words" in SAKHI_INSTRUCTIONS     # emotional
+        assert "80-150 words" in SAKHI_INSTRUCTIONS     # decision/multi-symptom
+        assert "40-100 words" in SAKHI_INSTRUCTIONS     # celebration/casual
 
-    def test_fever_gets_override(self):
-        """Fever is a physical symptom."""
-        prompt = build_adaptive_prompt("I have a fever", self._build_body_synth(symptom="fever"))
-        assert "BODY SYMPTOM MODE" in prompt
+    def test_friction_as_background_for_physical(self):
+        """For physical symptoms, friction should be background context."""
+        assert "Friction state is background context" in SAKHI_INSTRUCTIONS
 
-    def test_nausea_gets_override(self):
-        """Nausea is a physical symptom."""
-        prompt = build_adaptive_prompt("I feel nauseous", self._build_body_synth(symptom="nausea"))
-        assert "BODY SYMPTOM MODE" in prompt
+    def test_friction_as_causal_for_emotional(self):
+        """For emotional friction, friction should be the causal framework."""
+        assert "it's the causal framework here" in SAKHI_INSTRUCTIONS
 
-    def test_sleep_does_not_get_override(self):
-        """Sleep is lifestyle, not acute physical illness."""
-        prompt = build_adaptive_prompt("I can't sleep", self._build_body_synth(symptom="sleep"))
-        assert "BODY SYMPTOM MODE" not in prompt
+    def test_body_prompt_includes_domain_in_direction(self):
+        """Response direction should include domain for calibration lookup."""
+        prompt = build_adaptive_prompt("sore throat", self._build_synth())
+        assert "body" in prompt.lower()  # domain appears in conversation block
 
-    def test_energy_does_not_get_override(self):
-        """Energy is lifestyle, not acute physical illness."""
-        prompt = build_adaptive_prompt("I'm so tired", self._build_body_synth(symptom="energy"))
-        assert "BODY SYMPTOM MODE" not in prompt
+    def test_mind_prompt_includes_domain_in_direction(self):
+        """Response direction should include domain for calibration lookup."""
+        prompt = build_adaptive_prompt("anxious", self._build_synth(symptom="anxiety", domain="mind"))
+        assert "mind" in prompt.lower()
 
-    def test_life_domain_does_not_get_override(self):
-        """Life domain should never get body override."""
-        prompt = build_adaptive_prompt("career problems", self._build_body_synth(symptom="work", domain="life"))
-        assert "BODY SYMPTOM MODE" not in prompt
+    def test_examples_show_practical_body_response(self):
+        """Examples must demonstrate practical body symptom response with bullets."""
+        assert "salt water gargle" in SAKHI_INSTRUCTIONS
+        assert "What helps:" in SAKHI_INSTRUCTIONS
+        # The example uses bullet points for remedies
+        assert "Honey in warm water" in SAKHI_INSTRUCTIONS
 
-    def test_body_override_has_example(self):
-        """Override should include a body-specific example."""
-        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
-        assert "salt water gargle" in prompt
+    def test_examples_show_emotional_pattern_response(self):
+        """Examples must demonstrate emotional friction with pattern insight."""
+        assert "Irritation is usually the first signal" in SAKHI_INSTRUCTIONS
+        assert "pause before reacting" in SAKHI_INSTRUCTIONS
 
-    def test_friction_still_present_as_context(self):
-        """Friction state should still appear, just not as primary frame."""
-        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
-        assert "CONTEXT, not the primary frame" in prompt
+    def test_recommendation_guidance_varies_by_type(self):
+        """Recommendation usage should differ for physical vs emotional."""
+        assert "For physical symptoms: combine relevant suggestions" in SAKHI_INSTRUCTIONS
+        assert "For emotional/mental: pick ONE" in SAKHI_INSTRUCTIONS
 
-    def test_body_response_direction_says_practical(self):
-        """Response direction for body should say 'practical'."""
-        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
-        assert "practical" in prompt.lower()
-
-    def test_is_physical_helper_sore_throat(self):
-        """Helper correctly identifies sore_throat as physical."""
-        ctx = self._build_body_synth(symptom="sore_throat")
-        assert _is_physical_health_symptom(ctx) is True
-
-    def test_is_physical_helper_anxiety(self):
-        """Helper correctly excludes anxiety."""
-        ctx = self._build_mind_synth()
-        assert _is_physical_health_symptom(ctx) is False
-
-    def test_is_physical_helper_sleep(self):
-        """Helper correctly excludes sleep (lifestyle, not acute physical)."""
-        ctx = self._build_body_synth(symptom="sleep")
-        assert _is_physical_health_symptom(ctx) is False
+    def test_response_direction_mentions_calibration(self):
+        """Response direction should reference Response Calibration."""
+        prompt = build_adaptive_prompt("sore throat", self._build_synth())
+        assert "Response Calibration" in prompt
