@@ -93,8 +93,13 @@ class TestSakhiInstructions:
         """Physical symptom guidance must exist in calibration."""
         assert "PHYSICAL SYMPTOM" in SAKHI_INSTRUCTIONS
         assert "practical remedies" in SAKHI_INSTRUCTIONS
-        assert "Bullet points OK" in SAKHI_INSTRUCTIONS
         assert "100-250 words" in SAKHI_INSTRUCTIONS
+
+    def test_response_calibration_requires_personalized_why(self):
+        """Must require personalized WHY, not generic reasoning."""
+        assert "Why THIS for THIS person" in SAKHI_INSTRUCTIONS
+        assert "would a search engine give the same answer" in SAKHI_INSTRUCTIONS
+        assert "why it's right for THIS person" in SAKHI_INSTRUCTIONS
 
     def test_response_calibration_has_emotional_friction(self):
         """Emotional friction guidance must exist in calibration."""
@@ -362,7 +367,7 @@ class TestResponseCalibration:
     def test_instructions_have_practical_remedy_guidance(self):
         """Base instructions must guide practical remedies for physical symptoms."""
         assert "practical remedies" in SAKHI_INSTRUCTIONS
-        assert "Bullet points OK" in SAKHI_INSTRUCTIONS
+        assert "2-4 bullets" in SAKHI_INSTRUCTIONS
         assert "diagnostic question" in SAKHI_INSTRUCTIONS
 
     def test_instructions_have_emotional_pattern_guidance(self):
@@ -395,12 +400,12 @@ class TestResponseCalibration:
         prompt = build_adaptive_prompt("anxious", self._build_synth(symptom="anxiety", domain="mind"))
         assert "mind" in prompt.lower()
 
-    def test_examples_show_practical_body_response(self):
-        """Examples must demonstrate practical body symptom response with bullets."""
+    def test_examples_show_personalized_body_response(self):
+        """Examples must demonstrate personalized WHY for each remedy."""
         assert "salt water gargle" in SAKHI_INSTRUCTIONS
-        assert "What helps:" in SAKHI_INSTRUCTIONS
-        # The example uses bullet points for remedies
-        assert "Honey in warm water" in SAKHI_INSTRUCTIONS
+        # The example uses bullet points with personalized WHY
+        assert "your system runs hot" in SAKHI_INSTRUCTIONS
+        assert "forcing you to" in SAKHI_INSTRUCTIONS
 
     def test_examples_show_emotional_pattern_response(self):
         """Examples must demonstrate emotional friction with pattern insight."""
