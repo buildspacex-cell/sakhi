@@ -302,44 +302,46 @@ async def run_adaptive_pipeline(
         drift_percentage = friction_data.get("drift_percentage", 0.0)
         energy_mode = friction_data.get("energy_mode", "sattva")
 
-        # Load recommendations if friction state indicates imbalance
-        if friction_state != "balanced":
-            try:
-                from sakhi.apps.api.services.ayurveda.graph_reasoning import (
-                    query_balancing_recommendations,
-                )
-                recommendations = await query_balancing_recommendations(
-                    person_id=person_id,
-                    friction_state=friction_state,
-                )
-            except Exception as rec_err:
-                logger.debug("[AdaptivePipeline] Recommendations not loaded: %s", rec_err)
+        # NOTE: Knowledge graph disabled — dosha-level KG recommendations are
+        # too generic and cause hallucinated responses. Symptom-specific protocol
+        # (LLM-generated below) now handles recommendations.
+        # if friction_state != "balanced":
+        #     try:
+        #         from sakhi.apps.api.services.ayurveda.graph_reasoning import (
+        #             query_balancing_recommendations,
+        #         )
+        #         recommendations = await query_balancing_recommendations(
+        #             person_id=person_id,
+        #             friction_state=friction_state,
+        #         )
+        #     except Exception as rec_err:
+        #         logger.debug("[AdaptivePipeline] Recommendations not loaded: %s", rec_err)
     except Exception as friction_err:
         logger.debug("[AdaptivePipeline] Friction state not loaded: %s", friction_err)
 
-    # Load memory graph context for cross-entity relationships
+    # NOTE: Memory graph disabled while knowledge graph is disabled.
     memory_graph_context = None
-    try:
-        from sakhi.apps.api.services.turn.deterministic_context_loader import (
-            load_memory_graph_context,
-            extract_topic_labels_from_text,
-        )
-        topic_labels = extract_topic_labels_from_text(user_text)
-        if topic_labels:
-            memory_graph_context = await load_memory_graph_context(
-                person_id=person_id,
-                topic_labels=topic_labels,
-                max_related=10,
-            )
-            if memory_graph_context and memory_graph_context.get("enabled"):
-                logger.debug(
-                    "[AdaptivePipeline] Memory graph loaded: %d matched, %d related, %d competing",
-                    len(memory_graph_context.get("matched_nodes", [])),
-                    len(memory_graph_context.get("related_nodes", [])),
-                    len(memory_graph_context.get("competing_entities", [])),
-                )
-    except Exception as graph_err:
-        logger.debug("[AdaptivePipeline] Memory graph not loaded: %s", graph_err)
+    # try:
+    #     from sakhi.apps.api.services.turn.deterministic_context_loader import (
+    #         load_memory_graph_context,
+    #         extract_topic_labels_from_text,
+    #     )
+    #     topic_labels = extract_topic_labels_from_text(user_text)
+    #     if topic_labels:
+    #         memory_graph_context = await load_memory_graph_context(
+    #             person_id=person_id,
+    #             topic_labels=topic_labels,
+    #             max_related=10,
+    #         )
+    #         if memory_graph_context and memory_graph_context.get("enabled"):
+    #             logger.debug(
+    #                 "[AdaptivePipeline] Memory graph loaded: %d matched, %d related, %d competing",
+    #                 len(memory_graph_context.get("matched_nodes", [])),
+    #                 len(memory_graph_context.get("related_nodes", [])),
+    #                 len(memory_graph_context.get("competing_entities", [])),
+    #             )
+    # except Exception as graph_err:
+    #     logger.debug("[AdaptivePipeline] Memory graph not loaded: %s", graph_err)
 
     # Look up symptom-specific recommendations via LLM (symptom-aware)
     # Note: KG queries are dosha-level (not symptom-specific), so they feed the
