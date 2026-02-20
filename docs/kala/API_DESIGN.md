@@ -1,743 +1,650 @@
-# Kala - API Design
+# Kala — API Reference
 
-> The developer experience: what it looks like to use Kala.
-
----
-
-## Design Principle
-
-**20 lines to temporal awareness.** A developer should go from "my agent has no memory" to "my agent understands temporal state" in under 20 lines of meaningful code.
-
-The API should feel like a natural extension of how you already build agents, not a new paradigm to learn.
+> Complete API reference for all public functions, classes, and constants.
+> 46 source files, 547 tests, zero external dependencies.
 
 ---
 
-## Quick Start: The 20-Line Experience
+## Governance Layer
+
+The core of kala. Everything below this section is substrate that the governance layer builds on.
+
+### Constraints (`kala/constraints/`)
+
+Data-driven constraint evaluation. Constraints are **data** (serializable), not **code** (lambdas).
+
+#### Data Types
 
 ```python
-import kala
-
-# Initialize Kala with a PostgreSQL backend
-engine = kala.Engine(database_url="postgresql://...")
-
-# Define your entity (a user, a customer, a process — anything)
-entity = await engine.entity("user-123")
-
-# Set a baseline (what "normal" looks like)
-await entity.set_baseline({
-    "energy": 0.7,
-    "focus": 0.6,
-    "stress": 0.3,
-    "motivation": 0.8
-})
-
-# Record observations over time
-await entity.observe("Felt really scattered today, couldn't focus on anything")
-
-# Later... record more
-await entity.observe("Had a great workout, feeling energized but still anxious about the deadline")
-
-# Ask: how are they doing relative to their baseline?
-drift = await entity.drift()
-# DriftResult(percentage=28.5, severity="moderate", primary="focus", direction="depleted")
-
-# Get temporal context for an LLM call
-context = await entity.context("How should I prioritize my day?")
-# Returns structured temporal state: baseline, current, drift, recent memories, patterns
-
-# Build your prompt with temporal awareness
-messages = [
-    {"role": "system", "content": f"User context:\n{context.summary}"},
-    {"role": "user", "content": "How should I prioritize my day?"}
-]
+from kala.constraints import (
+    Constraint,        # Frozen dataclass — a single rule
+    ConstraintSet,     # Mutable collection of constraints
+    Violation,         # Frozen dataclass — a failed check
+    Verdict,           # Frozen dataclass — the evaluation result
+    PRIORITY_SOFT,     # 1
+    PRIORITY_MEDIUM,   # 2
+    PRIORITY_HARD,     # 3
+)
 ```
 
-That's it. Your agent now knows what's normal for this user, what's different right now, and what patterns have emerged over time.
+**`Constraint`** — A single evaluable rule.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `str` | Unique identifier |
+| `constraint_type` | `str` | Category: `time_boundary`, `value_alignment`, `drift_threshold`, `commitment`, `capacity`, `custom` |
+| `field` | `str` | Dotted path into action_context (e.g., `"proposed_hour"`, `"drift.drift_percentage"`) |
+| `operator` | `str` | One of 11 operators (see below) |
+| `value` | `Any` | Expected value to compare against |
+| `description` | `str` | Human-readable description |
+| `source` | `str` | What created this constraint (e.g., `"objective:sleep-goal:v2"`) |
+| `priority` | `int` | `PRIORITY_SOFT` (1), `PRIORITY_MEDIUM` (2), or `PRIORITY_HARD` (3) |
+| `active` | `bool` | Whether this constraint is active (default `True`) |
+| `metadata` | `dict` | Arbitrary extra data |
+
+**`Violation`** — A constraint that failed.
+
+| Field | Type | Description |
+|---|---|---|
+| `constraint` | `Constraint` | The constraint that was violated |
+| `actual_value` | `Any` | The value that was found |
+| `message` | `str` | Human-readable violation description |
+
+**`Verdict`** — The result of evaluating all constraints.
+
+| Field | Type | Description |
+|---|---|---|
+| `action` | `str` | `"allow"`, `"block"`, or `"confirm"` |
+| `violations` | `tuple[Violation, ...]` | All violations found |
+
+Static factories: `Verdict.allow()`, `Verdict.block(violations)`, `Verdict.confirm(violations)`.
+
+**`ConstraintSet`** — Mutable collection with query methods.
+
+```python
+cs = ConstraintSet()
+cs.add(constraint)
+cs.remove("constraint-id")
+cs.get("constraint-id")        # -> Constraint | None
+cs.active()                     # -> list[Constraint] (active only)
+cs.by_type("time_boundary")    # -> list[Constraint]
+cs.by_priority(PRIORITY_HARD)  # -> list[Constraint]
+len(cs)                         # number of constraints
+```
+
+#### Operators
+
+11 comparison predicates available via `VALID_OPERATORS`:
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `lt` | Less than | `field < value` |
+| `gt` | Greater than | `field > value` |
+| `lte` | Less than or equal | `field <= value` |
+| `gte` | Greater than or equal | `field >= value` |
+| `eq` | Equal | `field == value` |
+| `neq` | Not equal | `field != value` |
+| `in` | In collection | `field in value` |
+| `not_in` | Not in collection | `field not in value` |
+| `between` | Between range | `value[0] <= field <= value[1]` |
+| `contains` | Contains element | `element in field` |
+| `not_contains` | Does not contain | `element not in field` |
+
+```python
+from kala.constraints import check, extract_field, VALID_OPERATORS
+
+check("lte", 22, 23)           # True (22 <= 23)
+check("between", 5, [1, 10])   # True (1 <= 5 <= 10)
+check("in", "vata", ["vata", "pitta"])  # True
+
+extract_field({"a": {"b": 3}}, "a.b")  # 3
+extract_field({"dosha.trend_7d.vata": "rising"}, "dosha.trend_7d.vata")  # "rising" (flat key match)
+```
+
+#### Evaluation
+
+```python
+from kala.constraints import evaluate, evaluate_single
+
+# Evaluate a single constraint
+violation = evaluate_single(action_context, constraint)
+# Returns Violation or None
+
+# Evaluate all active constraints
+verdict = evaluate(action_context, constraint_set)
+# Returns Verdict(action="allow"|"block"|"confirm", violations=(...))
+```
+
+**Priority logic:** Hard violation → `block`. Any violation (no hard) → `confirm`. No violations → `allow`.
+
+**Missing fields:** Hard constraint + missing field → violation. Soft/medium constraint + missing field → skip (no violation).
 
 ---
 
-## Core API Surface
+### Event Ledger (`kala/ledger/`)
 
-### Engine
-
-The entry point. Manages database connections and configuration.
+Append-only event log with pluggable persistence.
 
 ```python
-engine = kala.Engine(
-    database_url="postgresql://...",
-    embedding_fn=my_embedding_function,       # Optional: custom embedding function
-    embedding_dim=1536,                       # Embedding dimensionality
+from kala.ledger import Event, Ledger, InMemoryBackend, LedgerBackend
+```
+
+**`Event`** — An immutable record of something that happened.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `str` | Unique event identifier |
+| `timestamp` | `datetime` | When it happened (UTC) |
+| `entity_id` | `str` | Who/what it applies to |
+| `event_type` | `str` | `proposed`, `validated`, `committed`, `rejected`, `reconciled`, `observed` |
+| `action` | `str` | What was proposed/done (e.g., `"suggest_routine"`) |
+| `actor` | `str` | `llm`, `user`, `system`, `crystallization`, `governance` |
+| `data` | `dict` | Arbitrary payload |
+| `reason` | `str` | Why this event happened |
+
+**`Ledger`** — Main API for event storage and query.
+
+```python
+ledger = Ledger()                       # Uses InMemoryBackend
+ledger = Ledger(backend=my_backend)     # Custom persistence
+
+ledger.append(event)
+events = ledger.query(entity_id="user-123")
+events = ledger.query(entity_id="user-123", event_type="committed")
+events = ledger.query(entity_id="user-123", after=some_datetime)
+latest = ledger.latest(entity_id="user-123")
+len(ledger)
+```
+
+**`LedgerBackend`** — ABC for persistence. Implement `append()` and `query()` for database-backed storage.
+
+---
+
+### Governance Gate (`kala/governance/gate.py`)
+
+The single checkpoint. Merges 4 sources into one `GateDecision`.
+
+```python
+from kala.governance import GovernanceGate, GateDecision, Contradiction
+
+gate = GovernanceGate(
+    constraints=constraint_set,
+    ledger=ledger,
+    objectives=objective_store,   # Optional — enables staleness detection
 )
 
-# Setup: create tables if they don't exist
-await engine.setup()
-
-# Get or create an entity
-entity = await engine.entity("user-123")
-
-# List all entities
-entities = await engine.list_entities()
-
-# Shutdown cleanly
-await engine.close()
-```
-
-**`embedding_fn`**: Kala needs vectors for recall and similarity. By default it expects an async function `(text: str) -> List[float]`. If not provided, Kala uses a lightweight local model or raises an error.
-
----
-
-### Entity
-
-Represents anything you're tracking over time — a person, a customer, a workflow, a process.
-
-```python
-entity = await engine.entity("user-123")
-
-# Identity
-entity.id          # "user-123"
-entity.created_at  # When first observed
-entity.age_days    # Days since first observation
-```
-
----
-
-### Baseline & State
-
-```python
-# Set baseline (immutable reference — what "normal" looks like)
-await entity.set_baseline({
-    "energy": 0.7,
-    "focus": 0.6,
-    "stress": 0.3,
-    "motivation": 0.8
-})
-
-# Get baseline
-baseline = await entity.baseline()
-# Baseline(dimensions={"energy": 0.7, ...}, source="explicit", computed_at=...)
-
-# Get current state (windowed aggregation with decay)
-current = await entity.current_state(window_days=7)
-# CurrentState(dimensions={"energy": 0.5, ...}, confidence=0.75, observation_count=12)
-
-# Get drift (deviation from baseline)
-drift = await entity.drift()
-# DriftResult(
-#     percentage=28.5,
-#     severity="moderate",
-#     primary_contributor="focus",
-#     direction="depleted",
-#     per_dimension={"energy": -0.15, "focus": -0.25, "stress": +0.10, "motivation": -0.05},
-#     confidence=0.75
+decision = gate.evaluate(
+    action_context={"proposed_hour": 23, "entity_id": "user-123"},
+    drift_data={"drift_percentage": 30, "severity": "moderate"},  # Optional
+)
+# GateDecision(
+#     action="block"|"require_confirmation"|"require_reconciliation"|"allow",
+#     reasons=("...",),
+#     triggers=("constraint"|"drift"|"contradiction",),
+#     drift_data={...},
+#     violations=(Violation(...),),
 # )
 
-# Configure drift detection
-drift = await entity.drift(
-    distance_metric="euclidean",     # or "cosine", "manhattan"
-    severity_thresholds=[15, 25, 40] # minimal/mild/moderate/significant boundaries
+decision.is_allowed       # True if action == "allow"
+decision.is_blocked       # True if action == "block"
+decision.requires_confirmation  # True if action in ("require_confirmation", "require_reconciliation")
+```
+
+**Strictest wins:** `block > require_reconciliation > require_confirmation > allow`
+
+#### Contradiction Detection
+
+```python
+contradictions = gate.detect_contradictions(
+    entity_id="user-123",
+    proposed_action="suggest_routine",
+    window=timedelta(hours=24),   # Optional lookback window
 )
+# [Contradiction(type="previously_rejected", event=Event(...), message="...")]
+```
+
+**5 contradiction types:**
+
+| Type | What it detects |
+|---|---|
+| `previously_rejected` | Same action was rejected within time window |
+| `contradicts_commitment` | Committed event conflicts with proposed action |
+| `repetition_loop` | proposed → rejected → proposed cycle |
+| `outdated_objective_version` | Constraint references stale objective version |
+| `violates_recent_override` | Reserved (not yet implemented) |
+
+#### Drift Gate
+
+```python
+from kala.governance import check_drift_gate, DEFAULT_DRIFT_THRESHOLDS
+
+decision = check_drift_gate(
+    drift_data={"drift_percentage": 30, "severity": "moderate"},
+    thresholds=DEFAULT_DRIFT_THRESHOLDS,  # Optional
+)
+# DEFAULT_DRIFT_THRESHOLDS = {"block_proactive": 40.0, "require_confirmation": 25.0}
 ```
 
 ---
 
-### Observation & Memory
+### Temporal Context (`kala/governance/temporal.py`)
+
+Bridges Timeline data into the constraint pipeline.
 
 ```python
-# Record an observation (the primary input to Kala)
-await entity.observe(
-    "Had a terrible night's sleep, woke up at 3am and couldn't fall back asleep",
-    timestamp=datetime.now(),        # Optional: defaults to now
-    source="journal",                # Optional: categorize the source
-    metadata={"mood": "anxious"}     # Optional: structured metadata
-)
+from kala.governance import TemporalContext
 
-# Record with explicit state dimensions (when you have structured data)
-await entity.observe(
-    "Morning health check",
-    dimensions={"energy": 0.3, "stress": 0.8},   # Direct state measurement
-    source="wearable"
-)
+tc = TemporalContext()
+tc.add_timeline("dosha", dosha_timeline)
+tc.set_ledger(ledger)
 
-# Recall relevant memories
-memories = await entity.recall(
-    "Why am I so tired lately?",
-    k=5,                             # Number of results
-    recency_halflife_days=45,        # Temporal decay half-life
-)
-# [Memory(text="Had terrible sleep...", age_days=2, relevance=0.89), ...]
+ctx = tc.build({"proposed_hour": 22, "entity_id": "user-123"})
+# ctx now includes:
+#   "proposed_hour": 22
+#   "entity_id": "user-123"
+#   "dosha.latest.vata": 0.53
+#   "dosha.moving_avg_7d.vata": 0.48
+#   "dosha.moving_avg_14d.vata": 0.46
+#   "dosha.trend_7d.vata": "rising"
+#   "dosha.rate_7d.vata": 0.01
+#   ... (same for pitta, kapha, and for 14d windows)
+```
 
-# Get recent observations
-recent = await entity.recent(days=7)
-# [Observation(text="...", timestamp=..., source="journal"), ...]
+Constraints can then reference temporal features directly:
 
-# "Last time" queries
-result = await entity.last_time("exercised")
-# LastTimeResult(found=True, when=datetime(...), days_ago=4, context="Went for a 30min run")
+```python
+Constraint(field="dosha.moving_avg_14d.vata", operator="lt", value=0.6)
+Constraint(field="dosha.trend_7d.vata", operator="neq", value="rising")
 ```
 
 ---
 
-### Patterns
+### State Reducer (`kala/governance/state.py`)
+
+Replays events into deterministic state. Pure function — same events always produce the same snapshot.
 
 ```python
-# Register a pattern extractor (domain-specific)
-@entity.pattern_extractor
-async def extract_behaviors_and_effects(text: str):
-    """Extract causes and effects from observation text."""
-    # Use LLM, regex, NLP — whatever works for your domain
-    return {
-        "causes": [("behavior", "skipped_lunch"), ("behavior", "worked_late")],
-        "effects": [("symptom", "afternoon_fatigue"), ("symptom", "irritability")]
-    }
+from kala.governance import StateSnapshot, reduce, diff
 
-# Patterns are learned automatically from observations
-# After sufficient observations, query them:
-patterns = await entity.patterns()
-# [TemporalPattern(
-#     cause=("behavior", "skipped_lunch"),
-#     effect=("symptom", "afternoon_fatigue"),
-#     observation_count=7,
-#     confidence=0.78,
-#     first_observed_at=...,
-#     last_observed_at=...
-# ), ...]
+snapshot = reduce(ledger, entity_id="user-123")
+# StateSnapshot(
+#     entity_id="user-123",
+#     as_of=datetime(...),
+#     active_commitments=("morning_meditation",),
+#     pending_actions=("suggest_routine",),
+#     rejected_actions=(),
+#     active_constraints=(),
+#     last_drift_severity="moderate",
+#     version=5,
+# )
 
-# Query specific patterns
-patterns = await entity.patterns(cause_type="behavior", min_confidence=0.6)
+# Compare two snapshots
+changes = diff(before_snapshot, after_snapshot)
+# {"active_commitments": {"added": ("evening_walk",), "removed": ()}, ...}
 ```
 
 ---
 
-### Signals
+### Objective Versioning (`kala/objectives/`)
+
+Versioned objectives with lineage and staleness detection.
 
 ```python
-# Register an event source
-source = entity.event_source("email")
+from kala.objectives import (
+    ObjectiveVersion,
+    ObjectiveStore,
+    parse_objective_source,
+    find_stale_constraints,
+    invalidated_by,
+    format_source,
+)
+```
 
-# Record events from the source
-await source.record(kala.Event(
-    event_id="msg-456",
-    timestamp=datetime.now(),
-    direction="incoming",
-    participants=[{"name": "Alice", "id": "alice@co.com"}],
-    metadata={"subject": "Q4 Planning", "thread_id": "thread-789"}
-))
+**`ObjectiveVersion`** — Immutable snapshot of an objective at a specific version.
 
-# Register signal detectors (or use built-in ones)
-source.add_detector(kala.detectors.RhythmDetector(window_days=90))
-source.add_detector(kala.detectors.TrendDetector(period_days=7))
-source.add_detector(kala.detectors.LoadDetector(period_days=7))
+| Field | Type | Description |
+|---|---|---|
+| `objective_id` | `str` | Stable identity across versions |
+| `version` | `int` | Monotonic: 1, 2, 3, ... |
+| `timestamp` | `datetime` | When this version was created |
+| `title` | `str` | Human-readable (e.g., "Sleep by 10pm") |
+| `description` | `str` | Optional longer description |
+| `data` | `dict` | Structured payload |
+| `source` | `str` | What triggered this version (e.g., `"user_input"`, `"feedback"`) |
+| `reason` | `str` | Why it changed (e.g., "10pm unrealistic on weekdays") |
+| `parent_version` | `int \| None` | Which version this evolved from (`None` for v1) |
 
-# Extract signals
-signals = await source.extract()
+**`ObjectiveStore`** — Registry with version lineage.
+
+```python
+store = ObjectiveStore()
+store.add(ObjectiveVersion(objective_id="sleep", version=1, title="Sleep by 10pm", ...))
+store.add(ObjectiveVersion(objective_id="sleep", version=2, title="Sleep by 11pm",
+                           parent_version=1, reason="10pm unrealistic on weekdays"))
+
+store.current("sleep")          # -> ObjectiveVersion (v2)
+store.get_version("sleep", 1)   # -> ObjectiveVersion (v1)
+store.history("sleep")          # -> [v1, v2]
+store.is_stale("sleep", 1)     # -> True (v1 < v2)
+store.objectives()              # -> ["sleep"]
+len(store)                      # -> 2
+```
+
+**Sequential enforcement:** Versions must be added in order (v1, v2, v3 — can't skip).
+
+#### Staleness Detection
+
+```python
+# Source convention: "objective:{id}:v{n}"
+format_source("sleep-goal", 2)                      # "objective:sleep-goal:v2"
+parse_objective_source("objective:sleep-goal:v2")    # ("sleep-goal", 2)
+parse_objective_source("onboarding")                 # None
+
+# Find constraints referencing outdated objective versions
+stale = find_stale_constraints(constraint_set, store)
+# [(stale_constraint, current_version), ...]
+
+# Find constraints invalidated by a new version
+invalidated = invalidated_by(new_version, constraint_set)
+# [constraint_for_old_version, ...]
+```
+
+---
+
+## Substrate Layer
+
+Temporal containers and extracted pure math that the governance layer builds on.
+
+### Timeline (`kala/timeline/`)
+
+The fundamental temporal primitive. Generic over `T`.
+
+```python
+from kala.timeline import Snapshot, Timeline
+from kala.timeline.trend import detect_trend, moving_average, rate_of_change
+from kala.timeline.reconcile import reconcile
+```
+
+**`Snapshot[T]`** — Timestamped observation with confidence and source.
+
+| Field | Type | Description |
+|---|---|---|
+| `timestamp` | `datetime` | When observed |
+| `value` | `T` | The observation (typically `dict[str, float]`) |
+| `confidence` | `float` | 0.0–1.0 (default 1.0) |
+| `source` | `str` | Where this came from (default `""`) |
+
+**`Timeline[T]`** — Bisect-sorted sequence.
+
+```python
+tl = Timeline()
+tl.add(Snapshot(timestamp=t1, value={"vata": 0.45}))
+tl.add(Snapshot(timestamp=t2, value={"vata": 0.53}))
+
+tl.latest()                  # Most recent snapshot
+tl.earliest()                # Oldest snapshot
+tl.at(t)                     # Snapshot at or before time t
+tl.between(start, end)       # Snapshots in range
+tl.window(timedelta(days=7)) # Last 7 days of snapshots
+len(tl)                      # Number of snapshots
+```
+
+**Trend functions:**
+
+```python
+detect_trend(timeline, key="vata", window=timedelta(days=7))
+# -> "rising" | "falling" | "stable"
+
+moving_average(timeline, key="vata", window=timedelta(days=7))
+# -> float
+
+rate_of_change(timeline, key="vata", window=timedelta(days=7))
+# -> float (per day)
+```
+
+**Reconciliation:**
+
+```python
+result = reconcile([timeline_a, timeline_b], strategy="confidence_weighted")
+# Merged Timeline with confidence-weighted values from multiple sources
+```
+
+---
+
+### State (`kala/state/`)
+
+Pure drift and constitution math.
+
+```python
+from kala.state.drift import compute_baseline_drift, classify_severity, classify_friction_state
+from kala.state.constitution import compute_constitution
+from kala.state.dosha import compute_dosha_state
+from kala.state.guna import compute_guna_state
+```
+
+**Drift:**
+
+```python
+result = compute_baseline_drift(
+    prakruti={"vata": 0.45, "pitta": 0.40, "kapha": 0.15},
+    vikriti={"vata": 0.60, "pitta": 0.35, "kapha": 0.05},
+)
 # {
-#     "rhythm": [RhythmSignal(group="alice@co.com", cadence="daily", confidence=0.85), ...],
-#     "trend": TrendResult(direction="worsening", delta=0.15, ...),
-#     "load": LoadResult(score=0.65, risk="moderate", active_count=15, ...)
+#     "drift_percentage": 28.5,
+#     "severity": "moderate",        # minimal | mild | moderate | significant
+#     "primary_contributor": "vata",
+#     "direction": {...},
 # }
 
-# Custom detector
-class MyDetector(kala.Detector):
-    def detect(self, events: List[kala.Event]) -> Any:
-        # Your custom signal extraction logic
-        pass
-
-source.add_detector(MyDetector())
+classify_severity(28.5)    # "moderate"
+classify_friction_state(drift_result, vikriti)
+# "chaos" | "intensity" | "stagnation" | "balanced"
 ```
 
 ---
 
-### Context (for LLM calls)
+### Pattern (`kala/pattern/`)
+
+Pattern crystallization — when observations become confirmed patterns.
 
 ```python
-# Get assembled temporal context for an LLM call
-context = await entity.context(
-    query="How should I prioritize today?",
-    modules=None,          # Auto-route based on query, or specify: ["state", "memory", "signals"]
-)
+from kala.pattern.thresholds import should_crystallize
+from kala.pattern.trajectory import analyze_trajectory
 
-# context.summary — Human-readable summary for system prompt injection
-# context.baseline — Baseline state
-# context.current — Current state with confidence
-# context.drift — Drift result
-# context.memories — Relevant recalled memories
-# context.patterns — Active patterns
-# context.signals — Recent signal extractions
-# context.session — Session continuity summary
+should_crystallize(observations, threshold=0.7)
+# True if accumulated confidence exceeds threshold
 
-# Use in your LLM call
-messages = [
-    {"role": "system", "content": f"""You are a helpful assistant.
-
-User temporal context:
-{context.summary}
-
-Active patterns:
-{context.patterns_summary}
-
-Recent drift: {context.drift.severity} ({context.drift.percentage:.0f}% from baseline,
-primary: {context.drift.primary_contributor} {context.drift.direction})
-"""},
-    {"role": "user", "content": user_message}
-]
-
-response = await llm.chat(messages)
+# Pattern strength decays without reinforcement
+# Trajectory analysis tracks pattern direction over time
 ```
 
 ---
 
-### Sessions
+### Graph (`kala/graph/`)
+
+In-memory graph construction for enrichment data.
 
 ```python
-# Manage conversation continuity
-session = await entity.session(slug="planning")
+from kala.graph import create_node, create_edge, build_graph_from_enrichment
+from kala.graph.schema import VALID_KINDS, VALID_RELATIONS, sanitize_kind, sanitize_relation
 
-# Record turns
-await session.turn("user", "I've been feeling overwhelmed with work")
-await session.turn("assistant", "I can see from your recent patterns that...")
+node = create_node(kind="theme", label="anxiety", data={"intensity": 0.8})
+edge = create_edge(src=node_a, dst=node_b, relation="supports")
+graph = build_graph_from_enrichment(enrichment_dict)
+```
 
-# Get session summary (compressed older turns)
-summary = await session.summary()
+**13 valid kinds:** theme, goal, emotion, behavior, symptom, trigger, value, need, strength, obstacle, relationship, activity, context
 
-# Find best session for a query
-best = await entity.best_session("How's my project going?")
-# Matches by semantic similarity + recency boost
+**11 valid relations:** supports, blocks, triggers, soothes, amplifies, requires, conflicts_with, precedes, follows, co_occurs, part_of
+
+---
+
+### Decision (`kala/decision/`)
+
+Fast deterministic decision scoring (<5ms).
+
+```python
+from kala.decision import compute_fast_decision_frame
+
+frame = compute_fast_decision_frame(
+    goals=[...],
+    values=[...],
+    intents=[...],
+    tasks=[...],
+    soul_state={...},
+)
+# frame.active_nodes, frame.micro_links, frame.friction_points, frame.energy_path
 ```
 
 ---
 
-## Timeline API (Testing)
+### Signals (`kala/signals/`)
 
-### Define a Persona
-
-```python
-import kala.timeline as timeline
-
-# From code
-persona = timeline.Persona(
-    id="burned-out-manager",
-    name="Jordan",
-    baseline={"energy": 0.7, "focus": 0.6, "stress": 0.3, "motivation": 0.8},
-    traits=[
-        timeline.Trait("perfectionist", intensity=0.8),
-        timeline.Trait("people-pleaser", intensity=0.7),
-    ],
-    life_context=timeline.LifeContext(
-        occupation="Engineering Manager",
-        challenges=["too many direct reports", "launch deadline in 3 weeks"]
-    ),
-    arc=timeline.Arc(phases=[
-        timeline.Phase(
-            name="building_pressure",
-            emotional_state="driven but stretched thin",
-            duration_days=14,
-            state_shift={"stress": +0.2, "energy": -0.1},
-            themes=["deadline pressure", "skipping lunch", "late nights"],
-        ),
-        timeline.Phase(
-            name="breaking_point",
-            emotional_state="exhausted and overwhelmed",
-            duration_days=10,
-            state_shift={"stress": +0.3, "energy": -0.3, "focus": -0.2},
-            themes=["can't concentrate", "snapping at team", "insomnia"],
-        ),
-        timeline.Phase(
-            name="recovery",
-            emotional_state="intentionally slowing down",
-            duration_days=14,
-            state_shift={"stress": -0.15, "energy": +0.1},
-            themes=["delegating", "setting boundaries", "taking walks"],
-        ),
-    ]),
-    checkpoints=[
-        timeline.Checkpoint(day=14, assertions={
-            "drift_state": {"severity_in": ["moderate", "significant"]},
-            "theme_emerged": {"keywords": ["deadline", "pressure"], "min_occurrences": 3},
-        }),
-        timeline.Checkpoint(day=24, assertions={
-            "drift_state": {"severity": "significant"},
-            "pattern_learned": {"cause": "late_night", "effect": "poor_focus", "min_count": 2},
-        }),
-        timeline.Checkpoint(day=38, assertions={
-            "drift_direction": {"dimension": "stress", "direction": "depleted"},
-        }),
-    ]
-)
-
-# Or from YAML
-persona = timeline.Persona.from_yaml("personas/burned-out-manager.yaml")
-```
-
-### Run a Simulation
+Signal extraction from external data sources.
 
 ```python
-# Create the harness
-harness = timeline.Harness(
-    engine=engine,
-    persona=persona,
-    entry_generator=my_llm_entry_generator,  # Function that generates synthetic entries
-    worker_fn=my_process_observation,         # Your per-observation pipeline
-    daily_worker_fn=my_daily_aggregation,     # Your daily aggregation pipeline (optional)
-    snapshot_interval=7,                       # Capture state every 7 days
-    daily_worker_interval=3,                   # Run daily workers every 3 simulated days
-)
-
-# Setup test entity
-user_id = await harness.setup()
-
-# Run the simulation
-result = await harness.run(max_days=38)
-
-# Check results
-print(f"Simulated {result.total_days} days, {result.total_entries} entries")
-print(f"Snapshots: {len(result.snapshots)}")
-print(f"All checkpoints passed: {result.all_checkpoints_passed}")
-
-# Inspect evolution
-for snapshot in result.snapshots:
-    drift = snapshot.drift_state
-    print(f"Day {snapshot.day}: drift={drift['percentage']:.0f}% ({drift['severity']})")
-
-# Day 1:  drift=5%  (minimal)
-# Day 7:  drift=18% (mild)
-# Day 14: drift=31% (moderate)    ← checkpoint: moderate ✓
-# Day 21: drift=45% (significant)
-# Day 24: drift=48% (significant) ← checkpoint: significant ✓, pattern learned ✓
-# Day 31: drift=35% (moderate)    ← recovery starting
-# Day 38: drift=22% (mild)        ← checkpoint: stress depleted ✓
-
-# Export for visualization
-result.save("simulation_output.json")
-
-# Cleanup test data
-await harness.cleanup()
-```
-
-### In pytest
-
-```python
-import pytest
-import kala.timeline as timeline
-
-@pytest.mark.asyncio
-async def test_burnout_detection():
-    engine = kala.Engine(database_url=TEST_DB_URL)
-    persona = timeline.Persona.from_yaml("personas/burned-out-manager.yaml")
-
-    harness = timeline.Harness(engine=engine, persona=persona, ...)
-    await harness.setup()
-
-    result = await harness.run(max_days=24)
-
-    # Verify temporal understanding evolved correctly
-    assert result.all_checkpoints_passed
-    assert result.snapshots[-1].drift_state["severity"] == "significant"
-    assert any(
-        p.cause == ("behavior", "late_night") and p.confidence > 0.6
-        for p in result.patterns
-    )
-
-    await harness.cleanup()
+from kala.signals.email.subscription import detect_subscription
+from kala.signals.email.avoidance import detect_avoidance
+from kala.signals.email.boundary import detect_boundary
+from kala.signals.email.cognitive_load import detect_cognitive_load
+from kala.signals.context_tags import extract_context_tags
 ```
 
 ---
 
-## Configuration
-
-### Sensible Defaults
-
-Kala ships with defaults that work for most use cases. Everything is overridable.
+### Context (`kala/context/`)
 
 ```python
-engine = kala.Engine(
-    database_url="postgresql://...",
-
-    # Memory defaults
-    memory=kala.MemoryConfig(
-        stm_ttl_days=14,                    # Short-term memory expiry
-        recency_halflife_days=45,           # Recall recency decay
-        vector_weight=0.7,                  # Hybrid recall: vector proportion
-        keyword_weight=0.3,                 # Hybrid recall: keyword proportion
-        diversity_threshold=0.92,           # Max similarity between recall results
-        graph_merge_threshold=0.93,         # Auto-merge nodes above this similarity
-    ),
-
-    # State defaults
-    state=kala.StateConfig(
-        current_window_days=7,              # Window for current state computation
-        decay_lambda=0.5,                   # Exponential decay rate
-        distance_metric="euclidean",        # Drift distance function
-        severity_thresholds=[15, 25, 40],   # Drift severity boundaries
-    ),
-
-    # Signal defaults
-    signals=kala.SignalConfig(
-        cache_ttl_seconds=21600,            # 6 hours signal extraction cache
-        rhythm_window_days=90,              # Cadence detection lookback
-        trend_period_days=7,                # Trend comparison period
-        load_period_days=7,                 # Load analysis window
-    ),
-
-    # Pattern defaults
-    patterns=kala.PatternConfig(
-        correlation_window_hours=48,        # Cause → effect time window
-        min_observations=2,                 # Minimum co-occurrences
-        confidence_fn="logarithmic",        # How confidence grows
-    ),
-)
+from kala.context.classifier import classify_context
+# Deterministic context routing based on input signals
 ```
 
-### Per-Entity Overrides
+---
+
+### Memory (`kala/memory/`)
 
 ```python
-# Override defaults for a specific entity
-entity = await engine.entity("user-123", config=kala.EntityConfig(
-    state=kala.StateConfig(
-        current_window_days=14,             # Longer window for this entity
-        decay_lambda=0.3,                   # Slower decay
-    )
+from kala.memory.vector_math import cosine_similarity
+# Vector similarity for embedding-based recall
+```
+
+---
+
+### Adapters (`kala/adapters/`)
+
+ABCs for external dependencies. kala defines the interfaces; consuming apps provide implementations.
+
+```python
+from kala.adapters.base import DatabaseAdapter, EmbeddingAdapter, LLMAdapter
+```
+
+| Adapter | Methods |
+|---|---|
+| `DatabaseAdapter` | `fetch()`, `fetch_one()`, `execute()` |
+| `EmbeddingAdapter` | `embed()`, `embed_batch()` |
+| `LLMAdapter` | `complete()` |
+
+---
+
+## End-to-End Example
+
+A complete governance evaluation flow:
+
+```python
+from datetime import datetime, timedelta, UTC
+from kala.constraints import Constraint, ConstraintSet, PRIORITY_HARD, PRIORITY_SOFT, evaluate
+from kala.ledger import Event, Ledger
+from kala.governance import GovernanceGate, TemporalContext
+from kala.objectives import ObjectiveVersion, ObjectiveStore
+from kala.objectives.staleness import format_source
+from kala.timeline import Snapshot, Timeline
+
+# 1. Build temporal state
+dosha_timeline = Timeline()
+dosha_timeline.add(Snapshot(
+    timestamp=datetime.now(UTC) - timedelta(days=7),
+    value={"vata": 0.45, "pitta": 0.40, "kapha": 0.15},
 ))
-```
+dosha_timeline.add(Snapshot(
+    timestamp=datetime.now(UTC),
+    value={"vata": 0.60, "pitta": 0.35, "kapha": 0.05},
+))
 
----
+tc = TemporalContext()
+tc.add_timeline("dosha", dosha_timeline)
 
-## Extension Points
+# 2. Define objective and constraints
+store = ObjectiveStore()
+store.add(ObjectiveVersion(
+    objective_id="sleep", version=1,
+    timestamp=datetime.now(UTC),
+    title="Sleep by 10pm",
+))
 
-### Custom Embedding Function
+constraints = ConstraintSet()
+constraints.add(Constraint(
+    id="sleep-boundary",
+    constraint_type="time_boundary",
+    field="proposed_hour",
+    operator="lte",
+    value=22,
+    description="Sleep by 10pm",
+    source=format_source("sleep", 1),
+    priority=PRIORITY_HARD,
+))
+constraints.add(Constraint(
+    id="vata-check",
+    constraint_type="drift_threshold",
+    field="dosha.moving_avg_7d.vata",
+    operator="lt",
+    value=0.6,
+    description="Vata should stay below 0.6",
+    source="system",
+    priority=PRIORITY_SOFT,
+))
 
-```python
-async def my_embeddings(text: str) -> List[float]:
-    response = await openai.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
-    )
-    return response.data[0].embedding
+# 3. Build event history
+ledger = Ledger()
+ledger.append(Event(
+    id="evt-1",
+    timestamp=datetime.now(UTC) - timedelta(hours=2),
+    entity_id="user-123",
+    event_type="committed",
+    action="evening_meditation",
+    actor="user",
+    data={},
+    reason="User committed to evening meditation",
+))
 
-engine = kala.Engine(
-    database_url="...",
-    embedding_fn=my_embeddings,
-    embedding_dim=1536,
+# 4. Evaluate a proposed action
+gate = GovernanceGate(constraints=constraints, ledger=ledger, objectives=store)
+
+action_context = tc.build({
+    "proposed_hour": 23,
+    "entity_id": "user-123",
+    "proposed_action": "suggest_routine",
+})
+
+decision = gate.evaluate(
+    action_context=action_context,
+    drift_data={"drift_percentage": 30, "severity": "moderate"},
 )
-```
 
-### Custom Pattern Extractor
-
-```python
-@entity.pattern_extractor
-async def extract_sales_patterns(text: str):
-    """Domain-specific: extract sales behaviors and outcomes."""
-    return {
-        "causes": [("action", "cold_outreach"), ("action", "demo_scheduled")],
-        "effects": [("outcome", "deal_advanced"), ("outcome", "ghosted")]
-    }
-```
-
-### Custom Signal Detector
-
-```python
-class ResponseTimeDetector(kala.Detector):
-    """Detect if response times are getting slower."""
-
-    def __init__(self, threshold_hours=24):
-        self.threshold_hours = threshold_hours
-
-    def detect(self, events: List[kala.Event]) -> Dict:
-        # Group by conversation, measure response gaps
-        # Return trend analysis
-        return {"avg_response_hours": 12.5, "trend": "worsening"}
-
-source.add_detector(ResponseTimeDetector(threshold_hours=12))
-```
-
-### Custom State Dimensions
-
-```python
-# For a sales pipeline
-await entity.set_baseline({
-    "deal_velocity": 0.6,
-    "engagement_quality": 0.7,
-    "pipeline_coverage": 0.8,
-    "win_rate": 0.35,
-})
-
-# For a customer health score
-await entity.set_baseline({
-    "product_usage": 0.7,
-    "support_sentiment": 0.8,
-    "feature_adoption": 0.5,
-    "nps_likelihood": 0.75,
-})
-
-# For a codebase health tracker
-await entity.set_baseline({
-    "test_coverage": 0.82,
-    "build_stability": 0.95,
-    "dependency_freshness": 0.7,
-    "incident_rate": 0.1,
-})
+print(decision.action)       # "block" — proposed_hour 23 > 22 (hard constraint)
+print(decision.violations)   # (Violation(constraint=sleep-boundary, actual=23, ...),)
+print(decision.is_blocked)   # True
 ```
 
 ---
 
-## Domain Examples
+## Safety Guarantees
 
-### Personal Wellness (Sakhi's domain)
-
-```python
-# Sakhi uses Kala with Ayurvedic dimensions
-await entity.set_baseline({
-    "vata": 0.45,       # Air/Space: creativity, anxiety, variability
-    "pitta": 0.40,      # Fire/Water: drive, intensity, metabolism
-    "kapha": 0.15,      # Earth/Water: stability, groundedness, inertia
-})
-
-# Sakhi's pattern extractor detects wellness behaviors → symptoms
-@entity.pattern_extractor
-async def extract_wellness(text):
-    return {
-        "causes": [("behavior", "irregular_sleep"), ("behavior", "skipped_meals")],
-        "effects": [("symptom", "anxiety"), ("symptom", "fatigue")]
-    }
-
-# Sakhi maps drift to user-facing friction states
-drift = await entity.drift()
-if drift.primary_contributor == "vata" and drift.direction == "elevated":
-    friction = "chaos"      # Scattered, anxious, overwhelmed
-elif drift.primary_contributor == "pitta" and drift.direction == "elevated":
-    friction = "intensity"  # Driven, irritable, burning out
-elif drift.primary_contributor == "kapha" and drift.direction == "elevated":
-    friction = "stagnation" # Stuck, sluggish, unmotivated
-```
-
-### Customer Success
-
-```python
-await entity.set_baseline({
-    "product_usage": 0.7,
-    "support_sentiment": 0.8,
-    "feature_adoption": 0.5,
-    "nps_likelihood": 0.75,
-})
-
-# Signal source: support tickets
-source = entity.event_source("support")
-source.add_detector(kala.detectors.TrendDetector(period_days=30))
-source.add_detector(kala.detectors.LoadDetector(period_days=7))
-
-# Check for churn risk (drift = declining engagement)
-drift = await entity.drift()
-if drift.severity in ("moderate", "significant") and drift.primary_contributor == "product_usage":
-    alert_csm(f"Customer {entity.id} showing {drift.severity} usage decline")
-```
-
-### Sales Pipeline
-
-```python
-await entity.set_baseline({
-    "deal_velocity": 0.6,
-    "engagement_quality": 0.7,
-    "pipeline_coverage": 0.8,
-})
-
-# Detect patterns: what actions lead to what outcomes
-@entity.pattern_extractor
-async def extract_sales_actions(text):
-    return {
-        "causes": [("action", "demo_delivered")],
-        "effects": [("outcome", "deal_advanced")]
-    }
-
-# Over time, Kala learns: demo_delivered → deal_advanced (confidence: 0.82)
-# And also: no_followup_7d → deal_stalled (confidence: 0.71)
-```
-
-### DevOps / Incident Response
-
-```python
-await entity.set_baseline({
-    "deploy_success_rate": 0.95,
-    "mean_time_to_recover": 0.2,     # Normalized: lower is better
-    "alert_volume": 0.3,
-    "change_failure_rate": 0.1,
-})
-
-# Signal source: alerts and incidents
-source = entity.event_source("pagerduty")
-source.add_detector(kala.detectors.LoadDetector(period_days=7))
-source.add_detector(kala.detectors.RhythmDetector(window_days=30))
-
-# Detect: is alert volume trending up?
-signals = await source.extract()
-if signals["trend"].direction == "worsening":
-    # Alert volume increasing — something is degrading
-    pass
-```
-
----
-
-## What Kala Does NOT Do
-
-- **Orchestrate agents.** Kala provides temporal context. Your framework (LangChain, CrewAI, custom) decides what to do with it.
-- **Call LLMs.** Kala structures context. You call your own LLM with it.
-- **Define domain semantics.** Kala doesn't know what "energy" or "vata" means. Your domain layer defines the dimensions and what they mean.
-- **Replace your database.** Kala uses PostgreSQL for its own state. Your application keeps its own data wherever it wants.
-- **Do real-time streaming.** Kala works on observation-by-observation processing. It's designed for interactions (conversations, events, measurements), not continuous data streams.
-
----
-
-## Package Structure
-
-```
-kala/
-├── __init__.py              # Engine, Entity, Config exports
-├── engine.py                # Engine: connection management, entity factory
-├── entity.py                # Entity: the main developer interface
-├── config.py                # Configuration dataclasses
-│
-├── memory/
-│   ├── __init__.py
-│   ├── short_term.py        # STM with TTL
-│   ├── episodic.py          # Write-once episodes
-│   ├── long_term.py         # EMA consolidation
-│   ├── recall.py            # Hybrid retrieval
-│   └── graph.py             # Associative graph
-│
-├── state/
-│   ├── __init__.py
-│   ├── baseline.py          # Immutable baseline
-│   ├── current.py           # Windowed aggregation
-│   ├── drift.py             # Deviation detection
-│   ├── patterns.py          # Cause-effect learning
-│   └── fusion.py            # Multi-source sensing
-│
-├── signals/
-│   ├── __init__.py
-│   ├── accumulator.py       # Event store + detector orchestration
-│   ├── rhythm.py            # Cadence detection
-│   ├── trend.py             # Period comparison
-│   ├── load.py              # Capacity scoring
-│   └── detectors.py         # Built-in detector implementations
-│
-├── awareness/
-│   ├── __init__.py
-│   ├── router.py            # Context module gating
-│   ├── assembler.py         # Temporal context builder
-│   └── session.py           # Conversation continuity
-│
-├── timeline/
-│   ├── __init__.py
-│   ├── harness.py           # Simulation engine
-│   ├── persona.py           # Entity specification
-│   ├── snapshot.py          # State capture
-│   └── checkpoint.py        # Temporal assertions
-│
-├── storage/
-│   ├── __init__.py
-│   ├── base.py              # Abstract storage interface
-│   └── postgresql.py        # PostgreSQL implementation
-│
-└── py.typed                 # PEP 561 type marker
-```
+- **kala never imports sakhi.** Enforced by convention and verified in CI.
+- **All code is pure computation.** No DB, no LLM, no I/O, no async, no network.
+- **Frozen dataclasses.** Governance decisions, events, violations, snapshots, objective versions — all immutable.
+- **Deterministic.** Same inputs always produce same outputs. State reducer is replayable.
+- **Zero external dependencies.** Only Python stdlib. No numpy, no pydantic, no third-party libraries.
+- **ABCs at boundaries.** `LedgerBackend`, `DatabaseAdapter` define persistence contracts without implementing I/O.
 
 ---
 

@@ -1,0 +1,378 @@
+# Sakhi — What We Built
+
+> A complete inventory of the Sakhi system as of February 2026.
+>
+> ~200K lines of code. 179 database tables. 547 kala tests. Zero shortcuts.
+
+---
+
+## One Paragraph
+
+Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 75 API routes and 113 background workers, a Next.js web app with 73 pages, a React Native mobile app with 16 screens, and a pure-computation governance kernel with 547 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
+
+---
+
+## The Numbers
+
+| What | Count |
+|---|---|
+| Python backend (sakhi/) | ~146K lines across 75 routes, 49 services, 113 workers |
+| Governance kernel (kala/) | ~10.7K lines, 46 source files, 547 tests |
+| Web app (apps/web/) | ~42K lines TypeScript, 73 pages, 101 API proxy routes |
+| Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 16 screens |
+| Database tables | 179 |
+| Background workers | 113 task files |
+| Context modules | 13 (11 primary + 2 ritual caches) |
+| LLM call sites | 80+ across routes, services, workers |
+| Vector dimensions | 1536 (OpenAI text-embedding-3-small) |
+
+---
+
+## Architecture
+
+Three-layer design, inspired by how Ayurveda structures understanding:
+
+```
+┌──────────────────────────────────────────────────┐
+│  User Layer (Friction Framework)                  │
+│  What the person experiences: chaos, intensity,   │
+│  stagnation, or balance. Adaptive response style. │
+├──────────────────────────────────────────────────┤
+│  Scientific Bridge                                │
+│  Memory, pattern detection, context routing,      │
+│  rhythm tracking, temporal analysis.              │
+├──────────────────────────────────────────────────┤
+│  Ayurvedic Engine                                 │
+│  Doshas (Vata/Pitta/Kapha), gunas, prakruti,     │
+│  vikriti, drift, causal reasoning.               │
+├──────────────────────────────────────────────────┤
+│  Governance Kernel (kala)                         │
+│  Constraints, drift gating, contradictions,       │
+│  objective versioning. Pure computation.          │
+└──────────────────────────────────────────────────┘
+```
+
+---
+
+## Conversation Pipeline
+
+Every conversation turn flows through this pipeline:
+
+```
+User message arrives (POST /v2/turn)
+  │
+  ├─ 1. CONTEXT LOADING (~150-300ms)
+  │     Load from memory (STM, episodic, long-term)
+  │     Load persona, rhythm state, active tasks
+  │     Load friction state (chaos/intensity/stagnation/balanced)
+  │
+  ├─ 2. CONTEXT ROUTING
+  │     Classify message → select relevant modules
+  │     13 modules: memory, persona, rhythm, tasks, email,
+  │     recommendations, inner dialogue, relationships,
+  │     causal reasoning, evidence packs, ...
+  │
+  ├─ 3. ADAPTIVE RESPONSE (5 stages)
+  │     Sensing → Knowledge Gap → Strategy → Synthesis → Response
+  │     Tone adapted to friction state and conversation history
+  │
+  ├─ 4. REPLY DELIVERY (<8 seconds total)
+  │     Return response + metadata to client
+  │
+  └─ 5. ASYNC WORKER FAN-OUT
+        ├─ turn_memory_update (store in STM)
+        ├─ episodic_consolidation (daily episodes)
+        ├─ preference_learning (learn from feedback)
+        ├─ intent_extraction (extract user intents)
+        ├─ journal_enrich (enrich journal entry)
+        └─ session_compress (compress session history)
+```
+
+**Daily state refresh** (scheduled, not per-turn):
+- Ayurvedic pipeline → vikriti, prakruti, friction state
+- Emotion-soul-rhythm deep frame
+- Soul values extraction
+- Rhythm inference → learn daily profile
+- Pattern crystallization → recurring patterns
+- Goal evolution → adapt objectives
+- Memory synthesis → weekly/monthly consolidation
+- Meta-reflection → weekly self-assessment
+
+---
+
+## What Each Layer Does
+
+### Friction Framework (User-Facing)
+
+The person never sees doshas or gunas. They experience **friction states**:
+
+| State | What the person feels | Underlying driver |
+|---|---|---|
+| **Chaos** | Scattered, anxious, overwhelmed | Elevated Vata |
+| **Intensity** | Driven, irritable, burning out | Elevated Pitta |
+| **Stagnation** | Stuck, sluggish, unmotivated | Elevated Kapha |
+| **Balanced** | Grounded, clear, flowing | Doshas near baseline |
+
+The friction state determines how Sakhi responds: tone, pacing, what it suggests, what it avoids. A person in chaos gets grounding. A person in intensity gets permission to slow down. A person in stagnation gets gentle activation.
+
+### Memory System (3 Tiers)
+
+| Tier | Window | What it holds |
+|---|---|---|
+| **Short-term** | 24-48 hours | Recent conversation turns, immediate context |
+| **Episodic** | Days to weeks | Daily episode summaries with state vectors |
+| **Long-term** | Weeks to months | Consolidated patterns, stable preferences, identity |
+
+Memory recall uses **hybrid retrieval**: semantic similarity (vector search) + keyword matching (BM25) + recency weighting (45-day half-life) + diversity filtering.
+
+### Ayurvedic Engine
+
+- **Prakruti** — Constitutional baseline (computed during onboarding). The person's natural balance of Vata/Pitta/Kapha.
+- **Vikriti** — Current state deviation from baseline. Computed daily from conversation signals, journal entries, and behavioral patterns.
+- **Drift** — Euclidean distance between prakruti and vikriti in 3D dosha space. Expressed as percentage with severity (minimal/mild/moderate/significant).
+- **Gunas** — Sattva (clarity), Rajas (activity), Tamas (inertia). Another axis of state assessment.
+- **Causal reasoning** — "Why is Vata elevated?" → Evidence from recent conversations, patterns, and temporal signals.
+
+### Governance Kernel (kala)
+
+Pure computation. No I/O, no database, no LLM. 547 tests.
+
+- **Constraint evaluation** — Data-driven rules (field/operator/value). 11 operators. Priority-based (HARD → block, SOFT → confirm).
+- **Drift gating** — Drift percentage triggers governance responses. Above threshold → block proactive suggestions.
+- **Contradiction detection** — 5 typed categories: previously_rejected, contradicts_commitment, repetition_loop, outdated_objective_version, violates_recent_override.
+- **Temporal substrate** — Timeline[T], trend detection, moving averages, rate of change, multi-source reconciliation, pattern crystallization with decay.
+- **Objective versioning** — Objectives evolve (v1 → v2 → v3) with lineage. Stale constraints detected automatically.
+- **State reducer** — Replays events into deterministic state. Same events → same snapshot. Auditable.
+
+See [docs/kala/](kala/) for complete kala documentation.
+
+---
+
+## Backend Inventory
+
+### API Routes (75 files)
+
+**Core conversation:**
+- `turn_v2.py` — Main conversation turn orchestrator
+- `conversation.py` — History and message handling
+- `journal_turn.py` — Journal entry conversation loop
+
+**Ayurvedic & wellness:**
+- `friction_framework.py` — Friction state assessment
+- `recommendations.py` — Personalized recommendations
+- `health.py`, `body.py`, `breath.py` — Physical state tracking
+
+**Soul & identity:**
+- `soul.py` — Values, identity signatures, purpose themes
+- `identity_momentum.py`, `identity_state.py`, `identity_timeline.py` — Identity evolution
+- `narrative.py`, `narrative_arcs.py` — Life story arcs
+
+**Rhythm & temporal:**
+- `rhythm.py` — Daily rhythm patterns
+- `morning_ask.py`, `morning_momentum.py`, `morning_preview.py` — Morning flow
+- `evening_closure.py` — Evening reflection
+- `forecast.py` — Rhythm forecast
+
+**Emotional & psychological:**
+- `emotion_soul_rhythm.py` — Emotion-soul-rhythm integration
+- `inner_dialogue.py`, `inner_conflict.py` — Internal state
+- `alignment.py`, `coherence.py` — Value alignment and life coherence
+
+**Focus & productivity:**
+- `focus.py`, `focus_path.py` — Focus state management
+- `micro_journey.py`, `micro_momentum.py` — Micro-goal journeys
+- `decision_graph.py` — Decision support
+
+**Memory & learning:**
+- `memory.py` — Recall and synthesis
+- `memory_graph.py` — Memory graph visualization
+- `learning.py` — Feedback and preference learning
+
+**External integrations:**
+- `email.py` — Gmail OAuth, signal extraction, digest
+- `calendar.py`, `scheduling.py` — Calendar integration
+- `agent.py`, `agentic.py` — Desktop agent coordination
+- `mesh.py` — Inter-Sakhi coordination
+
+**Analytics:**
+- `analytics/breath.py`, `analytics/patterns.py`, `analytics/summary.py`, `analytics/themes.py`, `analytics/timeseries.py`
+
+### Services (49 directories)
+
+| Service | What it does |
+|---|---|
+| `conversation_v2/` | Main conversation engine, reasoner, context builder, tone |
+| `ayurveda/` | Prakruti, vikriti, graph reasoning, food recommendations, causal reasoning |
+| `memory/` | Multi-layer memory: recall, episodic, STM, LTM, synthesis, BM25, embeddings |
+| `turn/` | Per-turn orchestration: context loading, reply building, async triggers |
+| `persona/` | Persona adaptation and session tuning |
+| `rhythm/` | Rhythm engine, triggers, scheduling |
+| `email/` | Gmail adapter, signal extraction |
+| `agent/` | Browser automation, vision loop, screen analysis |
+| `learning/` | Multi-level preference adaptation |
+| `patterns/` | Pattern detection and crystallization |
+| `soul/` | Soul values computation |
+| `focus/` | Focus state management |
+| `missions/` | Mission/project tracking |
+| `relationships/` | Relationship state and attention |
+| `planning/`, `planner/` | Planning and scheduling |
+| `reflection/`, `meta_reflection/` | Reflection and meta-reflection |
+| `narratives/` | Narrative generation |
+| `body/`, `environment/` | Physical and environmental context |
+
+### Workers (113 task files)
+
+**Per-turn (triggered after every conversation):**
+- Memory update, episodic consolidation, preference learning, intent extraction
+
+**Daily schedule:**
+- Ayurvedic pipeline, emotion-soul-rhythm, soul refresh, rhythm inference
+- Pattern crystallization, goal evolution, memory synthesis
+- Body refresh, environment refresh, alignment refresh
+
+**Weekly schedule:**
+- Meta-reflection, weekly learning cycle, weekly rhythm rollup, weekly signals
+
+**Email:**
+- Email sync, email digest generation
+
+**Task & planning:**
+- Task enrichment, progressive structuring, task weaving, task routing
+
+---
+
+## Frontend Inventory
+
+### Web App (Next.js 14, 73 pages)
+
+**Tech:** Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Framer Motion, Supabase Auth, SWR
+
+**Main experiences:**
+- `/experience/converse` — Conversation interface (main chat)
+- `/experience/voice` — Voice mode (Whisper STT → Sakhi → OpenAI TTS)
+- `/experience/onboarding` — Onboarding flow
+- `/experience/me` — User profile and wellness state
+- `/experience/journal` — Journal writing
+- `/experience/calendar` — Calendar and scheduling
+- `/experience/memory` — Memory visualization
+- `/experience/reflection` — Deep reflection
+- `/experience/dashboard` — Analytics dashboard
+- `/experience/weekly` — Weekly review
+
+**Soul section:**
+- `/soul/values` — Core values exploration
+- `/soul/alignment` — Life alignment assessment
+- `/soul/narrative` — Personal narrative
+- `/soul/timeline` — Life timeline visualization
+- `/soul/shadow-work` — Shadow work exercises
+
+**Lab (internal):**
+- `/lab/simulation` — Full-brain simulation harness
+- 15+ detail pages for debugging memory, persona, rhythm, patterns, etc.
+
+**101 API proxy routes** forwarding to the Python backend.
+
+### Mobile App (React Native / Expo, 16 screens)
+
+**Tech:** Expo 54, React Native 0.81, React 19, TypeScript, NativeWind (Tailwind), Supabase Auth, React Query, Apple HealthKit integration
+
+**Screens:**
+- Auth flow (login, OAuth callback)
+- Onboarding (questions, result, health connect)
+- Conversation (canonical flow — mobile is source of truth)
+- Soul (8 screens: hub, values, alignment, narrative, timeline, shadow, friction, insights)
+- Voice mode
+
+**Native integrations:**
+- Apple Sign-In
+- HealthKit (sleep, heart rate, activity)
+- Haptic feedback
+- Secure token storage
+
+---
+
+## Voice Pipeline
+
+```
+User speaks → MediaRecorder → audio blob
+  → POST /api/voice/turn
+    → Whisper STT (transcription)
+    → POST /v2/turn (conversation)
+    → OpenAI TTS (nova/shimmer/alloy voice)
+  → Audio playback to user
+```
+
+Supports: echo cancellation, noise suppression, auto-play, speed control (0.25-4.0x), interrupt.
+
+---
+
+## Email Intelligence
+
+Gmail integration that extracts behavioral signals from email patterns:
+
+- **OAuth flow** → connect Gmail account
+- **Sync** → fetch email metadata (subject, sender, timestamps)
+- **Signal extraction** → subscription detection, sender avoidance patterns, communication boundaries, cognitive load scoring
+- **Digest** → LLM-powered triage (GPT-4o-mini) → action items, FYI, noise, commitments
+- **UI** → EmailDigestCard on the Me page showing categorized items
+
+---
+
+## Database (179 Tables)
+
+Organized across domains:
+
+| Domain | What it stores |
+|---|---|
+| **Personal Model** | Operating system (prakruti, vikriti, friction state, doshas, gunas) |
+| **Memory** | Short-term, episodic, long-term memories with embeddings |
+| **Conversation** | Turn history, session state, context snapshots |
+| **Friction** | Friction state history, recommendations, feedback |
+| **Rhythm** | Daily rhythm profiles, forecasts, nudges |
+| **Soul** | Values, identity signatures, narrative arcs |
+| **Patterns** | Crystallized patterns, pattern trends |
+| **Email** | Sync state, email events, signals, digest items |
+| **Learning** | Intervention plans, feedback loops, preference history |
+| **Calendar** | Events, scheduling state |
+| **Agent** | Registered agents, approvals, task routing |
+| **Missions** | Goals, mission plans, progress tracking |
+
+All person-scoped via `person_id UUID`. Vector columns use `vector(1536)`. JSONB for flexible metadata. Timestamps on everything.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.11, FastAPI, Poetry |
+| Frontend (web) | Next.js 14, React 18, TypeScript, Tailwind |
+| Frontend (mobile) | Expo 54, React Native, NativeWind |
+| Database | PostgreSQL + pgvector (via Supabase) |
+| Auth | Supabase Auth (web), Apple Sign-In (mobile) |
+| Background jobs | Redis + RQ (Python) |
+| LLM | OpenAI GPT-4o, GPT-4o-mini |
+| Embeddings | OpenAI text-embedding-3-small (1536D) |
+| Voice | OpenAI Whisper (STT) + OpenAI TTS |
+| Governance | kala (pure Python, zero dependencies) |
+| Deployment | Vercel (web), Railway (API), EAS (mobile) |
+
+---
+
+## What Makes This Different
+
+1. **Ayurvedic grounding.** Not generic wellness. Doshas, gunas, prakruti/vikriti provide a structured framework for understanding a person's state — not just "mood: happy/sad" but a multi-dimensional state space with drift detection.
+
+2. **Temporal intelligence.** Every data structure has a temporal dimension. Memory decays. Patterns crystallize and fade. State drifts and recovers. Moving averages smooth noise. The system gets smarter over time, not just bigger.
+
+3. **Governance kernel.** kala provides deterministic governance over probabilistic LLM inference. Constraints, drift gating, contradiction detection, objective versioning — all pure computation, all auditable, all replayable. 547 tests, zero external dependencies.
+
+4. **Friction-first UX.** The person never sees doshas. They experience friction states (chaos, intensity, stagnation, balanced) that feel natural. The Ayurvedic engine runs underneath.
+
+5. **Deep pipeline.** Not a chatbot wrapper. 113 background workers process every interaction: memory storage, episodic consolidation, pattern learning, rhythm inference, preference adaptation, causal reasoning. The system is continuously learning.
+
+6. **Multi-layer memory.** Three tiers (STM, episodic, long-term) with hybrid retrieval (vector + BM25 + recency), diversity filtering, and consolidation. Not just "store embeddings and retrieve."
+
+---
+
+*Last updated: 2026-02-20*
