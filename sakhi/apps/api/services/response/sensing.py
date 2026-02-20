@@ -27,6 +27,7 @@ DOMAIN_KEYWORDS = {
             "muscle", "tension", "back", "neck", "shoulder", "joint", "fever",
             "cold", "cough", "sick", "ill", "health", "body", "physical",
             "weight", "fitness", "exercise", "workout", "breath", "breathing",
+            "throat", "congestion",
         ],
         "sub_domains": {
             "head_neurological": ["headache", "head", "migraine", "dizzy", "vertigo"],
@@ -35,6 +36,7 @@ DOMAIN_KEYWORDS = {
             "energy": ["energy", "fatigue", "tired", "exhausted", "drained", "low energy"],
             "skin": ["skin", "rash", "itch", "dry", "acne"],
             "musculoskeletal": ["muscle", "back", "neck", "shoulder", "joint", "tension", "pain", "ache"],
+            "respiratory_throat": ["throat", "sore", "cough", "congestion", "cold", "flu", "breathing"],
             "fitness": ["exercise", "workout", "fitness", "weight", "gym", "yoga", "run", "walk"],
         },
     },
@@ -118,6 +120,15 @@ URGENCY_SIGNALS = {
     "medium": ["pretty bad", "bothering me", "affecting", "interfering"],
     "low": ["mild", "slight", "a bit", "sometimes", "occasional"],
 }
+
+# Compound symptoms that must be detected as a single unit before
+# individual keyword extraction breaks them into pieces (e.g. "sore throat" → "sore")
+COMPOUND_SYMPTOMS = [
+    "sore throat", "dry skin", "brain fog", "body pain", "back pain",
+    "joint pain", "muscle pain", "stomach ache", "head ache", "chest pain",
+    "low energy", "no energy", "racing thoughts", "skin rash", "itchy skin",
+    "cold flu", "weight gain", "water retention",
+]
 
 
 # =============================================================================
@@ -216,16 +227,25 @@ def _classify_domain(text: str, keywords: List[str]) -> Tuple[str, str, float]:
 
 
 def _extract_symptom(text: str, domain: str, sub_domain: str, keywords: List[str]) -> str:
-    """Extract the primary symptom or topic."""
-    # Use the first matched keyword as the symptom
+    """Extract the primary symptom or topic.
+
+    Checks compound symptoms first (e.g. "sore throat") before falling
+    back to individual keywords, so multi-word symptoms aren't split.
+    """
+    text_lower = text.lower()
+
+    # 1. Check compound symptoms first — prevents "sore throat" → "sore"
+    for compound in COMPOUND_SYMPTOMS:
+        if compound in text_lower:
+            return compound.replace(" ", "_")
+
+    # 2. Use the first matched keyword
     if keywords:
         return keywords[0]
 
-    # Fallback: try to extract a noun phrase
-    text_lower = text.lower()
-
-    # Common symptom patterns
+    # 3. Fallback: try to extract a noun phrase
     symptom_patterns = [
+        r"having\s+(?:a\s+)?(\w+\s+\w+)",  # "having a sore throat"
         r"having\s+(\w+)",
         r"getting\s+(\w+)",
         r"feeling\s+(\w+)",
@@ -236,7 +256,7 @@ def _extract_symptom(text: str, domain: str, sub_domain: str, keywords: List[str
     for pattern in symptom_patterns:
         match = re.search(pattern, text_lower)
         if match:
-            return match.group(1)
+            return match.group(1).replace(" ", "_")
 
     return sub_domain if sub_domain != "general" else domain
 

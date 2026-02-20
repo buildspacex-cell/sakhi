@@ -481,7 +481,7 @@ function ConverseContent() {
 
       try {
         const res = await fetch(
-          `/api/turn-v2?user=${encodeURIComponent(authUser.person_id)}`,
+          `/api/turn-v2?user=${encodeURIComponent(authUser.person_id)}&debug=1`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -491,10 +491,25 @@ function ConverseContent() {
 
         if (res.ok) {
           const data = await res.json();
-          // Store the full response for debug panel
+          // Store the full response for debug panel, normalizing backend shape
+          // Backend puts debug info in debug_data; DebugPanel reads from debug
+          const debugData = data.debug_data || {};
+          const internalState = debugData.internal_state || {};
           setLastResponseDebug({
             ...data,
             input_text: text.trim(),
+            // Map internal_state fields to top level for DebugPanel
+            operating_system: internalState.operating_system || data.operating_system,
+            dosha_baseline: internalState.dosha_baseline || data.dosha_baseline,
+            life_context: internalState.life_context || data.life_context,
+            decision_profile: internalState.decision_profile || data.decision_profile,
+            // Map debug_data to debug key that DebugPanel expects
+            debug: {
+              conversation_engine_debug: debugData.conversation_engine_debug,
+              adaptive_response: data.adaptive_response,
+              adaptive_error: (debugData.conversation_engine_debug || {}).adaptive_error,
+              used_fallback: (debugData.conversation_engine_debug || {}).used_fallback,
+            },
           });
 
           // Handle agent task context
