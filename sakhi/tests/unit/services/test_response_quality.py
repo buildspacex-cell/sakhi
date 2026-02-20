@@ -16,6 +16,7 @@ from sakhi.apps.api.services.response.synthesizer import (
     SAKHI_INSTRUCTIONS,
     build_adaptive_prompt,
     SynthesizedContext,
+    _is_physical_health_symptom,
 )
 from sakhi.apps.api.services.conversation_v2.conversation_reasoner import build_prompt
 
@@ -253,3 +254,139 @@ class TestBasePromptVoiceAlignment:
         """Persona mode was removed in P2."""
         result = build_prompt("hello", self._base_context(), self._base_tone())
         assert "Persona mode:" not in result
+
+
+class TestBodyHealthOverride:
+    """Verify body-domain physical symptoms get practical health instructions."""
+
+    def _build_body_synth(self, symptom="sore_throat", domain="body") -> SynthesizedContext:
+        from sakhi.apps.api.services.response.translation import build_jargon_free_context
+        jf = build_jargon_free_context(
+            operating_system="Adaptive-Performance",
+            dosha_baseline={"vata": 0.30, "pitta": 0.45, "kapha": 0.25},
+            friction_state="intensity",
+            drift_percentage=20,
+            energy_mode="rajas",
+        )
+        ctx = SynthesizedContext()
+        ctx.jargon_free = jf
+        ctx.response_mode = "RESPOND"
+        ctx.domain = domain
+        ctx.symptom = symptom
+        ctx.temporal = "acute"
+        ctx.specificity = "medium"
+        ctx.tone_guidance = "cooling, soothing"
+        ctx.guardrails = JARGON_FREE_GUARDRAILS.copy()
+        ctx.known_facts = ["Recently mentioned: daughter had cold last week"]
+        return ctx
+
+    def _build_mind_synth(self) -> SynthesizedContext:
+        from sakhi.apps.api.services.response.translation import build_jargon_free_context
+        jf = build_jargon_free_context(
+            operating_system="Balanced",
+            dosha_baseline={},
+            friction_state="balanced",
+            drift_percentage=0,
+            energy_mode="sattva",
+        )
+        ctx = SynthesizedContext()
+        ctx.jargon_free = jf
+        ctx.response_mode = "RESPOND"
+        ctx.domain = "mind"
+        ctx.symptom = "anxiety"
+        ctx.temporal = "recurring"
+        ctx.specificity = "medium"
+        ctx.tone_guidance = "warm, grounding"
+        ctx.guardrails = JARGON_FREE_GUARDRAILS.copy()
+        return ctx
+
+    def test_body_symptom_gets_override(self):
+        """Physical symptom prompt must contain BODY SYMPTOM MODE override."""
+        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
+        assert "BODY SYMPTOM MODE" in prompt
+        assert "150-250 words" in prompt
+
+    def test_body_symptom_allows_bullets(self):
+        """Override must explicitly allow bullet points."""
+        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
+        assert "Bullet points ARE appropriate" in prompt
+
+    def test_body_symptom_mentions_practical_remedies(self):
+        """Override must instruct practical remedies."""
+        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
+        assert "PRACTICAL REMEDIES" in prompt
+
+    def test_body_symptom_has_timeline_instruction(self):
+        """Override must mention timeline."""
+        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
+        assert "TIMELINE" in prompt
+
+    def test_body_symptom_has_red_flag_instruction(self):
+        """Override must mention when to see a doctor."""
+        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
+        assert "RED FLAG" in prompt
+
+    def test_mind_symptom_does_not_get_override(self):
+        """Mental/emotional concerns should NOT get body override."""
+        prompt = build_adaptive_prompt("I feel anxious", self._build_mind_synth())
+        assert "BODY SYMPTOM MODE" not in prompt
+
+    def test_headache_gets_override(self):
+        """Headache is a physical symptom."""
+        prompt = build_adaptive_prompt("I have a headache", self._build_body_synth(symptom="headache"))
+        assert "BODY SYMPTOM MODE" in prompt
+
+    def test_fever_gets_override(self):
+        """Fever is a physical symptom."""
+        prompt = build_adaptive_prompt("I have a fever", self._build_body_synth(symptom="fever"))
+        assert "BODY SYMPTOM MODE" in prompt
+
+    def test_nausea_gets_override(self):
+        """Nausea is a physical symptom."""
+        prompt = build_adaptive_prompt("I feel nauseous", self._build_body_synth(symptom="nausea"))
+        assert "BODY SYMPTOM MODE" in prompt
+
+    def test_sleep_does_not_get_override(self):
+        """Sleep is lifestyle, not acute physical illness."""
+        prompt = build_adaptive_prompt("I can't sleep", self._build_body_synth(symptom="sleep"))
+        assert "BODY SYMPTOM MODE" not in prompt
+
+    def test_energy_does_not_get_override(self):
+        """Energy is lifestyle, not acute physical illness."""
+        prompt = build_adaptive_prompt("I'm so tired", self._build_body_synth(symptom="energy"))
+        assert "BODY SYMPTOM MODE" not in prompt
+
+    def test_life_domain_does_not_get_override(self):
+        """Life domain should never get body override."""
+        prompt = build_adaptive_prompt("career problems", self._build_body_synth(symptom="work", domain="life"))
+        assert "BODY SYMPTOM MODE" not in prompt
+
+    def test_body_override_has_example(self):
+        """Override should include a body-specific example."""
+        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
+        assert "salt water gargle" in prompt
+
+    def test_friction_still_present_as_context(self):
+        """Friction state should still appear, just not as primary frame."""
+        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
+        assert "CONTEXT, not the primary frame" in prompt
+
+    def test_body_response_direction_says_practical(self):
+        """Response direction for body should say 'practical'."""
+        prompt = build_adaptive_prompt("I have a sore throat", self._build_body_synth())
+        assert "practical" in prompt.lower()
+
+    def test_is_physical_helper_sore_throat(self):
+        """Helper correctly identifies sore_throat as physical."""
+        ctx = self._build_body_synth(symptom="sore_throat")
+        assert _is_physical_health_symptom(ctx) is True
+
+    def test_is_physical_helper_anxiety(self):
+        """Helper correctly excludes anxiety."""
+        ctx = self._build_mind_synth()
+        assert _is_physical_health_symptom(ctx) is False
+
+    def test_is_physical_helper_sleep(self):
+        """Helper correctly excludes sleep (lifestyle, not acute physical)."""
+        ctx = self._build_body_synth(symptom="sleep")
+        assert _is_physical_health_symptom(ctx) is False

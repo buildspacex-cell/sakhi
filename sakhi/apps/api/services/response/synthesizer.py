@@ -340,6 +340,112 @@ DEFAULT_GUARDRAILS = JARGON_FREE_GUARDRAILS
 
 
 # =============================================================================
+# BODY HEALTH OVERRIDE — for physical symptoms (sore throat, fever, etc.)
+# =============================================================================
+
+# Sensing sub-domains that are acute physical health symptoms.
+# Excluded: sleep, energy, fitness — these are lifestyle/rhythm issues where
+# the friction framework works well.
+BODY_PHYSICAL_SUB_DOMAINS = {
+    "head_neurological",   # headaches, migraine, dizziness
+    "digestion",           # nausea, stomach issues, appetite
+    "skin",                # rash, dryness, acne
+    "musculoskeletal",     # body pain, stiffness, tension
+    "respiratory_throat",  # sore throat, cold, cough, congestion
+}
+
+# Symptom keys that are physical health symptoms (fallback when sub_domain
+# doesn't match — e.g. compound symptoms that resolve to a specific key)
+_PHYSICAL_SYMPTOM_KEYS = {
+    "headache", "headaches", "migraine", "sore_throat", "cold_flu",
+    "fever", "nausea", "body_pain", "back_pain", "joint_pain",
+    "muscle_pain", "stomach_ache", "chest_pain", "congestion",
+    "cough", "skin_rash", "dry_skin", "itchy_skin",
+}
+
+
+def _is_physical_health_symptom(synth: SynthesizedContext) -> bool:
+    """Check if the current concern is a physical health symptom.
+
+    Returns True for acute physical illness (sore throat, headache, fever)
+    where practical remedies should lead the response. Returns False for
+    lifestyle/rhythm issues (sleep, energy, fitness) where the friction
+    framework works well.
+    """
+    if synth.domain != "body":
+        return False
+    # Check symptom key against known physical symptoms
+    symptom_key = (synth.symptom or "").lower().strip()
+    if symptom_key in _PHYSICAL_SYMPTOM_KEYS:
+        return True
+    # Check symptom characteristics — presence of location/quality hints physical
+    if synth.symptom_characteristics:
+        return True
+    return False
+
+
+BODY_HEALTH_OVERRIDE = """
+═══════════════════════════════════════════════════════════════════════════════
+BODY SYMPTOM MODE — OVERRIDE FOR PHYSICAL HEALTH
+═══════════════════════════════════════════════════════════════════════════════
+
+This person is reporting a PHYSICAL HEALTH SYMPTOM. The following rules
+OVERRIDE the default rules for this response only:
+
+RESPONSE STRUCTURE (in this order):
+1. CONTEXT: If you know something relevant (family member sick, past episode,
+   recurring pattern), lead with that — it shows you see the full picture.
+2. PRACTICAL REMEDIES: Give 2-4 specific, actionable remedies. Use short
+   bullet points. Be concrete (name the food, the technique, the timing).
+3. TIMELINE: When relevant, give expected recovery timeline.
+4. RED FLAG: If this could indicate something serious at moderate+ severity,
+   briefly mention when to see a doctor. Keep it non-alarming.
+5. DIAGNOSTIC QUESTION: End with ONE specific question about the symptom
+   itself. Examples: "Is it worse when swallowing, or constant?" /
+   "Did this start before or after the fever?"
+
+RULES FOR THIS RESPONSE:
+- 150-250 words (overrides the 60-120 default)
+- Bullet points ARE appropriate for remedies (2-4 bullets max)
+- Give MULTIPLE practical suggestions, not just one
+- Practical health advice FIRST, personal patterns SECOND
+- Friction state is CONTEXT, not the primary frame — mention briefly if
+  relevant but do NOT make it the main explanation
+- Follow-up question must be DIAGNOSTIC (about the symptom), not emotional
+- DO still reference personal data (past episodes, what helped before,
+  life context) to make advice specific to THIS person
+- DO still use warm, grounded tone — not clinical
+
+WHAT NOT TO DO:
+- Do NOT frame physical illness primarily as friction/energy pattern
+- Do NOT offer breathing exercises as the primary remedy for infections
+- Do NOT say "your system is tightening" when they have a sore throat
+- Do NOT ask "how are you feeling overall?" — ask about symptom specifics
+
+Example — Sore Throat (with context):
+[Person: Driven. Known: daughter had cold last week, tends to push through,
+ past throat issues. Recommendations: warm fluids, honey, rest.]
+
+User: "I have a sore throat"
+
+Sakhi: Your daughter just came through this, so you've likely caught what
+she had. Given how you tend to push through, I want to be direct — this
+needs rest, not powering through.
+
+What helps:
+- Warm salt water gargle, 2-3x daily
+- Honey in warm water, especially evenings
+- Avoid cold drinks and dairy for a few days
+
+Since this is your third throat issue recently, if it keeps recurring after
+recovery, that's worth flagging with a doctor.
+
+Usually peaks around day 3-4 and eases by day 5-7. Is the pain worse when
+swallowing, or is it more constant?
+"""
+
+
+# =============================================================================
 # SYNTHESIS FUNCTIONS
 # =============================================================================
 
@@ -944,8 +1050,11 @@ def build_adaptive_prompt(
 
     # ── Assemble the 3 blocks ──
 
-    prompt = f"""{SAKHI_INSTRUCTIONS}
+    # Inject body health override for physical symptoms
+    body_override = BODY_HEALTH_OVERRIDE if _is_physical_health_symptom(synth) else ""
 
+    prompt = f"""{SAKHI_INSTRUCTIONS}
+{body_override}
 ═══════════════════════════════════════════════════════════════════════════════
 THIS PERSON — LIVE DATA
 ═══════════════════════════════════════════════════════════════════════════════
@@ -1010,6 +1119,22 @@ def _build_response_direction(synth: SynthesizedContext, jf: JargonFreeContext) 
     mode = synth.response_mode
     known_count = len(synth.known_facts)
     questions_count = len(synth.questions_to_ask)
+
+    # Body-specific direction: practical remedies first
+    if _is_physical_health_symptom(synth):
+        if mode == ResponseMode.RESPOND:
+            return (
+                f"Physical symptom. Give practical remedies first, "
+                f"then connect to their patterns. They're {jf.friction_state_name} — "
+                f"use that as context, not primary frame."
+            )
+        elif mode == ResponseMode.CONNECT_AND_INQUIRE:
+            return (
+                f"Physical symptom with some context ({known_count} known). "
+                f"Give practical advice, ask 1 diagnostic question about the symptom."
+            )
+        else:
+            return "Physical symptom, limited context. Acknowledge, ask diagnostic question about the symptom."
 
     if mode == ResponseMode.RESPOND:
         return f"We know enough to help. They're {jf.friction_state_name} — guide accordingly."
