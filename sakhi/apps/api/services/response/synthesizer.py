@@ -603,6 +603,38 @@ def _format_life_context(life_context: Dict[str, Any]) -> List[str]:
     return formatted
 
 
+def _strip_jargon_from_inference(inference: str) -> str:
+    """Translate any leaked Ayurvedic jargon in inference strings.
+
+    The inference engine generates statements like 'Kapha elevated 77% from
+    baseline — may indicate sluggishness'. This translates dosha terms to
+    friction language so the LLM prompt stays jargon-free.
+    """
+    import re
+    # Map dosha terms to friction language
+    replacements = [
+        (r'\bVata\b', 'Scattered-energy'),
+        (r'\bvata\b', 'scattered-energy'),
+        (r'\bPitta\b', 'Intensity'),
+        (r'\bpitta\b', 'intensity'),
+        (r'\bKapha\b', 'Sluggish-energy'),
+        (r'\bkapha\b', 'sluggish-energy'),
+        (r'\bdosha\b', 'energy pattern'),
+        (r'\bDosha\b', 'Energy pattern'),
+    ]
+    result = inference
+    for pattern, replacement in replacements:
+        result = re.sub(pattern, replacement, result)
+    # Also clean up "associated with X tendency" → friendlier
+    result = result.replace("associated with sluggish-energy tendency",
+                            "linked to sluggishness and heaviness")
+    result = result.replace("associated with intensity tendency",
+                            "linked to heat and intensity")
+    result = result.replace("associated with scattered-energy tendency",
+                            "linked to dryness and irregularity")
+    return result
+
+
 def _format_known_facts(facts: List[KnownFact]) -> List[str]:
     """Format known facts into human-readable strings."""
     formatted = []
@@ -958,21 +990,42 @@ def build_adaptive_prompt(
     # middle get deprioritized during generation)
 
     personalization_lines = []
-    for fact in (synth.known_facts or [])[:5]:
-        personalization_lines.append(f"  • {fact}")
+    seen_values = set()  # Deduplicate identical facts from different sources
+    for fact in (synth.known_facts or [])[:7]:
+        # Extract the value portion after the prefix for dedup
+        value = fact.split(": ", 1)[-1].strip().lower() if ": " in fact else fact.strip().lower()
+        if value not in seen_values:
+            seen_values.add(value)
+            personalization_lines.append(f"  • {fact}")
     for inf in (synth.inferences or [])[:3]:
-        personalization_lines.append(f"  • {inf}")
+        # Translate any leaked Ayurvedic jargon in inferences
+        clean_inf = _strip_jargon_from_inference(inf)
+        personalization_lines.append(f"  • {clean_inf}")
+
+    # Pull key recommendations from WHAT COULD HELP into enforcement zone
+    rec_lines = []
+    if jf and jf.symptom_best_food:
+        rec_lines.append(f"  → Recommend: {jf.symptom_best_food['what']} — {jf.symptom_best_food['why']}")
+    if jf and jf.symptom_best_practice:
+        rec_lines.append(f"  → Recommend: {jf.symptom_best_practice['what']} — {jf.symptom_best_practice['why']}")
+    if jf and jf.symptom_avoid:
+        rec_lines.append(f"  → Skip: {jf.symptom_avoid}")
 
     if personalization_lines:
         facts_block = "\n".join(personalization_lines)
+        recs_block = "\n".join(rec_lines) if rec_lines else ""
+        recs_instruction = f"\n\nUse these specific recommendations (from WHAT COULD HELP above):\n{recs_block}" if recs_block else ""
         personalization_section = f"""
 ═══════════════════════════════════════════════════════════════════════════════
 BEFORE YOU RESPOND — USE THESE FACTS
 ═══════════════════════════════════════════════════════════════════════════════
-{facts_block}
+{facts_block}{recs_instruction}
 
 Your response MUST reference at least 2 of these specific facts.
-Every remedy or suggestion MUST explain why it fits THIS person — not just why it works in general.
+Every remedy MUST explain why it fits THIS person — not just why it works in general.
+"Salt water gargles reduce inflammation" = GENERIC (fails the test).
+"Salt water gargles — your system's sluggish right now so the salt helps
+draw things out faster" = PERSONAL (passes the test).
 If a search engine would give the same response, rewrite it."""
     else:
         personalization_section = ""

@@ -16,6 +16,7 @@ from sakhi.apps.api.services.response.synthesizer import (
     SAKHI_INSTRUCTIONS,
     build_adaptive_prompt,
     SynthesizedContext,
+    _strip_jargon_from_inference,
 )
 from sakhi.apps.api.services.conversation_v2.conversation_reasoner import build_prompt
 
@@ -371,6 +372,42 @@ class TestResponseCalibration:
         ctx.inferences = []
         prompt = build_adaptive_prompt("sore throat", ctx)
         assert "BEFORE YOU RESPOND" not in prompt
+
+    def test_personalization_enforcement_deduplicates_facts(self):
+        """Duplicate facts from different sources should be deduplicated."""
+        ctx = self._build_synth()
+        ctx.known_facts = [
+            "Recently mentioned: daughter had cold last week",
+            "Previously shared: daughter had cold last week",
+            "Recently mentioned: sore throat in the morning",
+        ]
+        prompt = build_adaptive_prompt("sore throat", ctx)
+        # Should only appear once in the enforcement block
+        enforce_section = prompt.split("BEFORE YOU RESPOND")[1].split("THEY SAID")[0]
+        assert enforce_section.count("daughter had cold last week") == 1
+        assert "sore throat in the morning" in enforce_section
+
+    def test_personalization_enforcement_strips_jargon(self):
+        """Inferences with Ayurvedic jargon must be translated."""
+        ctx = self._build_synth()
+        ctx.known_facts = ["Recently mentioned: sore throat"]
+        ctx.inferences = [
+            "Kapha elevated 77% from baseline — may indicate sluggishness",
+            "This symptom is associated with kapha tendency",
+        ]
+        prompt = build_adaptive_prompt("sore throat", ctx)
+        enforce_section = prompt.split("BEFORE YOU RESPOND")[1].split("THEY SAID")[0]
+        assert "kapha" not in enforce_section.lower()
+        assert "Sluggish-energy" in enforce_section or "sluggish" in enforce_section.lower()
+
+    def test_personalization_enforcement_has_generic_vs_personal_example(self):
+        """Enforcement block should show a concrete generic vs personal contrast."""
+        ctx = self._build_synth()
+        ctx.known_facts = ["Recently mentioned: daughter had cold"]
+        prompt = build_adaptive_prompt("sore throat", ctx)
+        enforce_section = prompt.split("BEFORE YOU RESPOND")[1].split("THEY SAID")[0]
+        assert "GENERIC" in enforce_section
+        assert "PERSONAL" in enforce_section
 
     def test_all_prompts_share_same_base_instructions(self):
         """Body, mind, and life prompts should all start with the same SAKHI_INSTRUCTIONS."""
