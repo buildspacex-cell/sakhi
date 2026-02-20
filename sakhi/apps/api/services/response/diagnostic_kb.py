@@ -13,6 +13,8 @@ ask targeted questions based on the user's constitution.
 
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -1559,7 +1561,7 @@ async def generate_symptom_protocol_via_llm(
     )
 
     try:
-        result = await call_llm(prompt, model="openrouter/fast")
+        result = await call_llm(prompt, model=os.getenv("MODEL_CHAT", "gpt-4o-mini"))
         data = _json.loads(result) if isinstance(result, str) else result
         return {
             "insight": os_insight,

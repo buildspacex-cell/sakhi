@@ -12,6 +12,7 @@ Prevents redundant questioning by checking memory before asking.
 from __future__ import annotations
 
 import json
+import os
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -756,7 +757,7 @@ async def generate_personalized_questions(
     )
 
     try:
-        raw = await call_llm(prompt, model="openrouter/fast")
+        raw = await call_llm(prompt, model=os.getenv("MODEL_CHAT", "gpt-4o-mini"))
         items = json.loads(raw) if isinstance(raw, str) else raw
         if not isinstance(items, list):
             items = items.get("questions", []) if isinstance(items, dict) else []
