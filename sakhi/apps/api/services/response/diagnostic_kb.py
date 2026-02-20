@@ -608,6 +608,384 @@ RELATIONSHIPS_PATH = DiagnosticPath(
     universal_questions=[],
 )
 
+# Sore throat diagnostic path
+SORE_THROAT_PATH = DiagnosticPath(
+    symptom="sore_throat",
+    domain="body",
+    sub_domain="throat_respiratory",
+    dosha_questions={
+        "vata": [
+            DiagnosticQuestion(
+                id="throat_dryness",
+                question="Does your throat feel dry or scratchy rather than swollen?",
+                priority="high",
+                dosha_relevance="vata",
+                why="Vata sore throats are often dry, not inflamed",
+            ),
+            DiagnosticQuestion(
+                id="throat_cold_exposure",
+                question="Have you been exposed to cold, dry air or wind recently?",
+                priority="medium",
+                dosha_relevance="vata",
+                why="Vata is aggravated by cold and dryness",
+            ),
+        ],
+        "pitta": [
+            DiagnosticQuestion(
+                id="throat_inflammation",
+                question="Does it feel hot, burning, or inflamed?",
+                priority="high",
+                dosha_relevance="pitta",
+                why="Pitta sore throats involve heat and inflammation",
+            ),
+            DiagnosticQuestion(
+                id="throat_acid",
+                question="Have you noticed any acid reflux or burning sensation in your chest too?",
+                priority="medium",
+                dosha_relevance="pitta",
+                why="Pitta can cause acid-related throat irritation",
+            ),
+        ],
+        "kapha": [
+            DiagnosticQuestion(
+                id="throat_congestion",
+                question="Is there mucus or congestion along with the soreness?",
+                priority="high",
+                dosha_relevance="kapha",
+                why="Kapha sore throats involve congestion and heaviness",
+            ),
+            DiagnosticQuestion(
+                id="throat_heaviness",
+                question="Does your whole body feel heavy or sluggish along with it?",
+                priority="medium",
+                dosha_relevance="kapha",
+                why="Kapha illness often accompanies general heaviness",
+            ),
+        ],
+    },
+    constitution_guidance={
+        "vata": ConstitutionGuidance(
+            likely_causes=["cold_dry_exposure", "depleted_immunity", "irregular_routine", "exhaustion"],
+            tone="nurturing, warm, restorative",
+            avoid_suggesting=["exercise", "cold_foods", "fasting", "pushing_through"],
+        ),
+        "pitta": ConstitutionGuidance(
+            likely_causes=["inflammation", "acid_reflux", "overwork_heat", "spicy_food"],
+            tone="cooling, soothing, gentle",
+            avoid_suggesting=["hot_foods", "spicy_foods", "intense_activity", "pushing_through"],
+        ),
+        "kapha": ConstitutionGuidance(
+            likely_causes=["congestion", "cold_dampness", "weak_agni", "heavy_foods"],
+            tone="warming, clearing, supportive",
+            avoid_suggesting=["cold_foods", "dairy", "heavy_meals", "exercise_when_sick"],
+        ),
+    },
+    universal_questions=[
+        DiagnosticQuestion(
+            id="throat_duration",
+            question="How long has the soreness been there?",
+            priority="medium",
+            dosha_relevance="universal",
+            why="Duration distinguishes acute infection from chronic pattern",
+        ),
+    ],
+)
+
+# Cold/flu diagnostic path
+COLD_FLU_PATH = DiagnosticPath(
+    symptom="cold",
+    domain="body",
+    sub_domain="throat_respiratory",
+    dosha_questions={
+        "vata": [
+            DiagnosticQuestion(
+                id="cold_chills",
+                question="Are you feeling chills or body aches with it?",
+                priority="high",
+                dosha_relevance="vata",
+                why="Vata colds often come with chills and body pain",
+            ),
+            DiagnosticQuestion(
+                id="cold_dryness",
+                question="Is it more dry — dry cough, dry nose — or congested?",
+                priority="medium",
+                dosha_relevance="vata",
+                why="Vata colds tend to be dry rather than mucusy",
+            ),
+        ],
+        "pitta": [
+            DiagnosticQuestion(
+                id="cold_fever",
+                question="Do you have a fever or feel flushed?",
+                priority="high",
+                dosha_relevance="pitta",
+                why="Pitta colds often involve fever and heat",
+            ),
+            DiagnosticQuestion(
+                id="cold_irritability",
+                question="Has being sick made you feel irritable or frustrated?",
+                priority="medium",
+                dosha_relevance="pitta",
+                why="Pitta can't stand being slowed down by illness",
+            ),
+        ],
+        "kapha": [
+            DiagnosticQuestion(
+                id="cold_mucus",
+                question="Is there heavy congestion or thick mucus?",
+                priority="high",
+                dosha_relevance="kapha",
+                why="Kapha colds are dominated by congestion",
+            ),
+            DiagnosticQuestion(
+                id="cold_lethargy",
+                question="Are you feeling really heavy and low-energy with it?",
+                priority="medium",
+                dosha_relevance="kapha",
+                why="Kapha colds bring pronounced lethargy",
+            ),
+        ],
+    },
+    constitution_guidance={
+        "vata": ConstitutionGuidance(
+            likely_causes=["cold_exposure", "depleted_immunity", "exhaustion", "irregular_eating"],
+            tone="warming, nurturing, restful",
+            avoid_suggesting=["exercise", "cold_foods", "fasting", "going_out"],
+        ),
+        "pitta": ConstitutionGuidance(
+            likely_causes=["overwork", "heat_imbalance", "suppressed_anger", "seasonal_change"],
+            tone="cooling, gentle, patient",
+            avoid_suggesting=["pushing_through", "hot_spicy_food", "intense_activity", "overheating"],
+        ),
+        "kapha": ConstitutionGuidance(
+            likely_causes=["congestion_buildup", "cold_damp_weather", "heavy_diet", "weak_digestion"],
+            tone="warming, clearing, light",
+            avoid_suggesting=["dairy", "cold_foods", "sleeping_excessively", "heavy_meals"],
+        ),
+    },
+    universal_questions=[],
+)
+
+# Fever diagnostic path
+FEVER_PATH = DiagnosticPath(
+    symptom="fever",
+    domain="body",
+    sub_domain="systemic",
+    dosha_questions={
+        "vata": [
+            DiagnosticQuestion(
+                id="fever_fluctuation",
+                question="Does the fever come and go, or is it constant?",
+                priority="high",
+                dosha_relevance="vata",
+                why="Vata fevers tend to fluctuate",
+            ),
+        ],
+        "pitta": [
+            DiagnosticQuestion(
+                id="fever_intensity",
+                question="Is it a strong, burning fever?",
+                priority="high",
+                dosha_relevance="pitta",
+                why="Pitta fevers tend to be high and intense",
+            ),
+        ],
+        "kapha": [
+            DiagnosticQuestion(
+                id="fever_low_grade",
+                question="Is it a low-grade fever with heaviness and congestion?",
+                priority="high",
+                dosha_relevance="kapha",
+                why="Kapha fevers are often low-grade with mucus",
+            ),
+        ],
+    },
+    constitution_guidance={
+        "vata": ConstitutionGuidance(
+            likely_causes=["depleted_immunity", "exhaustion", "cold_exposure"],
+            tone="nurturing, warming, restful",
+            avoid_suggesting=["exercise", "cold_foods", "fasting", "pushing_through"],
+        ),
+        "pitta": ConstitutionGuidance(
+            likely_causes=["overheating", "inflammation", "infection"],
+            tone="cooling, soothing, patient",
+            avoid_suggesting=["hot_foods", "intense_activity", "overheating", "pushing_through"],
+        ),
+        "kapha": ConstitutionGuidance(
+            likely_causes=["congestion", "weak_digestion", "accumulated_toxins"],
+            tone="warming, light, clearing",
+            avoid_suggesting=["heavy_foods", "cold_drinks", "excessive_sleep", "dairy"],
+        ),
+    },
+    universal_questions=[
+        DiagnosticQuestion(
+            id="fever_duration",
+            question="How long have you had the fever?",
+            priority="high",
+            dosha_relevance="universal",
+            why="Duration indicates severity and whether medical attention may be needed",
+        ),
+    ],
+)
+
+# Nausea/digestive diagnostic path
+NAUSEA_PATH = DiagnosticPath(
+    symptom="nausea",
+    domain="body",
+    sub_domain="digestive",
+    dosha_questions={
+        "vata": [
+            DiagnosticQuestion(
+                id="nausea_anxiety",
+                question="Does the nausea come with anxiety or nervousness?",
+                priority="high",
+                dosha_relevance="vata",
+                why="Vata nausea is often anxiety-driven",
+            ),
+            DiagnosticQuestion(
+                id="nausea_irregular_eating",
+                question="Have you been eating irregularly or skipping meals?",
+                priority="medium",
+                dosha_relevance="vata",
+                why="Vata digestion is sensitive to irregular eating",
+            ),
+        ],
+        "pitta": [
+            DiagnosticQuestion(
+                id="nausea_acid",
+                question="Is there a burning or acidic feeling with it?",
+                priority="high",
+                dosha_relevance="pitta",
+                why="Pitta nausea often involves excess acid",
+            ),
+            DiagnosticQuestion(
+                id="nausea_spicy_food",
+                question="Have you had spicy, oily, or rich food recently?",
+                priority="medium",
+                dosha_relevance="pitta",
+                why="Pitta nausea triggered by heating foods",
+            ),
+        ],
+        "kapha": [
+            DiagnosticQuestion(
+                id="nausea_heaviness",
+                question="Does it come with a heavy, full feeling in your stomach?",
+                priority="high",
+                dosha_relevance="kapha",
+                why="Kapha nausea involves sluggish digestion",
+            ),
+            DiagnosticQuestion(
+                id="nausea_overeating",
+                question="Have you been overeating or eating heavy meals?",
+                priority="medium",
+                dosha_relevance="kapha",
+                why="Kapha digestion gets overwhelmed by heavy food",
+            ),
+        ],
+    },
+    constitution_guidance={
+        "vata": ConstitutionGuidance(
+            likely_causes=["anxiety", "irregular_eating", "cold_food", "air_in_stomach"],
+            tone="calming, grounding, gentle",
+            avoid_suggesting=["fasting", "cold_foods", "raw_foods", "exercise"],
+        ),
+        "pitta": ConstitutionGuidance(
+            likely_causes=["excess_acid", "spicy_food", "overheating", "anger"],
+            tone="cooling, soothing, gentle",
+            avoid_suggesting=["spicy_food", "hot_drinks", "intense_activity", "fasting"],
+        ),
+        "kapha": ConstitutionGuidance(
+            likely_causes=["sluggish_digestion", "overeating", "heavy_food", "dampness"],
+            tone="light, warming, clearing",
+            avoid_suggesting=["heavy_meals", "cold_foods", "dairy", "sleeping_after_eating"],
+        ),
+    },
+    universal_questions=[],
+)
+
+# Body pain diagnostic path
+BODY_PAIN_PATH = DiagnosticPath(
+    symptom="body_pain",
+    domain="body",
+    sub_domain="musculoskeletal",
+    dosha_questions={
+        "vata": [
+            DiagnosticQuestion(
+                id="pain_moving",
+                question="Does the pain move around or stay in one place?",
+                priority="high",
+                dosha_relevance="vata",
+                why="Vata pain tends to migrate",
+            ),
+            DiagnosticQuestion(
+                id="pain_cold",
+                question="Does it get worse in cold weather or with cold exposure?",
+                priority="medium",
+                dosha_relevance="vata",
+                why="Vata pain is aggravated by cold",
+            ),
+        ],
+        "pitta": [
+            DiagnosticQuestion(
+                id="pain_hot",
+                question="Is the area hot, red, or inflamed?",
+                priority="high",
+                dosha_relevance="pitta",
+                why="Pitta pain involves inflammation and heat",
+            ),
+            DiagnosticQuestion(
+                id="pain_sharp",
+                question="Is it a sharp, burning kind of pain?",
+                priority="medium",
+                dosha_relevance="pitta",
+                why="Pitta pain tends to be sharp and burning",
+            ),
+        ],
+        "kapha": [
+            DiagnosticQuestion(
+                id="pain_dull",
+                question="Is it a dull, heavy ache?",
+                priority="high",
+                dosha_relevance="kapha",
+                why="Kapha pain is dull and heavy",
+            ),
+            DiagnosticQuestion(
+                id="pain_stiffness",
+                question="Is there stiffness, especially in the morning?",
+                priority="medium",
+                dosha_relevance="kapha",
+                why="Kapha causes stiffness from stagnation",
+            ),
+        ],
+    },
+    constitution_guidance={
+        "vata": ConstitutionGuidance(
+            likely_causes=["cold_exposure", "overexertion", "dryness", "irregular_movement"],
+            tone="warming, nurturing, grounding",
+            avoid_suggesting=["intense_exercise", "cold_exposure", "fasting", "ignoring_it"],
+        ),
+        "pitta": ConstitutionGuidance(
+            likely_causes=["inflammation", "overexertion", "heat", "intensity"],
+            tone="cooling, gentle, restorative",
+            avoid_suggesting=["pushing_through", "heat_application", "intense_exercise", "ignoring_it"],
+        ),
+        "kapha": ConstitutionGuidance(
+            likely_causes=["stagnation", "inactivity", "dampness", "heavy_food"],
+            tone="warming, gently_activating, clearing",
+            avoid_suggesting=["complete_rest", "heavy_foods", "cold_application", "inactivity"],
+        ),
+    },
+    universal_questions=[
+        DiagnosticQuestion(
+            id="pain_duration",
+            question="How long has the pain been going on?",
+            priority="medium",
+            dosha_relevance="universal",
+            why="Duration distinguishes acute injury from chronic pattern",
+        ),
+    ],
+)
+
 # General conversation path - for when no specific symptom/topic is identified
 GENERAL_PATH = DiagnosticPath(
     symptom="general",
@@ -770,6 +1148,37 @@ DIAGNOSTIC_PATHS: Dict[str, DiagnosticPath] = {
     "fatigue": ENERGY_PATH,
     "energy": ENERGY_PATH,
     "exhausted": ENERGY_PATH,
+    # Throat / respiratory domain
+    "sore_throat": SORE_THROAT_PATH,
+    "sore throat": SORE_THROAT_PATH,
+    "throat": SORE_THROAT_PATH,
+    "throat pain": SORE_THROAT_PATH,
+    "scratchy throat": SORE_THROAT_PATH,
+    # Cold / flu
+    "cold": COLD_FLU_PATH,
+    "common cold": COLD_FLU_PATH,
+    "flu": COLD_FLU_PATH,
+    "chills": COLD_FLU_PATH,
+    "sneezing": COLD_FLU_PATH,
+    "cough": COLD_FLU_PATH,
+    # Fever
+    "fever": FEVER_PATH,
+    "temperature": FEVER_PATH,
+    # Nausea / digestive
+    "nausea": NAUSEA_PATH,
+    "nauseous": NAUSEA_PATH,
+    "queasy": NAUSEA_PATH,
+    "vomiting": NAUSEA_PATH,
+    "feeling sick": NAUSEA_PATH,
+    # Body pain
+    "body_pain": BODY_PAIN_PATH,
+    "body pain": BODY_PAIN_PATH,
+    "aches": BODY_PAIN_PATH,
+    "pain": BODY_PAIN_PATH,
+    "stiff": BODY_PAIN_PATH,
+    "stiffness": BODY_PAIN_PATH,
+    "sore body": BODY_PAIN_PATH,
+    "muscle pain": BODY_PAIN_PATH,
     # Skin domain
     "dry_skin": SKIN_DRYNESS_PATH,
     "skin": SKIN_DRYNESS_PATH,

@@ -361,11 +361,19 @@ async def run_adaptive_pipeline(
         canonical = match_symptom(symptom_key)
         dosha = map_symptom_to_dosha(canonical) if canonical else None
 
-        if canonical and dosha:
-            os_type = result.knowledge_gap.constitution.operating_system or ""
-            insight = get_symptom_insight(canonical, dosha, os_type)
+        # Fall back to user's constitution dosha when symptom→dosha mapping fails
+        if not dosha:
+            dosha = result.knowledge_gap.constitution.dominant_dosha
+            if dosha == "balanced":
+                dosha = "vata"  # sensible default for unresolved symptoms
 
-            # Query knowledge graph in parallel
+        os_type = result.knowledge_gap.constitution.operating_system or ""
+        # Use whatever we resolved; for LLM fallback, raw symptom_key is fine
+        effective_symptom = canonical or symptom_key or result.sense.symptom or "general"
+        insight = get_symptom_insight(effective_symptom, dosha, os_type)
+
+        if canonical and dosha:
+            # Try knowledge graph first
             pacify_foods, pacify_practices, aggravate_foods = await _asyncio.gather(
                 query_foods_for_dosha(dosha, "PACIFIES", limit=3),
                 query_practices_for_dosha(dosha, limit=3),
@@ -383,13 +391,17 @@ async def run_adaptive_pipeline(
                     "[AdaptivePipeline] Symptom protocol from knowledge graph: symptom=%s, dosha=%s",
                     canonical, dosha,
                 )
-            else:
-                # Knowledge graph empty — LLM fallback
-                symptom_protocol = await generate_symptom_protocol_via_llm(
-                    canonical, dosha, os_type, insight,
+
+        # LLM fallback: fires when KG is empty OR when symptom didn't resolve to a canonical key
+        if not symptom_protocol:
+            symptom_protocol = await generate_symptom_protocol_via_llm(
+                effective_symptom, dosha, os_type, insight,
+            )
+            if symptom_protocol:
+                logger.debug(
+                    "[AdaptivePipeline] Symptom protocol from LLM fallback: symptom=%s, dosha=%s",
+                    effective_symptom, dosha,
                 )
-                if symptom_protocol:
-                    logger.debug("[AdaptivePipeline] Symptom protocol from LLM fallback: symptom=%s", canonical)
     except Exception as proto_err:
         logger.debug("[AdaptivePipeline] Symptom protocol lookup failed: %s", proto_err)
 

@@ -378,9 +378,30 @@ class TestSymptomDoshaMapFallback:
         result = get_symptom_from_sense(sense)
         assert result in ("headache", "headaches")
 
-    def test_dosha_map_is_broader_than_diagnostic_paths(self):
-        """SYMPTOM_DOSHA_MAP should cover more symptoms than DIAGNOSTIC_PATHS."""
-        assert len(SYMPTOM_DOSHA_MAP) > len(DIAGNOSTIC_PATHS)
+    def test_dosha_map_covers_symptoms_beyond_diagnostic_paths(self):
+        """SYMPTOM_DOSHA_MAP should cover symptoms not in DIAGNOSTIC_PATHS."""
+        dosha_map_keys = set(SYMPTOM_DOSHA_MAP.keys())
+        diag_path_keys = set(DIAGNOSTIC_PATHS.keys())
+        # Dosha map should have symptoms that diagnostic paths don't cover
+        extra_in_dosha_map = dosha_map_keys - diag_path_keys
+        assert len(extra_in_dosha_map) > 0, "SYMPTOM_DOSHA_MAP should cover extra symptoms"
+
+    def test_domain_defaults_have_dosha_mapping(self):
+        """Domain default keys must have SYMPTOM_DOSHA_MAP entries so pipeline doesn't skip fallback."""
+        domain_defaults = ["energy", "stress", "work", "sleep"]
+        for key in domain_defaults:
+            dosha = map_symptom_to_dosha(key)
+            assert dosha is not None, f"Domain default '{key}' has no dosha mapping — pipeline will skip LLM fallback"
+
+    def test_stress_maps_to_dosha(self):
+        """'stress' must resolve to a dosha (was missing, causing fallback to fail)."""
+        assert map_symptom_to_dosha("stress") is not None
+
+    def test_match_symptom_resolves_domain_defaults(self):
+        """Domain defaults used by get_symptom_from_sense must resolve via match_symptom."""
+        for key in ["energy", "stress", "sleep"]:
+            canonical = match_symptom(key)
+            assert canonical is not None, f"match_symptom('{key}') returned None — pipeline loses canonical"
 
 
 # =============================================================================

@@ -144,6 +144,13 @@ SYMPTOM_DOSHA_MAP = {
     "swollen": "kapha",
     "water_retention": "kapha",
     "excess_mucus": "kapha",
+
+    # Cross-cutting / domain-default terms
+    # These ensure domain-default fallbacks in get_symptom_from_sense resolve to a dosha
+    "stress": "pitta",  # stress is pitta-dominant (intensity, pressure)
+    "energy": "vata",  # low energy often vata depletion
+    "sleep": "vata",  # sleep disturbance primary vata
+    "work": "pitta",  # work pressure is pitta territory
 }
 
 
