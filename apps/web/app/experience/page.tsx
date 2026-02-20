@@ -125,6 +125,18 @@ function ExperienceGateContent() {
     return `/auth/login?redirect=${encodeURIComponent("/experience/onboarding")}`;
   }, [authUser]);
 
+  // Auto-redirect onboarded users — skip the welcome screen entirely
+  useEffect(() => {
+    if (!authChecked || hasNavigated.current) return;
+    if (authUser?.onboarding_completed) {
+      hasNavigated.current = true;
+      setIsFading(true);
+      window.setTimeout(() => {
+        router.replace(nextPath as Route);
+      }, FADE_DURATION_MS);
+    }
+  }, [authChecked, authUser, nextPath, router]);
+
   const handleBegin = useCallback(() => {
     if (hasNavigated.current || !authChecked) return;
     hasNavigated.current = true;
