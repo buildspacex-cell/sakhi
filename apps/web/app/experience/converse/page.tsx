@@ -495,6 +495,25 @@ function ConverseContent() {
           // Backend puts debug info in debug_data; DebugPanel reads from debug
           const debugData = data.debug_data || {};
           const internalState = debugData.internal_state || {};
+          const engineDebug = debugData.conversation_engine_debug || {};
+
+          // Parse recall_context string into structured memory_recall array
+          // Format: "- [type] text (s=0.85)\n"
+          const recallStr = engineDebug.recall_context || "";
+          const parsedRecalls = recallStr
+            .split("\n")
+            .filter((line: string) => line.startsWith("- ["))
+            .map((line: string) => {
+              const typeMatch = line.match(/\[(\w+)\]/);
+              const scoreMatch = line.match(/\(s=([\d.]+)\)/);
+              const textMatch = line.match(/\]\s*(.+?)(?:\s*\(s=|$)/);
+              return {
+                type: typeMatch?.[1] || "unknown",
+                text: textMatch?.[1]?.trim() || line,
+                score: scoreMatch ? parseFloat(scoreMatch[1]) : 0,
+              };
+            });
+
           setLastResponseDebug({
             ...data,
             input_text: text.trim(),
@@ -503,12 +522,18 @@ function ConverseContent() {
             dosha_baseline: internalState.dosha_baseline || data.dosha_baseline,
             life_context: internalState.life_context || data.life_context,
             decision_profile: internalState.decision_profile || data.decision_profile,
+            // Engine states live in debug_data, DebugPanel reads from top level
+            behavior_profile: engineDebug.metadata?.behavior_profile || data.behavior_profile,
+            tone_state: debugData.tone_state || data.tone_state,
+            continuity: engineDebug.metadata?.continuity || data.continuity,
+            // Parse recall data from engine debug string into structured format
+            memory_recall: parsedRecalls.length > 0 ? parsedRecalls : data.memory_recall,
             // Map debug_data to debug key that DebugPanel expects
             debug: {
-              conversation_engine_debug: debugData.conversation_engine_debug,
+              conversation_engine_debug: engineDebug,
               adaptive_response: data.adaptive_response,
-              adaptive_error: (debugData.conversation_engine_debug || {}).adaptive_error,
-              used_fallback: (debugData.conversation_engine_debug || {}).used_fallback,
+              adaptive_error: engineDebug.adaptive_error,
+              used_fallback: engineDebug.used_fallback,
             },
           });
 

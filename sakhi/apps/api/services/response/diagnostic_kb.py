@@ -1446,10 +1446,25 @@ OS_DOSHA_INSIGHT_TEMPLATES = {
 
 
 def _normalize_os_type(os_type: str) -> str:
-    """Normalize OS type to one of the 4 protocol keys."""
+    """Normalize OS type to one of the 4 protocol keys.
+
+    For compound types like "Adaptive-Performance", we use the SECONDARY
+    component since it determines the dominant dosha tendency.
+    """
     if not os_type:
         return "Balanced"
     os_lower = os_type.lower()
+
+    # Compound types: secondary determines dosha tendency
+    if "-" in os_lower:
+        secondary = os_lower.split("-", 1)[1]
+        if "performance" in secondary:
+            return "Performance"
+        if "endurance" in secondary or "conservation" in secondary:
+            return "Conservation"
+        if "flow" in secondary or "adaptive" in secondary:
+            return "Adaptive"
+
     if "conservation" in os_lower or "endurance" in os_lower or "steady" in os_lower:
         return "Conservation"
     if "performance" in os_lower or "driven" in os_lower:
@@ -1522,15 +1537,17 @@ async def generate_symptom_protocol_via_llm(
     }
     imbalance = _DOSHA_QUALITY.get(dosha, "imbalance")
 
+    symptom_display = symptom.replace("_", " ")
     prompt = (
-        f"The user is experiencing: {symptom}\n"
+        f"The user is experiencing: {symptom_display}\n"
         f"Their system type: {os_key} (naturally {quality})\n"
         f"The underlying pattern: {imbalance}\n\n"
-        "Give exactly ONE food recommendation and ONE practice "
-        "(yoga, breathing, or routine) that would help.\n"
+        f"Give exactly ONE food/drink recommendation and ONE practice "
+        f"that would specifically help with {symptom_display}.\n"
         "Each must have a short reason why it helps THIS person.\n"
         "Also name ONE thing to avoid.\n\n"
         "Rules:\n"
+        f"- Recommendations MUST be relevant to {symptom_display} specifically\n"
         "- No Sanskrit or Ayurvedic terms (no dosha, pranayama, kapha, etc.)\n"
         "- Use plain everyday English\n"
         "- Connect the reason to their system type\n"
