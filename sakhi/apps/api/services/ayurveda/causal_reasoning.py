@@ -145,6 +145,13 @@ SYMPTOM_DOSHA_MAP = {
     "water_retention": "kapha",
     "excess_mucus": "kapha",
 
+    # Symptoms that have DIAGNOSTIC_PATHS entries
+    "sore_throat": "kapha",  # throat congestion, mucus
+    "cold_flu": "kapha",  # congestion, mucus, heaviness
+    "nausea": "pitta",  # digestive fire imbalance
+    "body_pain": "vata",  # pain, stiffness, irregularity
+    "skin_dryness": "vata",  # dryness is vata
+
     # Cross-cutting / domain-default terms
     # These ensure domain-default fallbacks in get_symptom_from_sense resolve to a dosha
     "stress": "pitta",  # stress is pitta-dominant (intensity, pressure)

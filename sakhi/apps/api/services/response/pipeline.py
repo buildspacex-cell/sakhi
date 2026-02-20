@@ -341,21 +341,17 @@ async def run_adaptive_pipeline(
     except Exception as graph_err:
         logger.debug("[AdaptivePipeline] Memory graph not loaded: %s", graph_err)
 
-    # Look up symptom-specific recommendations from knowledge graph (+ LLM fallback)
+    # Look up symptom-specific recommendations via LLM (symptom-aware)
+    # Note: KG queries are dosha-level (not symptom-specific), so they feed the
+    # general friction-state recommendations instead. The symptom protocol needs
+    # targeted advice for the ACTUAL symptom, which only the LLM can provide.
     symptom_protocol = None
     try:
-        import asyncio as _asyncio
         from sakhi.apps.api.services.response.diagnostic_kb import (
             get_symptom_from_sense, match_symptom, get_symptom_insight,
             generate_symptom_protocol_via_llm,
         )
         from sakhi.apps.api.services.ayurveda.causal_reasoning import map_symptom_to_dosha
-        from sakhi.apps.api.services.ayurveda.graph_reasoning import (
-            query_foods_for_dosha, query_practices_for_dosha,
-        )
-        from sakhi.apps.api.services.response.translation import (
-            translate_graph_food, translate_graph_practice, translate_graph_avoid,
-        )
 
         symptom_key = get_symptom_from_sense(result.sense)
         canonical = match_symptom(symptom_key)
@@ -368,40 +364,17 @@ async def run_adaptive_pipeline(
                 dosha = "vata"  # sensible default for unresolved symptoms
 
         os_type = result.knowledge_gap.constitution.operating_system or ""
-        # Use whatever we resolved; for LLM fallback, raw symptom_key is fine
         effective_symptom = canonical or symptom_key or result.sense.symptom or "general"
         insight = get_symptom_insight(effective_symptom, dosha, os_type)
 
-        if canonical and dosha:
-            # Try knowledge graph first
-            pacify_foods, pacify_practices, aggravate_foods = await _asyncio.gather(
-                query_foods_for_dosha(dosha, "PACIFIES", limit=3),
-                query_practices_for_dosha(dosha, limit=3),
-                query_foods_for_dosha(dosha, "AGGRAVATES", limit=3),
+        symptom_protocol = await generate_symptom_protocol_via_llm(
+            effective_symptom, dosha, os_type, insight,
+        )
+        if symptom_protocol:
+            logger.debug(
+                "[AdaptivePipeline] Symptom protocol generated: symptom=%s, dosha=%s",
+                effective_symptom, dosha,
             )
-
-            if pacify_foods or pacify_practices:
-                symptom_protocol = {
-                    "insight": insight,
-                    "best_food": translate_graph_food(pacify_foods[0], dosha) if pacify_foods else None,
-                    "best_practice": translate_graph_practice(pacify_practices[0]) if pacify_practices else None,
-                    "avoid": translate_graph_avoid(aggravate_foods[:3]) if aggravate_foods else "",
-                }
-                logger.debug(
-                    "[AdaptivePipeline] Symptom protocol from knowledge graph: symptom=%s, dosha=%s",
-                    canonical, dosha,
-                )
-
-        # LLM fallback: fires when KG is empty OR when symptom didn't resolve to a canonical key
-        if not symptom_protocol:
-            symptom_protocol = await generate_symptom_protocol_via_llm(
-                effective_symptom, dosha, os_type, insight,
-            )
-            if symptom_protocol:
-                logger.debug(
-                    "[AdaptivePipeline] Symptom protocol from LLM fallback: symptom=%s, dosha=%s",
-                    effective_symptom, dosha,
-                )
     except Exception as proto_err:
         logger.debug("[AdaptivePipeline] Symptom protocol lookup failed: %s", proto_err)
 
