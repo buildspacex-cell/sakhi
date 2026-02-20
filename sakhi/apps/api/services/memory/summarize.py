@@ -5,8 +5,6 @@ from typing import Dict, List
 
 from sakhi.libs.llm_router import LLMRouter, Task
 from sakhi.libs.llm_router.openai_provider import make_openai_provider_from_env
-from sakhi.libs.llm_router.openrouter import OpenRouterProvider
-from sakhi.libs.schemas import get_settings
 
 SUMMARY_SYS = """You are Sakhi's Brain layer. Summarize recent turns into a crisp rolling context:
 - Key goals/decisions
@@ -32,7 +30,6 @@ def _ensure_router() -> LLMRouter:
     if _ROUTER is not None:
         return _ROUTER
 
-    settings = get_settings()
     router = LLMRouter()
     providers: list[str] = []
 
@@ -40,12 +37,6 @@ def _ensure_router() -> LLMRouter:
     if openai_provider:
         router.register_provider('openai', openai_provider)
         providers.append('openai')
-
-    api_key = settings.openrouter_api_key
-    if api_key:
-        provider = OpenRouterProvider(api_key=api_key)
-        router.register_provider('openrouter', provider)
-        providers.append('openrouter')
 
     if not providers:
         _LOGGER.warning("No summary provider configured; falling back to heuristic summary")

@@ -47,24 +47,20 @@ class AppSettings(BaseSettings):
         default="postgresql://postgres:postgres@localhost:5432/sakhi",
         validation_alias=AliasChoices("DATABASE_URL", "SAKHI_POSTGRES_DSN"),
     )
-    openrouter_api_key: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("OPENROUTER_API_KEY", "SAKHI_OPENROUTER_API_KEY"),
-    )
     llm_router: str = Field(
         default="stub",
         validation_alias=AliasChoices("LLM_ROUTER", "SAKHI_LLM_ROUTER"),
     )
     model_chat: str = Field(
-        default="openrouter/chat",
+        default="gpt-4o-mini",
         validation_alias=AliasChoices("MODEL_CHAT", "SAKHI_MODEL_CHAT"),
     )
     model_tool: str = Field(
-        default="openrouter/tool",
+        default="gpt-4o-mini",
         validation_alias=AliasChoices("MODEL_TOOL", "SAKHI_MODEL_TOOL"),
     )
     model_reflect: str = Field(
-        default="openrouter/reflect",
+        default="gpt-4o-mini",
         validation_alias=AliasChoices("MODEL_REFLECT", "SAKHI_MODEL_REFLECT"),
     )
     model_embed: str = Field(

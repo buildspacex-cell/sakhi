@@ -77,7 +77,7 @@ async def call_llm(
             ",".join(context_payload.keys()),
         )
 
-    target_model = model or os.getenv("MODEL_CHAT") or "openrouter/chat"
+    target_model = model or os.getenv("MODEL_CHAT") or "gpt-4o-mini"
 
     if not base_messages or base_messages[0].get("role") != "system":
         base_messages = [{"role": "system", "content": "You are Sakhi, a helpful companion."}] + base_messages

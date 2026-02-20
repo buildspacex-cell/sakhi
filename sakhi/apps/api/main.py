@@ -189,7 +189,6 @@ from sakhi.libs.conversation.outer_flow import (
     is_active as outer_flow_is_active,
 )
 from sakhi.libs.llm_router import BaseProvider, BudgetExceededError, LLMResponse, LLMRouter, Task
-from sakhi.libs.llm_router.openrouter import OpenRouterProvider
 from sakhi.libs.llm_router.openai_provider import make_openai_provider_from_env
 from sakhi.libs.llm_router.web_provider import WebProvider
 from sakhi.libs.retrieval import HybridRetriever, RetrieverConfig, build_reflection_context, search_journals
@@ -1324,29 +1323,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     chat_providers: list[str] = []
     tool_providers: list[str] = []
 
-    # OpenAI provider (direct)
+    # OpenAI provider
     openai_provider = make_openai_provider_from_env()
     if openai_provider:
         router.register_provider("openai", openai_provider, daily_budget=None)
         chat_providers.append("openai")
         tool_providers.append("openai")
-
-    # OpenRouter provider
-    api_key = settings.openrouter_api_key or os.getenv("LLM_API_KEY")
-    if api_key:
-        base_url = os.getenv("OPENROUTER_BASE_URL")
-        tenant = os.getenv("OPENROUTER_TENANT")
-        try:
-            openrouter_provider = OpenRouterProvider(
-                api_key=api_key,
-                base_url=base_url,
-                tenant=tenant,
-            )
-            router.register_provider("openrouter", openrouter_provider)
-            chat_providers.append("openrouter")
-            tool_providers.append("openrouter")
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Failed to initialize OpenRouter provider: %s", exc)
 
     if ALLOW_WEB:
         try:

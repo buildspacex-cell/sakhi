@@ -425,7 +425,7 @@ class TaskOrchestrator:
             router = get_router()
 
             # Use configured chat model
-            target_model = os.getenv("MODEL_CHAT") or "openrouter/chat"
+            target_model = os.getenv("MODEL_CHAT") or "gpt-4o-mini"
             response = await router.chat(
                 messages=[{"role": "user", "content": prompt}],
                 model=target_model,

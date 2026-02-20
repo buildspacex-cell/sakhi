@@ -235,26 +235,22 @@ if __name__ == "__main__":  # pragma: no cover - manual demo
     import os
 
     async def _demo() -> None:
-        from .openrouter import OpenRouterProvider
+        from .openai_provider import make_openai_provider_from_env
         from .types import Task
 
         logging.basicConfig(level=logging.INFO)
-        api_key = os.environ.get("LLM_API_KEY")
-        if not api_key:
-            raise RuntimeError("LLM_API_KEY environment variable is required for the demo")
+        provider = make_openai_provider_from_env()
+        if not provider:
+            raise RuntimeError("OPENAI_API_KEY environment variable is required for the demo")
 
-        model = os.environ.get("MODEL_CHAT", "deepseek/deepseek-chat")
-        base_url = os.environ.get("LLM_BASE_URL")
+        model = os.environ.get("MODEL_CHAT", "gpt-4o-mini")
 
         router = LLMRouter()
-        router.set_policy(Task.CHAT, ["openrouter"])
-        router.set_policy(Task.TOOL, ["openrouter"])
-
-        provider = OpenRouterProvider(api_key=api_key, base_url=base_url)
-        router.register_provider("openrouter", provider)
+        router.set_policy(Task.CHAT, ["openai"])
+        router.register_provider("openai", provider)
 
         response = await router.chat(
-            messages=[{"role": "user", "content": "Say hello from DeepSeek."}],
+            messages=[{"role": "user", "content": "Say hello."}],
             model=model,
         )
         print(response.text or "[no text returned]")

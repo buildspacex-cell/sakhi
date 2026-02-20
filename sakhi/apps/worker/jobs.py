@@ -18,7 +18,6 @@ from sakhi.libs.llm_router import (
     BaseProvider,
     LLMResponse,
     LLMRouter,
-    OpenRouterProvider,
     Task,
 )
 from sakhi.libs.llm_router.openai_provider import make_openai_provider_from_env
@@ -104,34 +103,10 @@ def _get_router() -> LLMRouter:
     router = LLMRouter()
     chat_providers: List[str] = []
 
-    provider_pref = (os.getenv("LLM_PROVIDER") or "").lower()
-    # Auto-detect provider when not explicitly set
-    if not provider_pref:
-        has_openai = bool(os.getenv("OPENAI_API_KEY"))
-        has_openrouter = bool(settings.openrouter_api_key or os.getenv("LLM_API_KEY"))
-        if has_openai and has_openrouter:
-            provider_pref = "both"
-        elif has_openai:
-            provider_pref = "openai"
-        else:
-            provider_pref = "openrouter"
-
     openai_provider = make_openai_provider_from_env()
-    if openai_provider and provider_pref in {"openai", "both"}:
+    if openai_provider:
         router.register_provider("openai", openai_provider)
         chat_providers.append("openai")
-
-    api_key = settings.openrouter_api_key or os.getenv("LLM_API_KEY")
-    base_url = os.getenv("OPENROUTER_BASE_URL")
-    tenant = os.getenv("OPENROUTER_TENANT")
-
-    if api_key and provider_pref in {"openrouter", "both"}:
-        try:
-            provider = OpenRouterProvider(api_key=api_key, base_url=base_url, tenant=tenant)
-            router.register_provider("openrouter", provider)
-            chat_providers.append("openrouter")
-        except Exception as exc:  # pragma: no cover - defensive
-            LOGGER.warning("Failed to initialise OpenRouter provider: %s", exc)
 
     LOGGER.info(
         colorize("Worker router configured", "cyan"),
@@ -140,23 +115,12 @@ def _get_router() -> LLMRouter:
             "providers": list(router._providers.keys()),
             "chat_policy": router._config.policy.get(Task.CHAT),
             "model_chat": os.getenv("MODEL_CHAT"),
-            "model_tool": os.getenv("MODEL_TOOL"),
-            "openai_model_chat": os.getenv("OPENAI_MODEL_CHAT"),
         },
     )
     if not chat_providers:
         raise RuntimeError(
-            "No chat providers configured. Set OPENAI_API_KEY or LLM_API_KEY/OPENROUTER credentials."
+            "No chat providers configured. Set OPENAI_API_KEY."
         )
-
-    if provider_pref == "openai" and "openai" in chat_providers:
-        chat_providers = [prov for prov in chat_providers if prov == "openai"] + [
-            prov for prov in chat_providers if prov != "openai"
-        ]
-    elif provider_pref == "openrouter" and "openrouter" in chat_providers:
-        chat_providers = [prov for prov in chat_providers if prov == "openrouter"] + [
-            prov for prov in chat_providers if prov != "openrouter"
-        ]
 
     router.set_policy(Task.CHAT, chat_providers)
     router.set_policy(Task.TOOL, chat_providers)

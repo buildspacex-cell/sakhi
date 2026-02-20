@@ -3,9 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any, Mapping
 
-from sakhi.libs.llm_router import LLMRouter, OpenRouterProvider, Task
+from sakhi.libs.llm_router import LLMRouter, Task
 from sakhi.libs.llm_router.openai_provider import make_openai_provider_from_env
-from sakhi.libs.schemas import get_settings
 
 from .prompt import SYSTEM, build_prompt
 from sakhi.libs.prompt_builder import build_prompt as build_person_prompt
@@ -18,7 +17,6 @@ def _ensure_router() -> LLMRouter:
     if _ROUTER is not None:
         return _ROUTER
 
-    settings = get_settings()
     router = LLMRouter()
     providers: list[str] = []
 
@@ -27,16 +25,8 @@ def _ensure_router() -> LLMRouter:
         router.register_provider("openai", openai_provider)
         providers.append("openai")
 
-    api_key = settings.openrouter_api_key or os.getenv("LLM_API_KEY")
-    base_url = os.getenv("OPENROUTER_BASE_URL")
-    tenant = os.getenv("OPENROUTER_TENANT")
-    if api_key:
-        provider = OpenRouterProvider(api_key=api_key, base_url=base_url, tenant=tenant)
-        router.register_provider("openrouter", provider)
-        providers.append("openrouter")
-
     if not providers:
-        raise RuntimeError("No LLM provider configured for loop service")
+        raise RuntimeError("No LLM provider configured for loop service. Set OPENAI_API_KEY.")
 
     router.set_policy(Task.CHAT, providers)
     router.set_policy(Task.TOOL, providers)

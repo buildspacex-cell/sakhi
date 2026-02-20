@@ -101,22 +101,6 @@ def _init_llm_router() -> None:
     except Exception as exc:
         LOGGER.warning("OpenAI provider init failed: %s", exc)
 
-    # OpenRouter
-    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY")
-    if api_key:
-        try:
-            from sakhi.libs.llm_router.openrouter import OpenRouterProvider
-            openrouter_prov = OpenRouterProvider(
-                api_key=api_key,
-                base_url=os.getenv("OPENROUTER_BASE_URL"),
-                tenant=os.getenv("OPENROUTER_TENANT"),
-            )
-            router.register_provider("openrouter", openrouter_prov)
-            chat_providers.append("openrouter")
-            tool_providers.append("openrouter")
-        except Exception as exc:
-            LOGGER.warning("OpenRouter provider init failed: %s", exc)
-
     chat_providers.append("stub")
     tool_providers.append("stub")
     router.set_policy(Task.CHAT, chat_providers)

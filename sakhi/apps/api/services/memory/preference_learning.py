@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
 from sakhi.apps.api.services.memory.preference_framework import (
@@ -157,7 +158,7 @@ Example output:
     try:
         content = await call_llm(
             prompt=prompt,
-            model="openrouter/google/gemini-flash-1.5",  # Fast, cheap model
+            model=os.getenv("MODEL_CHAT", "gpt-4o-mini"),
         )
 
         # Handle potential markdown wrapping
