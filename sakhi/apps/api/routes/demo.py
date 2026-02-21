@@ -43,6 +43,14 @@ class DemoRunResponse(BaseModel):
     result: Optional[Dict[str, Any]] = None
 
 
+class SimulationEvalRequest(BaseModel):
+    """Request to evaluate a simulation scenario through Kala GovernanceGate."""
+    person_id: Optional[str] = None
+    scenario_id: str
+    profile: str = "adaptive"  # adaptive | performance | conservation
+    action_context: Dict[str, Any]
+
+
 # =============================================================================
 # Seeding Endpoints
 # =============================================================================
@@ -384,3 +392,151 @@ async def demo_status():
             "error": str(e),
             "hint": "Run POST /demo/seed/all to initialize demo data",
         }
+
+
+# =============================================================================
+# Governance Simulation Endpoints
+# =============================================================================
+
+
+@router.post("/seed/governance", response_model=SeedResponse)
+async def seed_governance(person_id: Optional[str] = None):
+    """Seed governance constraints and events for simulation demo.
+
+    Idempotent: deletes existing sim-* data and re-inserts.
+    Seeds 3 constraints + 2 base events for contradiction detection.
+    """
+    try:
+        from sakhi.apps.api.services.demo import (
+            seed_governance_demo_data,
+            DEMO_USER_ID,
+        )
+
+        result = await seed_governance_demo_data(person_id or DEMO_USER_ID)
+
+        return SeedResponse(
+            status="success",
+            message="Governance demo data seeded",
+            data=result,
+        )
+    except Exception as e:
+        LOGGER.exception("[demo] Failed to seed governance data: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/simulation/evaluate")
+async def evaluate_simulation_scenario(body: SimulationEvalRequest):
+    """Run REAL Kala GovernanceGate evaluation with scenario context.
+
+    Returns the full GateDecision from Kala's evaluate_turn().
+    Logs proposed + decision events to the governance_events ledger.
+    """
+    try:
+        from sakhi.apps.api.services.demo import DEMO_USER_ID
+        from sakhi.apps.api.services.governance.service import (
+            evaluate_turn,
+            log_turn_event,
+            map_decision_to_event_type,
+        )
+
+        person_id = body.person_id or DEMO_USER_ID
+
+        # Ensure entity_id is in the action context
+        action_context = {**body.action_context, "entity_id": person_id}
+
+        # Log PROPOSED event
+        event_id = f"sim-{body.profile}-{body.scenario_id}-{_short_id()}"
+        await log_turn_event(
+            person_id=person_id,
+            action=action_context.get("proposed_action", "conversation_turn"),
+            event_type="proposed",
+            actor="llm",
+            data={**action_context, "profile": body.profile, "scenario": body.scenario_id},
+            reason=f"Simulation scenario: {body.scenario_id} (profile: {body.profile})",
+        )
+
+        # Run REAL Kala GovernanceGate evaluation
+        drift_data = None
+        drift_pct = action_context.get("drift_percentage")
+        if drift_pct is not None:
+            drift_data = {
+                "drift_percentage": drift_pct,
+                "severity": action_context.get("friction_state", "balanced"),
+            }
+
+        decision = await evaluate_turn(
+            person_id=person_id,
+            action_context=action_context,
+            drift_data=drift_data,
+        )
+
+        # Log DECISION event
+        gov_action = decision.get("action", "allow")
+        await log_turn_event(
+            person_id=person_id,
+            action=action_context.get("proposed_action", "conversation_turn"),
+            event_type=map_decision_to_event_type(gov_action),
+            actor="governance",
+            data={
+                **action_context,
+                "profile": body.profile,
+                "scenario": body.scenario_id,
+                "gate_decision": gov_action,
+            },
+            reason="; ".join(decision.get("reasons", [])) or f"Governance: {gov_action}",
+        )
+
+        return {
+            "status": "success",
+            "scenario_id": body.scenario_id,
+            "profile": body.profile,
+            **decision,
+        }
+    except Exception as e:
+        LOGGER.exception("[demo] Simulation evaluate failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/simulation/ledger/{person_id}")
+async def get_simulation_ledger_endpoint(person_id: str, limit: int = Query(default=50)):
+    """Get governance event ledger for demo user."""
+    try:
+        from sakhi.apps.api.services.demo import get_simulation_ledger
+
+        events = await get_simulation_ledger(person_id, limit)
+        return {"status": "success", "events": events, "count": len(events)}
+    except Exception as e:
+        LOGGER.exception("[demo] Ledger fetch failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/simulation/state/{person_id}")
+async def get_simulation_state_endpoint(person_id: str):
+    """Get personal model state (OS, drift, constraints) for simulation."""
+    try:
+        from sakhi.apps.api.services.demo import get_simulation_state
+
+        state = await get_simulation_state(person_id)
+        return {"status": "success", **state}
+    except Exception as e:
+        LOGGER.exception("[demo] State fetch failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/simulation/reset/{person_id}")
+async def reset_simulation_endpoint(person_id: str):
+    """Clear simulation events and re-seed for a fresh demo."""
+    try:
+        from sakhi.apps.api.services.demo import reset_simulation_data
+
+        result = await reset_simulation_data(person_id)
+        return {"status": "success", **result}
+    except Exception as e:
+        LOGGER.exception("[demo] Simulation reset failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _short_id() -> str:
+    """Generate a short unique ID for simulation events."""
+    from uuid import uuid4
+    return uuid4().hex[:8]

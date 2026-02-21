@@ -62,6 +62,12 @@ from sakhi.apps.api.services.demo.coordination_demo import (
     CoordinationDemoRunner,
     CoordinationScenario,
 )
+from sakhi.apps.api.services.demo.governance_seeder import (
+    seed_governance_demo_data,
+    reset_simulation_data,
+    get_simulation_ledger,
+    get_simulation_state,
+)
 
 
 async def seed_all_demo_data(person_id: str = DEMO_USER_ID) -> Dict[str, Any]:
@@ -180,6 +186,11 @@ __all__ = [
     "CoordinationDemoConfig",
     "CoordinationDemoRunner",
     "CoordinationScenario",
+    # Governance simulation
+    "seed_governance_demo_data",
+    "reset_simulation_data",
+    "get_simulation_ledger",
+    "get_simulation_state",
     # Master functions
     "seed_all_demo_data",
     "run_full_demo",

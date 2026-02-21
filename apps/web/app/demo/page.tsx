@@ -161,6 +161,41 @@ export default function DemoStory() {
         </div>
       </section>
 
+      {/* Featured Demo: A Day with Sakhi */}
+      <section style={{ padding: "60px 24px", borderBottom: `1px solid ${palette.divider}` }}>
+        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+          <Link
+            href="/demo/simulation"
+            style={{
+              display: "block",
+              padding: 32,
+              borderRadius: 16,
+              background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(168,85,247,0.08))",
+              border: `1px solid ${palette.accent}40`,
+              textDecoration: "none",
+              transition: "border-color 0.3s",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: palette.accent, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 10px", borderRadius: 12, background: palette.accentDim }}>
+                Featured
+              </span>
+              <span style={{ fontSize: 13, color: palette.muted }}>Governance Demo</span>
+            </div>
+            <h3 style={{ fontSize: 24, fontWeight: 700, color: palette.fg, margin: "0 0 8px" }}>
+              A Day with Sakhi
+            </h3>
+            <p style={{ fontSize: 15, color: palette.muted, margin: "0 0 16px", lineHeight: 1.6 }}>
+              Watch governance decide — same situation, three constitutions, different outcomes.
+              Real constraint evaluation, drift gating, and contradiction detection.
+            </p>
+            <span style={{ fontSize: 14, fontWeight: 600, color: palette.accent }}>
+              Watch it act, refuse, and reconcile →
+            </span>
+          </Link>
+        </div>
+      </section>
+
       {/* The Story - Four Acts */}
       <section style={styles.actsSection}>
         <h2 style={styles.actsTitle}>The Story</h2>
