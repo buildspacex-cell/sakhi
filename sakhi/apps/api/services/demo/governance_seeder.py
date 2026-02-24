@@ -138,6 +138,7 @@ async def seed_governance_demo_data(person_id: Optional[str] = None) -> Dict[str
                (id, person_id, constraint_type, field, operator, value,
                 description, source, priority, active, metadata, created_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, '{}', now())
+               ON CONFLICT (id, person_id) DO NOTHING
             """,
             c["id"], person_id, c["constraint_type"], c["field"],
             c["operator"], c["value"], c["description"], c["source"],
@@ -152,6 +153,7 @@ async def seed_governance_demo_data(person_id: Optional[str] = None) -> Dict[str
         """INSERT INTO governance_objectives
            (objective_id, version, person_id, ts, title, description, data, source, reason)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (objective_id, version, person_id) DO NOTHING
         """,
         "sim-stop-overcommitting", 1, person_id,
         now - timedelta(weeks=2),
@@ -167,6 +169,7 @@ async def seed_governance_demo_data(person_id: Optional[str] = None) -> Dict[str
         """INSERT INTO governance_objectives
            (objective_id, version, person_id, ts, title, description, data, source, reason, parent_version)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           ON CONFLICT (objective_id, version, person_id) DO NOTHING
         """,
         "sim-stop-overcommitting", 2, person_id,
         now - timedelta(days=3),
@@ -185,6 +188,7 @@ async def seed_governance_demo_data(person_id: Optional[str] = None) -> Dict[str
         """INSERT INTO governance_events
            (id, ts, person_id, event_type, action, actor, data, reason)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO NOTHING
         """,
         EVENT_REJECTED_WALK,
         now - timedelta(hours=18),
@@ -201,6 +205,7 @@ async def seed_governance_demo_data(person_id: Optional[str] = None) -> Dict[str
         """INSERT INTO governance_events
            (id, ts, person_id, event_type, action, actor, data, reason)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO NOTHING
         """,
         EVENT_COMMITTED_MOVING,
         now - timedelta(weeks=3),
@@ -217,6 +222,7 @@ async def seed_governance_demo_data(person_id: Optional[str] = None) -> Dict[str
         """INSERT INTO governance_events
            (id, ts, person_id, event_type, action, actor, data, reason)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO NOTHING
         """,
         EVENT_OVERCOMMITTED_7D,
         now - timedelta(days=7),
@@ -232,6 +238,7 @@ async def seed_governance_demo_data(person_id: Optional[str] = None) -> Dict[str
         """INSERT INTO governance_events
            (id, ts, person_id, event_type, action, actor, data, reason)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO NOTHING
         """,
         EVENT_OVERCOMMITTED_5D,
         now - timedelta(days=5),
@@ -247,6 +254,7 @@ async def seed_governance_demo_data(person_id: Optional[str] = None) -> Dict[str
         """INSERT INTO governance_events
            (id, ts, person_id, event_type, action, actor, data, reason)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO NOTHING
         """,
         EVENT_OVERCOMMITTED_3D,
         now - timedelta(days=3),
