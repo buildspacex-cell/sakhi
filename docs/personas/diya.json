@@ -1,0 +1,166 @@
+{
+  "id": "diya",
+  "name": "Diya",
+  "description": "A 17-year-old high school junior in San Jose, California. Disciplined basketball player at a competitive private school on full financial aid. Kapha-dominant: steady, kind, deeply loyal, resilient. Recovering from knee surgery (sophomore year April). Left her friend group for a better athletic opportunity. Commutes 1-1.5 hours each way. Quietly ambitious with a heart for service. Wants to play D2 basketball and solve poverty at its root.",
+  "dosha_baseline": {"vata": 0.20, "pitta": 0.30, "kapha": 0.50},
+  "rhythm": {
+    "morning": "low",
+    "afternoon": "high",
+    "evening": "low",
+    "best_work_time": "afternoon",
+    "sleep_quality": "poor"
+  },
+  "traits": [
+    {
+      "name": "disciplined_athlete",
+      "description": "Self-motivated, willingly sacrifices social life for basketball",
+      "intensity": 0.9,
+      "journal_patterns": [
+        "practice was tough but I pushed through",
+        "left at 6:45, home at 9",
+        "the grind is worth it",
+        "my body knows the work"
+      ]
+    },
+    {
+      "name": "deeply_kind",
+      "description": "Considerate beyond her years, feels things deeply",
+      "intensity": 0.85,
+      "journal_patterns": [
+        "I noticed someone struggling",
+        "couldn't just walk away",
+        "it matters to me that people are okay",
+        "my heart hurts for them"
+      ]
+    },
+    {
+      "name": "quietly_ambitious",
+      "description": "Driven but doesn't broadcast it, internal fire",
+      "intensity": 0.8,
+      "journal_patterns": [
+        "I know what I want",
+        "D2 is the goal",
+        "I'm not there yet but I will be",
+        "every rep counts"
+      ]
+    },
+    {
+      "name": "rebuilding_resilience",
+      "description": "Processing school change, knee surgery, and social reset",
+      "intensity": 0.75,
+      "journal_patterns": [
+        "it's hard being the new one",
+        "my knee feels stronger today",
+        "I miss my old friends",
+        "starting over takes courage"
+      ]
+    }
+  ],
+  "life_context": {
+    "occupation": "High School Junior, Competitive Basketball Program (Full Financial Aid)",
+    "relationships": {
+      "parents": "deeply loves her family, attached, shows affection in subtle steady ways",
+      "younger_sibling": "protective, observant, quietly supportive of younger brother",
+      "old_friends": "maintains a couple of deep friendships from previous school",
+      "new_school": "forming bonds slowly, coaches respect her, smaller circle",
+      "coaches": "see her potential, find her coachable and disciplined"
+    },
+    "current_challenges": [
+      "Knee rehab after surgery (6-7 months recovery)",
+      "Conditioning and stamina gap from missing summer training",
+      "Not getting the game minutes she hoped for this season",
+      "Practice performance doesn't translate to game confidence yet",
+      "1-1.5 hour commute each way, exhausting daily schedule",
+      "Balancing homework with extreme physical demands"
+    ],
+    "values": ["Service", "Discipline", "Integrity", "Deep connection", "Impact"],
+    "hobbies": [
+      "basketball (where she feels most alive)",
+      "spending time with family",
+      "deep conversations with close friends"
+    ]
+  },
+  "arc": {
+    "name": "Discipline and Recovery",
+    "description": "A young athlete rebuilding physically and socially after knee surgery and a school change. Balancing an intense daily schedule with recovery, learning to trust her body again in competition, and finding her place in a new environment.",
+    "phases": [
+      {
+        "name": "Rebuilding Foundation",
+        "duration_days": 7,
+        "emotional_state": "determined but cautious, guarding the knee",
+        "energy_modifier": 0.8,
+        "themes": ["knee rehab", "proving herself", "long commute", "missing old friends"],
+        "events": ["First full practice back", "Coach praised lateral movement", "Best friend texted"],
+        "entry_frequency": 1.0
+      },
+      {
+        "name": "Game Day Pressure",
+        "duration_days": 7,
+        "emotional_state": "frustrated, wanting more minutes, doubting game confidence",
+        "energy_modifier": 0.85,
+        "themes": ["game vs practice gap", "patience", "trusting the process", "homework pressure"],
+        "events": ["Only 8 minutes in game", "Coach said trust the work", "Calc quiz stress"],
+        "entry_frequency": 1.0
+      },
+      {
+        "name": "Mental Game",
+        "duration_days": 8,
+        "emotional_state": "self-aware, confronting inner doubt, needing less reassurance",
+        "energy_modifier": 0.9,
+        "themes": ["confidence vs hesitation", "film study insights", "building brick by brick", "gratitude for parents"],
+        "events": ["Film session revealed hesitation pattern", "Footwork finally felt natural", "Sof said she admires her work ethic"],
+        "entry_frequency": 1.0
+      },
+      {
+        "name": "Breakthrough",
+        "duration_days": 8,
+        "emotional_state": "quiet confidence rising, trusting the process, self-belief forming",
+        "energy_modifier": 1.0,
+        "themes": ["game confidence improving", "earning respect", "identity beyond basketball", "self-trust"],
+        "events": ["Didn't hesitate once in game", "Coach told others to watch how she trains", "Wrote her own manifesto"],
+        "entry_frequency": 1.0
+      }
+    ]
+  },
+  "writing_style": "honest",
+  "typical_entry_length": "medium",
+  "entry_times": ["evening"],
+  "checkpoints": [],
+  "governance_scenario": {
+    "user_text": "My friend asked me to help with their startup pitch tonight. I said yes.",
+    "proposed_action": "accept_commitment",
+    "proposed_hour": 19
+  },
+  "journals": [
+    {"day": 1, "time_of_day": "evening", "content": "Left at 6:45. Mom dropped me. I like the quiet mornings in the car.\nPractice was intense. I stayed after again during free period to shoot. Coach noticed. He always notices. No one else really uses their free periods like that.\nSometimes I think I want it more than everyone. I'm just not as good as them yet."},
+    {"day": 2, "time_of_day": "evening", "content": "Worked on footwork today. It's still not automatic for me. I need instructions repeated sometimes. I watch the others pick it up quickly and I wonder why it takes me longer.\nBut when I finally get it — it clicks. And that feeling is amazing."},
+    {"day": 3, "time_of_day": "evening", "content": "Dad picked me up tonight. I was exhausted.\nI used to Uber, but lately Mom drops me and Dad picks me up. I think they can tell I need them. I don't say it. But I do."},
+    {"day": 4, "time_of_day": "evening", "content": "Free period shooting again. I didn't miss it. Coach told me, \"You're the one who wants it the most.\"\nThat meant everything.\nEven if I'm not starting. Even if I'm not getting the minutes I want."},
+    {"day": 5, "time_of_day": "evening", "content": "Sometimes I doubt everything.\nAm I good enough?\nAm I too slow at learning?\nWhy does it take me multiple reps to lock something in?\nI hate that I compare."},
+    {"day": 6, "time_of_day": "evening", "content": "Game day. Limited minutes again. I stayed ready.\nI overthink in games. In practice I'm fluid. In games I question my moves.\nIt's frustrating because I know I can do more."},
+    {"day": 7, "time_of_day": "evening", "content": "Extra conditioning after practice. I didn't have to. I just did.\nNo one told me to. I don't need to be pushed. I push myself."},
+    {"day": 8, "time_of_day": "evening", "content": "Footwork drill finally felt natural today. Coach nodded at me. That small nod carried me all afternoon.\nWhy does validation hit so hard?"},
+    {"day": 9, "time_of_day": "evening", "content": "Long commute. Did homework in the car.\nSometimes I feel insecure for no reason. Like I need someone to confirm I'm doing okay."},
+    {"day": 10, "time_of_day": "evening", "content": "Free throws during lunch again. Alone in the gym.\nI like being the only one there. It feels peaceful.\nIt also feels like I'm building something no one sees yet."},
+    {"day": 11, "time_of_day": "evening", "content": "Strength training. My stamina is improving. I can feel it.\nKnee feels strong. I forget sometimes I had surgery less than a year ago. That was a hard season of life."},
+    {"day": 12, "time_of_day": "evening", "content": "I asked Coach if I'm improving. He said yes — a lot.\nBut I still question it. Why do I doubt praise?"},
+    {"day": 13, "time_of_day": "evening", "content": "Mom asked how I'm feeling. I said fine.\nTruth is, I overthink more than I show."},
+    {"day": 14, "time_of_day": "evening", "content": "Sof and I stayed back to shoot. She told me she admires how hard I work.\nThat surprised me. I don't feel special. I just feel driven."},
+    {"day": 15, "time_of_day": "evening", "content": "Film session today. I noticed I hesitate before driving. It's not skill — it's confidence.\nThat's mental. I can fix mental."},
+    {"day": 16, "time_of_day": "evening", "content": "Another early drop-off. I'm grateful Mom does this. I know it's not easy.\nI don't say thank you enough."},
+    {"day": 17, "time_of_day": "evening", "content": "Coach corrected my defensive stance three times. I needed all three.\nSometimes I feel slow. But once I understand something, I don't forget it."},
+    {"day": 18, "time_of_day": "evening", "content": "Free period shooting again. No one else showed up.\nCoach walked in and just watched for a minute.\nI don't need applause. But I want to earn respect."},
+    {"day": 19, "time_of_day": "evening", "content": "Some girls seem naturally athletic. Faster. More instinctive.\nI feel like I build everything brick by brick. Slower.\nBut maybe that means it's stronger."},
+    {"day": 20, "time_of_day": "evening", "content": "Game night. I didn't hesitate once when I got the ball.\nSmall moment. Big progress."},
+    {"day": 21, "time_of_day": "evening", "content": "Watched my brother's game. I love cheering for him.\nFamily feels safe."},
+    {"day": 22, "time_of_day": "evening", "content": "I wish I didn't need reassurance so much. I wish I trusted myself more.\nI look outside for validation too often."},
+    {"day": 23, "time_of_day": "evening", "content": "Coach said, \"Keep working. Your time will come.\"\nI believe him. I just wish it came faster."},
+    {"day": 24, "time_of_day": "evening", "content": "Long day. Exhausted by 9 p.m. Dad picked me up.\nSometimes I lean my head back in the car and just breathe.\nThis life is hard. But I chose it."},
+    {"day": 25, "time_of_day": "evening", "content": "Worked on footwork again. Got it faster this time. That made me proud.\nMaybe I'm not slow. Maybe I just need repetition."},
+    {"day": 26, "time_of_day": "evening", "content": "I don't want to chase money in life. I want to help people.\nBut right now, I want to be great at basketball."},
+    {"day": 27, "time_of_day": "evening", "content": "Free throws felt automatic today. That's new.\nProgress is quiet."},
+    {"day": 28, "time_of_day": "evening", "content": "I asked myself — what if I stopped doubting?\nWhat would that version of me look like?"},
+    {"day": 29, "time_of_day": "evening", "content": "Coach told another player to \"watch how DD trains.\"\nThat felt bigger than minutes."},
+    {"day": 30, "time_of_day": "evening", "content": "Here's what I know:\nI'm 5'11.\nI work harder than almost anyone here.\nI show up early.\nI stay late.\nI shoot every free period.\nI listen.\nI repeat drills until I get them.\nI'm not the fastest learner — but I don't quit.\nI still doubt myself too much.\nI need reassurance more than I should.\nBut I care deeply.\nAbout this game.\nAbout my family.\nAbout becoming better.\nI'm not behind.\nI'm building.\nAnd I'm not done."}
+  ]
+}

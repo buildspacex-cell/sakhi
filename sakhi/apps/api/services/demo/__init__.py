@@ -67,6 +67,7 @@ from sakhi.apps.api.services.demo.governance_seeder import (
     reset_simulation_data,
     get_simulation_ledger,
     get_simulation_state,
+    get_simulation_intelligence,
 )
 
 
@@ -191,6 +192,7 @@ __all__ = [
     "reset_simulation_data",
     "get_simulation_ledger",
     "get_simulation_state",
+    "get_simulation_intelligence",
     # Master functions
     "seed_all_demo_data",
     "run_full_demo",

@@ -52,7 +52,7 @@ export interface SimulationState {
 
 // Profile configuration
 export interface ProfileConfig {
-  id: "adaptive" | "performance" | "conservation";
+  id: string;
   label: string;
   osType: string;
   dosha: string;
@@ -83,6 +83,7 @@ export interface ProfileScenarioData {
   };
   // Static display data (secondary to governance objects)
   driftPercentage: number;
+  driftTrend?: { delta: number; days: number };
   frictionState: string;
   conversationText: string;
   intelligenceItems: IntelligenceItem[];
@@ -92,4 +93,121 @@ export interface IntelligenceItem {
   label: string;
   value: string;
   source: string;
+}
+
+// Intelligence data from real backend (objectives, events, drift trend)
+export interface IntelligenceData {
+  objectives: ObjectiveVersion[];
+  commitment_events: CommitmentEvent[];
+  drift_trend: DriftTrend | null;
+  constraints: IntelligenceConstraint[];
+  intelligence_items: IntelligenceItem[];
+}
+
+export interface ObjectiveVersion {
+  objective_id: string;
+  version: number;
+  title: string;
+  description: string;
+  source: string;
+  reason: string;
+  created_at: string | null;
+  parent_version: number | null;
+}
+
+export interface CommitmentEvent {
+  id: string;
+  action: string;
+  context: string;
+  drift_at_time: number | null;
+  days_ago: number | null;
+  timestamp: string | null;
+}
+
+export interface DriftTrend {
+  values: number[];
+  delta: number;
+  days: number;
+  direction: "rising" | "falling" | "stable";
+}
+
+export interface IntelligenceConstraint {
+  id: string;
+  description: string;
+  priority: number;
+  source: string;
+}
+
+// ---------------------------------------------------------------------------
+// Replay types (30-day conversation replay)
+// ---------------------------------------------------------------------------
+
+export interface ReplayFrictionState {
+  state: string;
+  description?: string;
+  drift_percentage: number;
+  drift_direction?: string;
+  primary_contributor?: string;
+}
+
+export interface ReplayEntry {
+  day: number;
+  time_of_day: string;
+  content: string;
+  timestamp: string;
+  reply?: string;
+  friction_state?: ReplayFrictionState;
+}
+
+export interface GovernanceResult {
+  action: string;
+  reasons: string[];
+  triggers: string[];
+  is_blocked: boolean;
+  is_allowed: boolean;
+  requires_confirmation: boolean;
+  violations: Violation[];
+}
+
+export interface ArcPhase {
+  name: string;
+  duration_days: number;
+  emotional_state: string;
+  themes?: string[];
+  energy_modifier?: number;
+  events?: string[];
+  entry_frequency?: number;
+}
+
+export interface ReplayPersona {
+  id: string;
+  name: string;
+  description: string;
+  dosha_baseline: { vata: number; pitta: number; kapha: number };
+  arc: { name: string; description: string; phases: ArcPhase[] };
+  governance_scenario?: {
+    user_text: string;
+    proposed_action: string;
+    proposed_hour: number;
+  };
+}
+
+export interface ReplayData {
+  persona_id: string;
+  user_id: string;
+  persona: ReplayPersona;
+  total_days: number;
+  total_entries: number;
+  entries: ReplayEntry[];
+  snapshots: Array<{
+    day: number;
+    friction_state?: {
+      drift?: { drift_percentage: number; primary_contributor: string; direction: string; severity: string };
+      friction?: { state: string; name: string; description: string; drift_percentage: number; severity: string; recommendations_focus?: string[] };
+    };
+    pattern_count?: number;
+    memory_count?: number;
+    crystallized_patterns?: unknown[];
+  }>;
+  governance_result?: GovernanceResult;
 }

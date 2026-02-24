@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 LOGGER = logging.getLogger(__name__)
@@ -400,7 +400,7 @@ async def demo_status():
 
 
 @router.post("/seed/governance", response_model=SeedResponse)
-async def seed_governance(person_id: Optional[str] = None):
+async def seed_governance(request: Request):
     """Seed governance constraints and events for simulation demo.
 
     Idempotent: deletes existing sim-* data and re-inserts.
@@ -409,9 +409,11 @@ async def seed_governance(person_id: Optional[str] = None):
     try:
         from sakhi.apps.api.services.demo import (
             seed_governance_demo_data,
-            DEMO_USER_ID,
         )
+        from sakhi.apps.api.services.demo.governance_seeder import DEMO_USER_ID
 
+        body = await request.json() if request else {}
+        person_id = body.get("person_id") if isinstance(body, dict) else None
         result = await seed_governance_demo_data(person_id or DEMO_USER_ID)
 
         return SeedResponse(
@@ -533,6 +535,23 @@ async def reset_simulation_endpoint(person_id: str):
         return {"status": "success", **result}
     except Exception as e:
         LOGGER.exception("[demo] Simulation reset failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/simulation/intelligence/{person_id}")
+async def get_simulation_intelligence_endpoint(person_id: str):
+    """Get real governance intelligence data (objectives, events, drift trend).
+
+    Returns pre-formatted intelligence items for the "What Sakhi knows" panel,
+    plus raw objectives, commitment events, and constraints for detailed display.
+    """
+    try:
+        from sakhi.apps.api.services.demo import get_simulation_intelligence
+
+        data = await get_simulation_intelligence(person_id)
+        return {"status": "success", **data}
+    except Exception as e:
+        LOGGER.exception("[demo] Intelligence fetch failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

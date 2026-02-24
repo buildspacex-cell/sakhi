@@ -49,7 +49,9 @@ import type {
   ConversationDemo,
   ThemeSnapshot,
   CrystallizedPattern,
+  ReplayFrictionState,
 } from "./types";
+import ThreeActDemo from "./governance/ThreeActDemo";
 
 // ============================================================================
 // Palette
@@ -86,9 +88,9 @@ const palette = {
 // ============================================================================
 
 export default function SimulationDemoClient() {
-  const [personaId, setPersonaId] = useState<string>("anxious_achiever");
+  const [personaId, setPersonaId] = useState<string>("vidhya");
   const [data, setData] = useState<SimulationData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Timeline
@@ -100,12 +102,23 @@ export default function SimulationDemoClient() {
   const [narrateMode, setNarrateMode] = useState(true);
   const [pauseReason, setPauseReason] = useState<string | null>(null);
 
-  // Load data
+  // Collapsible understanding section — governance leads the page
+  const [showUnderstanding, setShowUnderstanding] = useState(false);
+
+  // Conversation replay — step-based (0=not started, then 2 steps per entry: journal + reply)
+  const [replayStep, setReplayStep] = useState(0);
+  const [replayPlaying, setReplayPlaying] = useState(false);
+  const [replaySpeed, setReplaySpeed] = useState(3000);
+
+  // Load data — only when understanding section is visible
   useEffect(() => {
+    if (!showUnderstanding) return;
     setLoading(true);
     setError(null);
     setCurrentDay(1);
     setIsPlaying(false);
+    setReplayStep(0);
+    setReplayPlaying(false);
 
     fetch(`/simulation/${personaId}.json`)
       .then((res) => {
@@ -120,7 +133,7 @@ export default function SimulationDemoClient() {
         setError(err.message);
         setLoading(false);
       });
-  }, [personaId]);
+  }, [personaId, showUnderstanding]);
 
   // Compute phase boundary days and checkpoint days for narration pauses
   const pauseDays = useMemo(() => {
@@ -228,28 +241,6 @@ export default function SimulationDemoClient() {
       edges: Math.max(last.provenance?.graph_edges ?? 1, 1),
     };
   }, [data]);
-
-  // Normalized growth chart data (0-100% for each metric)
-  const growthChartData = useMemo(() => {
-    if (!data) return [];
-    return data.snapshots
-      .filter((s) => s.day <= currentDay)
-      .map((s) => ({
-        day: s.day,
-        memories: Math.round(
-          ((s.memory_count ?? 0) / finalStats.mem) * 100,
-        ),
-        patterns: Math.round(
-          ((s.pattern_count ?? 0) / finalStats.pat) * 100,
-        ),
-        nodes: Math.round(
-          ((s.provenance?.graph_nodes ?? 0) / finalStats.nodes) * 100,
-        ),
-        edges: Math.round(
-          ((s.provenance?.graph_edges ?? 0) / finalStats.edges) * 100,
-        ),
-      }));
-  }, [data, currentDay, finalStats]);
 
   // Soul evolution: track how the soul vector drifts from its initial state
   const soulEvolutionData = useMemo(() => {
@@ -381,93 +372,187 @@ export default function SimulationDemoClient() {
     );
   }, [data, currentBoundary, currentDay]);
 
+  // ── Conversation Replay Logic ──
+  // 1 step per entry + 1 for governance = entries.length + 1
+  const replayTotalSteps = data ? data.entries.length + 1 : 0;
+  const replayEntryIndex = replayStep > 0 ? replayStep - 1 : -1;
+  const replayShowGovernance = replayStep > 0 && replayStep >= replayTotalSteps;
+  const replayCurrentDay =
+    replayEntryIndex >= 0 && data
+      ? (data.entries[Math.min(replayEntryIndex, data.entries.length - 1)]?.day ?? 0)
+      : 0;
+
+  // Phase boundaries for replay
+  const replayPhaseBoundaries = useMemo(() => {
+    if (!data) return [];
+    const boundaries: PhaseBoundary[] = [];
+    let cumulative = 0;
+    for (const phase of data.persona.arc.phases) {
+      boundaries.push({ start: cumulative + 1, end: cumulative + phase.duration_days, phase });
+      cumulative += phase.duration_days;
+    }
+    return boundaries;
+  }, [data]);
+
+  // Current friction from snapshot for replay
+  const replayCurrentFriction = useMemo<ReplayFrictionState | null>(() => {
+    if (!data || replayCurrentDay === 0) return null;
+    const snap = data.snapshots?.find((s) => s.day === replayCurrentDay);
+    if (snap?.friction_state?.friction) {
+      const f = snap.friction_state.friction;
+      return {
+        state: f.state,
+        description: f.description,
+        drift_percentage: f.drift_percentage,
+        primary_contributor: snap.friction_state.drift?.primary_contributor || "",
+      };
+    }
+    const entry = data.entries.find((e) => e.day === replayCurrentDay);
+    return entry?.friction_state || null;
+  }, [data, replayCurrentDay]);
+
+  // Sync currentDay from replay so understanding sections below update
+  useEffect(() => {
+    if (replayCurrentDay > 0) {
+      setCurrentDay(replayCurrentDay);
+    }
+  }, [replayCurrentDay]);
+
+  // Replay auto-play
+  useEffect(() => {
+    if (!replayPlaying || !data) return;
+    const timer = setInterval(() => {
+      setReplayStep((s) => {
+        const next = s + 1;
+        if (next > replayTotalSteps) {
+          setReplayPlaying(false);
+          return replayTotalSteps;
+        }
+        return next;
+      });
+    }, replaySpeed);
+    return () => clearInterval(timer);
+  }, [replayPlaying, replaySpeed, data, replayTotalSteps]);
+
   // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight")
-        setCurrentDay((d) => Math.min(d + 1, data?.total_days ?? d));
-      if (e.key === "ArrowLeft") setCurrentDay((d) => Math.max(d - 1, 1));
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLSelectElement
+      )
+        return;
       if (e.key === " ") {
         e.preventDefault();
-        setIsPlaying((p) => !p);
+        if (replayStep > 0 || replayPlaying) {
+          setReplayPlaying((p) => !p);
+        } else {
+          setIsPlaying((p) => !p);
+        }
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (replayStep > 0) {
+          setReplayStep((s) => Math.min(s + 1, replayTotalSteps));
+        } else {
+          setCurrentDay((d) => Math.min(d + 1, data?.total_days ?? d));
+        }
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (replayStep > 0) {
+          setReplayStep((s) => Math.max(s - 1, 0));
+        } else {
+          setCurrentDay((d) => Math.max(d - 1, 1));
+        }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [data]);
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          ...styles.page,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <div style={{ color: palette.muted, fontSize: 18 }}>
-          Loading simulation...
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div
-        style={{
-          ...styles.page,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <div style={{ color: palette.chaos, fontSize: 18 }}>
-          {error || "No data available"}
-        </div>
-      </div>
-    );
-  }
+  }, [data, replayStep, replayPlaying, replayTotalSteps]);
 
   return (
     <div style={styles.page}>
-      {/* 1. Header + Real Data Badge */}
-      <div style={styles.header}>
-        <div
+      {/* ── Governance Demo (leads the page) ── */}
+      <ThreeActDemo />
+
+      {/* ── Collapsible Understanding Section ── */}
+      <div
+        style={{
+          marginTop: 48,
+          paddingTop: 32,
+          borderTop: `1px solid ${palette.border}`,
+          textAlign: "center",
+        }}
+      >
+        <button
+          onClick={() => setShowUnderstanding(!showUnderstanding)}
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 12,
+            padding: "12px 28px",
+            borderRadius: 8,
+            border: `1px solid ${palette.border}`,
+            background: showUnderstanding ? palette.cardAlt : palette.card,
+            color: palette.accent,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
           }}
         >
-          <h1 style={styles.title}>How Understanding Deepens</h1>
-          {data.real_pipeline && (
-            <span
-              style={{
-                padding: "4px 10px",
-                background: "#e8f5e9",
-                borderRadius: 6,
-                color: palette.balanced,
-                fontWeight: 600,
-                fontSize: 11,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Real Pipeline Data
-            </span>
-          )}
-        </div>
-        <p style={styles.subtitle}>
-          Watch Sakhi build a complete picture of someone over 2 months of
-          journaling
-        </p>
+          {showUnderstanding
+            ? "Hide understanding details"
+            : "See how Sakhi built this understanding →"}
+        </button>
       </div>
 
-      {/* 2. Persona Selector */}
+      {showUnderstanding && (
+        <>
+          {loading && (
+            <div style={{ textAlign: "center", padding: 48, color: palette.muted, fontSize: 16 }}>
+              Loading simulation data...
+            </div>
+          )}
+
+          {error && !loading && (
+            <div style={{ textAlign: "center", padding: 48, color: palette.chaos, fontSize: 16 }}>
+              {error}
+            </div>
+          )}
+
+          {data && !loading && (
+            <>
+              {/* 1. Header */}
+              <div style={{ ...styles.header, marginTop: 24 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 12,
+                  }}
+                >
+                  <h2 style={{ ...styles.title, fontSize: 20 }}>How Understanding Deepens</h2>
+                  {data.real_pipeline && (
+                    <span
+                      style={{
+                        padding: "4px 10px",
+                        background: "#e8f5e9",
+                        borderRadius: 6,
+                        color: palette.balanced,
+                        fontWeight: 600,
+                        fontSize: 11,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Real Pipeline Data
+                    </span>
+                  )}
+                </div>
+                <p style={styles.subtitle}>
+                  Watch Sakhi build a complete picture of someone over 2 months of journaling
+                </p>
+              </div>
+
+              {/* 2. Persona Selector */}
       <PersonaSelector
         current={personaId}
         data={data}
@@ -476,6 +561,35 @@ export default function SimulationDemoClient() {
 
       {/* 3. Story Intro Card */}
       <StoryIntroCard persona={data.persona} />
+
+      {/* 3.1 Conversation Replay — journal + Sakhi replies, one card at a time */}
+      <ConversationReplay
+        data={data}
+        step={replayStep}
+        totalSteps={replayTotalSteps}
+        entryIndex={replayEntryIndex}
+        showGovernance={replayShowGovernance}
+        isPlaying={replayPlaying}
+        playSpeed={replaySpeed}
+        currentDay={replayCurrentDay}
+        currentFriction={replayCurrentFriction}
+        phaseBoundaries={replayPhaseBoundaries}
+        onTogglePlay={() => {
+          if (!data) return;
+          if (replayStep === 0) {
+            setReplayStep(1);
+            setReplayPlaying(true);
+          } else if (replayStep >= replayTotalSteps && !replayPlaying) {
+            setReplayStep(1);
+            setReplayPlaying(true);
+          } else {
+            setReplayPlaying((p) => !p);
+          }
+        }}
+        onSpeedChange={setReplaySpeed}
+        onStepForward={() => setReplayStep((s) => Math.min(s + 1, replayTotalSteps))}
+        onStepBack={() => setReplayStep((s) => Math.max(s - 1, 0))}
+      />
 
       {/* 3.5 Current Friction State - shows REAL computed state from simulation */}
       <CurrentFrictionState
@@ -522,14 +636,6 @@ export default function SimulationDemoClient() {
         phaseEntries={phaseEntries}
         personaName={data.persona.name}
         currentDay={currentDay}
-      />
-
-      {/* 6. Intelligence Growth Chart — THE CENTERPIECE */}
-      <IntelligenceGrowthChart
-        chartData={growthChartData}
-        phaseBoundaries={phaseBoundaries}
-        currentDay={currentDay}
-        finalStats={finalStats}
       />
 
       {/* 7. Journal vs Memory — KILLER FEATURE */}
@@ -717,13 +823,18 @@ export default function SimulationDemoClient() {
           color: palette.muted,
           fontSize: 12,
           marginTop: 24,
-          paddingBottom: 48,
+          paddingBottom: 16,
         }}
       >
         Simulated {data.total_days} days &middot; {data.total_entries} journal
         entries
         {data.real_pipeline && " \u00b7 Real Worker Pipeline"}
       </div>
+
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -731,6 +842,406 @@ export default function SimulationDemoClient() {
 // ============================================================================
 // Sub-Components
 // ============================================================================
+
+// ── Conversation Replay (single-card stepper) ──────────────────────────────
+
+function frictionColor(state: string): string {
+  switch (state) {
+    case "balanced": return palette.balanced;
+    case "chaos": return palette.chaos;
+    case "intensity": return palette.intensity;
+    case "stagnation": return palette.stagnation;
+    default: return palette.unknown;
+  }
+}
+
+function ConversationReplay({
+  data,
+  step,
+  totalSteps,
+  entryIndex,
+  showGovernance,
+  isPlaying,
+  playSpeed,
+  currentDay,
+  currentFriction,
+  phaseBoundaries,
+  onTogglePlay,
+  onSpeedChange,
+  onStepForward,
+  onStepBack,
+}: {
+  data: SimulationData;
+  step: number;
+  totalSteps: number;
+  entryIndex: number;
+  showGovernance: boolean;
+  isPlaying: boolean;
+  playSpeed: number;
+  currentDay: number;
+  currentFriction: ReplayFrictionState | null;
+  phaseBoundaries: PhaseBoundary[];
+  onTogglePlay: () => void;
+  onSpeedChange: (speed: number) => void;
+  onStepForward: () => void;
+  onStepBack: () => void;
+}) {
+  const personaName = data.persona.name;
+  const totalDays = data.total_days;
+  const entry = entryIndex >= 0 && entryIndex < data.entries.length ? data.entries[entryIndex] : null;
+
+  // Current phase
+  const currentPhase = useMemo(() => {
+    return phaseBoundaries.find((b) => currentDay >= b.start && currentDay <= b.end) ?? null;
+  }, [currentDay, phaseBoundaries]);
+
+  const currentPhaseIndex = useMemo(() => {
+    return phaseBoundaries.findIndex((b) => currentDay >= b.start && currentDay <= b.end);
+  }, [currentDay, phaseBoundaries]);
+
+  // Governance scenario from persona data
+  const govScenario = useMemo(() => {
+    const pm = data.persona as Record<string, any>;
+    return pm.governance_scenario as { user_text: string; proposed_action: string } | undefined;
+  }, [data.persona]);
+
+  // Progress as percentage
+  const progressPct = totalSteps > 0 ? Math.round((step / totalSteps) * 100) : 0;
+
+  // ── Not started ──
+  if (step === 0) {
+    return (
+      <div style={{ marginTop: 24, marginBottom: 24 }}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+            30-Day Conversation
+          </div>
+          <div style={{ fontSize: 12, color: palette.muted }}>
+            Step through {personaName}&apos;s journal entries and Sakhi&apos;s replies, one at a time
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            padding: "32px 16px", textAlign: "center", gap: 12,
+            background: palette.card, border: `1px solid ${palette.border}`, borderRadius: 12,
+          }}
+        >
+          <div style={{ fontSize: 14, color: palette.muted, maxWidth: 400, lineHeight: 1.6 }}>
+            See how Sakhi&apos;s responses evolve as understanding deepens over 30 days.
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <button
+              onClick={onStepForward}
+              style={{
+                padding: "10px 28px", borderRadius: 10, border: "none",
+                background: palette.accent, color: "#fff", fontWeight: 700,
+                fontSize: 14, cursor: "pointer",
+              }}
+            >
+              Start &rarr;
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: palette.muted, opacity: 0.6 }}>
+            &larr; &rarr; arrows to step &middot; Space to auto-play
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Active replay ──
+  return (
+    <div style={{ marginTop: 24, marginBottom: 24 }}>
+      {/* Section header */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+          30-Day Conversation
+        </div>
+        <div style={{ fontSize: 12, color: palette.muted }}>
+          Step through {personaName}&apos;s journal entries and Sakhi&apos;s replies
+        </div>
+      </div>
+
+      {/* Controls bar */}
+      <div
+        style={{
+          background: palette.card,
+          border: `1px solid ${palette.border}`,
+          borderRadius: 12,
+          padding: "14px 18px",
+          marginBottom: 16,
+        }}
+      >
+        {/* Top row: day info + nav */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: palette.text }}>
+              Day {currentDay}
+            </span>
+            <span style={{ fontSize: 12, color: palette.muted }}>
+              of {totalDays}
+            </span>
+            {currentPhase && (
+              <span style={{ fontSize: 12, color: palette.accent, fontWeight: 600 }}>
+                &middot; {currentPhase.phase.name}
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <button
+              onClick={onStepBack}
+              disabled={step <= 0}
+              style={{
+                padding: "6px 12px", borderRadius: 6, border: `1px solid ${palette.border}`,
+                background: palette.card, color: step <= 0 ? palette.border : palette.text,
+                fontSize: 14, cursor: step <= 0 ? "default" : "pointer", fontWeight: 600,
+              }}
+            >
+              &larr;
+            </button>
+            <button
+              onClick={onTogglePlay}
+              style={{
+                padding: "6px 14px", borderRadius: 8, border: "none",
+                background: isPlaying ? palette.muted : palette.accent,
+                color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer",
+              }}
+            >
+              {isPlaying ? "\u23F8" : "\u25B6"}
+            </button>
+            <button
+              onClick={onStepForward}
+              disabled={step >= totalSteps}
+              style={{
+                padding: "6px 12px", borderRadius: 6, border: `1px solid ${palette.border}`,
+                background: palette.card, color: step >= totalSteps ? palette.border : palette.text,
+                fontSize: 14, cursor: step >= totalSteps ? "default" : "pointer", fontWeight: 600,
+              }}
+            >
+              &rarr;
+            </button>
+            <select
+              value={playSpeed}
+              onChange={(e) => onSpeedChange(Number(e.target.value))}
+              style={{
+                padding: "5px 6px", borderRadius: 6, border: `1px solid ${palette.border}`,
+                fontSize: 11, color: palette.text, background: palette.card, cursor: "pointer",
+              }}
+            >
+              <option value={5000}>Slow</option>
+              <option value={3000}>Normal</option>
+              <option value={1500}>Fast</option>
+              <option value={500}>Skim</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ height: 4, borderRadius: 2, background: palette.border, overflow: "hidden" }}>
+          <div
+            style={{
+              height: "100%", width: `${progressPct}%`,
+              background: palette.accent, borderRadius: 2,
+              transition: "width 0.3s ease",
+            }}
+          />
+        </div>
+
+        {/* Friction pill */}
+        {currentFriction && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <span
+              style={{
+                padding: "2px 10px", borderRadius: 10,
+                background: `${frictionColor(currentFriction.state)}18`,
+                color: frictionColor(currentFriction.state),
+                fontSize: 11, fontWeight: 600, textTransform: "capitalize",
+              }}
+            >
+              {currentFriction.state}
+            </span>
+            <span style={{ fontSize: 11, color: palette.muted }}>
+              drift: {currentFriction.drift_percentage}%
+            </span>
+            {currentFriction.primary_contributor && (
+              <span style={{ fontSize: 11, color: palette.muted }}>
+                &middot; {currentFriction.primary_contributor}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Single card: current message ── */}
+      {showGovernance ? (
+        // Governance card (final step)
+        data.governance_result && govScenario ? (
+          <div
+            style={{
+              background: palette.card,
+              border: `2px solid ${
+                data.governance_result.requires_confirmation
+                  ? palette.intensity
+                  : data.governance_result.is_blocked
+                    ? palette.chaos
+                    : palette.balanced
+              }`,
+              borderRadius: 16, padding: 28,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8,
+                color: data.governance_result.requires_confirmation
+                  ? palette.intensity
+                  : data.governance_result.is_blocked
+                    ? palette.chaos
+                    : palette.balanced,
+              }}
+            >
+              Constitution Gate
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: palette.text, marginTop: 8, lineHeight: 1.4 }}>
+              After 30 days of understanding {personaName}&hellip;
+            </div>
+            <div
+              style={{
+                padding: 14, background: palette.cardAlt, borderRadius: 10, margin: "14px 0",
+                fontSize: 14, fontStyle: "italic", color: palette.text, lineHeight: 1.6,
+                borderLeft: `3px solid ${palette.muted}`,
+              }}
+            >
+              &ldquo;{govScenario.user_text}&rdquo;
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <span
+                style={{
+                  padding: "5px 14px", borderRadius: 8, fontWeight: 700, fontSize: 14,
+                  background: `${
+                    data.governance_result.requires_confirmation ? palette.intensity
+                    : data.governance_result.is_blocked ? palette.chaos
+                    : palette.balanced
+                  }18`,
+                  color: data.governance_result.requires_confirmation ? palette.intensity
+                    : data.governance_result.is_blocked ? palette.chaos
+                    : palette.balanced,
+                }}
+              >
+                {data.governance_result.requires_confirmation ? "Requires Confirmation"
+                  : data.governance_result.is_blocked ? "Blocked" : "Allowed"}
+              </span>
+            </div>
+            {data.governance_result.violations.map((v, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: 12, background: `${palette.chaos}08`, borderRadius: 10,
+                  borderLeft: `3px solid ${palette.chaos}`, marginBottom: 8,
+                  fontSize: 13, color: palette.text, lineHeight: 1.5,
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>{v.description}</div>
+                <div style={{ fontSize: 12, color: palette.muted }}>{v.message}</div>
+              </div>
+            ))}
+            <div style={{ fontSize: 13, color: palette.muted, marginTop: 14, lineHeight: 1.6 }}>
+              Sakhi knows {personaName} well enough to protect them from their own patterns.
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", padding: 32, color: palette.muted, fontSize: 13 }}>
+            End of {totalDays}-day replay
+          </div>
+        )
+      ) : entry ? (
+        // Journal + Reply card together
+        <div
+          style={{
+            background: palette.card,
+            border: `1px solid ${palette.border}`,
+            borderRadius: 16,
+            padding: 24,
+          }}
+        >
+          {/* Phase marker if this is the first day of a new phase */}
+          {currentPhase && currentDay === currentPhase.start && (
+            <div
+              style={{
+                display: "flex", alignItems: "center", gap: 8, marginBottom: 16,
+                padding: "8px 12px", borderRadius: 8, background: palette.accentLight,
+              }}
+            >
+              <span style={{ fontSize: 11, color: palette.muted, textTransform: "uppercase" }}>
+                Phase {currentPhaseIndex + 1}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: palette.accent }}>
+                {currentPhase.phase.name}
+              </span>
+              <span style={{ fontSize: 12, color: palette.muted, fontStyle: "italic" }}>
+                &mdash; {currentPhase.phase.emotional_state}
+              </span>
+            </div>
+          )}
+
+          {/* Day + time label */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 12, color: palette.muted }}>
+              Day {entry.day} &middot; {entry.time_of_day}
+            </span>
+          </div>
+
+          {/* Journal entry */}
+          <div
+            style={{
+              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3,
+              marginBottom: 8, color: palette.accent,
+            }}
+          >
+            {personaName}
+          </div>
+          <div
+            style={{
+              fontSize: 14, color: palette.text, lineHeight: 1.75, whiteSpace: "pre-line",
+              borderLeft: `3px solid ${palette.accent}`,
+              background: "#fdf8f3",
+              borderRadius: "0 12px 12px 0",
+              padding: "14px 18px 14px 16px",
+              marginBottom: 20,
+            }}
+          >
+            {entry.content}
+          </div>
+
+          {/* Sakhi reply */}
+          {entry.reply && (
+            <>
+              <div
+                style={{
+                  fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3,
+                  marginBottom: 8, color: palette.vata,
+                }}
+              >
+                Sakhi
+              </div>
+              <div
+                style={{
+                  fontSize: 14, color: palette.text, lineHeight: 1.75, whiteSpace: "pre-line",
+                  borderLeft: `3px solid ${palette.vata}`,
+                  background: "#f3f7fb",
+                  borderRadius: "0 12px 12px 0",
+                  padding: "14px 18px 14px 16px",
+                }}
+              >
+                {entry.reply}
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function PersonaSelector({
   current,
@@ -742,9 +1253,9 @@ function PersonaSelector({
   onChange: (id: string) => void;
 }) {
   const personas = [
-    { id: "anxious_achiever", label: "Maya", subtitle: "Burnout & Recovery", prakruti: "Pitta-dominant" },
-    { id: "stuck_creative", label: "Alex", subtitle: "Stagnation & Awakening", prakruti: "Kapha-Pitta" },
-    { id: "hormonal_harmony", label: "Diya", subtitle: "Cycle Awareness", prakruti: "Kapha-Vata" },
+    { id: "vidhya", label: "Vidhya", subtitle: "Overcommitment & Rediscovery", prakruti: "Pitta-dominant" },
+    { id: "bigd", label: "Big D", subtitle: "Leadership & Generosity", prakruti: "Kapha-dominant" },
+    { id: "diya", label: "Diya", subtitle: "Discipline & Recovery", prakruti: "Kapha-dominant" },
   ];
 
   return (
@@ -1142,7 +1653,7 @@ function CurrentFrictionState({
 }
 
 // ============================================================================
-// Personalization Comparison - Side-by-side LLM recommendations for Maya vs Diya
+// Personalization Comparison - Side-by-side LLM recommendations for Vidhya vs Diya
 // ============================================================================
 
 const SYMPTOM_OPTIONS = [
@@ -1153,7 +1664,7 @@ const SYMPTOM_OPTIONS = [
 ];
 
 // Fixed prakruti for comparison
-const MAYA_PRAKRUTI = { vata: 0.25, pitta: 0.50, kapha: 0.25 };
+const VIDHYA_PRAKRUTI = { vata: 0.25, pitta: 0.50, kapha: 0.25 };
 const DIYA_PRAKRUTI = { vata: 0.30, pitta: 0.20, kapha: 0.50 };
 
 interface LLMRecommendation {
@@ -1193,12 +1704,12 @@ function PersonalizationDemo({
   currentDay: number;
 }) {
   const [selectedSymptom, setSelectedSymptom] = useState(0);
-  const [mayaResponse, setMayaResponse] = useState<LLMRecommendationResponse | null>(null);
+  const [vidhyaResponse, setVidhyaResponse] = useState<LLMRecommendationResponse | null>(null);
   const [diyaResponse, setDiyaResponse] = useState<LLMRecommendationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isMaya = persona.id === "anxious_achiever";
+  const isVidhya = persona.id === "anxious_achiever";
   const isDiya = persona.id === "hormonal_harmony";
 
   // Only show after day 7
@@ -1212,11 +1723,11 @@ function PersonalizationDemo({
 
     try {
       // Fetch both in parallel
-      const [mayaRes, diyaRes] = await Promise.all([
+      const [vidhyaRes, diyaRes] = await Promise.all([
         fetch("/api/friction/recommendations/by-constitution", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...MAYA_PRAKRUTI, symptom }),
+          body: JSON.stringify({ ...VIDHYA_PRAKRUTI, symptom }),
         }),
         fetch("/api/friction/recommendations/by-constitution", {
           method: "POST",
@@ -1225,16 +1736,16 @@ function PersonalizationDemo({
         }),
       ]);
 
-      if (!mayaRes.ok || !diyaRes.ok) {
+      if (!vidhyaRes.ok || !diyaRes.ok) {
         throw new Error("Failed to get recommendations");
       }
 
-      const [mayaData, diyaData] = await Promise.all([
-        mayaRes.json(),
+      const [vidhyaData, diyaData] = await Promise.all([
+        vidhyaRes.json(),
         diyaRes.json(),
       ]);
 
-      setMayaResponse(mayaData);
+      setVidhyaResponse(vidhyaData);
       setDiyaResponse(diyaData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -1243,8 +1754,8 @@ function PersonalizationDemo({
     }
   };
 
-  const hasResults = mayaResponse && diyaResponse;
-  const source = mayaResponse?.source || "none";
+  const hasResults = vidhyaResponse && diyaResponse;
+  const source = vidhyaResponse?.source || "none";
 
   return (
     <div style={{ ...styles.card, marginBottom: 24, borderLeft: `4px solid ${palette.accent}` }}>
@@ -1278,7 +1789,7 @@ function PersonalizationDemo({
             key={i}
             onClick={() => {
               setSelectedSymptom(i);
-              setMayaResponse(null);
+              setVidhyaResponse(null);
               setDiyaResponse(null);
             }}
             style={{
@@ -1313,7 +1824,7 @@ function PersonalizationDemo({
           marginBottom: 16,
         }}
       >
-        {isLoading ? "Generating personalized advice..." : "Compare Maya vs Diya"}
+        {isLoading ? "Generating personalized advice..." : "Compare Vidhya vs Diya"}
       </button>
 
       {/* Error */}
@@ -1326,13 +1837,13 @@ function PersonalizationDemo({
       {/* Side-by-side comparison */}
       {hasResults && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {/* Maya (Pitta) */}
+          {/* Vidhya (Pitta) */}
           <div
             style={{
               padding: 16,
               borderRadius: 12,
-              background: isMaya ? palette.accentLight : palette.cardAlt,
-              border: isMaya ? `2px solid ${palette.accent}` : `1px solid ${palette.border}`,
+              background: isVidhya ? palette.accentLight : palette.cardAlt,
+              border: isVidhya ? `2px solid ${palette.accent}` : `1px solid ${palette.border}`,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -1350,15 +1861,15 @@ function PersonalizationDemo({
                   fontSize: 14,
                 }}
               >
-                M
+                V
               </div>
               <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: palette.text }}>Maya</div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: palette.text }}>Vidhya</div>
                 <div style={{ fontSize: 11, color: palette.muted }}>
-                  {mayaResponse.constitution.type} (50% Pitta)
+                  {vidhyaResponse.constitution.type} (50% Pitta)
                 </div>
               </div>
-              {isMaya && (
+              {isVidhya && (
                 <span style={{ marginLeft: "auto", fontSize: 10, color: palette.accent, fontWeight: 600 }}>
                   CURRENT
                 </span>
@@ -1376,19 +1887,19 @@ function PersonalizationDemo({
                   fontWeight: 600,
                 }}
               >
-                {mayaResponse.friction_state}
+                {vidhyaResponse.friction_state}
               </span>
             </div>
 
             {/* First recommendation */}
-            {mayaResponse.recommendations[0] && (
+            {vidhyaResponse.recommendations[0] && (
               <>
                 <div style={{ fontSize: 13, color: palette.text, lineHeight: 1.6, marginBottom: 8 }}>
-                  <strong>Advice:</strong> {mayaResponse.recommendations[0].action}
+                  <strong>Advice:</strong> {vidhyaResponse.recommendations[0].action}
                 </div>
 
                 {/* Details: What, When, How */}
-                {mayaResponse.recommendations[0].details && (
+                {vidhyaResponse.recommendations[0].details && (
                   <div style={{
                     fontSize: 11,
                     color: palette.text,
@@ -1401,15 +1912,15 @@ function PersonalizationDemo({
                   }}>
                     <div style={{ marginBottom: 6 }}>
                       <strong style={{ color: palette.pitta }}>What:</strong>{" "}
-                      {mayaResponse.recommendations[0].details.what}
+                      {vidhyaResponse.recommendations[0].details.what}
                     </div>
                     <div style={{ marginBottom: 6 }}>
                       <strong style={{ color: palette.pitta }}>When:</strong>{" "}
-                      {mayaResponse.recommendations[0].details.when}
+                      {vidhyaResponse.recommendations[0].details.when}
                     </div>
                     <div>
                       <strong style={{ color: palette.pitta }}>How:</strong>{" "}
-                      {mayaResponse.recommendations[0].details.how}
+                      {vidhyaResponse.recommendations[0].details.how}
                     </div>
                   </div>
                 )}
@@ -1425,7 +1936,7 @@ function PersonalizationDemo({
                     fontStyle: "italic",
                   }}
                 >
-                  <strong>Why:</strong> {mayaResponse.recommendations[0].why}
+                  <strong>Why:</strong> {vidhyaResponse.recommendations[0].why}
                 </div>
               </>
             )}
@@ -2030,147 +2541,6 @@ function pickExcerpts(entries: JournalEntry[], count: number): JournalEntry[] {
     result.push(entries[idx]);
   }
   return result;
-}
-
-// ============================================================================
-// NEW: Intelligence Growth Chart — THE CENTERPIECE
-// ============================================================================
-
-function IntelligenceGrowthChart({
-  chartData,
-  phaseBoundaries,
-  currentDay,
-  finalStats,
-}: {
-  chartData: Array<{
-    day: number;
-    memories: number;
-    patterns: number;
-    nodes: number;
-    edges: number;
-  }>;
-  phaseBoundaries: PhaseBoundary[];
-  currentDay: number;
-  finalStats: { mem: number; pat: number; nodes: number; edges: number };
-}) {
-  return (
-    <div style={styles.card}>
-      <div
-        style={{
-          fontSize: 15,
-          fontWeight: 600,
-          color: palette.text,
-          marginBottom: 4,
-        }}
-      >
-        Sakhi&apos;s Understanding Over Time
-      </div>
-      <div
-        style={{ fontSize: 12, color: palette.muted, marginBottom: 16 }}
-      >
-        Four dimensions of understanding, normalized to show relative growth
-      </div>
-      <ResponsiveContainer width="100%" height={320}>
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke={palette.border} />
-          <XAxis dataKey="day" stroke={palette.muted} fontSize={11} />
-          <YAxis
-            stroke={palette.muted}
-            fontSize={11}
-            domain={[0, 100]}
-            tickFormatter={(v: number) => `${v}%`}
-          />
-          <RTooltip
-            contentStyle={{
-              background: palette.card,
-              border: `1px solid ${palette.border}`,
-              borderRadius: 8,
-              fontSize: 12,
-            }}
-            formatter={(value: number, name: string) => {
-              const labels: Record<string, string> = {
-                memories: "Episodic Memories",
-                patterns: "Patterns Detected",
-                nodes: "Knowledge Nodes",
-                edges: "Connections",
-              };
-              return [`${value}%`, labels[name] ?? name];
-            }}
-            labelFormatter={(day: number) => `Day ${day}`}
-          />
-          {/* Phase boundary lines */}
-          {phaseBoundaries.slice(1).map((b) =>
-            b.start <= currentDay ? (
-              <ReferenceLine
-                key={b.start}
-                x={b.start}
-                stroke={palette.muted}
-                strokeDasharray="4 4"
-                strokeOpacity={0.3}
-              />
-            ) : null,
-          )}
-          <Line
-            type="monotone"
-            dataKey="memories"
-            stroke={palette.memories}
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="patterns"
-            stroke={palette.patterns}
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="nodes"
-            stroke={palette.nodes}
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="edges"
-            stroke={palette.edges}
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          justifyContent: "center",
-          marginTop: 8,
-        }}
-      >
-        <LegendDot
-          color={palette.memories}
-          label={`Memories (${finalStats.mem})`}
-        />
-        <LegendDot
-          color={palette.patterns}
-          label={`Patterns (${finalStats.pat})`}
-        />
-        <LegendDot
-          color={palette.nodes}
-          label={`Nodes (${finalStats.nodes})`}
-        />
-        <LegendDot
-          color={palette.edges}
-          label={`Edges (${finalStats.edges})`}
-        />
-      </div>
-    </div>
-  );
 }
 
 // ============================================================================

@@ -68,14 +68,16 @@ async def evaluate_turn(
     constraints = await _load_constraints(person_id)
     objectives = await _load_objectives(person_id)
 
+    # Pre-load recent events into an in-memory ledger for contradiction detection.
+    # We use InMemoryBackend because GovernanceGate calls ledger.query() synchronously,
+    # but SakhiLedgerBackend.query/append are async and would return unawaited coroutines.
     backend = SakhiLedgerBackend()
-    ledger = Ledger(backend=backend)
-    # Pre-load recent events for contradiction detection
     recent = await backend.query(
         entity_id=person_id,
-        after=datetime.now(UTC) - timedelta(hours=24),
+        after=datetime.now(UTC) - timedelta(days=14),
         limit=50,
     )
+    ledger = Ledger()  # uses InMemoryBackend by default
     for evt in reversed(recent):  # oldest first
         ledger.append(evt)
 
@@ -91,7 +93,7 @@ async def evaluate_turn(
     )
 
     violations_list = []
-    for v in decision.violations:
+    for v in (decision.violations or ()):
         violations_list.append({
             "constraint_id": v.constraint.id,
             "field": v.constraint.field,

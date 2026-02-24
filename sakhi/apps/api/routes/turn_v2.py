@@ -189,6 +189,7 @@ class TurnIn(BaseModel):
     clarity_phrase: str | None = None
     capture_only: bool = False
     source: str = "text"  # "text" or "voice"
+    ts: str | None = None  # Optional experience timestamp (ISO 8601); defaults to now
     # Vision support
     image_data: str | None = None  # Base64 encoded image
     image_mime_type: str | None = None  # e.g., "image/png"
@@ -320,8 +321,16 @@ async def _run_post_reply_processing(
     generated_plans: list,
     turn_context: Dict,
     emotion_update: Dict,
+    experience_ts: str | None = None,
 ) -> None:
     """Fire-and-forget post-reply processing. Runs in background after response is sent."""
+    # Use caller-supplied experience timestamp when available (e.g. simulation/demo)
+    _ts_iso = experience_ts or datetime.datetime.utcnow().isoformat()
+    _ts_dt = (
+        datetime.datetime.fromisoformat(_ts_iso.replace("Z", "+00:00"))
+        if experience_ts
+        else datetime.datetime.utcnow()
+    )
     try:
         # 1. Persist conversation turns for continuity
         if session_id:
@@ -378,7 +387,7 @@ async def _run_post_reply_processing(
                 {
                     "type": "text_message",
                     "text": text,
-                    "ts": datetime.datetime.utcnow().isoformat(),
+                    "ts": _ts_iso,
                     "emotion": emotion,
                     "tone_state": tone_state,
                     "empathy_state": empathy_state,
@@ -400,7 +409,7 @@ async def _run_post_reply_processing(
                     "entry_id": str(entry_id) if entry_id else None,
                     "text": text,
                     "layer": "conversation",
-                    "ts": datetime.datetime.utcnow().isoformat(),
+                    "ts": _ts_iso,
                 },
             )
         except Exception:
@@ -413,7 +422,7 @@ async def _run_post_reply_processing(
                 if schema_ok:
                     await ingest_heavy(
                         person_id=user_id, entry_id=entry_id,
-                        text=text, ts=datetime.datetime.utcnow(),
+                        text=text, ts=_ts_dt,
                     )
             except Exception as exc:
                 logger.warning("[turn_v2:bg] ingest_heavy failed: %s", exc)
@@ -441,7 +450,7 @@ async def _run_post_reply_processing(
         disable_queue = os.getenv("SAKHI_DISABLE_QUEUE") == "1"
         payload = {
             "text": text,
-            "ts": datetime.datetime.utcnow().isoformat(),
+            "ts": _ts_iso,
             "entry_id": str(entry_id) if entry_id else None,
             "facets": facets_for_worker,
             "thread_id": user_id,
@@ -633,6 +642,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             clarity_hint=body.clarity_phrase,
             capture_only=body.capture_only,
             skip_llm=True,  # Defer LLM calls (enrich, embedding, intents) to workers
+            ts=body.ts,
         )
     except Exception as orch_exc:
         logger.error("[turn_v2] orchestrate_turn failed: %s", orch_exc)
@@ -1829,6 +1839,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         generated_plans=generated_plans,
         turn_context=turn_context,
         emotion_update=emotion_update,
+        experience_ts=body.ts,
     ))
 
     logger.info(

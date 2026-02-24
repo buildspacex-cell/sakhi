@@ -377,11 +377,66 @@ async def log_pattern_occurrences(
         )
 
 
-async def extract_episodic_soul(summary_text: str) -> Dict[str, List[str]]:
+async def _fetch_existing_pattern_vocab(person_id: str) -> Dict[str, List[str]]:
+    """Fetch the most common pattern labels already stored for this person.
+
+    Returns a dict keyed by soul signal type with up to 15 labels each,
+    ordered by frequency descending.  These are fed into the extraction
+    prompt so the LLM reuses consistent vocabulary.
+    """
+    type_map = {
+        "core_value": "soul",
+        "shadow": "soul_shadow",
+        "light": "soul_light",
+    }
+    vocab: Dict[str, List[str]] = {"soul": [], "soul_shadow": [], "soul_light": []}
+
+    try:
+        rows = await dbfetch(
+            """
+            SELECT pattern_type, pattern_value, COUNT(*) as cnt
+            FROM pattern_occurrences
+            WHERE person_id = $1
+              AND pattern_type IN ('core_value', 'shadow', 'light')
+            GROUP BY pattern_type, pattern_value
+            ORDER BY cnt DESC, pattern_value
+            """,
+            person_id,
+        )
+        for row in rows:
+            key = type_map.get(row["pattern_type"])
+            if key and len(vocab[key]) < 15:
+                vocab[key].append(row["pattern_value"])
+    except Exception as exc:
+        _log("episodic_v21", f"vocab_fetch_failed {exc}", person_id=person_id)
+
+    return vocab
+
+
+async def extract_episodic_soul(
+    summary_text: str,
+    existing_vocab: Dict[str, List[str]] | None = None,
+) -> Dict[str, List[str]]:
     """
     Extract lightweight soul signals from an episodic summary.
     Must be neutral, non-interpretive, and grounded in the episode only.
     """
+    # Build vocabulary hint block if we have prior patterns
+    vocab_block = ""
+    if existing_vocab and any(existing_vocab.values()):
+        parts: list[str] = []
+        for key, label in [("soul", "soul"), ("soul_shadow", "soul_shadow"), ("soul_light", "soul_light")]:
+            items = existing_vocab.get(key) or []
+            if items:
+                parts.append(f"  {label}: {', '.join(items)}")
+        if parts:
+            vocab_block = (
+                "\n\nPreviously used labels for this person (REUSE these exact phrases "
+                "when the meaning matches — only create a new label if none of these fit):\n"
+                + "\n".join(parts)
+                + "\n"
+            )
+
     prompt = f"""You are annotating a single day of lived experience.
 
 From the text below, extract:
@@ -402,7 +457,9 @@ Do NOT infer future direction
 
 Use short phrases only
 
-If nothing is evident, return empty arrays
+IMPORTANT: When a label from the vocabulary list below matches what you observe, use that EXACT label. Only invent a new label when none of the existing ones fit.
+
+If nothing is evident, return empty arrays{vocab_block}
 
 Return valid JSON only in this exact shape:
 
@@ -877,18 +934,6 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
             journal_count=count,
         )
         return
-    if count == 1:
-        _log(
-            "episodic_v21",
-            "exit: waiting for more journals",
-            user_id=user_id,
-            entry_id=entry_id,
-            start=window_start.isoformat(),
-            end=window_end.isoformat(),
-            journal_count=count,
-        )
-        return
-
     # Eligible for consolidation: compute source ids and dedup hash
     source_entry_ids = sorted([str(j["id"]) for j in journals])
     joined = "|".join(source_entry_ids)
@@ -962,7 +1007,8 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
         summary_text = await _summarize_day(journals, window_start, health_context=health_context)
         vector_values, has_vec = await _embed_summary(summary_text)
         vector_literal = to_pgvector(vector_values, length=1536) if has_vec else None
-        soul_signals = await extract_episodic_soul(summary_text)
+        existing_vocab = await _fetch_existing_pattern_vocab(user_id)
+        soul_signals = await extract_episodic_soul(summary_text, existing_vocab=existing_vocab)
         episodic_emotional_state = await extract_episodic_emotional_state(summary_text)
         episodic_rhythm_state = await extract_episodic_rhythm_state(summary_text)
         # Recompute state vectors for Friction Framework (blended with body dosha)
@@ -1090,7 +1136,8 @@ async def run_episodic_consolidation_v21(person_id: str, payload: Dict[str, Any]
     summary_text = await _summarize_day(journals, window_start, health_context=health_context)
     vector_values, has_vec = await _embed_summary(summary_text)
     vector_literal = to_pgvector(vector_values, length=1536) if has_vec else None
-    soul_signals = await extract_episodic_soul(summary_text)
+    existing_vocab = await _fetch_existing_pattern_vocab(user_id)
+    soul_signals = await extract_episodic_soul(summary_text, existing_vocab=existing_vocab)
     episodic_emotional_state = await extract_episodic_emotional_state(summary_text)
     episodic_rhythm_state = await extract_episodic_rhythm_state(summary_text)
     # Compute state vectors for Friction Framework (blended with body dosha)

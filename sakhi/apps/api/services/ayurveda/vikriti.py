@@ -39,6 +39,7 @@ LOGGER = logging.getLogger(__name__)
 async def compute_current_vikriti(
     person_id: str,
     window_days: int = 7,
+    reference_time: datetime | None = None,
 ) -> Dict[str, Any]:
     """
     Compute current Vikriti (state) from recent episodic data.
@@ -48,10 +49,13 @@ async def compute_current_vikriti(
     Args:
         person_id: The person's ID
         window_days: Number of days to look back (default 7)
+        reference_time: Optional anchor time for window queries (defaults to now).
+                        Pass a simulated timestamp for backdated data.
 
     Returns:
         Dict with current_dosha, confidence, computed_from, and episode_count
     """
+    now = reference_time or datetime.now(timezone.utc)
     try:
         rows = await dbfetch(
             """
@@ -59,10 +63,11 @@ async def compute_current_vikriti(
             FROM memory_episodic
             WHERE user_id = $1
               AND state_vector IS NOT NULL
-              AND created_at > NOW() - INTERVAL '%s days'
+              AND created_at > $2::timestamptz - INTERVAL '%s days'
             ORDER BY created_at DESC
             """ % window_days,
             person_id,
+            now,
         )
 
         if not rows:
@@ -71,12 +76,11 @@ async def compute_current_vikriti(
                 "confidence": 0.2,
                 "computed_from": f"last_{window_days}_days",
                 "episode_count": 0,
-                "computed_at": datetime.now(timezone.utc).isoformat(),
+                "computed_at": now.isoformat(),
             }
 
         # Exponential decay weighting (lambda = 0.5, so half-life ~ 1.4 days)
         decay_lambda = 0.5
-        now = datetime.now(timezone.utc)
         weighted_totals = {"vata": 0.0, "pitta": 0.0, "kapha": 0.0}
         total_weight = 0.0
 
@@ -115,11 +119,12 @@ async def compute_current_vikriti(
                 SELECT vata_score, pitta_score, kapha_score, computed_at
                 FROM body_state_history
                 WHERE person_id = $1
-                  AND computed_at > NOW() - INTERVAL '%s days'
+                  AND computed_at > $2::timestamptz - INTERVAL '%s days'
                   AND vata_score IS NOT NULL
                 ORDER BY computed_at DESC
                 """ % window_days,
                 person_id,
+                now,
             )
             for brow in (body_rows or []):
                 b_vata = brow.get("vata_score")
@@ -146,7 +151,7 @@ async def compute_current_vikriti(
                 "confidence": 0.2,
                 "computed_from": f"last_{window_days}_days",
                 "episode_count": len(rows),
-                "computed_at": datetime.now(timezone.utc).isoformat(),
+                "computed_at": now.isoformat(),
             }
 
         # Normalize
@@ -172,7 +177,7 @@ async def compute_current_vikriti(
             "computed_from": f"last_{window_days}_days",
             "episode_count": len(rows),
             "has_body_data": has_body,
-            "computed_at": datetime.now(timezone.utc).isoformat(),
+            "computed_at": now.isoformat(),
         }
 
     except Exception as exc:
@@ -186,16 +191,23 @@ async def compute_current_vikriti(
             "computed_from": f"last_{window_days}_days",
             "episode_count": 0,
             "error": str(exc),
-            "computed_at": datetime.now(timezone.utc).isoformat(),
+            "computed_at": now.isoformat(),
         }
 
 
-async def get_full_friction_state(person_id: str) -> Dict[str, Any]:
+async def get_full_friction_state(
+    person_id: str,
+    reference_time: datetime | None = None,
+) -> Dict[str, Any]:
     """
     Get complete friction state for a person.
 
     Combines Prakruti, Vikriti, drift, and friction classification.
+
+    Args:
+        reference_time: Optional anchor for window queries (defaults to now).
     """
+    now = reference_time or datetime.now(timezone.utc)
     prakruti = await get_prakruti(person_id)
     if not prakruti:
         # Use default balanced baseline if no Prakruti stored
@@ -206,7 +218,7 @@ async def get_full_friction_state(person_id: str) -> Dict[str, Any]:
             "source": "default",
         }
 
-    vikriti = await compute_current_vikriti(person_id)
+    vikriti = await compute_current_vikriti(person_id, reference_time=now)
     drift = compute_baseline_drift(prakruti, vikriti)
     friction = classify_friction_state(drift, vikriti)
 
@@ -216,7 +228,7 @@ async def get_full_friction_state(person_id: str) -> Dict[str, Any]:
         "current_state": vikriti,
         "drift": drift,
         "friction": friction,
-        "computed_at": datetime.now(timezone.utc).isoformat(),
+        "computed_at": now.isoformat(),
     }
 
 

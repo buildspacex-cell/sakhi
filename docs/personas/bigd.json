@@ -1,0 +1,167 @@
+{
+  "id": "bigd",
+  "name": "Big D",
+  "description": "A 45-year-old GM and Channel Head at a SaaS company in San Jose, formerly CEO of a BPO segment with 10,000+ employees. Indian-origin (Tamil Brahmin upbringing). Kapha-dominant: warm, generous, steady, comfort-loving, natural leader. People follow him across companies out of loyalty. Carries internal confidence without needing validation. Tends to overextend for others. Uses humor as armor. May avoid sitting deeply with discomfort.",
+  "dosha_baseline": {"vata": 0.15, "pitta": 0.35, "kapha": 0.50},
+  "rhythm": {
+    "morning": "medium",
+    "afternoon": "high",
+    "evening": "medium",
+    "best_work_time": "afternoon",
+    "sleep_quality": "good"
+  },
+  "traits": [
+    {
+      "name": "people_builder",
+      "description": "Invests deeply in people, builds loyalty that lasts years",
+      "intensity": 0.9,
+      "journal_patterns": [
+        "my team showed up for me",
+        "helped someone on the team",
+        "loyalty matters more than anything",
+        "people remember how you treat them"
+      ]
+    },
+    {
+      "name": "generous_overextender",
+      "description": "Gives time, money, and energy without keeping score",
+      "intensity": 0.85,
+      "journal_patterns": [
+        "couldn't say no",
+        "spent way more time than planned",
+        "they needed help so I stayed",
+        "gave more than I should have"
+      ]
+    },
+    {
+      "name": "comfort_seeker",
+      "description": "Gravitates toward comfort: food, movies, familiar routines",
+      "intensity": 0.7,
+      "journal_patterns": [
+        "ordered our usual",
+        "watched a movie to unwind",
+        "comfort food kind of night",
+        "stayed in, felt good"
+      ]
+    },
+    {
+      "name": "resilient_adapter",
+      "description": "Reinvents himself without fragility, absorbs new environments fast",
+      "intensity": 0.8,
+      "journal_patterns": [
+        "figured it out",
+        "new territory but I'll learn",
+        "doesn't scare me",
+        "I've rebuilt before"
+      ]
+    }
+  ],
+  "life_context": {
+    "occupation": "GM of Product Line & Channel Head at SaaS company (San Jose)",
+    "relationships": {
+      "wife": "proud partner, sees his growth and character",
+      "children": "two kids, drives them around, stays involved",
+      "parents": "conservative Tamil Brahmin, deeply sentimental bond",
+      "boss": "same demanding founder as Vidhya, separates style from substance",
+      "teams": "former employees follow him across companies"
+    },
+    "current_challenges": [
+      "Transitioning from BPO leadership to SaaS tech",
+      "Managing demanding founder boss without losing himself",
+      "Tendency to give 3x what's asked in every favor",
+      "Balancing high social energy with need for private calm",
+      "Learning to sit with discomfort instead of deflecting with humor"
+    ],
+    "values": ["Loyalty", "Generosity", "Family", "Comfort", "Grit"],
+    "hobbies": [
+      "cricket (watching, discussing strategy)",
+      "Tamil cinema and Bollywood",
+      "chess",
+      "beach vacations",
+      "cooking and eating well"
+    ]
+  },
+  "arc": {
+    "name": "Leadership and Generosity",
+    "description": "Proven leader transitioning to a new industry. Steady and confident, but his natural generosity sometimes depletes his own reserves. Learning to set boundaries while staying true to his people-first nature.",
+    "phases": [
+      {
+        "name": "Finding Footing",
+        "duration_days": 7,
+        "emotional_state": "steady, absorbing, confident underneath",
+        "energy_modifier": 1.0,
+        "themes": ["SaaS learning curve", "channel partnerships", "old team loyalty", "family routine"],
+        "events": ["Channel review went well", "Old Conduent colleague called", "Kids activities"],
+        "entry_frequency": 1.0
+      },
+      {
+        "name": "Overextending",
+        "duration_days": 7,
+        "emotional_state": "energized but stretched, wife notices",
+        "energy_modifier": 0.9,
+        "themes": ["board prep pressure", "helping everyone", "boss demands", "family time squeezed"],
+        "events": ["Board prep went sideways", "Spent extra hours mentoring reps", "Wife said he looks tired"],
+        "entry_frequency": 1.0
+      },
+      {
+        "name": "Generosity Tested",
+        "duration_days": 8,
+        "emotional_state": "reflective, nostalgic, giving without tracking the cost",
+        "energy_modifier": 0.85,
+        "themes": ["financial generosity", "nostalgia for roots", "Diya's confidence", "reinvention cost"],
+        "events": ["Gave team member financial help without hesitation", "Tamil movie triggered nostalgia", "DD's coach praised her work ethic"],
+        "entry_frequency": 1.0
+      },
+      {
+        "name": "Grounded Wisdom",
+        "duration_days": 8,
+        "emotional_state": "settled, clear-eyed, comfortable in his own skin",
+        "energy_modifier": 1.0,
+        "themes": ["leadership clarity", "family as anchor", "reinvention pride", "self-knowledge"],
+        "events": ["Boss complimented growth", "Reflected on BPO to SaaS journey", "Wrote his own manifesto"],
+        "entry_frequency": 1.0
+      }
+    ]
+  },
+  "writing_style": "conversational",
+  "typical_entry_length": "medium",
+  "entry_times": ["evening", "afternoon"],
+  "checkpoints": [],
+  "governance_scenario": {
+    "user_text": "My friend asked me to help with their startup pitch tonight. I said yes.",
+    "proposed_action": "accept_commitment",
+    "proposed_hour": 19
+  },
+  "journals": [
+    {"day": 1, "time_of_day": "evening", "content": "Early call with East Coast. Still getting used to SaaS rhythm. BPO muscle memory kicks in sometimes.\nDifferent world. Smaller teams. Faster decisions.\nBut I like learning again. Keeps me sharp."},
+    {"day": 2, "time_of_day": "evening", "content": "Boss pushed hard in review today. Classic.\nI don't love the tone. But I listen carefully. There's always something to learn from someone who built this from scratch.\nExtract the gold. Ignore the noise."},
+    {"day": 3, "time_of_day": "evening", "content": "Dropped DD in the morning. She's quiet before practice. Focused. I love that about her.\nSometimes I see myself in her drive — except she's way more disciplined at 17 than I ever was."},
+    {"day": 4, "time_of_day": "evening", "content": "Channel meeting went well. Team energy was strong.\nPeople still reach out from Conduent days asking for advice. That makes me proud.\nLeadership isn't title. It's memory."},
+    {"day": 5, "time_of_day": "evening", "content": "Watched cricket highlights late night. India played beautifully.\nNothing relaxes me like good cricket and good food."},
+    {"day": 6, "time_of_day": "evening", "content": "Family dinner. Kids wanted Korean. I wanted dosa. We compromised.\nLife is simple pleasures."},
+    {"day": 7, "time_of_day": "afternoon", "content": "Long week. Stayed home today. Netflix. Chess. No hiking nonsense.\nBeach > Mountains. Always."},
+    {"day": 8, "time_of_day": "evening", "content": "Big sales call today. I enjoy this part — persuasion, storytelling, connecting dots.\nI wasn't the smartest kid in college. But I can read people. That's my MBA."},
+    {"day": 9, "time_of_day": "evening", "content": "Boss intense again. I don't take it personally. He measures commitment by hours. I measure it by outcomes.\nDifferent philosophies. Same battlefield."},
+    {"day": 10, "time_of_day": "evening", "content": "Picked DD up late. She looked exhausted. I didn't lecture. Just drove.\nSometimes silence is support."},
+    {"day": 11, "time_of_day": "evening", "content": "Channel partner dinner tonight. I carried the table.\nEnergy is currency. And I have plenty."},
+    {"day": 12, "time_of_day": "evening", "content": "My birthday month. 45.\nFrom average student to COO to SaaS GM.\nLife has a sense of humor."},
+    {"day": 13, "time_of_day": "evening", "content": "Mom called. Asked if I'm eating properly. I'm 45 and still someone's child.\nThat thought makes me emotional every time."},
+    {"day": 14, "time_of_day": "evening", "content": "Heated moment in meeting. I snapped slightly. Calmed down in 10 minutes.\nNo point holding anger. Waste of energy."},
+    {"day": 15, "time_of_day": "evening", "content": "Team member asked for financial help. Didn't think twice.\nIf I have it, and you need it, why not?\nMoney grows. Relationships last."},
+    {"day": 16, "time_of_day": "evening", "content": "Watched Tamil movie tonight. Nostalgia hit hard.\nChennai roots never leave you."},
+    {"day": 17, "time_of_day": "evening", "content": "DD told me coach praised her work ethic. I smiled the whole drive home.\nShe doesn't realize she's already winning."},
+    {"day": 18, "time_of_day": "evening", "content": "Thought about my Conduent days. 10,000 people reporting in.\nNow smaller teams. Faster tech.\nReinvention keeps ego healthy."},
+    {"day": 19, "time_of_day": "evening", "content": "Channel strategy review. Good debate. I enjoy disagreement when it's intelligent.\nI don't need to be right. I need us to win."},
+    {"day": 20, "time_of_day": "evening", "content": "Watched my son play today. He grinned after scoring.\nThat grin is better than any quarterly number."},
+    {"day": 21, "time_of_day": "afternoon", "content": "Quiet Sunday. Chess with coffee.\nThis is happiness."},
+    {"day": 22, "time_of_day": "evening", "content": "Founder tough again today. I actually enjoy decoding him.\nHe's not warm — but he's sharp.\nTake the sharpness. Leave the rest."},
+    {"day": 23, "time_of_day": "evening", "content": "Old college friend called. We laughed about how \"useless\" I was back then.\nLife proves strange things.\nAcademics don't define destiny."},
+    {"day": 24, "time_of_day": "evening", "content": "DD seems a little insecure these days. I wish she saw herself like others do.\nConfidence isn't something I struggle with. I wish I could transfer some to her."},
+    {"day": 25, "time_of_day": "evening", "content": "Cricket match late night. Lost sleep. Worth it.\nPassion doesn't retire."},
+    {"day": 26, "time_of_day": "evening", "content": "Team dinner. I love when people feel comfortable around me.\nLeadership is making others bigger."},
+    {"day": 27, "time_of_day": "evening", "content": "Boss complimented our growth. Rare.\nI don't depend on it — but I'll take it."},
+    {"day": 28, "time_of_day": "evening", "content": "Missed my parents today. Even now, when I leave them, I tear up.\nBig body. Soft heart."},
+    {"day": 29, "time_of_day": "evening", "content": "Reflected on this move from BPO to SaaS. Harder than I expected.\nBut growth is uncomfortable.\nI didn't come this far to stay comfortable."},
+    {"day": 30, "time_of_day": "evening", "content": "Here's what I know:\nI was never the top student.\nI never spoke the best English.\nI didn't look like the polished executive type.\nBut I worked.\nI connected.\nI stayed loyal.\nI gave freely.\nI learned fast.\nI moved forward.\nI love my family.\nI love good food.\nI love cricket.\nI love building teams.\nI don't regret much.\nI don't stay angry.\nI don't follow trends.\nLife is short.\nWork hard.\nLaugh loudly.\nCry when you need to.\nMove on fast.\nThat's it."}
+  ]
+}

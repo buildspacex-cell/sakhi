@@ -186,11 +186,21 @@ export interface CheckpointResult {
   message: string;
 }
 
+export interface ReplayFrictionState {
+  state: string;
+  description?: string;
+  drift_percentage: number;
+  drift_direction?: string;
+  primary_contributor?: string;
+}
+
 export interface JournalEntry {
   day: number;
   time_of_day: string;
   content: string;
   timestamp: string;
+  reply?: string;
+  friction_state?: ReplayFrictionState;
 }
 
 export interface SimulationData {
@@ -211,6 +221,24 @@ export interface SimulationData {
   generated_at?: string;
   // Conversation demo Q&A pairs (v2 — full brain)
   conversation_demo?: ConversationDemo[];
+  // Governance evaluation result
+  governance_result?: {
+    action: string;
+    reasons: string[];
+    triggers: string[];
+    is_blocked: boolean;
+    is_allowed: boolean;
+    requires_confirmation: boolean;
+    violations: Array<{
+      constraint_id: string;
+      field: string;
+      operator: string;
+      expected: number | string;
+      description: string;
+      actual: number | string | null;
+      message: string;
+    }>;
+  };
 }
 
 // Phase boundary for timeline visualization
