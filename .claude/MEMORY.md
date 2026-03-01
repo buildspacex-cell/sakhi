@@ -11,6 +11,7 @@
 | 2026-02-04 | Single migration source at `/sakhi/infra/scripts/migrations/` | Avoid schema drift |
 | 2026-02-04 | Pre-commit hooks with black, ruff, typecheck | Catch errors before commit |
 | 2026-02-04 | `make ready-to-commit` before all commits | Catches Vercel/Railway errors |
+| 2026-02-26 | Add `docs/CODEBASE_CONTEXT.md` + `scripts/context-audit.sh` as context baseline | Keep coding decisions tied to live code health, not stale assumptions |
 
 ---
 
@@ -20,6 +21,9 @@
 - **Import path**: Always use `from sakhi.apps.api...` not `from apps.api...`
 - **Worker entry**: `sakhi.apps.worker.main` not `apps.worker.main`
 - **Test fixtures**: Use `DEMO_USER_ID` from `sakhi.tests.fixtures`
+- **Quick-test target is stale**: `make quick-test` references missing `sakhi/tests/v2/test_smoke.py`
+- **Ayurvedic demo worker import mismatch**: `sakhi/apps/worker/tasks/ayurvedic_pipeline.py` still imports `core.workers.*`
+- **Crystallization update hazard**: `trajectory_data` may be string-encoded JSON; coerce before dict mutation
 
 ### Frontend
 - **App Router**: Next.js 14 with App Router (not Pages Router)
@@ -74,10 +78,10 @@ def test_something_unit(mock_db):
 
 ## Current Sprint Focus
 
-- Reorganizing monorepo structure
-- Improving dev workflow efficiency
-- Test coverage for workers and routes
+- Stabilizing investor simulation pipeline outputs
+- Keeping architecture/test docs aligned with actual code counts
+- Hardening quality gates (`make verify`/`make ready-to-commit`) to reflect real test paths
 
 ---
 
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-26*

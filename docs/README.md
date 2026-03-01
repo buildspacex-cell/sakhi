@@ -28,6 +28,7 @@ make worker
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, conversation flow, memory system |
+| [CODEBASE_CONTEXT.md](CODEBASE_CONTEXT.md) | Audited codebase baseline, working vs broken signals, quality gates |
 | [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | Complete schema reference (179 tables) |
 | [DATABASE_MIGRATIONS.md](DATABASE_MIGRATIONS.md) | How to make database changes |
 

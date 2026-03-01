@@ -476,6 +476,38 @@ class TestPersonalizedQuestions:
             assert all(isinstance(q, DiagnosticQuestion) for q in result)
 
     @pytest.mark.asyncio
+    async def test_uses_structured_output_schema(self):
+        """Question generation should call the structured-output LLM path."""
+        captured = {}
+
+        async def capture_call(prompt, **kwargs):
+            captured["prompt"] = prompt
+            captured["kwargs"] = kwargs
+            return {
+                "questions": [
+                    {
+                        "id": "q1",
+                        "question": "What seems to make it worse?",
+                        "priority": "high",
+                        "dosha_relevance": "vata",
+                        "why": "Worsening triggers help identify the cause",
+                    }
+                ]
+            }
+
+        with patch("sakhi.apps.api.core.llm.call_llm", side_effect=capture_call):
+            result = await generate_personalized_questions(
+                self._make_sense(),
+                self._make_constitution(),
+                self._make_known_facts(),
+                self._make_inferences(),
+            )
+
+        assert len(result) == 1
+        assert "schema" in captured["kwargs"]
+        assert captured["kwargs"]["max_repair_attempts"] == 2
+
+    @pytest.mark.asyncio
     async def test_known_facts_included_in_prompt(self):
         """LLM prompt should contain known facts so it doesn't re-ask."""
         captured_prompt = None

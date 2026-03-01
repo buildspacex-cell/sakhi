@@ -157,6 +157,34 @@ class _SkipModule(Exception):
 _UNIFIED_INGEST_SCHEMA_OK: bool | None = None
 
 
+def _agent_task_execution_enabled() -> bool:
+    """Agent task planning/execution is opt-in and disabled by default."""
+    raw = os.getenv("SAKHI_ENABLE_AGENT_EXECUTION", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _build_agent_task_guard(enabled: bool) -> str:
+    if not enabled:
+        return (
+            "Agent task planning and execution are disabled in this environment. "
+            "Do not offer to start autonomous tasks, create execution plans, or ask for "
+            "confirmation to run them. If the user asks for an action, respond with "
+            "guidance, options, or a manual checklist only."
+        )
+    return (
+        "When agent_task_context is present, respond according to the task state:\n"
+        "1. NEW TASK (new_task present): Present the formatted_plan naturally. "
+        "Ask 'Would you like me to proceed?' or 'Should I start?'\n"
+        "2. PENDING CONFIRMATION (awaiting_confirmation): The user hasn't confirmed yet. "
+        "Gently remind them of the pending task if relevant.\n"
+        "3. EXECUTION (execution present): Report progress. If waiting_approval, "
+        "explain what step needs approval and ask for confirmation.\n"
+        "4. REJECTED: Acknowledge cancellation briefly and move on.\n"
+        "5. COMPLETED: Celebrate the completion and summarize what was done.\n"
+        "CRITICAL: Never execute agent tasks without explicit user confirmation."
+    )
+
+
 @router.get("/turn/probe")
 async def __turn_v2_probe(request: Request):
     print("🔥 TURN V2 PROBE HIT", request.url)
@@ -779,17 +807,23 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "forecast_state": det_ctx.forecast_state,
     }
 
+    agent_task_enabled = _agent_task_execution_enabled()
+
     # --- Parallel fetch: pending agent task + intent evolution ---
     try:
-        pending_agent_task, evolution_intents = await asyncio.gather(
-            get_pending_agent_task(user_id),
-            load_recent_intent_evolution(user_id),
-            return_exceptions=True,
-        )
-        if isinstance(pending_agent_task, Exception):
+        if agent_task_enabled:
+            pending_agent_task, evolution_intents = await asyncio.gather(
+                get_pending_agent_task(user_id),
+                load_recent_intent_evolution(user_id),
+                return_exceptions=True,
+            )
+            if isinstance(pending_agent_task, Exception):
+                pending_agent_task = None
+            if isinstance(evolution_intents, Exception):
+                evolution_intents = []
+        else:
             pending_agent_task = None
-        if isinstance(evolution_intents, Exception):
-            evolution_intents = []
+            evolution_intents = await load_recent_intent_evolution(user_id)
     except Exception:
         pending_agent_task = None
         evolution_intents = []
@@ -1426,144 +1460,132 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     agent_task_plan = None
     agent_task_execution = None
 
-    try:
-        text_lower = (body.text or "").lower()
+    if agent_task_enabled:
+        try:
+            # 1. CHECK FOR TASK CONFIRMATION: Did user confirm/reject a pending task?
+            # (pending_agent_task already fetched before router for has_pending_task signal)
+            if pending_agent_task:
+                confirmation = detect_task_confirmation(body.text)
 
-        # 1. CHECK FOR TASK CONFIRMATION: Did user confirm/reject a pending task?
-        # (pending_agent_task already fetched before router for has_pending_task signal)
-        if pending_agent_task:
-            confirmation = detect_task_confirmation(body.text)
+                if confirmation is True:
+                    # User confirmed - start real execution via desktop agent
+                    confirmed_task = await confirm_task(pending_agent_task.task_id)
+                    if confirmed_task:
+                        execution_state = await start_task_execution(confirmed_task)
+                        agent_task_execution = {
+                            "task_id": confirmed_task.task_id,
+                            "status": execution_state.status,
+                            "current_step": execution_state.current_step + 1,
+                            "total_steps": execution_state.total_steps,
+                            "message": format_execution_update_for_chat(execution_state),
+                            "agent_id": execution_state.agent_id,
+                        }
+                        agent_task_context["execution"] = agent_task_execution
+                        agent_task_context["confirmed"] = True
+                        logger.info(
+                            "[turn_v2] Agent task confirmed and started: task_id=%s agent_id=%s",
+                            confirmed_task.task_id,
+                            execution_state.agent_id,
+                        )
 
-            if confirmation is True:
-                # User confirmed - start real execution via desktop agent
-                confirmed_task = await confirm_task(pending_agent_task.task_id)
-                if confirmed_task:
-                    execution_state = await start_task_execution(confirmed_task)
+                elif confirmation is False:
+                    # User rejected
+                    await reject_task(pending_agent_task.task_id)
+                    agent_task_context["rejected"] = True
+                    agent_task_context["message"] = "No problem, I've cancelled that."
+                    logger.info(
+                        "[turn_v2] Agent task rejected: task_id=%s",
+                        pending_agent_task.task_id,
+                    )
+
+                else:
+                    # User said something else - keep the pending task in context
+                    agent_task_context["pending_task"] = {
+                        "task_id": pending_agent_task.task_id,
+                        "task_type": pending_agent_task.task_type.value,
+                        "description": pending_agent_task.task_description,
+                        "awaiting_confirmation": True,
+                    }
+
+            # 2. DETECT NEW AGENT TASK: Is this a new task request?
+            if not pending_agent_task or agent_task_context.get("rejected"):
+                task_detection = detect_agent_task_intent(body.text)
+
+                if task_detection:
+                    task_type, matched_pattern, confidence = task_detection
+                    agent_task_detected = {
+                        "type": task_type.value,
+                        "confidence": confidence,
+                    }
+
+                    # Generate a task plan
+                    plan_result = await generate_task_plan(
+                        person_id=user_id,
+                        task_type=task_type,
+                        task_request=body.text,
+                    )
+
+                    if plan_result.get("success"):
+                        # Create pending task for confirmation
+                        new_task = await create_pending_task(
+                            person_id=user_id,
+                            task_type=task_type,
+                            original_request=body.text,
+                            plan_steps=plan_result.get("steps", []),
+                            context_used=plan_result.get("context", {}),
+                        )
+
+                        agent_task_plan = {
+                            "task_id": new_task.task_id,
+                            "task_type": task_type.value,
+                            "steps": plan_result.get("steps", []),
+                            "estimated_duration": plan_result.get("estimated_duration", 2),
+                            "context_used": plan_result.get("context", {}),
+                            "formatted_plan": format_task_plan_for_chat(
+                                task_type,
+                                plan_result,
+                                plan_result.get("context", {}),
+                            ),
+                        }
+                        agent_task_context["new_task"] = agent_task_plan
+                        agent_task_context["awaiting_confirmation"] = True
+
+                        logger.info(
+                            "[turn_v2] Agent task detected: type=%s task_id=%s steps=%d",
+                            task_type.value,
+                            new_task.task_id,
+                            len(plan_result.get("steps", [])),
+                        )
+
+            # 3. CHECK EXECUTION STATE: Is there a running task?
+            if pending_agent_task and pending_agent_task.status == "confirmed":
+                execution_state = await get_task_execution_state(pending_agent_task.task_id)
+                if execution_state:
+                    # Check if waiting for step approval
+                    step_confirmation = detect_task_confirmation(body.text)
+
+                    if execution_state.status == "waiting_approval" and step_confirmation is True:
+                        # Approve the step and continue
+                        updated_state = await approve_execution_step(pending_agent_task.task_id)
+                        if updated_state:
+                            execution_state = updated_state
+
                     agent_task_execution = {
-                        "task_id": confirmed_task.task_id,
+                        "task_id": pending_agent_task.task_id,
                         "status": execution_state.status,
                         "current_step": execution_state.current_step + 1,
                         "total_steps": execution_state.total_steps,
+                        "pending_approval": execution_state.pending_approval,
                         "message": format_execution_update_for_chat(execution_state),
                         "agent_id": execution_state.agent_id,
                     }
                     agent_task_context["execution"] = agent_task_execution
-                    agent_task_context["confirmed"] = True
-                    logger.info(
-                        "[turn_v2] Agent task confirmed and started: task_id=%s agent_id=%s",
-                        confirmed_task.task_id,
-                        execution_state.agent_id,
-                    )
 
-            elif confirmation is False:
-                # User rejected
-                await reject_task(pending_agent_task.task_id)
-                agent_task_context["rejected"] = True
-                agent_task_context["message"] = "No problem, I've cancelled that."
-                logger.info(
-                    "[turn_v2] Agent task rejected: task_id=%s",
-                    pending_agent_task.task_id,
-                )
+        except Exception as agent_exc:
+            logger.warning("[turn_v2] Agent task processing failed: %s", agent_exc)
+            agent_task_context = {}
 
-            else:
-                # User said something else - keep the pending task in context
-                agent_task_context["pending_task"] = {
-                    "task_id": pending_agent_task.task_id,
-                    "task_type": pending_agent_task.task_type.value,
-                    "description": pending_agent_task.task_description,
-                    "awaiting_confirmation": True,
-                }
-
-        # 2. DETECT NEW AGENT TASK: Is this a new task request?
-        if not pending_agent_task or agent_task_context.get("rejected"):
-            task_detection = detect_agent_task_intent(body.text)
-
-            if task_detection:
-                task_type, matched_pattern, confidence = task_detection
-                agent_task_detected = {
-                    "type": task_type.value,
-                    "confidence": confidence,
-                }
-
-                # Generate a task plan
-                plan_result = await generate_task_plan(
-                    person_id=user_id,
-                    task_type=task_type,
-                    task_request=body.text,
-                )
-
-                if plan_result.get("success"):
-                    # Create pending task for confirmation
-                    new_task = await create_pending_task(
-                        person_id=user_id,
-                        task_type=task_type,
-                        original_request=body.text,
-                        plan_steps=plan_result.get("steps", []),
-                        context_used=plan_result.get("context", {}),
-                    )
-
-                    agent_task_plan = {
-                        "task_id": new_task.task_id,
-                        "task_type": task_type.value,
-                        "steps": plan_result.get("steps", []),
-                        "estimated_duration": plan_result.get("estimated_duration", 2),
-                        "context_used": plan_result.get("context", {}),
-                        "formatted_plan": format_task_plan_for_chat(
-                            task_type,
-                            plan_result,
-                            plan_result.get("context", {}),
-                        ),
-                    }
-                    agent_task_context["new_task"] = agent_task_plan
-                    agent_task_context["awaiting_confirmation"] = True
-
-                    logger.info(
-                        "[turn_v2] Agent task detected: type=%s task_id=%s steps=%d",
-                        task_type.value,
-                        new_task.task_id,
-                        len(plan_result.get("steps", [])),
-                    )
-
-        # 3. CHECK EXECUTION STATE: Is there a running task?
-        if pending_agent_task and pending_agent_task.status == "confirmed":
-            execution_state = await get_task_execution_state(pending_agent_task.task_id)
-            if execution_state:
-                # Check if waiting for step approval
-                step_confirmation = detect_task_confirmation(body.text)
-
-                if execution_state.status == "waiting_approval" and step_confirmation is True:
-                    # Approve the step and continue
-                    updated_state = await approve_execution_step(pending_agent_task.task_id)
-                    if updated_state:
-                        execution_state = updated_state
-
-                agent_task_execution = {
-                    "task_id": pending_agent_task.task_id,
-                    "status": execution_state.status,
-                    "current_step": execution_state.current_step + 1,
-                    "total_steps": execution_state.total_steps,
-                    "pending_approval": execution_state.pending_approval,
-                    "message": format_execution_update_for_chat(execution_state),
-                    "agent_id": execution_state.agent_id,
-                }
-                agent_task_context["execution"] = agent_task_execution
-
-    except Exception as agent_exc:
-        logger.warning("[turn_v2] Agent task processing failed: %s", agent_exc)
-        agent_task_context = {}
-
-    agent_task_guard = (
-        "When agent_task_context is present, respond according to the task state:\n"
-        "1. NEW TASK (new_task present): Present the formatted_plan naturally. "
-        "Ask 'Would you like me to proceed?' or 'Should I start?'\n"
-        "2. PENDING CONFIRMATION (awaiting_confirmation): The user hasn't confirmed yet. "
-        "Gently remind them of the pending task if relevant.\n"
-        "3. EXECUTION (execution present): Report progress. If waiting_approval, "
-        "explain what step needs approval and ask for confirmation.\n"
-        "4. REJECTED: Acknowledge cancellation briefly and move on.\n"
-        "5. COMPLETED: Celebrate the completion and summarize what was done.\n"
-        "CRITICAL: Never execute agent tasks without explicit user confirmation."
-    )
+    agent_task_guard = _build_agent_task_guard(agent_task_enabled)
 
     agentic_guard = ""  # Agentic/web search disabled — see note above
 

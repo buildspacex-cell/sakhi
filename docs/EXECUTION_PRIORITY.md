@@ -2,7 +2,7 @@
 
 > Ship order for Sakhi — foundation first, differentiation second, distribution third, expansion last.
 
-Last Updated: 2026-02-07
+Last Updated: 2026-02-26
 
 ---
 
@@ -55,7 +55,7 @@ See [unified-messaging-strategy.md — Contact Preferences Design](./features/un
 
 ## Priority 2: Ayurvedic Engine — Contextual Intelligence
 
-**Status**: Context Router complete (tiered 360° context intelligence with hybrid deterministic + LLM routing). Context injection complete (email + causal reasoning + contact preferences wired into conversation pipeline).
+**Status**: Context Router complete. Context injection complete. Governance kernel (kala) complete and integrated into pipeline. Conversation quality improvements (personalization, adaptive prompt, JSONB parsing fixes) complete.
 **Effort**: ~2-3 weeks
 **Depends on**: Priority 1 (preferences feed context)
 

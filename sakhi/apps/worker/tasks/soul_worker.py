@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime as dt
+import json
 import logging
 from typing import List
 
@@ -34,6 +35,7 @@ async def run(person_id: str) -> dict:
 
     observations = await _load_observations(person_id)
     soul_state = await update_soul_state(person_id, observations, embeddings=None)
+    payload = soul_state if isinstance(soul_state, str) else json.dumps(soul_state, ensure_ascii=False)
 
     await dbexec(
         """
@@ -43,7 +45,7 @@ async def run(person_id: str) -> dict:
         WHERE person_id = $1
         """,
         person_id,
-        soul_state,
+        payload,
         dt.datetime.utcnow(),
     )
     return {"person_id": person_id, "updated": True}

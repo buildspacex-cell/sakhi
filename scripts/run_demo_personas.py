@@ -24,6 +24,12 @@ Usage:
 
     # List available personas
     python scripts/run_demo_personas.py --list
+
+    # Override multi-clock cadence
+    python scripts/run_demo_personas.py --all --daily-interval 1 --weekly-interval 7 --monthly-interval 30 --forecast-runs-per-day 8
+
+    # Print production vs simulation worker frequency map
+    python scripts/run_demo_personas.py --list-worker-frequency
 """
 
 from __future__ import annotations
@@ -45,6 +51,15 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env")
+
+from sakhi.apps.worker.simulation_worker_registry import (
+    as_import_tuples,
+    interval_import_tuples,
+    monthly_import_tuples,
+    render_worker_frequency_table,
+    resolve_forecast_runs_per_day,
+    weekly_import_tuples,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -166,6 +181,9 @@ async def cleanup_user(db_exec, user_id: str) -> None:
         ("user_intents", "person_id"),
         ("user_preferences", "person_id"),
         ("behavior_symptom_log", "person_id"),
+        ("behavior_log", "person_id"),
+        ("symptom_log", "person_id"),
+        ("personal_patterns", "person_id"),
         ("pattern_stats", "person_id"),
         # Worker output
         ("theme_states", "person_id"),
@@ -178,12 +196,15 @@ async def cleanup_user(db_exec, user_id: str) -> None:
         ("memory_context_cache", "person_id"),
         ("narrative_arc_cache", "person_id"),
         ("wellness_state_cache", "person_id"),
+        ("body_state_history", "person_id"),
         # Ayurvedic pipeline
         ("elemental_signal_stm", "person_id"),
         ("elemental_weekly_aggregates", "person_id"),
         ("elemental_monthly_aggregates", "person_id"),
         ("energy_weekly_aggregates", "person_id"),
         ("energy_monthly_aggregates", "person_id"),
+        ("health_data_sync", "person_id"),
+        ("self_report_body", "person_id"),
         # Core tables
         ("journal_entries", "user_id"),
         ("personal_model", "person_id"),
@@ -228,14 +249,24 @@ class DemoPersonaRunner:
         db_query,
         db_exec,
         snapshot_interval: int = 1,
-        daily_worker_interval: int = 3,
+        daily_worker_interval: int = 1,
+        weekly_worker_interval: int = 7,
+        monthly_worker_interval: int = 30,
+        forecast_interval_runs_per_day: Optional[int] = None,
+        daily_worker_timeout: float = 30.0,
     ):
         self.persona = persona
         self.user_id = user_id
         self.db_query = db_query
         self.db_exec = db_exec
         self.snapshot_interval = snapshot_interval
-        self.daily_worker_interval = daily_worker_interval
+        self.daily_worker_interval = max(1, daily_worker_interval)
+        self.weekly_worker_interval = max(1, weekly_worker_interval)
+        self.monthly_worker_interval = max(1, monthly_worker_interval)
+        self.forecast_interval_runs_per_day = resolve_forecast_runs_per_day(
+            forecast_interval_runs_per_day
+        )
+        self.daily_worker_timeout = daily_worker_timeout
 
         self._parity_client = None
         self._lifespan_cm = None
@@ -328,55 +359,87 @@ class DemoPersonaRunner:
             "timestamp": timestamp.isoformat(),
         }
 
-    async def run_daily_workers(self, day: int) -> Dict[str, Any]:
-        """Run all production daily workers (same as SimulationHarness)."""
+    async def _run_worker_group(
+        self,
+        *,
+        day: int,
+        phase_name: str,
+        worker_specs: List[tuple[str, str, str]],
+        key_prefix: str,
+    ) -> Dict[str, Any]:
         import importlib
-
-        DAILY_WORKER_SPECS = [
-            ("daily_reflection", "sakhi.apps.worker.tasks.daily_reflection_worker", "run_daily_reflection"),
-            ("ayurvedic_pipeline", "sakhi.apps.worker.tasks.ayurvedic_pipeline", "run_ayurvedic_pipeline"),
-            ("esr", "sakhi.apps.worker.tasks.esr_worker", "run_emotion_state_refresh"),
-            ("soul_refresh", "sakhi.apps.worker.tasks.soul_refresh_worker", "soul_refresh_worker"),
-            ("identity_momentum", "sakhi.apps.worker.identity_momentum_deep", "run_identity_momentum_deep"),
-            ("emotion_soul_rhythm", "sakhi.apps.worker.tasks.emotion_soul_rhythm_deep", "run_emotion_soul_rhythm_deep"),
-            ("rhythm_soul", "sakhi.apps.worker.rhythm_soul_deep", "run_rhythm_soul_deep"),
-            ("alignment_refresh", "sakhi.apps.worker.tasks.alignment_refresh", "run_alignment_refresh"),
-            ("coherence_refresh", "sakhi.apps.worker.tasks.coherence_refresh", "run_coherence_refresh"),
-            ("crystallization", "sakhi.apps.worker.tasks.pattern_crystallization_worker", "run_daily_crystallization"),
-            ("theme_uprank", "sakhi.apps.worker.tasks.theme_inference", "run_theme_inference_incremental"),
-            ("intent_decay", "sakhi.apps.worker.tasks.intent_evolution_decay", "intent_evolution_decay"),
-            ("emotion_loop", "sakhi.apps.worker.tasks.emotion_loop_refresh", "emotion_loop_refresh"),
-            ("task_weaver", "sakhi.apps.worker.tasks.task_weaver_refresh", "task_weaver_refresh"),
-            ("forecast", "sakhi.apps.worker.tasks.forecast", "run_forecast"),
-        ]
 
         results: Dict[str, Any] = {}
         succeeded = 0
 
-        for name, mod_path, fn_name in DAILY_WORKER_SPECS:
+        for name, mod_path, fn_name in worker_specs:
+            key = f"{key_prefix}{name}"
             try:
                 mod = importlib.import_module(mod_path)
                 fn = getattr(mod, fn_name)
             except Exception as exc:
-                results[name] = {"ok": False, "error": f"import: {exc}"}
+                results[key] = {"ok": False, "error": f"import: {exc}"}
                 continue
 
             try:
                 self._tasks_before_turn = self._snapshot_tasks()
-                result = await asyncio.wait_for(fn(self.user_id), timeout=30.0)
+                result = await asyncio.wait_for(
+                    fn(self.user_id), timeout=self.daily_worker_timeout
+                )
                 await self._drain_background_tasks(timeout=10.0)
-                results[name] = {"ok": True}
+                payload = result if isinstance(result, dict) else {"raw": str(result)[:200]}
+                results[key] = {"ok": True, **payload}
                 succeeded += 1
-                LOGGER.info(f"  {name} OK (day {day})")
+                LOGGER.info(f"  {phase_name}.{name} OK (day {day}) payload={payload}")
             except asyncio.TimeoutError:
-                results[name] = {"ok": False, "error": "timeout"}
-                LOGGER.warning(f"  {name} TIMEOUT (day {day})")
+                results[key] = {"ok": False, "error": "timeout"}
+                LOGGER.warning(f"  {phase_name}.{name} TIMEOUT (day {day})")
+                await self._force_drain_all(timeout=5.0)
             except Exception as exc:
-                results[name] = {"ok": False, "error": str(exc)[:100]}
-                LOGGER.warning(f"  {name} FAILED (day {day}): {exc}")
+                results[key] = {"ok": False, "error": str(exc)[:200]}
+                LOGGER.warning(f"  {phase_name}.{name} FAILED (day {day}): {exc}", exc_info=True)
 
-        LOGGER.info(f"Daily workers: {succeeded}/{len(DAILY_WORKER_SPECS)} (day {day})")
-        self._last_worker_results = results
+        LOGGER.info(
+            f"{phase_name.capitalize()} workers: {succeeded}/{len(worker_specs)} (day {day})"
+        )
+        return results
+
+    async def run_daily_workers(self, day: int) -> Dict[str, Any]:
+        return await self._run_worker_group(
+            day=day,
+            phase_name="daily",
+            worker_specs=as_import_tuples(),
+            key_prefix="",
+        )
+
+    async def run_weekly_workers(self, day: int) -> Dict[str, Any]:
+        return await self._run_worker_group(
+            day=day,
+            phase_name="weekly",
+            worker_specs=weekly_import_tuples(),
+            key_prefix="weekly.",
+        )
+
+    async def run_monthly_workers(self, day: int) -> Dict[str, Any]:
+        return await self._run_worker_group(
+            day=day,
+            phase_name="monthly",
+            worker_specs=monthly_import_tuples(),
+            key_prefix="monthly.",
+        )
+
+    async def run_interval_workers(self, day: int) -> Dict[str, Any]:
+        if self.forecast_interval_runs_per_day <= 0:
+            return {}
+        results: Dict[str, Any] = {}
+        for pass_index in range(1, self.forecast_interval_runs_per_day + 1):
+            pass_results = await self._run_worker_group(
+                day=day,
+                phase_name=f"interval#{pass_index}",
+                worker_specs=interval_import_tuples(),
+                key_prefix=f"interval.{pass_index}.",
+            )
+            results.update(pass_results)
         return results
 
     async def capture_snapshot(self, day: int, reference_time: datetime | None = None) -> Dict[str, Any]:
@@ -560,25 +623,47 @@ class DemoPersonaRunner:
         return {t for t in asyncio.all_tasks() if t is not current and not t.done()}
 
     async def _drain_background_tasks(self, timeout: float = 30.0) -> None:
+        """Wait for post-turn tasks until quiescent, then reset the DB pool on forced cancellation."""
         current = asyncio.current_task()
         baseline = self._tasks_before_turn
-        new_tasks = {
-            t for t in asyncio.all_tasks()
-            if t is not current and not t.done() and t not in baseline
-        }
-        if new_tasks:
-            done, pending = await asyncio.wait(new_tasks, timeout=timeout)
-            for t in pending:
-                t.cancel()
-            # Wait briefly for cancellations to propagate
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        cancelled_tasks = False
+
+        while True:
+            new_tasks = {
+                t for t in asyncio.all_tasks()
+                if t is not current and not t.done() and t not in baseline
+            }
+            if not new_tasks:
+                break
+
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                for t in new_tasks:
+                    t.cancel()
+                await asyncio.gather(*new_tasks, return_exceptions=True)
+                cancelled_tasks = True
+                break
+
+            done, pending = await asyncio.wait(new_tasks, timeout=remaining)
+
+            for t in done:
+                try:
+                    t.result()
+                except (asyncio.CancelledError, Exception):
+                    pass
+
             if pending:
-                await asyncio.sleep(0.5)
-            for t in done | pending:
-                if t.done():
-                    try:
-                        t.result()
-                    except (asyncio.CancelledError, Exception):
-                        pass
+                for t in pending:
+                    t.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+                cancelled_tasks = True
+                break
+
+        if cancelled_tasks:
+            await asyncio.sleep(0.5)
+            await self._reset_db_pool()
 
     async def _force_drain_all(self, timeout: float = 10.0) -> None:
         """Cancel ALL pending tasks except current. Use after worker timeouts."""
@@ -640,7 +725,13 @@ async def run_persona(
     persona_id: str,
     max_days: Optional[int] = None,
     cleanup: bool = True,
-    daily_worker_interval: int = 3,
+    daily_worker_interval: int = 1,
+    weekly_worker_interval: int = 7,
+    monthly_worker_interval: int = 30,
+    forecast_interval_runs_per_day: Optional[int] = None,
+    daily_worker_timeout: float = 30.0,
+    snapshot_timeout: float = 90.0,
+    final_snapshot_timeout: float = 30.0,
 ) -> Path:
     """
     Run a single persona through the real pipeline.
@@ -648,6 +739,9 @@ async def run_persona(
     Returns path to exported JSON.
     """
     persona = load_persona_def(persona_id)
+    daily_worker_interval = max(1, daily_worker_interval)
+    weekly_worker_interval = max(1, weekly_worker_interval)
+    monthly_worker_interval = max(1, monthly_worker_interval)
     user_id = PERSONA_UUIDS[persona_id]
     journals = persona.get("journals", [])
 
@@ -671,6 +765,10 @@ async def run_persona(
         db_query=db_query,
         db_exec=db_exec,
         daily_worker_interval=daily_worker_interval,
+        weekly_worker_interval=weekly_worker_interval,
+        monthly_worker_interval=monthly_worker_interval,
+        forecast_interval_runs_per_day=forecast_interval_runs_per_day,
+        daily_worker_timeout=daily_worker_timeout,
     )
 
     # Simulation start: 90 days ago (or however many days of journals)
@@ -691,6 +789,7 @@ async def run_persona(
         # Process day by day
         for day in range(1, total_days + 1):
             day_journals = journals_by_day.get(day, [])
+            day_reference_ts = _get_entry_timestamp(sim_start, day, "evening")
 
             for j in day_journals:
                 timestamp = _get_entry_timestamp(
@@ -714,18 +813,32 @@ async def run_persona(
                     LOGGER.error(f"[Day {day}] Journal processing failed: {exc}")
                     errors.append({"day": day, "error": str(exc)})
 
-            # Run daily workers periodically
-            if day_journals and day % daily_worker_interval == 0:
+            # Run production cadence across daily + weekly + monthly + interval.
+            should_run_daily = day % daily_worker_interval == 0
+            should_run_weekly = day % weekly_worker_interval == 0
+            should_run_monthly = day % monthly_worker_interval == 0
+            should_run_interval = runner.forecast_interval_runs_per_day > 0
+
+            if should_run_daily or should_run_weekly or should_run_monthly or should_run_interval:
                 await runner._force_drain_all(timeout=5.0)
-                await runner.run_daily_workers(day)
+                worker_results: Dict[str, Any] = {}
+                if should_run_daily:
+                    worker_results.update(await runner.run_daily_workers(day))
+                if should_run_weekly:
+                    worker_results.update(await runner.run_weekly_workers(day))
+                if should_run_monthly:
+                    worker_results.update(await runner.run_monthly_workers(day))
+                if should_run_interval:
+                    worker_results.update(await runner.run_interval_workers(day))
+                runner._last_worker_results = worker_results
                 await runner._force_drain_all(timeout=5.0)
 
-            # Capture snapshot (pass simulated timestamp for drift computation)
-            if day_journals and day % runner.snapshot_interval == 0:
+            # Capture snapshot (pass simulated timestamp for drift computation).
+            if day % runner.snapshot_interval == 0:
                 try:
                     snapshot = await asyncio.wait_for(
-                        runner.capture_snapshot(day, reference_time=timestamp),
-                        timeout=30.0,
+                        runner.capture_snapshot(day, reference_time=day_reference_ts),
+                        timeout=snapshot_timeout,
                     )
                     snapshots.append(snapshot)
                 except asyncio.TimeoutError:
@@ -739,12 +852,20 @@ async def run_persona(
             final_ts = _get_entry_timestamp(sim_start, total_days, "evening")
             await asyncio.sleep(2)
             await runner._force_drain_all(timeout=5.0)
-            await runner.run_daily_workers(total_days)
-            await runner._force_drain_all(timeout=5.0)
+            final_worker_results: Dict[str, Any] = {}
+            if total_days % daily_worker_interval != 0:
+                final_worker_results.update(await runner.run_daily_workers(total_days))
+            if total_days % weekly_worker_interval != 0:
+                final_worker_results.update(await runner.run_weekly_workers(total_days))
+            if total_days % monthly_worker_interval != 0:
+                final_worker_results.update(await runner.run_monthly_workers(total_days))
+            if final_worker_results:
+                runner._last_worker_results = final_worker_results
+                await runner._force_drain_all(timeout=5.0)
             try:
                 final = await asyncio.wait_for(
                     runner.capture_snapshot(total_days, reference_time=final_ts),
-                    timeout=30.0,
+                    timeout=final_snapshot_timeout,
                 )
                 snapshots.append(final)
             except asyncio.TimeoutError:
@@ -757,23 +878,42 @@ async def run_persona(
             "Should I push through or take a break?",
             "What should I focus on this week?",
         ]
-        for q in demo_questions:
-            try:
-                runner._tasks_before_turn = runner._snapshot_tasks()
-                resp = await runner._parity_client.post(
-                    "/v2/turn",
-                    params={"user": user_id, "debug": "1"},
-                    json={"text": q},
-                )
-                await runner._drain_background_tasks()
-                if resp.status_code == 200:
-                    data = resp.json()
-                    conversation_demo.append({
-                        "question": q,
-                        "response": data.get("reply", ""),
-                    })
-            except Exception as exc:
-                conversation_demo.append({"question": q, "error": str(exc)})
+        demo_env_overrides = {
+            # Keep the post-simulation demo focused on the synthesized brain state,
+            # not a growing 30-day chat transcript.
+            "SAKHI_CONVERSATION_COMPRESS_THRESHOLD": "9999",
+            "SAKHI_CONVERSATION_RECENT_LIMIT": "4",
+        }
+        demo_env_previous = {key: os.environ.get(key) for key in demo_env_overrides}
+        try:
+            await runner._force_drain_all(timeout=5.0)
+            os.environ.update(demo_env_overrides)
+
+            for q in demo_questions:
+                try:
+                    runner._tasks_before_turn = runner._snapshot_tasks()
+                    resp = await runner._parity_client.post(
+                        "/v2/turn",
+                        params={"user": user_id, "debug": "1"},
+                        json={"text": q},
+                    )
+                    await runner._drain_background_tasks(timeout=120.0)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        conversation_demo.append({
+                            "question": q,
+                            "response": data.get("reply", ""),
+                        })
+                    else:
+                        conversation_demo.append({"question": q, "error": resp.text[:200]})
+                except Exception as exc:
+                    conversation_demo.append({"question": q, "error": str(exc)})
+        finally:
+            for key, value in demo_env_previous.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
 
         # Run governance scenario (if defined)
         governance_result = None
@@ -852,8 +992,15 @@ async def main():
     parser.add_argument("--all", "-a", action="store_true", help="Run all personas")
     parser.add_argument("--days", "-d", type=int, help="Override max simulation days")
     parser.add_argument("--no-cleanup", action="store_true", help="Keep data in DB")
-    parser.add_argument("--daily-interval", type=int, default=3, help="Run daily workers every N days")
+    parser.add_argument("--daily-interval", type=int, default=1, help="Run daily workers every N days")
+    parser.add_argument("--weekly-interval", type=int, default=7, help="Run weekly workers every N days")
+    parser.add_argument("--monthly-interval", type=int, default=30, help="Run monthly workers every N days")
+    parser.add_argument("--forecast-runs-per-day", type=int, help="Extra intraday forecast runs per day")
+    parser.add_argument("--worker-timeout", type=float, default=30.0, help="Timeout per daily worker execution (seconds)")
+    parser.add_argument("--snapshot-timeout", type=float, default=90.0, help="Timeout for periodic snapshot capture (seconds)")
+    parser.add_argument("--final-snapshot-timeout", type=float, default=30.0, help="Timeout for final snapshot capture (seconds)")
     parser.add_argument("--list", "-l", action="store_true", help="List available personas")
+    parser.add_argument("--list-worker-frequency", action="store_true", help="Print production vs simulation frequency for simulation workers")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
 
     args = parser.parse_args()
@@ -872,8 +1019,19 @@ async def main():
             print(f"  - {pid}: {p['name']} ({len(journals)} journals)")
         return
 
+    if args.list_worker_frequency:
+        print(
+            render_worker_frequency_table(
+                daily_worker_interval=args.daily_interval,
+                weekly_worker_interval=args.weekly_interval,
+                monthly_worker_interval=args.monthly_interval,
+                forecast_interval_runs_per_day=args.forecast_runs_per_day,
+            )
+        )
+        return
+
     if not args.persona and not args.all:
-        parser.error("Must specify --persona or --all (or --list)")
+        parser.error("Must specify --persona or --all (or --list / --list-worker-frequency)")
 
     persona_ids = list_personas() if args.all else [args.persona]
 
@@ -887,6 +1045,12 @@ async def main():
                 max_days=args.days,
                 cleanup=not args.no_cleanup,
                 daily_worker_interval=args.daily_interval,
+                weekly_worker_interval=args.weekly_interval,
+                monthly_worker_interval=args.monthly_interval,
+                forecast_interval_runs_per_day=args.forecast_runs_per_day,
+                daily_worker_timeout=args.worker_timeout,
+                snapshot_timeout=args.snapshot_timeout,
+                final_snapshot_timeout=args.final_snapshot_timeout,
             )
         except Exception as exc:
             LOGGER.error(f"Failed {pid}: {exc}", exc_info=True)

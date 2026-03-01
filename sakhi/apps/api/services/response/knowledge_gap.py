@@ -17,6 +17,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, Field
+
 from sakhi.apps.api.core.db import q
 from sakhi.apps.api.services.memory.recall import recall_advanced
 from sakhi.apps.api.services.response.sensing import SenseFrame
@@ -76,6 +78,20 @@ class KnowledgeGap:
     inferred: Dict[str, Inference] = field(default_factory=dict)  # topic -> Inference
     unknown: List[DiagnosticQuestion] = field(default_factory=list)  # Questions to ask
     constitution: ConstitutionContext = field(default_factory=ConstitutionContext)
+
+
+class DiagnosticQuestionPayload(BaseModel):
+    """Structured LLM payload for one diagnostic question."""
+    id: str = Field(default="q_0")
+    question: str = Field(default="")
+    priority: str = Field(default="medium")
+    dosha_relevance: str = Field(default="balanced")
+    why: str = Field(default="")
+
+
+class DiagnosticQuestionEnvelope(BaseModel):
+    """Structured LLM payload for the diagnostic questions list."""
+    questions: List[DiagnosticQuestionPayload] = Field(default_factory=list)
 
 
 # =============================================================================
@@ -688,7 +704,7 @@ async def generate_personalized_questions(
     inferences from state vectors) to generate questions about what
     we DON'T yet know about their specific situation.
     """
-    from sakhi.apps.api.core.llm import call_llm
+    from sakhi.apps.api.core.llm import call_llm, extract_json_from_llm_response
 
     os_type = constitution.operating_system or "unknown"
     dosha = constitution.dominant_dosha or "balanced"
@@ -751,25 +767,51 @@ async def generate_personalized_questions(
         f"- No Ayurvedic, Sanskrit, or medical terms\n"
         f"- Each question: 1 sentence\n"
         f"- Questions should help determine what's causing or worsening this\n\n"
-        f'Return JSON array: [{{"id": "short_id", "question": "the question", '
-        f'"priority": "high|medium", "dosha_relevance": "{dosha}", '
-        f'"why": "why this matters for this person"}}]'
+        f'Return a JSON object in this exact shape: {{"questions": [{{"id": "short_id", '
+        f'"question": "the question", "priority": "high|medium", '
+        f'"dosha_relevance": "{dosha}", "why": "why this matters for this person"}}]}}'
     )
 
     try:
-        raw = await call_llm(prompt, model=os.getenv("MODEL_CHAT", "gpt-4o-mini"))
-        items = json.loads(raw) if isinstance(raw, str) else raw
-        if not isinstance(items, list):
-            items = items.get("questions", []) if isinstance(items, dict) else []
+        raw = await call_llm(
+            prompt,
+            model=os.getenv("MODEL_CHAT", "gpt-4o-mini"),
+            schema=DiagnosticQuestionEnvelope,
+            max_repair_attempts=2,
+        )
+
+        if isinstance(raw, DiagnosticQuestionEnvelope):
+            items = raw.questions
+        elif isinstance(raw, list):
+            items = raw
+        elif isinstance(raw, dict):
+            items = raw.get("questions", [])
+        elif isinstance(raw, str):
+            parsed = extract_json_from_llm_response(raw)
+            if isinstance(parsed, list):
+                items = parsed
+            elif isinstance(parsed, dict):
+                items = parsed.get("questions", [])
+            else:
+                items = []
+        else:
+            items = []
 
         questions = []
         for item in items[:3]:
+            if isinstance(item, DiagnosticQuestionPayload):
+                payload = item
+            elif isinstance(item, dict):
+                payload = DiagnosticQuestionPayload.model_validate(item)
+            else:
+                continue
+
             questions.append(DiagnosticQuestion(
-                id=item.get("id", f"q_{len(questions)}"),
-                question=item.get("question", ""),
-                priority=item.get("priority", "medium"),
-                dosha_relevance=item.get("dosha_relevance", dosha),
-                why=item.get("why", ""),
+                id=payload.id or f"q_{len(questions)}",
+                question=payload.question,
+                priority=payload.priority or "medium",
+                dosha_relevance=payload.dosha_relevance or dosha,
+                why=payload.why,
             ))
         return questions
     except Exception as e:

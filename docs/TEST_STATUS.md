@@ -1,6 +1,6 @@
 # Test Status Tracking
 
-> Last Updated: 2026-02-05
+> Last Updated: 2026-02-26
 >
 > Run `make test-coverage` to regenerate this report.
 
@@ -10,8 +10,9 @@
 
 | Category | Total | Tested | Coverage |
 |----------|-------|--------|----------|
-| Workers | 71 | 48 | 68% |
-| Routes | 78 | 47 | 60% |
+| Workers | 64 task files | 48 | ~75% |
+| Routes | 75 | 47 | ~63% |
+| Kala (governance) | 46 source files | 547 tests | 100% |
 | Services | TBD | TBD | TBD |
 
 **Target: 90% coverage before production deploy**

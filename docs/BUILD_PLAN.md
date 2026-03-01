@@ -2,11 +2,11 @@
 
 > Living document tracking all planned work. Update checkboxes as items are completed.
 >
-> Last Updated: 2026-02-05
+> Last Updated: 2026-02-26
 >
 > **Coverage**: 100% — All demo capabilities have paths to become REAL (not just simulated)
 >
-> **Latest**: Phase B (Voice) and Phase C (Dashboard) COMPLETE. Mobile apps now TOP PRIORITY.
+> **Latest**: Governance kernel (kala) COMPLETE. "A Day with Sakhi" simulation demo COMPLETE. Conversation quality (personalization, adaptive prompt) COMPLETE. Pipeline fixes (coherence, alignment, identity, themes) COMPLETE. Mobile apps TOP PRIORITY.
 
 ---
 
@@ -70,6 +70,32 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 | ✅ | Command Queue | Thread-safe with `asyncio.Lock` | `actions.py` |
 | ✅ | Action History | 50-item compaction (first 5 + last 45) | `vision_loop.py` |
 
+### ✅ Phase: Governance Kernel — kala (COMPLETE)
+
+| Status | Item | Description | Files |
+|--------|------|-------------|-------|
+| ✅ | Kala package scaffold | Pure computation, zero external dependencies | `kala/` |
+| ✅ | Constraint evaluation | 11 operators, priority-based (HARD/SOFT) | `kala/constraints/core.py` |
+| ✅ | Drift gating | Drift % triggers governance responses | `kala/governance/gate.py` |
+| ✅ | Contradiction detection | 5 typed categories | `kala/contradictions/` |
+| ✅ | Objective versioning | v1 → v2 → v3 with lineage tracking | `kala/objectives/core.py` |
+| ✅ | Temporal substrate | Timeline, trends, moving averages, pattern crystallization | `kala/temporal/` |
+| ✅ | State reducer | Event replay → deterministic state snapshots | `kala/state/` |
+| ✅ | Sakhi integration | GovernanceGate wired into conversation pipeline | `services/governance/service.py` |
+| ✅ | 547 tests | Full coverage, pure computation | `kala/tests/` |
+
+### ✅ Phase: "A Day with Sakhi" Simulation Demo (COMPLETE)
+
+| Status | Item | Description | Files |
+|--------|------|-------------|-------|
+| ✅ | Three-act governance demo | Illusion → Reveal → Divergence scenario | `apps/web/app/lab/simulation/governance/` |
+| ✅ | 30-day conversation replay | Auto-play with drift visualization, speed controls | `apps/web/app/lab/simulation/replay/` |
+| ✅ | Profiles contrast | Side-by-side persona comparison (Vidhya, Diya, Big D) | `apps/web/app/lab/simulation/profiles/` |
+| ✅ | Real persona pipelines | 30-day journal → full worker pipeline → JSON export | `scripts/run_demo_personas.py` |
+| ✅ | Simulation profile updater | Add journal entries through real pipeline | `services/demo/simulation_profile_updater.py` |
+| ✅ | Governance seeder | Seed constraints, objectives, events | `services/demo/governance_seeder.py` |
+| ✅ | Pipeline fixes | JSONB parsing, alignment SQL, identity guard, theme fallback | `sakhi/apps/engine/` |
+
 ---
 
 ## BUILD SEQUENCE
@@ -85,11 +111,21 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 │  ├── M.4 iOS App Store submission                                           │
 │  └── M.5 Android Play Store submission                                      │
 │                                                                              │
-│  PHASE A: Demo Build ✅ MOSTLY COMPLETE                                     │
-│  ├── ✅ Simulation Personalization (Maya vs Diya)                           │
+│  PHASE A: Demo Build ✅ COMPLETE                                            │
+│  ├── ✅ Simulation Personalization (Vidhya, Diya, Big D)                   │
 │  ├── ✅ Personalization Engine                                              │
 │  ├── ✅ Reflective Intelligence                                             │
 │  └── ✅ Demo UI Framework                                                   │
+│                                                                              │
+│  PHASE: Governance Kernel (kala) ✅ COMPLETE                                │
+│  ├── ✅ Constraint evaluation (11 operators, 547 tests)                    │
+│  ├── ✅ Drift gating + contradiction detection                             │
+│  └── ✅ Sakhi pipeline integration                                         │
+│                                                                              │
+│  PHASE: Simulation Demo ✅ COMPLETE                                         │
+│  ├── ✅ Three-act governance demo                                          │
+│  ├── ✅ 30-day conversation replay                                         │
+│  └── ✅ Real persona pipelines (3 personas × 30 days)                      │
 │                                                                              │
 │  PHASE B: Voice Interface ✅ COMPLETE                                       │
 │  ├── ✅ Speech-to-Text input                                                │

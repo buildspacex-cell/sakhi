@@ -39,6 +39,20 @@ except ImportError:
 LOGGER = logging.getLogger(__name__)
 
 
+def _coerce_json_object(value: Any) -> Dict[str, Any]:
+    """Normalize DB JSON/JSONB payloads that may come back as strings."""
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            return {}
+    return {}
+
+
 async def aggregate_pattern_occurrences(
     person_id: str,
     window_days: int,
@@ -148,7 +162,7 @@ async def crystallize_pattern(
         )
 
         # Build trajectory data
-        trajectory_data = existing.get("trajectory_data") or {}
+        trajectory_data = _coerce_json_object(existing.get("trajectory_data"))
         trajectory_data[now.isoformat()] = {
             "mentions": candidate.mention_count,
             "confidence": final_confidence,
@@ -483,8 +497,11 @@ async def crystallize_patterns(
                         patterns_updated += 1
                         updated_patterns.append(f"{candidate.pattern_type}:{candidate.pattern_value[:30]}")
 
-    # Decay stale patterns
-    patterns_decayed = await decay_stale_patterns(person_id)
+    # Decay stale patterns only on deeper cadence to avoid over-pruning.
+    # Daily runs are intended to be incremental checks/promotions.
+    patterns_decayed = 0
+    if run_type in {"weekly", "monthly"}:
+        patterns_decayed = await decay_stale_patterns(person_id)
 
     result = CrystallizationResult(
         person_id=person_id,

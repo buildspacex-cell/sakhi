@@ -7,6 +7,7 @@ Workers tested:
 - soul_refresh_worker: Periodic soul state refresh
 """
 
+import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timezone
@@ -16,6 +17,43 @@ from sakhi.tests.fixtures import DEMO_USER_ID
 
 class TestSoulWorker:
     """Tests for soul_worker - core soul processing."""
+
+    @pytest.mark.asyncio
+    async def test_serializes_soul_state_for_jsonb_write(self, monkeypatch):
+        """
+        Given: The soul engine returns a dict state
+        When: soul_worker.run persists it
+        Then: The JSONB payload is serialized before dbexec
+        """
+        from sakhi.apps.worker.tasks import soul_worker
+
+        captured = {}
+
+        monkeypatch.setattr(soul_worker, "_load_observations", AsyncMock(return_value=["I want to feel healthier"]))
+        monkeypatch.setattr(
+            soul_worker,
+            "update_soul_state",
+            AsyncMock(return_value={"core_values": ["health"], "confidence": 0.7}),
+        )
+        monkeypatch.setattr(
+            soul_worker,
+            "dbexec",
+            AsyncMock(side_effect=lambda sql, person_id, payload, updated_at: captured.update(
+                {"sql": sql, "person_id": person_id, "payload": payload, "updated_at": updated_at}
+            )),
+        )
+        monkeypatch.setattr(
+            soul_worker,
+            "get_settings",
+            lambda: type("Settings", (), {"enable_identity_workers": True})(),
+        )
+
+        result = await soul_worker.run(DEMO_USER_ID)
+
+        assert result["updated"] is True
+        assert captured["person_id"] == DEMO_USER_ID
+        assert isinstance(captured["payload"], str)
+        assert json.loads(captured["payload"]) == {"core_values": ["health"], "confidence": 0.7}
 
     @pytest.mark.asyncio
     async def test_processes_soul_signals(self, mock_db):

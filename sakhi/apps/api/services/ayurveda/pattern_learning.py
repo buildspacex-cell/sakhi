@@ -14,8 +14,9 @@ The goal: Over time, Sakhi learns YOUR patterns, not just general Ayurvedic know
 
 from __future__ import annotations
 
+import math
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
@@ -135,31 +136,41 @@ def get_dosha_effect(behavior_name: str) -> Tuple[Optional[str], Optional[str]]:
 # Extraction Functions
 # =============================================================================
 
-EXTRACTION_PROMPT = """Analyze this journal entry and extract:
+EXTRACTION_PROMPT = """Extract only the most relevant wellbeing signals from this journal entry.
 
-1. BEHAVIORS: Actions the person took (eating, sleeping, working, etc.)
-   - behavior_type: food, sleep, exercise, work, social, substance, routine
-   - behavior_name: normalized name (e.g., "late_dinner", "skipped_exercise")
-   - intensity: 0.0-1.0 (how significant)
-   - time_indication: when it happened (morning, afternoon, evening, late_night)
-   - dosha_effect: which dosha this affects (vata, pitta, kapha) if known
-   - effect_direction: "aggravates" or "pacifies"
+Return exactly one JSON object with this shape:
+{{
+  "behaviors": [...],
+  "symptoms": [...]
+}}
 
-2. SYMPTOMS/STATES: How they're feeling
-   - symptom_type: physical, mental, emotional, energy
-   - symptom_name: normalized (e.g., "anxiety", "fatigue", "scattered")
-   - severity: 0.0-1.0
-   - time_indication: when experienced
-   - likely_dosha: mapped dosha if applicable
+Rules:
+- Include at most 3 behaviors and at most 3 symptoms.
+- Use short normalized snake_case names.
+- Only include behaviors that plausibly affect wellbeing.
+- Only include symptoms or states the person is actually experiencing.
+- If a field is unclear, omit that item instead of guessing.
+- If nothing relevant is present, return empty arrays.
 
-Focus on behaviors that could affect wellbeing and symptoms that indicate imbalance.
+Behavior fields:
+- behavior_type: food, sleep, exercise, work, social, substance, routine
+- behavior_name: normalized name like late_dinner, skipped_exercise, overwork
+- intensity: 0.0-1.0
+- time_indication: morning, afternoon, evening, late_night, or null
+- dosha_effect: vata, pitta, kapha, or null
+- effect_direction: aggravates, pacifies, or null
 
-Entry:
+Symptom fields:
+- symptom_type: physical, mental, emotional, energy
+- symptom_name: normalized name like anxiety, fatigue, scattered
+- severity: 0.0-1.0
+- time_indication: morning, afternoon, evening, late_night, or null
+- likely_dosha: vata, pitta, kapha, or null
+
+Journal entry:
 ---
 {text}
----
-
-Return JSON with "behaviors" and "symptoms" arrays."""
+---"""
 
 
 async def extract_behaviors_and_symptoms(
@@ -183,6 +194,7 @@ async def extract_behaviors_and_symptoms(
         result = await call_llm(
             prompt=EXTRACTION_PROMPT.format(text=text),
             schema=ExtractionResult,
+            max_repair_attempts=3,
             person_id=person_id,
         )
 
@@ -310,62 +322,184 @@ async def detect_patterns(
     Returns:
         List of detected patterns
     """
-    detected_patterns = []
-    lookback = datetime.utcnow() - timedelta(days=lookback_days)
+    lookback = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    raw_matches = await _find_new_behavior_symptom_matches(person_id, lookback)
+    if not raw_matches:
+        return []
 
-    # Get recent symptoms
-    symptoms = await dbfetch(
+    recorded_matches = await _record_behavior_symptom_matches(person_id, raw_matches)
+    if not recorded_matches:
+        return []
+
+    aggregated: Dict[
+        Tuple[str, str, str, str, Optional[str]],
+        Dict[str, Any],
+    ] = {}
+    for match in recorded_matches:
+        key = (
+            match["cause_type"],
+            match["cause_value"],
+            match["effect_type"],
+            match["effect_value"],
+            match.get("related_dosha"),
+        )
+        observed_at = match.get("observed_at") or datetime.now(timezone.utc)
+        bucket = aggregated.get(key)
+        if not bucket:
+            aggregated[key] = {
+                "cause_type": match["cause_type"],
+                "cause_value": match["cause_value"],
+                "effect_type": match["effect_type"],
+                "effect_value": match["effect_value"],
+                "related_dosha": match.get("related_dosha"),
+                "increment": 1,
+                "first_observed_at": observed_at,
+                "last_observed_at": observed_at,
+            }
+            continue
+
+        bucket["increment"] += 1
+        if observed_at < bucket["first_observed_at"]:
+            bucket["first_observed_at"] = observed_at
+        if observed_at > bucket["last_observed_at"]:
+            bucket["last_observed_at"] = observed_at
+
+    detected_patterns: List[Dict[str, Any]] = []
+    for pattern in aggregated.values():
+        pattern_data = await _upsert_pattern(
+            person_id=person_id,
+            cause_type=pattern["cause_type"],
+            cause_value=pattern["cause_value"],
+            effect_type=pattern["effect_type"],
+            effect_value=pattern["effect_value"],
+            related_dosha=pattern.get("related_dosha"),
+            increment=pattern["increment"],
+            first_observed_at=pattern["first_observed_at"],
+            last_observed_at=pattern["last_observed_at"],
+        )
+        if pattern_data:
+            detected_patterns.append(pattern_data)
+
+    return detected_patterns
+
+
+async def _find_new_behavior_symptom_matches(
+    person_id: str,
+    lookback: datetime,
+) -> List[Dict[str, Any]]:
+    """Find behavior->symptom correlations that have not been recorded yet."""
+    return await dbfetch(
         """
-        SELECT symptom_name, symptom_type, occurred_at, likely_dosha, severity
-        FROM symptom_log
-        WHERE person_id = $1 AND occurred_at > $2
-        ORDER BY occurred_at DESC
+        SELECT
+            b.id AS behavior_log_id,
+            s.id AS symptom_log_id,
+            b.behavior_type AS cause_type,
+            b.behavior_name AS cause_value,
+            s.symptom_type AS effect_type,
+            s.symptom_name AS effect_value,
+            b.dosha_effect AS related_dosha,
+            s.occurred_at AS observed_at
+        FROM symptom_log s
+        JOIN behavior_log b
+          ON b.person_id = s.person_id
+         AND b.occurred_at BETWEEN s.occurred_at - INTERVAL '48 hours' AND s.occurred_at
+         AND b.effect_direction = 'aggravates'
+         AND b.dosha_effect IS NOT NULL
+         AND b.dosha_effect = s.likely_dosha
+        LEFT JOIN behavior_symptom_log l
+          ON l.person_id = s.person_id
+         AND l.behavior_log_id = b.id
+         AND l.symptom_log_id = s.id
+        WHERE s.person_id = $1
+          AND s.occurred_at > $2
+          AND s.likely_dosha IS NOT NULL
+          AND l.id IS NULL
+        ORDER BY s.occurred_at DESC, b.occurred_at DESC
         """,
         person_id,
         lookback,
     )
 
-    if not symptoms:
+
+async def _record_behavior_symptom_matches(
+    person_id: str,
+    matches: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Persist new correlations so repeated scans remain idempotent."""
+    if not matches:
         return []
 
-    # For each symptom, look for preceding behaviors (within 48 hours)
-    for symptom in symptoms:
-        symptom_time = symptom["occurred_at"]
-        window_start = symptom_time - timedelta(hours=48)
+    behavior_ids = [str(match["behavior_log_id"]) for match in matches]
+    symptom_ids = [str(match["symptom_log_id"]) for match in matches]
+    cause_types = [match["cause_type"] for match in matches]
+    cause_values = [match["cause_value"] for match in matches]
+    effect_types = [match["effect_type"] for match in matches]
+    effect_values = [match["effect_value"] for match in matches]
+    related_doshas = [match.get("related_dosha") for match in matches]
+    observed_ats = [match.get("observed_at") or datetime.now(timezone.utc) for match in matches]
 
-        # Get behaviors in the window before this symptom
-        behaviors = await dbfetch(
-            """
-            SELECT behavior_name, behavior_type, dosha_effect, effect_direction
-            FROM behavior_log
-            WHERE person_id = $1
-              AND occurred_at BETWEEN $2 AND $3
-            """,
+    return await dbfetch(
+        """
+        INSERT INTO behavior_symptom_log (
             person_id,
-            window_start,
-            symptom_time,
+            behavior_log_id,
+            symptom_log_id,
+            cause_type,
+            cause_value,
+            effect_type,
+            effect_value,
+            related_dosha,
+            observed_at
         )
+        SELECT
+            $1::uuid,
+            data.behavior_log_id,
+            data.symptom_log_id,
+            data.cause_type,
+            data.cause_value,
+            data.effect_type,
+            data.effect_value,
+            data.related_dosha,
+            data.observed_at
+        FROM UNNEST(
+            $2::uuid[],
+            $3::uuid[],
+            $4::text[],
+            $5::text[],
+            $6::text[],
+            $7::text[],
+            $8::text[],
+            $9::timestamptz[]
+        ) AS data(
+            behavior_log_id,
+            symptom_log_id,
+            cause_type,
+            cause_value,
+            effect_type,
+            effect_value,
+            related_dosha,
+            observed_at
+        )
+        ON CONFLICT (person_id, behavior_log_id, symptom_log_id) DO NOTHING
+        RETURNING cause_type, cause_value, effect_type, effect_value, related_dosha, observed_at
+        """,
+        person_id,
+        behavior_ids,
+        symptom_ids,
+        cause_types,
+        cause_values,
+        effect_types,
+        effect_values,
+        related_doshas,
+        observed_ats,
+    )
 
-        # Look for behaviors that might cause this symptom
-        for behavior in behaviors:
-            # Check if dosha alignment suggests causation
-            if (behavior.get("dosha_effect") == symptom.get("likely_dosha")
-                    and behavior.get("effect_direction") == "aggravates"):
 
-                # This behavior might cause this symptom - record pattern
-                pattern_data = await _upsert_pattern(
-                    person_id=person_id,
-                    cause_type=behavior["behavior_type"],
-                    cause_value=behavior["behavior_name"],
-                    effect_type=symptom["symptom_type"],
-                    effect_value=symptom["symptom_name"],
-                    related_dosha=behavior.get("dosha_effect"),
-                )
-
-                if pattern_data:
-                    detected_patterns.append(pattern_data)
-
-    return detected_patterns
+def _calculate_pattern_metrics(observation_count: int) -> Tuple[float, float]:
+    """Compute correlation strength and confidence from the number of observations."""
+    strength = min(0.95, 0.5 + (0.15 * math.log(observation_count + 1)))
+    confidence = min(0.9, 0.3 + (0.1 * math.log(observation_count + 1)))
+    return strength, confidence
 
 
 async def _upsert_pattern(
@@ -377,13 +511,21 @@ async def _upsert_pattern(
     related_dosha: Optional[str] = None,
     ayurvedic_explanation: Optional[str] = None,
     evidence_snippet: Optional[str] = None,
+    increment: int = 1,
+    first_observed_at: Optional[datetime] = None,
+    last_observed_at: Optional[datetime] = None,
 ) -> Optional[Dict[str, Any]]:
     """Upsert a pattern and return the updated data."""
     try:
+        now = datetime.now(timezone.utc)
+        first_seen = first_observed_at or now
+        last_seen = last_observed_at or now
+
         # Check if pattern exists
         existing = await dbfetch(
             """
-            SELECT id, observation_count, correlation_strength, confidence
+            SELECT id, observation_count, correlation_strength, confidence,
+                   first_observed_at, last_observed_at, related_dosha
             FROM personal_patterns
             WHERE person_id = $1
               AND cause_type = $2 AND cause_value = $3
@@ -399,11 +541,10 @@ async def _upsert_pattern(
 
         if existing:
             # Update existing
-            new_count = existing["observation_count"] + 1
-            # Logarithmic growth for strength and confidence
-            import math
-            new_strength = min(0.95, 0.5 + (0.15 * math.log(new_count + 1)))
-            new_confidence = min(0.9, 0.3 + (0.1 * math.log(new_count + 1)))
+            new_count = existing["observation_count"] + max(1, increment)
+            new_strength, new_confidence = _calculate_pattern_metrics(new_count)
+            current_first = existing.get("first_observed_at") or first_seen
+            current_last = existing.get("last_observed_at") or last_seen
 
             await execute(
                 """
@@ -411,13 +552,18 @@ async def _upsert_pattern(
                 SET observation_count = $1,
                     correlation_strength = $2,
                     confidence = $3,
-                    last_observed_at = now(),
+                    first_observed_at = $4,
+                    last_observed_at = $5,
+                    related_dosha = COALESCE($6, related_dosha),
                     updated_at = now()
-                WHERE id = $4
+                WHERE id = $7
                 """,
                 new_count,
                 new_strength,
                 new_confidence,
+                min(current_first, first_seen),
+                max(current_last, last_seen),
+                related_dosha or existing.get("related_dosha"),
                 existing["id"],
             )
 
@@ -432,12 +578,16 @@ async def _upsert_pattern(
 
         else:
             # Create new
+            observation_count = max(1, increment)
+            correlation_strength, confidence = _calculate_pattern_metrics(observation_count)
             result = await dbfetch(
                 """
                 INSERT INTO personal_patterns (
                     person_id, cause_type, cause_value, effect_type, effect_value,
-                    related_dosha, ayurvedic_explanation
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    correlation_strength, confidence, observation_count,
+                    related_dosha, ayurvedic_explanation,
+                    first_observed_at, last_observed_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 RETURNING id
                 """,
                 person_id,
@@ -445,10 +595,15 @@ async def _upsert_pattern(
                 cause_value,
                 effect_type,
                 effect_value,
+                correlation_strength,
+                confidence,
+                observation_count,
                 related_dosha,
                 ayurvedic_explanation or _generate_ayurvedic_explanation(
                     cause_value, effect_value, related_dosha
                 ),
+                first_seen,
+                last_seen,
                 one=True,
             )
 
@@ -456,8 +611,8 @@ async def _upsert_pattern(
                 "id": str(result["id"]) if result else None,
                 "cause": f"{cause_type}:{cause_value}",
                 "effect": f"{effect_type}:{effect_value}",
-                "observation_count": 1,
-                "correlation_strength": 0.5,
+                "observation_count": observation_count,
+                "correlation_strength": correlation_strength,
                 "status": "new",
             }
 

@@ -2,8 +2,9 @@
 Unit tests for Ayurvedic Knowledge Graph services.
 """
 
+from datetime import datetime, timezone
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 
 # =============================================================================
@@ -237,14 +238,15 @@ class TestPatternLearning:
     @pytest.mark.asyncio
     async def test_extract_behaviors_and_symptoms(self):
         """Should extract behaviors and symptoms from text."""
-        mock_llm_result = MagicMock()
-        mock_llm_result.behaviors = []
-        mock_llm_result.symptoms = []
+        from sakhi.apps.api.services.ayurveda.pattern_learning import (
+            ExtractionResult,
+            extract_behaviors_and_symptoms,
+        )
+
+        mock_llm_result = ExtractionResult()
 
         with patch("sakhi.apps.api.services.ayurveda.pattern_learning.call_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = mock_llm_result
-
-            from sakhi.apps.api.services.ayurveda.pattern_learning import extract_behaviors_and_symptoms
 
             result = await extract_behaviors_and_symptoms(
                 "I stayed up late and now feel anxious",
@@ -253,6 +255,85 @@ class TestPatternLearning:
 
             # Should have called LLM
             mock_llm.assert_called_once()
+            assert isinstance(result, ExtractionResult)
+            assert mock_llm.await_args.kwargs["max_repair_attempts"] == 3
+            assert "at most 3 behaviors" in mock_llm.await_args.kwargs["prompt"]
+
+    @pytest.mark.asyncio
+    async def test_detect_patterns_batches_new_matches_once(self):
+        """Repeated raw matches should upsert one pattern per unique cause/effect pair."""
+        matches = [
+            {
+                "cause_type": "food",
+                "cause_value": "late_dinner",
+                "effect_type": "physical",
+                "effect_value": "poor_sleep",
+                "related_dosha": "vata",
+                "observed_at": datetime(2026, 3, 1, 8, 0, tzinfo=timezone.utc),
+            },
+            {
+                "cause_type": "food",
+                "cause_value": "late_dinner",
+                "effect_type": "physical",
+                "effect_value": "poor_sleep",
+                "related_dosha": "vata",
+                "observed_at": datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc),
+            },
+            {
+                "cause_type": "work",
+                "cause_value": "overwork",
+                "effect_type": "physical",
+                "effect_value": "elevated_heart_rate",
+                "related_dosha": "pitta",
+                "observed_at": datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc),
+            },
+        ]
+
+        with patch(
+            "sakhi.apps.api.services.ayurveda.pattern_learning._find_new_behavior_symptom_matches",
+            new_callable=AsyncMock,
+        ) as mock_find, patch(
+            "sakhi.apps.api.services.ayurveda.pattern_learning._record_behavior_symptom_matches",
+            new_callable=AsyncMock,
+        ) as mock_record, patch(
+            "sakhi.apps.api.services.ayurveda.pattern_learning._upsert_pattern",
+            new_callable=AsyncMock,
+        ) as mock_upsert:
+            mock_find.return_value = matches
+            mock_record.return_value = matches
+            mock_upsert.side_effect = [
+                {
+                    "cause": "food:late_dinner",
+                    "effect": "physical:poor_sleep",
+                    "observation_count": 2,
+                    "status": "strengthened",
+                },
+                {
+                    "cause": "work:overwork",
+                    "effect": "physical:elevated_heart_rate",
+                    "observation_count": 1,
+                    "status": "new",
+                },
+            ]
+
+            from sakhi.apps.api.services.ayurveda.pattern_learning import detect_patterns
+
+            result = await detect_patterns("test-user", lookback_days=14)
+
+            assert len(result) == 2
+            assert mock_upsert.await_count == 2
+
+            calls = mock_upsert.await_args_list
+            assert any(
+                call.kwargs["cause_value"] == "late_dinner"
+                and call.kwargs["increment"] == 2
+                for call in calls
+            )
+            assert any(
+                call.kwargs["cause_value"] == "overwork"
+                and call.kwargs["increment"] == 1
+                for call in calls
+            )
 
     def test_get_dosha_effect(self):
         """Should return correct dosha effect for known behaviors."""

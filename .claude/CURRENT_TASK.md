@@ -6,44 +6,40 @@
 
 ## Active Task
 
-**Implementing dev efficiency improvements**
+**Codebase context baseline + quality guardrails**
 
 ### Status: In Progress
 
 ### What's Done
-- [x] Pre-commit hooks (.pre-commit-config.yaml)
-- [x] Code generators (new-route.sh, new-service.sh)
-- [x] Test fixtures & factories (conftest.py)
-- [x] Make commands (ready-to-commit, verify, etc.)
-- [x] Dev status script (dev-status.sh)
-- [x] Feature flags (sakhi/libs/feature_flags.py)
-- [x] API client for testing (apps/web/lib/test-utils/)
-- [x] Documentation (TEST_STATUS.md, CLAUDE.md updates)
-- [x] Session memory (.claude/MEMORY.md)
-- [x] Quick task shortcuts in CLAUDE.md
-- [x] Auto-changelog script
+- [x] Full inventory scan of routes/services/workers/engines/tests
+- [x] Runtime flow mapping for `/lab/simulation` and demo add-journal path
+- [x] Created `docs/CODEBASE_CONTEXT.md` with verified working/broken signals
+- [x] Added `scripts/context-audit.sh` for repeatable context refresh
+- [x] Wired `AGENTS.md` bootstrap to include context doc + audit script
+- [x] Updated docs index (`docs/README.md`)
+- [x] Refreshed `.claude/MEMORY.md` gotchas and baseline
 
-### Status: COMPLETE
-
-All dev efficiency improvements have been implemented.
+### In Progress
+- [ ] Keep docs (`ARCHITECTURE.md`, `TEST_STATUS.md`, `WHAT_WE_BUILT.md`) aligned to this verified baseline
 
 ---
 
 ## Context
 
-User is improving development workflow to:
-- Catch errors before deploy (Vercel/Railway)
-- Make Claude interactions more efficient
-- Track session context between conversations
+User asked for a thorough codebase understanding that is persisted so future changes are high-quality and tested.  
+Priority is to reduce stale assumptions by forcing a repeatable context + verification pass before substantial edits.
 
 ---
 
 ## Files Being Modified
 
-- `CLAUDE.md` - Adding shortcuts
-- `Makefile` - Adding changelog command
-- `scripts/changelog.sh` - New script
+- `docs/CODEBASE_CONTEXT.md`
+- `scripts/context-audit.sh`
+- `AGENTS.md`
+- `docs/README.md`
+- `.claude/MEMORY.md`
+- `.claude/CURRENT_TASK.md`
 
 ---
 
-*Updated: 2026-02-04*
+*Updated: 2026-02-26*

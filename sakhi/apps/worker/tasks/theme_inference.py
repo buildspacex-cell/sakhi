@@ -14,6 +14,9 @@ LOGGER = logging.getLogger(__name__)
 async def run_theme_inference(person_id: str) -> Dict[str, Any] | None:
     """
     Correlate reflections, goals, and rhythm state into unified themes.
+
+    Falls back to episodic memory when reflections/goals are empty (e.g. simulation
+    profiles that process journals but don't use the reflections/goals tables).
     """
 
     db = await get_db()
@@ -43,18 +46,47 @@ async def run_theme_inference(person_id: str) -> Dict[str, Any] | None:
             person_id,
         )
 
-        payload = {
-            "reflections": [
-                {"id": row["id"], "theme": row.get("theme"), "content": row.get("content")}
-                for row in reflections
-            ],
-            "goals": goals,
+        # Fall back to episodic memory when reflections and goals are both absent
+        # (simulation profiles process journals through /v2/turn which builds episodic
+        # memory, but doesn't populate the reflections or goals tables)
+        episodic_fallback: List[Dict[str, Any]] = []
+        if not reflections and not goals:
+            episodic_rows = await db.fetch(
+                """
+                SELECT text, context_tags, created_at
+                FROM memory_episodic
+                WHERE user_id = $1
+                ORDER BY created_at DESC
+                LIMIT 30
+                """,
+                person_id,
+            )
+            episodic_fallback = [
+                {"content": row.get("text", ""), "tags": row.get("context_tags") or []}
+                for row in (episodic_rows or [])
+                if row.get("text")
+            ]
+
+        if not reflections and not goals and not episodic_fallback:
+            LOGGER.info("[Theme Inference] No source data for %s — skipping", person_id)
+            return None
+
+        payload: Dict[str, Any] = {
             "rhythm_state": rhythm_row.get("rhythm_state") if rhythm_row else {},
         }
+        if reflections or goals:
+            payload["reflections"] = [
+                {"id": row["id"], "theme": row.get("theme"), "content": row.get("content")}
+                for row in reflections
+            ]
+            payload["goals"] = [dict(g) for g in goals]
+        else:
+            payload["episodic_memories"] = episodic_fallback
 
         prompt = (
-            "Given reflections, goals, and rhythm_state, find 2–3 major cross-themes.\n"
-            "Return JSON list: [{\"theme\":\"...\",\"related_themes\":[...],"
+            "Given the provided journal/reflection content and rhythm_state, identify 2–3 major "
+            "recurring themes in this person's life.\n"
+            "Return a JSON list: [{\"theme\":\"...\",\"related_themes\":[...],"
             "\"coherence\":0-1,\"energy_alignment\":0-1}].\n"
             f"Data:\n{json.dumps(payload, ensure_ascii=False)}"
         )

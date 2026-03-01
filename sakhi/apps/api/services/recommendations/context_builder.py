@@ -328,10 +328,43 @@ async def get_historical_effectiveness(person_id: str) -> HistoricalEffectivenes
     effective_foods = []
     ineffective = []
 
+    def _clean_item(value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        lowered = text.lower()
+        if lowered in {"none", "null", "n/a"}:
+            return None
+        return text
+
+    def _unique(values: List[str]) -> List[str]:
+        seen = set()
+        ordered: List[str] = []
+        for value in values:
+            if value in seen:
+                continue
+            seen.add(value)
+            ordered.append(value)
+        return ordered
+
     for f in feedback or []:
         raw_content = f.get("recommendation_content") or {}
-        content = json.loads(raw_content) if isinstance(raw_content, str) else raw_content
-        item = content.get("name", "") or f.get("recommendation_domain", "")
+        if isinstance(raw_content, str):
+            try:
+                content = json.loads(raw_content)
+            except (TypeError, ValueError):
+                content = {}
+        elif isinstance(raw_content, dict):
+            content = raw_content
+        else:
+            content = {}
+
+        item = _clean_item(content.get("name")) or _clean_item(f.get("recommendation_domain"))
+        if item is None:
+            continue
+
         rec_type = f.get("recommendation_type", "")
         rating = f.get("rating")
         was_followed = f.get("was_followed")
@@ -348,9 +381,9 @@ async def get_historical_effectiveness(person_id: str) -> HistoricalEffectivenes
             ineffective.append(item)
 
     return HistoricalEffectiveness(
-        effective_practices=effective_practices[:10],
-        effective_foods=effective_foods[:10],
-        ineffective_or_avoided=ineffective[:10],
+        effective_practices=_unique(effective_practices)[:10],
+        effective_foods=_unique(effective_foods)[:10],
+        ineffective_or_avoided=_unique(ineffective)[:10],
     )
 
 

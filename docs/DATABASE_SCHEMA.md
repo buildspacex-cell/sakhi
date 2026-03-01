@@ -1,8 +1,8 @@
 # Sakhi Database Schema (Live from Database)
 
-**Total Tables: 179**
+**Total Tables: 181**
 
-Generated from production database on 2026-02-03
+Generated from production database on 2026-02-27
 
 ---
 
@@ -607,6 +607,28 @@ Generated from production database on 2026-02-03
 | person_id | uuid | NOT NULL | PK, FK → profiles.user_id |
 | forecast_state | jsonb | NULL |  |
 | updated_at | timestamptz | NULL |  |
+
+## food_experiences
+
+| Column | Type | Nullable | Constraints |
+|--------|------|----------|-------------|
+| id | uuid | NOT NULL | PK |
+| person_id | uuid | NOT NULL | FK → persons.id |
+| dish_name | text | NOT NULL |  |
+| cuisine | text | NULL |  |
+| restaurant_name | text | NULL |  |
+| restaurant_location | text | NULL |  |
+| meal_type | text | NULL |  |
+| context | text | NULL |  |
+| rating | text | NULL |  |
+| notes | text | NULL |  |
+| companions | jsonb | NOT NULL |  |
+| tags | jsonb | NOT NULL |  |
+| want_again | bool | NOT NULL |  |
+| price_paid | float8 | NULL |  |
+| experience_date | timestamptz | NOT NULL |  |
+| created_at | timestamptz | NOT NULL |  |
+| updated_at | timestamptz | NOT NULL |  |
 
 ## goal_history
 
@@ -2154,6 +2176,22 @@ Generated from production database on 2026-02-03
 | last_heartbeat_at | timestamptz | NULL |  |
 | created_at | timestamptz | NULL |  |
 | updated_at | timestamptz | NULL |  |
+
+## restaurant_memory
+
+| Column | Type | Nullable | Constraints |
+|--------|------|----------|-------------|
+| id | uuid | NOT NULL | PK |
+| person_id | uuid | NOT NULL | FK → persons.id |
+| restaurant_name | text | NOT NULL | UNIQUE with person_id |
+| location | text | NULL |  |
+| cuisine | text | NULL |  |
+| visit_count | int4 | NOT NULL |  |
+| last_visit | timestamptz | NULL |  |
+| notes | text | NULL |  |
+| want_to_return | bool | NOT NULL |  |
+| created_at | timestamptz | NOT NULL |  |
+| updated_at | timestamptz | NOT NULL |  |
 
 ## relationship_state
 

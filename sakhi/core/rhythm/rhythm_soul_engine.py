@@ -70,6 +70,18 @@ def compute_deep_rhythm_soul(person_id: str, episodic: Sequence[Dict[str, Any]],
     def _clamp(val: float) -> float:
         return max(0.0, min(1.0, val))
 
+    def _coerce_dict(value: Any) -> Dict[str, Any]:
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                return {}
+        return {}
+
     rhythm = rhythm_state or {}
     soul = soul_state or {}
     if isinstance(rhythm, str):
@@ -87,18 +99,19 @@ def compute_deep_rhythm_soul(person_id: str, episodic: Sequence[Dict[str, Any]],
     if not isinstance(soul, dict):
         soul = {}
 
-    overall = rhythm.get("overall") or {}
+    overall = _coerce_dict(rhythm.get("overall"))
     energy = float(overall.get("energy_level") or 0.5)
     load = float(overall.get("load_level") or 0.0)
     recovery = float(overall.get("recovery_level") or 0.0)
     strain = float(overall.get("strain_level") or 0.0)
     window_days = int(rhythm.get("window_days") or overall.get("window_days") or 0)
 
-    slots = rhythm.get("slots") or {}
+    slots = _coerce_dict(rhythm.get("slots"))
     tension_zones = []
     coherence_zones = []
     soul_values = soul.get("core_values") or []
     for slot, metrics in slots.items():
+        metrics = _coerce_dict(metrics)
         e = float(metrics.get("energy_level") or 0.5)
         l = float(metrics.get("load_level") or 0.0)
         s = float(metrics.get("strain_level") or 0.0)

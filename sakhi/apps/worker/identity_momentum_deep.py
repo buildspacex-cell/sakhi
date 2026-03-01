@@ -51,15 +51,13 @@ async def run_identity_momentum_deep(person_id: str) -> Dict[str, Any]:
             },
         )
 
-        # Guard: require identity signals before running.
-        if not soul_state or (
-            not soul_state.get("identity_themes")
-            and not soul_state.get("core_values")
-            and not soul_state.get("friction")
-        ):
+        # Guard: require any meaningful soul state before running.
+        # Accept any populated soul_state dict — soul_refresh writes varied key shapes
+        # (shadow/light/tone/identity_themes/core_values/friction depending on version).
+        if not soul_state or len(soul_state) < 2:
             logger.info(
                 "[identity_momentum] skipped: no identity signals",
-                extra={"person_id": person_id},
+                extra={"person_id": person_id, "soul_keys": list(soul_state.keys())},
             )
             return {}
 

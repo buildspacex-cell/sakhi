@@ -2,7 +2,7 @@
 
 > A complete inventory of the Sakhi system as of February 2026.
 >
-> ~200K lines of code. 179 database tables. 547 kala tests. Zero shortcuts.
+> ~200K lines of code. 179 database tables. 30 engines. 547 kala tests. Zero shortcuts.
 
 ---
 
@@ -16,12 +16,13 @@ Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversat
 
 | What | Count |
 |---|---|
-| Python backend (sakhi/) | ~146K lines across 75 routes, 49 services, 113 workers |
+| Python backend (sakhi/) | ~146K lines across 75 routes, 50 services, 64 worker tasks |
+| Engine modules (sakhi/apps/engine/) | 30 computational engines |
 | Governance kernel (kala/) | ~10.7K lines, 46 source files, 547 tests |
 | Web app (apps/web/) | ~42K lines TypeScript, 73 pages, 101 API proxy routes |
 | Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 16 screens |
 | Database tables | 179 |
-| Background workers | 113 task files |
+| Background workers | 64 task files + 13 top-level workers |
 | Context modules | 13 (11 primary + 2 ritual caches) |
 | LLM call sites | 80+ across routes, services, workers |
 | Vector dimensions | 1536 (OpenAI text-embedding-3-small) |
@@ -197,7 +198,21 @@ See [docs/kala/](kala/) for complete kala documentation.
 **Analytics:**
 - `analytics/breath.py`, `analytics/patterns.py`, `analytics/summary.py`, `analytics/themes.py`, `analytics/timeseries.py`
 
-### Services (49 directories)
+### Engine Layer (30 modules)
+
+Standalone computational engines at `sakhi/apps/engine/`, each producing deterministic intelligence:
+
+| Category | Engines |
+|---|---|
+| State & Identity | alignment, coherence, identity_drift, identity_momentum |
+| Emotion & Soul | emotion_loop, empathy, microreg, inner_conflict, inner_dialogue |
+| Daily Flows | morning_ask, morning_momentum, morning_preview, evening_closure, daily_reflection |
+| Narrative & Patterns | narrative, reflection_trace, pattern_sense, forecast, continuity |
+| Micro Interventions | micro_journey, micro_momentum, micro_recovery, mini_flow |
+| Planning & Action | focus_path, hands, nudge, tone, task_routing |
+| Reasoning | deliberation_scaffold, evidence_pack, moment_model |
+
+### Services (50 directories)
 
 | Service | What it does |
 |---|---|
@@ -212,6 +227,8 @@ See [docs/kala/](kala/) for complete kala documentation.
 | `learning/` | Multi-level preference adaptation |
 | `patterns/` | Pattern detection and crystallization |
 | `soul/` | Soul values computation |
+| `governance/` | Kala governance bridge (constraints, drift gating, event ledger) |
+| `demo/` | Demo seeding, simulation harness, governance seeder |
 | `focus/` | Focus state management |
 | `missions/` | Mission/project tracking |
 | `relationships/` | Relationship state and attention |
@@ -220,7 +237,7 @@ See [docs/kala/](kala/) for complete kala documentation.
 | `narratives/` | Narrative generation |
 | `body/`, `environment/` | Physical and environmental context |
 
-### Workers (113 task files)
+### Workers (64 task files)
 
 **Per-turn (triggered after every conversation):**
 - Memory update, episodic consolidation, preference learning, intent extraction
@@ -351,6 +368,7 @@ All person-scoped via `person_id UUID`. Vector columns use `vector(1536)`. JSONB
 | Database | PostgreSQL + pgvector (via Supabase) |
 | Auth | Supabase Auth (web), Apple Sign-In (mobile) |
 | Background jobs | Redis + RQ (Python) |
+| Simulation | 3 personas (Vidhya, Diya, Big D), 30-day replay, governance demo |
 | LLM | OpenAI GPT-4o, GPT-4o-mini |
 | Embeddings | OpenAI text-embedding-3-small (1536D) |
 | Voice | OpenAI Whisper (STT) + OpenAI TTS |
@@ -369,10 +387,10 @@ All person-scoped via `person_id UUID`. Vector columns use `vector(1536)`. JSONB
 
 4. **Friction-first UX.** The person never sees doshas. They experience friction states (chaos, intensity, stagnation, balanced) that feel natural. The Ayurvedic engine runs underneath.
 
-5. **Deep pipeline.** Not a chatbot wrapper. 113 background workers process every interaction: memory storage, episodic consolidation, pattern learning, rhythm inference, preference adaptation, causal reasoning. The system is continuously learning.
+5. **Deep pipeline.** Not a chatbot wrapper. 64+ background workers process every interaction: memory storage, episodic consolidation, pattern learning, rhythm inference, preference adaptation, causal reasoning. The system is continuously learning.
 
 6. **Multi-layer memory.** Three tiers (STM, episodic, long-term) with hybrid retrieval (vector + BM25 + recency), diversity filtering, and consolidation. Not just "store embeddings and retrieve."
 
 ---
 
-*Last updated: 2026-02-20*
+*Last updated: 2026-02-26*

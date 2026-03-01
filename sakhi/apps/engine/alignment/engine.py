@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List
 
 from sakhi.apps.api.core.db import q
@@ -27,6 +28,21 @@ def _normalize_energy_cost(val: float | None) -> float:
     return max(0.0, min(1.0, float(val)))
 
 
+def _parse_json(value: Any, default: Any) -> Any:
+    """Normalize a DB value that may be a string-encoded JSON or already parsed."""
+    if value is None:
+        return default
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if parsed is not None else default
+        except Exception:
+            return default
+    return default
+
+
 async def compute_alignment_map(person_id: str) -> Dict[str, Any]:
     # wellness state
     wellness_row = await q(
@@ -34,23 +50,20 @@ async def compute_alignment_map(person_id: str) -> Dict[str, Any]:
         person_id,
         one=True,
     ) or {}
-    body_score = (wellness_row.get("body") or {}).get("score", 0) if isinstance(wellness_row.get("body"), dict) else 0
-    mind_score = (wellness_row.get("mind") or {}).get("score", 0) if isinstance(wellness_row.get("mind"), dict) else 0
-    emotion_score = (wellness_row.get("emotion") or {}).get("score", 0) if isinstance(wellness_row.get("emotion"), dict) else 0
-    energy_score = (wellness_row.get("energy") or {}).get("score", 0) if isinstance(wellness_row.get("energy"), dict) else 0
+    body_score = _parse_json(wellness_row.get("body"), {}).get("score", 0)
+    mind_score = _parse_json(wellness_row.get("mind"), {}).get("score", 0)
+    emotion_score = _parse_json(wellness_row.get("emotion"), {}).get("score", 0)
+    energy_score = _parse_json(wellness_row.get("energy"), {}).get("score", 0)
 
-    # emotion loop
-    emo_state = await q(
-        "SELECT long_term->>'emotion_state' as es FROM personal_model WHERE person_id = $1",
+    # emotion state — read the direct column, not a JSON path inside long_term
+    emotion_state_row = await q(
+        "SELECT emotion_state FROM personal_model WHERE person_id = $1",
         person_id,
         one=True,
     ) or {}
-    mode = ""
-    drift = 0.0
-    if emo_state and emo_state.get("es"):
-        es = emo_state.get("es") if isinstance(emo_state.get("es"), dict) else {}
-        mode = es.get("mode") or ""
-        drift = float(es.get("drift") or 0)
+    emotion_state = _parse_json(emotion_state_row.get("emotion_state"), {})
+    mode = emotion_state.get("mode") or ""
+    drift = float(emotion_state.get("drift") or 0)
 
     # intents
     intents = await q(
@@ -84,7 +97,6 @@ async def compute_alignment_map(person_id: str) -> Dict[str, Any]:
     for task in tasks:
         priority = float(task.get("auto_priority") or 0)
         energy_cost = _normalize_energy_cost(task.get("energy_cost"))
-        # derive intent strength using title match
         title = (task.get("title") or "").lower()
         matched_intent_strength = 0.0
         matched_alignment = 0.0
@@ -92,7 +104,7 @@ async def compute_alignment_map(person_id: str) -> Dict[str, Any]:
             if intent_name and intent_name in title:
                 matched_intent_strength = max(matched_intent_strength, strength)
                 matched_alignment = max(matched_alignment, intent_align_map.get(intent_name, 0))
-        urgency = priority  # reuse auto_priority as urgency proxy
+        urgency = priority
         score = (matched_intent_strength * 0.4) + (matched_alignment * 0.2) + ((1 - energy_cost) * 0.2) + (urgency * 0.2)
         payload = {
             "id": task.get("id"),

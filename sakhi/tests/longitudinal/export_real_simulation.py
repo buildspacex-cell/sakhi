@@ -25,8 +25,14 @@ Usage:
     # Keep test data in DB for live demo (default: cleanup)
     python -m sakhi.tests.longitudinal.export_real_simulation --persona anxious_achiever --no-cleanup
 
-    # Control daily worker frequency (default: every 3 simulated days)
+    # Control daily worker frequency (default: every simulated day)
     python -m sakhi.tests.longitudinal.export_real_simulation --persona anxious_achiever --daily-interval 5
+
+    # Override weekly/monthly cadence and intraday forecast passes
+    python -m sakhi.tests.longitudinal.export_real_simulation --persona anxious_achiever --weekly-interval 7 --monthly-interval 30 --forecast-runs-per-day 8
+
+    # Print production vs simulation worker frequency map
+    python -m sakhi.tests.longitudinal.export_real_simulation --list-worker-frequency
 
     # Custom demo questions for conversation demo
     python -m sakhi.tests.longitudinal.export_real_simulation --persona anxious_achiever --demo-questions "How am I doing?" "What should I prioritize?"
@@ -52,6 +58,7 @@ sys.path.insert(0, str(Path(__file__).parents[4]))
 from dotenv import load_dotenv
 load_dotenv()
 
+from sakhi.apps.worker.simulation_worker_registry import render_worker_frequency_table
 from sakhi.tests.longitudinal.persona_spec import (
     load_persona,
     list_available_personas,
@@ -122,7 +129,10 @@ async def run_and_export(
     persona_id: str,
     max_days: int | None = None,
     snapshot_interval: int = 1,  # Daily snapshots for rich demo data
-    daily_worker_interval: int = 3,  # Run daily workers every N days
+    daily_worker_interval: int = 1,  # Run daily workers every simulated day
+    weekly_worker_interval: int = 7,  # Run weekly workers every N simulated days
+    monthly_worker_interval: int = 30,  # Run monthly workers every N simulated days
+    forecast_interval_runs_per_day: int | None = None,  # Extra intraday forecast passes
     cleanup: bool = True,
     output_dir: Path = OUTPUT_DIR,
     production_parity: bool = False,  # Route through /v2/turn
@@ -135,6 +145,9 @@ async def run_and_export(
         max_days: Override total days (None = use persona's arc length)
         snapshot_interval: How often to capture state snapshots (days)
         daily_worker_interval: Run daily workers every N simulated days
+        weekly_worker_interval: Run weekly workers every N simulated days
+        monthly_worker_interval: Run monthly workers every N simulated days
+        forecast_interval_runs_per_day: Extra intraday forecast passes
         cleanup: Whether to delete test data from DB after export
         output_dir: Where to write the JSON file
         production_parity: If True, route entries through /v2/turn endpoint
@@ -157,6 +170,9 @@ async def run_and_export(
         snapshot_interval=snapshot_interval,
         run_workers=True,
         daily_worker_interval=daily_worker_interval,
+        weekly_worker_interval=weekly_worker_interval,
+        monthly_worker_interval=monthly_worker_interval,
+        forecast_interval_runs_per_day=forecast_interval_runs_per_day,
         production_parity=production_parity,
     )
 
@@ -266,8 +282,25 @@ async def main():
     parser.add_argument(
         "--daily-interval",
         type=int,
-        default=3,
-        help="Run daily workers every N simulated days (default: 3)",
+        default=1,
+        help="Run daily workers every N simulated days (default: 1)",
+    )
+    parser.add_argument(
+        "--weekly-interval",
+        type=int,
+        default=7,
+        help="Run weekly workers every N simulated days (default: 7)",
+    )
+    parser.add_argument(
+        "--monthly-interval",
+        type=int,
+        default=30,
+        help="Run monthly workers every N simulated days (default: 30)",
+    )
+    parser.add_argument(
+        "--forecast-runs-per-day",
+        type=int,
+        help="Extra intraday forecast runs per simulated day (default: from FORECAST_INTERVAL_HOURS)",
     )
     parser.add_argument(
         "--demo-questions",
@@ -295,6 +328,11 @@ async def main():
         help="Production parity mode: route entries through /v2/turn endpoint "
              "(same code path as production, not direct DB inserts)",
     )
+    parser.add_argument(
+        "--list-worker-frequency",
+        action="store_true",
+        help="Print production vs simulation frequency for simulation workers and exit.",
+    )
 
     args = parser.parse_args()
 
@@ -303,11 +341,6 @@ async def main():
         level=level,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-
-    # Initialize LLM router so workers + conversation demo can call call_llm()
-    # In parity mode, the FastAPI lifespan handles this instead.
-    if not args.parity:
-        _init_llm_router()
 
     if args.list:
         personas = list_available_personas()
@@ -320,8 +353,27 @@ async def main():
                 print(f"  - {pid}: (error loading: {exc})")
         return
 
+    if args.list_worker_frequency:
+        print(
+            render_worker_frequency_table(
+                daily_worker_interval=args.daily_interval,
+                weekly_worker_interval=args.weekly_interval,
+                monthly_worker_interval=args.monthly_interval,
+                forecast_interval_runs_per_day=args.forecast_runs_per_day,
+            )
+        )
+        return
+
+    # Initialize LLM router so workers + conversation demo can call call_llm()
+    # In parity mode, the FastAPI lifespan handles this instead.
+    if not args.parity:
+        _init_llm_router()
+
     if not args.persona and not args.all:
-        parser.error("Must specify --persona or --all (or --list to see options)")
+        parser.error(
+            "Must specify --persona or --all "
+            "(or --list / --list-worker-frequency to inspect options)"
+        )
 
     output_dir = Path(args.output_dir) if args.output_dir else OUTPUT_DIR
 
@@ -337,6 +389,9 @@ async def main():
                 max_days=args.days,
                 snapshot_interval=args.snapshot_interval,
                 daily_worker_interval=args.daily_interval,
+                weekly_worker_interval=args.weekly_interval,
+                monthly_worker_interval=args.monthly_interval,
+                forecast_interval_runs_per_day=args.forecast_runs_per_day,
                 cleanup=not args.no_cleanup,
                 output_dir=output_dir,
                 production_parity=args.parity,

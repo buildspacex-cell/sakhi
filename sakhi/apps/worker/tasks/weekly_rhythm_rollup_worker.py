@@ -168,16 +168,36 @@ def _unknown_payload() -> Dict[str, Any]:
     }
 
 
+async def _table_exists(table_name: str) -> bool:
+    try:
+        row = await q("SELECT to_regclass($1) AS relation_name", table_name, one=True) or {}
+    except Exception:
+        return False
+    return bool(row.get("relation_name"))
+
+
 async def run_weekly_rhythm_rollup(person_id: str | None = None) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
     window_start = (now - timedelta(days=RHYTHM_ROLLUP_WINDOW_DAYS)).date()
     week_start = window_start
     week_end = now.date()
 
+    if not await _table_exists("public.rhythm_daily_curve"):
+        LOGGER.warning("weekly_rhythm_rollup skipped: missing rhythm_daily_curve table")
+        return {"processed": 0, "updated": 0, "skipped": "rhythm_daily_curve_missing"}
+
+    if not await _table_exists("public.rhythm_weekly_rollups"):
+        LOGGER.warning("weekly_rhythm_rollup skipped: missing rhythm_weekly_rollups table")
+        return {"processed": 0, "updated": 0, "skipped": "rhythm_weekly_rollups_missing"}
+
+    has_rhythm_events = await _table_exists("public.rhythm_events")
+    if not has_rhythm_events:
+        LOGGER.warning("weekly_rhythm_rollup: rhythm_events missing; continuing without event data")
+
     if person_id:
         persons = [{"person_id": person_id}]
     else:
-        persons = await q("SELECT DISTINCT person_id FROM rhythm_daily_curve")
+        persons = await q("SELECT DISTINCT person_id FROM rhythm_daily_curve") or []
 
     results = {"processed": 0, "updated": 0}
 
@@ -196,16 +216,19 @@ async def run_weekly_rhythm_rollup(person_id: str | None = None) -> Dict[str, An
             pid,
             window_start,
         )
-        events = await q(
-            """
-            SELECT event_ts, payload
-            FROM rhythm_events
-            WHERE person_id = $1 AND event_ts >= $2
-            ORDER BY event_ts ASC
-            """,
-            pid,
-            datetime.combine(window_start, datetime.min.time(), tzinfo=timezone.utc),
-        )
+        if has_rhythm_events:
+            events = await q(
+                """
+                SELECT event_ts, payload
+                FROM rhythm_events
+                WHERE person_id = $1 AND event_ts >= $2
+                ORDER BY event_ts ASC
+                """,
+                pid,
+                datetime.combine(window_start, datetime.min.time(), tzinfo=timezone.utc),
+            )
+        else:
+            events = []
 
         rollup = compute_rollup(curves or [], events or [], now)
         rollup_json = json.dumps(rollup)

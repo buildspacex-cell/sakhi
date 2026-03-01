@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import json
 
 from sakhi.apps.api.core.db import exec as dbexec
 from sakhi.apps.api.core.person_utils import resolve_person_id
@@ -13,6 +14,7 @@ async def run_forecast(person_id: str) -> None:
     try:
         resolved = await resolve_person_id(person_id) or person_id
         state = await compute_forecast(resolved)
+        state_json = json.dumps(state)
         await dbexec(
             """
             INSERT INTO forecast_cache (person_id, forecast_state, updated_at)
@@ -22,7 +24,7 @@ async def run_forecast(person_id: str) -> None:
                 updated_at = NOW()
             """,
             resolved,
-            state,
+            state_json,
         )
         await dbexec(
             """
@@ -31,7 +33,7 @@ async def run_forecast(person_id: str) -> None:
             WHERE person_id = $1
             """,
             resolved,
-            state,
+            state_json,
         )
     except Exception as exc:
         logger.warning("run_forecast failed person=%s err=%s", person_id, exc)

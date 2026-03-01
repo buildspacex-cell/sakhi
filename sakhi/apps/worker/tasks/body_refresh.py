@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
@@ -14,6 +15,14 @@ from sakhi.apps.api.services.body.state_engine import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _pattern_detection_timeout_seconds() -> float:
+    raw = os.getenv("BODY_REFRESH_PATTERN_TIMEOUT_SECONDS", "20")
+    try:
+        return max(1.0, float(raw))
+    except (TypeError, ValueError):
+        return 20.0
 
 
 async def run_body_refresh(person_id: str) -> Dict[str, Any]:
@@ -42,12 +51,20 @@ async def run_body_refresh(person_id: str) -> Dict[str, Any]:
         patterns_detected = []
         try:
             from sakhi.apps.api.services.ayurveda.pattern_learning import detect_patterns
-            patterns_detected = await detect_patterns(person_id, lookback_days=14)
+            patterns_detected = await asyncio.wait_for(
+                detect_patterns(person_id, lookback_days=14),
+                timeout=_pattern_detection_timeout_seconds(),
+            )
             if patterns_detected:
                 logger.info(
                     f"[body_refresh] Detected {len(patterns_detected)} patterns "
                     f"for person_id={person_id}"
                 )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "[body_refresh] Pattern detection timed out for person_id=%s",
+                person_id,
+            )
         except Exception as pat_exc:
             logger.warning(f"[body_refresh] Pattern detection failed: {pat_exc}")
 

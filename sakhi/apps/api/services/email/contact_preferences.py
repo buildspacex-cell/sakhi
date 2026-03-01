@@ -224,10 +224,14 @@ async def get_suggestions(person_id: str) -> List[Dict[str, Any]]:
         person_id,
     )
     for row in mute_rows or []:
+        contact_identifier = row.get("contact_identifier")
+        dismiss_count = row.get("dismiss_count")
+        if not contact_identifier or dismiss_count is None:
+            continue
         suggestions.append({
-            "contact_identifier": row["contact_identifier"],
+            "contact_identifier": contact_identifier,
             "suggested_priority": "muted",
-            "reason": f"You dismissed {row['dismiss_count']} emails from this sender",
+            "reason": f"You dismissed {dismiss_count} emails from this sender",
             "channel": "email",
         })
 
@@ -270,9 +274,12 @@ async def get_suggestions(person_id: str) -> List[Dict[str, Any]]:
         person_id,
     )
     for row in promote_rows or []:
-        count = row["reply_count"]
+        contact_identifier = row.get("contact_identifier")
+        count = row.get("reply_count")
+        if not contact_identifier or count is None:
+            continue
         suggestions.append({
-            "contact_identifier": row["contact_identifier"],
+            "contact_identifier": contact_identifier,
             "suggested_priority": "high",
             "reason": f"You replied to {count} of their emails in the last 30 days",
             "channel": "email",

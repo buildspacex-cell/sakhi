@@ -38,7 +38,7 @@
 | Queue | Redis + RQ |
 | Frontend | Next.js 14 (React) |
 | Mobile | React Native (Expo) |
-| LLM | Multi-provider (OpenAI, OpenRouter) |
+| LLM | OpenAI (GPT-4o, GPT-4o-mini) |
 
 ---
 
@@ -51,15 +51,18 @@ sakhi-monorepo/
 │   └── mobile/                # React Native (Expo)
 ├── sakhi/                     # Python backend (CANONICAL)
 │   ├── apps/api/              # FastAPI API
-│   │   ├── routes/            # 60+ API route modules
-│   │   └── services/          # Business logic
+│   │   ├── routes/            # 75+ API route modules
+│   │   └── services/          # Business logic (50+ modules)
+│   ├── apps/engine/           # 30 computational engines
 │   ├── apps/worker/           # Background job workers
 │   │   ├── pipelines/         # Worker orchestration
-│   │   └── tasks/             # Individual worker tasks
+│   │   └── tasks/             # 64 individual worker tasks
 │   ├── libs/                  # Shared Python libraries
 │   ├── tests/                 # All Python tests
 │   └── infra/scripts/         # DB migrations, scripts
+├── kala/                      # Governance kernel (pure computation, 547 tests)
 ├── docs/                      # All documentation
+│   └── kala/                  # Governance kernel documentation
 ├── scripts/                   # Dev/utility scripts
 └── config/                    # App configuration
 ```
@@ -327,6 +330,65 @@ Workers update intelligence after each conversation turn:
 
 ---
 
+## Engine Layer
+
+30 standalone computational engines at `sakhi/apps/engine/`, each with its own `engine.py`. These produce deterministic intelligence that feeds the conversation pipeline:
+
+| Category | Engines |
+|----------|---------|
+| State & Identity | alignment, coherence, identity_drift, identity_momentum |
+| Emotion & Soul | emotion_loop, empathy, microreg, inner_conflict, inner_dialogue |
+| Daily Flows | morning_ask, morning_momentum, morning_preview, evening_closure, daily_reflection |
+| Narrative & Patterns | narrative, reflection_trace, pattern_sense, forecast, continuity |
+| Micro Interventions | micro_journey, micro_momentum, micro_recovery, mini_flow |
+| Planning & Action | focus_path, hands, nudge, tone, task_routing |
+| Reasoning | deliberation_scaffold, evidence_pack, moment_model |
+
+---
+
+## Governance Integration (Kala)
+
+The **kala** governance kernel is a pure-computation package with 547 tests. It is integrated into Sakhi's conversation pipeline:
+
+```
+Proposed Action → GovernanceGate
+     │
+     ├── Load constraints from governance_constraints table
+     ├── Load objectives from governance_objectives table
+     ├── Evaluate constraints (11 operators, priority-based)
+     ├── Detect contradictions (5 typed categories)
+     ├── Compute drift gating
+     └── Log decision to governance_events ledger
+```
+
+| Purpose | File |
+|---------|------|
+| Governance bridge | `sakhi/apps/api/services/governance/service.py` |
+| Constraint seeding | `sakhi/apps/api/services/governance/seed.py` |
+| Demo seeder | `sakhi/apps/api/services/demo/governance_seeder.py` |
+| Kala package | `kala/` (standalone, zero external dependencies) |
+
+---
+
+## Demo & Simulation
+
+The simulation system showcases Sakhi's intelligence evolution over 30 days:
+
+| Route | Purpose |
+|-------|---------|
+| `POST /demo/simulation/seed` | Seed governance + persona data |
+| `POST /demo/simulation/add-journal` | Process journal through real pipeline |
+| `GET /demo/simulation/state/{person_id}` | Get personal model state |
+| `GET /demo/simulation/ledger/{person_id}` | Get governance event ledger |
+| `POST /demo/simulation/evaluate` | Run kala GovernanceGate evaluation |
+
+Frontend components at `apps/web/app/lab/simulation/`:
+- **ThreeActDemo** — Three-act governance scenario (Illusion → Reveal → Divergence)
+- **ReplayClient** — 30-day conversation replay with auto-play and drift visualization
+- **ProfilesContrast** — Side-by-side persona comparison
+
+---
+
 ## Personal Model
 
 The `personal_model` table is the single source of truth for all user intelligence:
@@ -445,3 +507,5 @@ Name: Vidhya
 | [features/adaptive-response.md](features/adaptive-response.md) | Response pipeline details |
 | [features/context-routing.md](features/context-routing.md) | Context Router & tiered intelligence |
 | [guides/getting-started.md](guides/getting-started.md) | Setup instructions |
+| [kala/](kala/) | Governance kernel documentation |
+| [features/conversation-turn-anatomy.md](features/conversation-turn-anatomy.md) | Turn pipeline source of truth |

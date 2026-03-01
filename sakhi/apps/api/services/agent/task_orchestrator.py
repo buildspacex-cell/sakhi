@@ -30,6 +30,49 @@ from pydantic import BaseModel
 
 LOGGER = logging.getLogger(__name__)
 
+FOOD_CONTEXT_KEYWORDS = (
+    "restaurant",
+    "eat",
+    "dinner",
+    "lunch",
+    "breakfast",
+    "brunch",
+    "meal",
+    "dine",
+    "dining",
+    "cafe",
+    "cuisine",
+    "table",
+    "reservation",
+    "takeout",
+    "delivery",
+    "menu",
+)
+
+FOOD_ORDER_CONTEXT_KEYWORDS = (
+    "food",
+    "dinner",
+    "lunch",
+    "breakfast",
+    "brunch",
+    "meal",
+    "takeout",
+    "delivery",
+    "restaurant",
+    "cafe",
+    "menu",
+)
+
+
+def _is_food_related_request(task_description: str) -> bool:
+    """Return True only for explicit dining/restaurant tasks."""
+    desc_lower = task_description.lower()
+    if any(word in desc_lower for word in FOOD_CONTEXT_KEYWORDS):
+        return True
+    if "order" in desc_lower and any(word in desc_lower for word in FOOD_ORDER_CONTEXT_KEYWORDS):
+        return True
+    return False
+
 
 # =============================================================================
 # Task Planning Models
@@ -295,7 +338,7 @@ class TaskOrchestrator:
             LOGGER.warning("[orchestrator] Failed to get sensory profile: %s", e)
 
         # Get food context if food-related
-        if any(word in task_description.lower() for word in ["food", "restaurant", "eat", "dinner", "lunch", "breakfast", "order"]):
+        if _is_food_related_request(task_description):
             try:
                 from sakhi.apps.api.services.memory.food_memory import (
                     get_food_context_for_recommendations,
@@ -509,11 +552,11 @@ class TaskOrchestrator:
         """Classify the task type."""
         desc_lower = task_description.lower()
 
+        if _is_food_related_request(task_description):
+            return TaskType.FOOD
+
         if any(word in desc_lower for word in ["buy", "purchase", "order", "shop", "amazon", "find product"]):
             return TaskType.SHOPPING
-
-        if any(word in desc_lower for word in ["restaurant", "food", "eat", "dinner", "lunch", "breakfast", "dine"]):
-            return TaskType.FOOD
 
         if any(word in desc_lower for word in ["book", "reserve", "reservation", "appointment"]):
             return TaskType.BOOKING

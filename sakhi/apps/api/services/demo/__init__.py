@@ -69,6 +69,9 @@ from sakhi.apps.api.services.demo.governance_seeder import (
     get_simulation_state,
     get_simulation_intelligence,
 )
+from sakhi.apps.api.services.demo.simulation_profile_updater import (
+    add_journal_to_simulation_profile,
+)
 
 
 async def seed_all_demo_data(person_id: str = DEMO_USER_ID) -> Dict[str, Any]:
@@ -193,6 +196,7 @@ __all__ = [
     "get_simulation_ledger",
     "get_simulation_state",
     "get_simulation_intelligence",
+    "add_journal_to_simulation_profile",
     # Master functions
     "seed_all_demo_data",
     "run_full_demo",

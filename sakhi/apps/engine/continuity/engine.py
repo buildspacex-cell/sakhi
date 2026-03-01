@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import copy
 import datetime as dt
+import json
 import uuid
 from typing import Any, Dict, List, Sequence
 
@@ -23,12 +25,106 @@ DEFAULT_STATE = {
 WINDOW_HOURS = 12
 
 
+def _default_state() -> Dict[str, Any]:
+    return copy.deepcopy(DEFAULT_STATE)
+
+
+def _is_missing_column_error(exc: Exception, column_name: str) -> bool:
+    msg = str(exc).lower()
+    return f'column "{column_name.lower()}" does not exist' in msg
+
+
+def _to_iso(ts: Any) -> str:
+    if isinstance(ts, dt.datetime):
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=dt.timezone.utc)
+        return ts.isoformat()
+    if isinstance(ts, str) and ts:
+        return ts
+    return dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc).isoformat()
+
+
+def _merge_with_defaults(raw_state: Any) -> Dict[str, Any]:
+    merged = _default_state()
+    if not isinstance(raw_state, dict):
+        return merged
+
+    merged.update(raw_state)
+
+    threads = merged.get("threads")
+    if not isinstance(threads, dict):
+        merged["threads"] = {"current": "general", "confidence": 0.5}
+    else:
+        current = str(threads.get("current") or "general")
+        try:
+            confidence = float(threads.get("confidence", 0.5))
+        except Exception:
+            confidence = 0.5
+        merged["threads"] = {
+            "current": current,
+            "confidence": max(0.0, min(1.0, confidence)),
+        }
+
+    return merged
+
+
+def _legacy_row_to_state(row: Dict[str, Any]) -> Dict[str, Any]:
+    state = _default_state()
+    if not isinstance(row, dict) or not row:
+        return state
+
+    ts = _to_iso(row.get("last_interaction_ts"))
+    last_emotion = row.get("last_emotion")
+    if isinstance(last_emotion, str) and last_emotion.strip():
+        state["last_emotion_snapshots"] = [{"ts": ts, "emotion": last_emotion.strip()}]
+
+    if row.get("reflection_pending") is True:
+        state["last_nudges"] = [{"ts": ts, "pending_reflection": True}]
+
+    try:
+        confidence = float(row.get("engagement_level") or 0.5)
+    except Exception:
+        confidence = 0.5
+    state["threads"] = {"current": "general", "confidence": max(0.0, min(1.0, confidence))}
+
+    return state
+
+
 async def load_continuity(person_id: str) -> Dict[str, Any]:
     person_id = await resolve_person_id(person_id) or person_id
-    row = await q("SELECT continuity_state FROM session_continuity WHERE person_id = $1", person_id, one=True) or {}
-    state = row.get("continuity_state") or {}
-    merged = {**DEFAULT_STATE, **state}
-    return merged
+    try:
+        row = await q(
+            "SELECT continuity_state FROM session_continuity WHERE person_id = $1",
+            person_id,
+            one=True,
+        ) or {}
+        state = row.get("continuity_state") or {}
+        if isinstance(state, str):
+            try:
+                state = json.loads(state)
+            except Exception:
+                state = {}
+        return _merge_with_defaults(state)
+    except Exception as exc:
+        if not _is_missing_column_error(exc, "continuity_state"):
+            return _default_state()
+
+    # Legacy schema fallback: baseline DB has session_continuity without continuity_state jsonb.
+    try:
+        row = await q(
+            """
+            SELECT last_emotion, last_interaction_ts, engagement_level, reflection_pending, clarity_level
+            FROM session_continuity
+            WHERE person_id = $1
+            ORDER BY last_interaction_ts DESC NULLS LAST
+            LIMIT 1
+            """,
+            person_id,
+            one=True,
+        ) or {}
+        return _legacy_row_to_state(row)
+    except Exception:
+        return _default_state()
 
 
 def compute_continuity_markers(event: Dict[str, Any], memory_short_term: Sequence[Dict[str, Any]] | None = None, pattern_sense: Dict[str, Any] | None = None) -> Dict[str, Any]:

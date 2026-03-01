@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 from statistics import mean
 from typing import Any, Dict, List
 
@@ -10,6 +11,19 @@ from sakhi.apps.api.core.person_utils import resolve_person_id
 
 def _safe_mean(values: List[float]) -> float:
     return mean(values) if values else 0.0
+
+
+def _coerce_json_dict(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            return {}
+    return {}
 
 
 async def compute_forecast(person_id: str) -> Dict[str, Any]:
@@ -25,10 +39,10 @@ async def compute_forecast(person_id: str) -> Dict[str, Any]:
         person_id,
         one=True,
     ) or {}
-    identity_state = pm_row.get("identity_state") or {}
-    conflict_state = pm_row.get("conflict_state") or {}
-    coherence_state = pm_row.get("coherence_state") or {}
-    pattern_sense = pm_row.get("pattern_sense") or {}
+    identity_state = _coerce_json_dict(pm_row.get("identity_state"))
+    conflict_state = _coerce_json_dict(pm_row.get("conflict_state"))
+    coherence_state = _coerce_json_dict(pm_row.get("coherence_state"))
+    pattern_sense = _coerce_json_dict(pm_row.get("pattern_sense"))
 
     emotion_row = await q(
         "SELECT emotion_loop FROM memory_episodic WHERE person_id = $1 ORDER BY ts DESC LIMIT 30",

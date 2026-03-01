@@ -46,7 +46,6 @@ import type {
   CheckpointResult,
   JournalEntry,
   BrainStates,
-  ConversationDemo,
   ThemeSnapshot,
   CrystallizedPattern,
   ReplayFrictionState,
@@ -110,6 +109,76 @@ export default function SimulationDemoClient() {
   const [replayPlaying, setReplayPlaying] = useState(false);
   const [replaySpeed, setReplaySpeed] = useState(3000);
 
+  // Ask Sakhi — add new journal entries to the live simulation
+  const [askText, setAskText] = useState("");
+  const [askTimeOfDay, setAskTimeOfDay] = useState<"morning" | "afternoon" | "evening">("evening");
+  const [askLoading, setAskLoading] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
+  const [askLastEntry, setAskLastEntry] = useState<{
+    content: string;
+    reply: string;
+    friction_state?: ReplayFrictionState;
+    day: number;
+  } | null>(null);
+
+  const handleAskSakhi = useCallback(async () => {
+    const content = askText.trim();
+    if (!content || askLoading) return;
+    setAskLoading(true);
+    setAskError(null);
+    try {
+      const res = await fetch("/api/demo/simulation/add-journal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ persona_id: personaId, content, time_of_day: askTimeOfDay }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err.detail ?? err.error) || `Request failed (${res.status})`);
+      }
+      const result = await res.json();
+      const newEntry: JournalEntry = result.entry;
+      // Append to local data state so replay includes new entry immediately
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              entries: [...prev.entries, newEntry],
+              total_entries: result.total_entries,
+              total_days: result.total_days,
+            }
+          : prev,
+      );
+      setAskLastEntry({
+        content,
+        reply: newEntry.reply ?? "",
+        friction_state: newEntry.friction_state,
+        day: result.snapshot_day,
+      });
+      setAskText("");
+      // Jump replay to the new entry
+      setReplayStep(result.total_entries);
+    } catch (e) {
+      setAskError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setAskLoading(false);
+    }
+  }, [askText, askTimeOfDay, askLoading, personaId]);
+
+  const reloadSimulationData = useCallback(
+    async (targetPersonaId: string): Promise<SimulationData> => {
+      const res = await fetch(`/simulation/${targetPersonaId}.json?ts=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("Failed to load simulation data");
+      const result: SimulationData = await res.json();
+      setData(result);
+      setError(null);
+      return result;
+    },
+    [],
+  );
+
   // Load data — only when understanding section is visible
   useEffect(() => {
     if (!showUnderstanding) return;
@@ -120,20 +189,15 @@ export default function SimulationDemoClient() {
     setReplayStep(0);
     setReplayPlaying(false);
 
-    fetch(`/simulation/${personaId}.json`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load simulation data");
-        return res.json();
-      })
-      .then((result: SimulationData) => {
-        setData(result);
+    reloadSimulationData(personaId)
+      .then(() => {
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message);
         setLoading(false);
       });
-  }, [personaId, showUnderstanding]);
+  }, [personaId, showUnderstanding, reloadSimulationData]);
 
   // Compute phase boundary days and checkpoint days for narration pauses
   const pauseDays = useMemo(() => {
@@ -591,15 +655,31 @@ export default function SimulationDemoClient() {
         onStepBack={() => setReplayStep((s) => Math.max(s - 1, 0))}
       />
 
+      <AddJournalToProfile
+        personaId={personaId}
+        personaName={data.persona.name}
+        onAdded={async (addedDay) => {
+          setLoading(true);
+          try {
+            await reloadSimulationData(personaId);
+            if (addedDay) setCurrentDay(addedDay);
+            setReplayStep(0);
+            setReplayPlaying(false);
+            setIsPlaying(false);
+            setPauseReason(
+              addedDay ? `New journal added at Day ${addedDay}` : "New journal added",
+            );
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "Failed to refresh simulation data");
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
+
       {/* 3.5 Current Friction State - shows REAL computed state from simulation */}
       <CurrentFrictionState
         currentSnapshot={currentSnapshot}
-        persona={data.persona}
-        currentDay={currentDay}
-      />
-
-      {/* 3.6 Personalization Demo - LLM-generated recommendations */}
-      <PersonalizationDemo
         persona={data.persona}
         currentDay={currentDay}
       />
@@ -794,22 +874,6 @@ export default function SimulationDemoClient() {
         currentDay={currentDay}
       />
 
-      {/* 11. Conversation Demo */}
-      {data.conversation_demo && data.conversation_demo.length > 0 && (
-        <ConversationDemoSection
-          demos={data.conversation_demo}
-          personaName={data.persona.name}
-        />
-      )}
-
-      {/* 12. Checkpoint Cards */}
-      <CheckpointCards
-        checkpoints={data.persona.checkpoints}
-        results={data.checkpoint_results}
-        currentDay={currentDay}
-        onJumpToDay={setCurrentDay}
-      />
-
       {/* 11. Pipeline Strip */}
       <PipelineStrip
         isRealPipeline={data.real_pipeline === true}
@@ -835,6 +899,19 @@ export default function SimulationDemoClient() {
           )}
         </>
       )}
+
+      {/* ── Ask Sakhi — continue the conversation ── */}
+      <AskSakhiSection
+        personaId={personaId}
+        loading={askLoading}
+        error={askError}
+        text={askText}
+        timeOfDay={askTimeOfDay}
+        lastEntry={askLastEntry}
+        onTextChange={setAskText}
+        onTimeOfDayChange={setAskTimeOfDay}
+        onSubmit={handleAskSakhi}
+      />
     </div>
   );
 }
@@ -1239,6 +1316,159 @@ function ConversationReplay({
           )}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function AddJournalToProfile({
+  personaId,
+  personaName,
+  onAdded,
+}: {
+  personaId: string;
+  personaName: string;
+  onAdded: (addedDay: number | null) => Promise<void> | void;
+}) {
+  const [journalText, setJournalText] = useState("");
+  const [timeOfDay, setTimeOfDay] = useState<"morning" | "afternoon" | "evening">("evening");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const submit = async () => {
+    const content = journalText.trim();
+    if (!content || saving) return;
+
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/demo/simulation/add-journal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          persona_id: personaId,
+          content,
+          time_of_day: timeOfDay,
+        }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = payload?.detail || payload?.error || "Failed to add journal";
+        throw new Error(String(detail));
+      }
+
+      const addedDay =
+        payload?.entry && typeof payload.entry.day === "number"
+          ? (payload.entry.day as number)
+          : null;
+      setJournalText("");
+      setSuccess(
+        addedDay
+          ? `Added to ${personaName} as Day ${addedDay}. Replay has been updated.`
+          : `Added to ${personaName}. Replay has been updated.`,
+      );
+      await onAdded(addedDay);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ ...styles.card, marginBottom: 24, borderLeft: `4px solid ${palette.vata}` }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+        Add Journal To This Profile
+      </div>
+      <div style={{ fontSize: 12, color: palette.muted, marginBottom: 12 }}>
+        Runs through the same simulation pipeline (`/v2/turn` + daily workers) and becomes replayable.
+      </div>
+
+      <textarea
+        value={journalText}
+        onChange={(e) => setJournalText(e.target.value)}
+        placeholder={`Add a new journal entry for ${personaName}...`}
+        rows={4}
+        style={{
+          width: "100%",
+          border: `1px solid ${palette.border}`,
+          borderRadius: 8,
+          padding: "10px 12px",
+          fontSize: 13,
+          color: palette.text,
+          resize: "vertical",
+          background: palette.card,
+          marginBottom: 10,
+        }}
+      />
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <select
+          value={timeOfDay}
+          onChange={(e) => setTimeOfDay(e.target.value as "morning" | "afternoon" | "evening")}
+          style={{
+            border: `1px solid ${palette.border}`,
+            borderRadius: 8,
+            padding: "8px 10px",
+            fontSize: 12,
+            color: palette.text,
+            background: palette.card,
+          }}
+        >
+          <option value="morning">Morning</option>
+          <option value="afternoon">Afternoon</option>
+          <option value="evening">Evening</option>
+        </select>
+
+        <button
+          onClick={submit}
+          disabled={saving || journalText.trim().length === 0}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 8,
+            border: "none",
+            background: saving ? palette.muted : palette.accent,
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: saving ? "not-allowed" : "pointer",
+          }}
+        >
+          {saving ? "Processing..." : "Add Journal"}
+        </button>
+      </div>
+
+      {error && (
+        <div
+          style={{
+            marginTop: 10,
+            fontSize: 12,
+            color: palette.chaos,
+            background: "#ffebee",
+            borderRadius: 8,
+            padding: "8px 10px",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div
+          style={{
+            marginTop: 10,
+            fontSize: 12,
+            color: palette.balanced,
+            background: "#e8f5e9",
+            borderRadius: 8,
+            padding: "8px 10px",
+          }}
+        >
+          {success}
+        </div>
+      )}
     </div>
   );
 }
@@ -1648,422 +1878,6 @@ function CurrentFrictionState({
           {Math.round(baseline.dosha_baseline.kapha * 100)}% Kapha
         </div>
       )}
-    </div>
-  );
-}
-
-// ============================================================================
-// Personalization Comparison - Side-by-side LLM recommendations for Vidhya vs Diya
-// ============================================================================
-
-const SYMPTOM_OPTIONS = [
-  "Feeling tired and low energy",
-  "Feeling anxious and scattered",
-  "Trouble sleeping",
-  "Overwhelmed by workload",
-];
-
-// Fixed prakruti for comparison
-const VIDHYA_PRAKRUTI = { vata: 0.25, pitta: 0.50, kapha: 0.25 };
-const DIYA_PRAKRUTI = { vata: 0.30, pitta: 0.20, kapha: 0.50 };
-
-interface LLMRecommendation {
-  action: string;
-  details?: {
-    what: string;
-    when: string;
-    how: string;
-  };
-  why: string;
-  category: string;
-}
-
-interface LLMRecommendationResponse {
-  constitution: {
-    dominant: string;
-    secondary: string;
-    type: string;
-    vata: number;
-    pitta: number;
-    kapha: number;
-  };
-  friction_state: string;
-  recommendations: LLMRecommendation[];
-  pattern_insight?: {
-    pattern: string;
-    suggestion: string;
-  };
-  source: string;
-}
-
-function PersonalizationDemo({
-  persona,
-  currentDay,
-}: {
-  persona: SimulationData["persona"];
-  currentDay: number;
-}) {
-  const [selectedSymptom, setSelectedSymptom] = useState(0);
-  const [vidhyaResponse, setVidhyaResponse] = useState<LLMRecommendationResponse | null>(null);
-  const [diyaResponse, setDiyaResponse] = useState<LLMRecommendationResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const isVidhya = persona.id === "anxious_achiever";
-  const isDiya = persona.id === "hormonal_harmony";
-
-  // Only show after day 7
-  if (currentDay < 7) return null;
-
-  const fetchBothRecommendations = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    const symptom = SYMPTOM_OPTIONS[selectedSymptom];
-
-    try {
-      // Fetch both in parallel
-      const [vidhyaRes, diyaRes] = await Promise.all([
-        fetch("/api/friction/recommendations/by-constitution", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...VIDHYA_PRAKRUTI, symptom }),
-        }),
-        fetch("/api/friction/recommendations/by-constitution", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...DIYA_PRAKRUTI, symptom }),
-        }),
-      ]);
-
-      if (!vidhyaRes.ok || !diyaRes.ok) {
-        throw new Error("Failed to get recommendations");
-      }
-
-      const [vidhyaData, diyaData] = await Promise.all([
-        vidhyaRes.json(),
-        diyaRes.json(),
-      ]);
-
-      setVidhyaResponse(vidhyaData);
-      setDiyaResponse(diyaData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const hasResults = vidhyaResponse && diyaResponse;
-  const source = vidhyaResponse?.source || "none";
-
-  return (
-    <div style={{ ...styles.card, marginBottom: 24, borderLeft: `4px solid ${palette.accent}` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: palette.text }}>
-            Personalization in Action
-          </div>
-          <div style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>
-            Same symptom, different advice — real LLM-generated based on constitution
-          </div>
-        </div>
-        <span
-          style={{
-            padding: "4px 10px",
-            background: source === "llm" ? "#e3f2fd" : "#e8f5e9",
-            borderRadius: 6,
-            color: source === "llm" ? "#1976d2" : palette.balanced,
-            fontWeight: 600,
-            fontSize: 11,
-          }}
-        >
-          {source === "llm" ? "LLM Powered" : "Why Sakhi is Different"}
-        </span>
-      </div>
-
-      {/* Symptom selector */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {SYMPTOM_OPTIONS.map((symptom, i) => (
-          <button
-            key={i}
-            onClick={() => {
-              setSelectedSymptom(i);
-              setVidhyaResponse(null);
-              setDiyaResponse(null);
-            }}
-            style={{
-              padding: "6px 12px",
-              border: `1px solid ${selectedSymptom === i ? palette.accent : palette.border}`,
-              borderRadius: 20,
-              background: selectedSymptom === i ? palette.accentLight : palette.card,
-              color: selectedSymptom === i ? palette.accent : palette.muted,
-              fontSize: 12,
-              cursor: "pointer",
-              fontWeight: selectedSymptom === i ? 600 : 400,
-            }}
-          >
-            {symptom}
-          </button>
-        ))}
-      </div>
-
-      {/* Generate button */}
-      <button
-        onClick={fetchBothRecommendations}
-        disabled={isLoading}
-        style={{
-          padding: "10px 20px",
-          background: isLoading ? palette.muted : palette.accent,
-          color: "#fff",
-          border: "none",
-          borderRadius: 8,
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: isLoading ? "not-allowed" : "pointer",
-          marginBottom: 16,
-        }}
-      >
-        {isLoading ? "Generating personalized advice..." : "Compare Vidhya vs Diya"}
-      </button>
-
-      {/* Error */}
-      {error && (
-        <div style={{ padding: 12, background: "#ffebee", borderRadius: 8, color: "#c62828", fontSize: 12, marginBottom: 16 }}>
-          {error}. Make sure the Python backend is running on port 8080.
-        </div>
-      )}
-
-      {/* Side-by-side comparison */}
-      {hasResults && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {/* Vidhya (Pitta) */}
-          <div
-            style={{
-              padding: 16,
-              borderRadius: 12,
-              background: isVidhya ? palette.accentLight : palette.cardAlt,
-              border: isVidhya ? `2px solid ${palette.accent}` : `1px solid ${palette.border}`,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: palette.pitta,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 14,
-                }}
-              >
-                V
-              </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: palette.text }}>Vidhya</div>
-                <div style={{ fontSize: 11, color: palette.muted }}>
-                  {vidhyaResponse.constitution.type} (50% Pitta)
-                </div>
-              </div>
-              {isVidhya && (
-                <span style={{ marginLeft: "auto", fontSize: 10, color: palette.accent, fontWeight: 600 }}>
-                  CURRENT
-                </span>
-              )}
-            </div>
-
-            <div style={{ marginBottom: 10 }}>
-              <span
-                style={{
-                  fontSize: 10,
-                  padding: "2px 8px",
-                  background: palette.pitta,
-                  color: "#fff",
-                  borderRadius: 10,
-                  fontWeight: 600,
-                }}
-              >
-                {vidhyaResponse.friction_state}
-              </span>
-            </div>
-
-            {/* First recommendation */}
-            {vidhyaResponse.recommendations[0] && (
-              <>
-                <div style={{ fontSize: 13, color: palette.text, lineHeight: 1.6, marginBottom: 8 }}>
-                  <strong>Advice:</strong> {vidhyaResponse.recommendations[0].action}
-                </div>
-
-                {/* Details: What, When, How */}
-                {vidhyaResponse.recommendations[0].details && (
-                  <div style={{
-                    fontSize: 11,
-                    color: palette.text,
-                    lineHeight: 1.6,
-                    marginBottom: 10,
-                    padding: "10px 12px",
-                    background: "rgba(255,255,255,0.7)",
-                    borderRadius: 8,
-                    borderLeft: `3px solid ${palette.pitta}`,
-                  }}>
-                    <div style={{ marginBottom: 6 }}>
-                      <strong style={{ color: palette.pitta }}>What:</strong>{" "}
-                      {vidhyaResponse.recommendations[0].details.what}
-                    </div>
-                    <div style={{ marginBottom: 6 }}>
-                      <strong style={{ color: palette.pitta }}>When:</strong>{" "}
-                      {vidhyaResponse.recommendations[0].details.when}
-                    </div>
-                    <div>
-                      <strong style={{ color: palette.pitta }}>How:</strong>{" "}
-                      {vidhyaResponse.recommendations[0].details.how}
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: palette.muted,
-                    lineHeight: 1.5,
-                    padding: "8px 10px",
-                    background: "rgba(255,255,255,0.5)",
-                    borderRadius: 6,
-                    fontStyle: "italic",
-                  }}
-                >
-                  <strong>Why:</strong> {vidhyaResponse.recommendations[0].why}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Diya (Kapha) */}
-          <div
-            style={{
-              padding: 16,
-              borderRadius: 12,
-              background: isDiya ? palette.accentLight : palette.cardAlt,
-              border: isDiya ? `2px solid ${palette.accent}` : `1px solid ${palette.border}`,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: palette.kapha,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 14,
-                }}
-              >
-                D
-              </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: palette.text }}>Diya</div>
-                <div style={{ fontSize: 11, color: palette.muted }}>
-                  {diyaResponse.constitution.type} (50% Kapha)
-                </div>
-              </div>
-              {isDiya && (
-                <span style={{ marginLeft: "auto", fontSize: 10, color: palette.accent, fontWeight: 600 }}>
-                  CURRENT
-                </span>
-              )}
-            </div>
-
-            <div style={{ marginBottom: 10 }}>
-              <span
-                style={{
-                  fontSize: 10,
-                  padding: "2px 8px",
-                  background: palette.kapha,
-                  color: "#fff",
-                  borderRadius: 10,
-                  fontWeight: 600,
-                }}
-              >
-                {diyaResponse.friction_state}
-              </span>
-            </div>
-
-            {/* First recommendation */}
-            {diyaResponse.recommendations[0] && (
-              <>
-                <div style={{ fontSize: 13, color: palette.text, lineHeight: 1.6, marginBottom: 8 }}>
-                  <strong>Advice:</strong> {diyaResponse.recommendations[0].action}
-                </div>
-
-                {/* Details: What, When, How */}
-                {diyaResponse.recommendations[0].details && (
-                  <div style={{
-                    fontSize: 11,
-                    color: palette.text,
-                    lineHeight: 1.6,
-                    marginBottom: 10,
-                    padding: "10px 12px",
-                    background: "rgba(255,255,255,0.7)",
-                    borderRadius: 8,
-                    borderLeft: `3px solid ${palette.kapha}`,
-                  }}>
-                    <div style={{ marginBottom: 6 }}>
-                      <strong style={{ color: palette.kapha }}>What:</strong>{" "}
-                      {diyaResponse.recommendations[0].details.what}
-                    </div>
-                    <div style={{ marginBottom: 6 }}>
-                      <strong style={{ color: palette.kapha }}>When:</strong>{" "}
-                      {diyaResponse.recommendations[0].details.when}
-                    </div>
-                    <div>
-                      <strong style={{ color: palette.kapha }}>How:</strong>{" "}
-                      {diyaResponse.recommendations[0].details.how}
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: palette.muted,
-                    lineHeight: 1.5,
-                    padding: "8px 10px",
-                    background: "rgba(255,255,255,0.5)",
-                    borderRadius: 6,
-                    fontStyle: "italic",
-                  }}
-                >
-                  <strong>Why:</strong> {diyaResponse.recommendations[0].why}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Bottom insight */}
-      <div
-        style={{
-          marginTop: 16,
-          padding: "12px 16px",
-          background: palette.cardAlt,
-          borderRadius: 8,
-          fontSize: 12,
-          color: palette.muted,
-          textAlign: "center",
-        }}
-      >
-        <strong style={{ color: palette.text }}>Generic health apps give everyone the same advice.</strong>
-        {" "}Sakhi uses {source === "llm" ? "real LLM + Ayurvedic reasoning" : "constitution-aware logic"} to tailor recommendations to YOUR body.
-      </div>
     </div>
   );
 }
@@ -3656,95 +3470,6 @@ function ScoreRing({ label, value, color }: { label: string; value: number; colo
 }
 
 // ============================================================================
-// Conversation Demo — shows personalized Q&A from the full brain
-// ============================================================================
-
-function ConversationDemoSection({
-  demos,
-  personaName,
-}: {
-  demos: ConversationDemo[];
-  personaName: string;
-}) {
-  return (
-    <div style={{ ...styles.card, marginBottom: 16, borderLeft: `4px solid ${palette.accent}` }}>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: palette.text }}>
-          Personalization Demo
-        </div>
-        <div style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>
-          Real responses from Sakhi using {personaName}&apos;s fully-built brain state
-        </div>
-      </div>
-
-      {demos.map((demo, i) => (
-        <div
-          key={i}
-          style={{
-            marginBottom: i < demos.length - 1 ? 16 : 0,
-            padding: 14,
-            background: palette.cardAlt,
-            borderRadius: 10,
-          }}
-        >
-          {/* Question */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <span style={{
-              width: 24, height: 24, borderRadius: 12,
-              background: palette.accent, color: "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 12, fontWeight: 700, flexShrink: 0,
-            }}>
-              Q
-            </span>
-            <div style={{ fontSize: 13, fontWeight: 600, color: palette.text, lineHeight: 1.5 }}>
-              {demo.question}
-            </div>
-          </div>
-
-          {/* Response */}
-          <div style={{ display: "flex", gap: 8 }}>
-            <span style={{
-              width: 24, height: 24, borderRadius: 12,
-              background: palette.balanced, color: "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 12, fontWeight: 700, flexShrink: 0,
-            }}>
-              S
-            </span>
-            <div style={{
-              fontSize: 13, color: palette.text, lineHeight: 1.6,
-              whiteSpace: "pre-wrap",
-            }}>
-              {demo.error ? (
-                <span style={{ color: palette.chaos, fontStyle: "italic" }}>{demo.error}</span>
-              ) : (
-                demo.response
-              )}
-            </div>
-          </div>
-
-          {/* Debug context badges */}
-          {demo.debug?.context_used && demo.debug.context_used.length > 0 && (
-            <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
-              {demo.debug.context_used.slice(0, 6).map((ctx, j) => (
-                <span key={j} style={{
-                  padding: "2px 6px", background: palette.card,
-                  border: `1px solid ${palette.border}`,
-                  borderRadius: 8, fontSize: 9, color: palette.muted,
-                }}>
-                  {ctx}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
 // Checkpoint Cards (modified: LEARNING badge for friction failures)
 // ============================================================================
 
@@ -3973,6 +3698,264 @@ function LegendDot({ color, label }: { color: string; label: string }) {
         }}
       />
       <span style={{ fontSize: 11, color: palette.muted }}>{label}</span>
+    </div>
+  );
+}
+
+// ============================================================================
+// Ask Sakhi Section
+// ============================================================================
+
+const PERSONA_NAMES: Record<string, string> = {
+  vidhya: "Vidhya",
+  diya: "Diya",
+  bigd: "Big D",
+};
+
+function AskSakhiSection({
+  personaId,
+  loading,
+  error,
+  text,
+  timeOfDay,
+  lastEntry,
+  onTextChange,
+  onTimeOfDayChange,
+  onSubmit,
+}: {
+  personaId: string;
+  loading: boolean;
+  error: string | null;
+  text: string;
+  timeOfDay: "morning" | "afternoon" | "evening";
+  lastEntry: {
+    content: string;
+    reply: string;
+    friction_state?: ReplayFrictionState;
+    day: number;
+  } | null;
+  onTextChange: (v: string) => void;
+  onTimeOfDayChange: (v: "morning" | "afternoon" | "evening") => void;
+  onSubmit: () => void;
+}) {
+  const personaName = PERSONA_NAMES[personaId] ?? personaId;
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      onSubmit();
+    }
+  };
+
+  return (
+    <div
+      style={{
+        marginTop: 48,
+        paddingTop: 32,
+        borderTop: `1px solid ${palette.border}`,
+      }}
+    >
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: palette.text, margin: 0 }}>
+          Continue the Conversation
+        </h2>
+        <p style={{ fontSize: 14, color: palette.muted, marginTop: 6, marginBottom: 0 }}>
+          Add a new journal entry as {personaName} and watch Sakhi respond through the real
+          pipeline.
+        </p>
+      </div>
+
+      <div
+        style={{
+          maxWidth: 640,
+          margin: "0 auto",
+          background: palette.card,
+          border: `1px solid ${palette.border}`,
+          borderRadius: 14,
+          padding: 24,
+        }}
+      >
+        {/* Time of day selector */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          {(["morning", "afternoon", "evening"] as const).map((tod) => (
+            <button
+              key={tod}
+              onClick={() => onTimeOfDayChange(tod)}
+              style={{
+                flex: 1,
+                padding: "6px 0",
+                borderRadius: 8,
+                border: `1px solid ${timeOfDay === tod ? palette.accent : palette.border}`,
+                background: timeOfDay === tod ? palette.accentLight : "transparent",
+                color: timeOfDay === tod ? palette.accent : palette.muted,
+                fontSize: 13,
+                fontWeight: timeOfDay === tod ? 600 : 400,
+                cursor: "pointer",
+                textTransform: "capitalize" as const,
+              }}
+            >
+              {tod}
+            </button>
+          ))}
+        </div>
+
+        {/* Textarea */}
+        <textarea
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={`What's on ${personaName}'s mind today? (Cmd+Enter to send)`}
+          rows={5}
+          style={{
+            width: "100%",
+            padding: "12px 14px",
+            borderRadius: 10,
+            border: `1px solid ${palette.border}`,
+            fontSize: 14,
+            lineHeight: 1.6,
+            color: palette.text,
+            background: palette.bg,
+            resize: "vertical" as const,
+            fontFamily: "inherit",
+            boxSizing: "border-box" as const,
+            outline: "none",
+          }}
+        />
+
+        {/* Submit row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 12,
+          }}
+        >
+          <span style={{ fontSize: 12, color: palette.muted }}>
+            Processes through the real Sakhi pipeline
+          </span>
+          <button
+            onClick={onSubmit}
+            disabled={!text.trim() || loading}
+            style={{
+              padding: "10px 24px",
+              background: !text.trim() || loading ? palette.muted : palette.accent,
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: !text.trim() || loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.75 : 1,
+            }}
+          >
+            {loading ? "Processing..." : "Send to Sakhi \u2192"}
+          </button>
+        </div>
+
+        {error && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: "10px 14px",
+              background: "#fff5f5",
+              border: `1px solid ${palette.chaos}44`,
+              borderRadius: 8,
+              color: palette.chaos,
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* Sakhi reply */}
+      {lastEntry && (
+        <div
+          style={{
+            maxWidth: 640,
+            margin: "16px auto 0",
+            background: palette.cardAlt,
+            border: `1px solid ${palette.border}`,
+            borderRadius: 14,
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: palette.muted,
+                textTransform: "uppercase" as const,
+                letterSpacing: 0.5,
+              }}
+            >
+              Day {lastEntry.day}
+            </span>
+            {lastEntry.friction_state && (
+              <span
+                style={{
+                  padding: "2px 10px",
+                  borderRadius: 10,
+                  background: frictionColor(lastEntry.friction_state.state) + "22",
+                  color: frictionColor(lastEntry.friction_state.state),
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              >
+                {lastEntry.friction_state.state}
+              </span>
+            )}
+          </div>
+
+          {/* Journal echo */}
+          <div
+            style={{
+              padding: "10px 14px",
+              background: palette.card,
+              borderRadius: 8,
+              fontSize: 13,
+              color: palette.muted,
+              fontStyle: "italic",
+              lineHeight: 1.6,
+              marginBottom: 14,
+              borderLeft: `3px solid ${palette.border}`,
+            }}
+          >
+            {lastEntry.content}
+          </div>
+
+          {/* Sakhi reply */}
+          {lastEntry.reply && (
+            <div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: palette.accent,
+                  marginBottom: 6,
+                  textTransform: "uppercase" as const,
+                  letterSpacing: 0.5,
+                }}
+              >
+                Sakhi
+              </div>
+              <div style={{ fontSize: 14, color: palette.text, lineHeight: 1.75 }}>
+                {lastEntry.reply}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

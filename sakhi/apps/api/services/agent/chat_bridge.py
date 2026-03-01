@@ -240,7 +240,6 @@ async def create_pending_task(
 
     _pending_tasks[task_id] = task
 
-    # Also store in database for persistence
     try:
         await dbexec(
             """

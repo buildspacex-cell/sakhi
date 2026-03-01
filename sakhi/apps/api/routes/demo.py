@@ -13,7 +13,7 @@ These routes enable:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -49,6 +49,13 @@ class SimulationEvalRequest(BaseModel):
     scenario_id: str
     profile: str = "adaptive"  # adaptive | performance | conservation
     action_context: Dict[str, Any]
+
+
+class SimulationAddJournalRequest(BaseModel):
+    """Request to append a journal entry to a simulation profile."""
+    persona_id: str
+    content: str
+    time_of_day: Literal["morning", "afternoon", "evening"] = "evening"
 
 
 # =============================================================================
@@ -552,6 +559,30 @@ async def get_simulation_intelligence_endpoint(person_id: str):
         return {"status": "success", **data}
     except Exception as e:
         LOGGER.exception("[demo] Intelligence fetch failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/simulation/add-journal")
+async def add_simulation_journal(body: SimulationAddJournalRequest, request: Request):
+    """Append a journal to a simulation profile and process it through /v2/turn + daily workers."""
+    try:
+        from sakhi.apps.api.services.demo.simulation_profile_updater import (
+            add_journal_to_simulation_profile,
+        )
+
+        result = await add_journal_to_simulation_profile(
+            app=request.app,
+            persona_id=body.persona_id,
+            content=body.content,
+            time_of_day=body.time_of_day,
+        )
+        return {"status": "success", **result}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        LOGGER.exception("[demo] Simulation add-journal failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -2,7 +2,7 @@
 
 > **This file provides instructions for Claude and other LLMs working on this codebase.**
 >
-> Last Updated: 2026-02-03
+> Last Updated: 2026-02-26
 
 ---
 
@@ -15,18 +15,21 @@ sakhi-monorepo/
 │   └── mobile/                # React Native (Expo)
 ├── sakhi/                     # Python backend (CANONICAL)
 │   ├── apps/api/              # FastAPI API
-│   │   ├── routes/            # 80+ API route modules
-│   │   └── services/          # Business logic
+│   │   ├── routes/            # 75+ API route modules
+│   │   └── services/          # Business logic (50+ modules)
+│   ├── apps/engine/           # 30 computational engines
 │   ├── apps/worker/           # RQ background workers
 │   ├── libs/                  # Shared Python libraries
 │   ├── tests/                 # All Python tests
 │   └── infra/scripts/
 │       └── migrations/        # SINGLE migration location
+├── kala/                      # Governance kernel (pure computation, 547 tests)
 ├── docs/                      # All documentation
 │   ├── ARCHITECTURE.md        # System architecture
 │   ├── DATABASE_SCHEMA.md     # 179 tables reference
 │   ├── DATABASE_MIGRATIONS.md # Migration instructions
 │   ├── BUILD_PLAN.md          # Feature roadmap
+│   ├── kala/                  # Governance kernel documentation
 │   └── features/, guides/, vision/
 ├── scripts/                   # Dev/utility scripts
 ├── config/                    # App configuration
@@ -209,11 +212,16 @@ make docs-schema
 |---------|---------|
 | `services/ayurveda/` | Ayurvedic intelligence (prakruti, vikriti, causal reasoning) |
 | `services/memory/` | Memory system (STM, episodic, recall, preferences) |
+| `services/conversation_v2/` | Conversation engine, reasoner, synthesis |
+| `services/turn/` | Per-turn orchestration, context loading |
+| `services/governance/` | Kala governance bridge (constraints, drift gating, event ledger) |
+| `services/demo/` | Demo seeding, simulation harness, governance seeder |
+| `services/soul/` | Soul values, identity state computation |
+| `services/patterns/` | Pattern detection and crystallization |
 | `services/agent/` | Desktop agent, browser automation, vision loop |
 | `services/mesh/` | Inter-Sakhi coordination |
 | `services/calendar/` | Calendar and scheduling |
 | `services/learning/` | Intervention plans, feedback, preference updates |
-| `services/conversation_v2/` | Conversation engine |
 | `services/email/` | Email intelligence (Gmail integration, signals, patterns) |
 
 ### Database access pattern
@@ -418,6 +426,9 @@ updated_at TIMESTAMPTZ DEFAULT now()
 | `intervention_plans` | Wellness intervention tracking |
 | `registered_agents` | Desktop/browser agents |
 | `calendar_events` | Sakhi calendar events |
+| `governance_constraints` | Kala constraint definitions |
+| `governance_objectives` | Versioned governance objectives |
+| `governance_events` | Governance event ledger |
 
 ---
 

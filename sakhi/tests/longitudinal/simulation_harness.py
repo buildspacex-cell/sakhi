@@ -23,6 +23,14 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from sakhi.apps.worker.simulation_worker_registry import (
+    as_import_tuples,
+    interval_import_tuples,
+    monthly_import_tuples,
+    resolve_forecast_runs_per_day,
+    weekly_import_tuples,
+)
+
 from .persona_spec import PersonaSpec, Checkpoint
 from .entry_generator import generate_day_entries, get_entry_timestamp
 from .assertions import AssertionResult, run_checkpoint_assertions
@@ -203,7 +211,10 @@ class SimulationHarness:
         simulation_start: Optional[datetime] = None,
         snapshot_interval: int = 7,  # Snapshot every N days
         run_workers: bool = True,
-        daily_worker_interval: int = 3,  # Run daily workers every N days
+        daily_worker_interval: int = 1,  # Run daily workers every simulated day
+        weekly_worker_interval: int = 7,  # Run weekly workers every N simulated days
+        monthly_worker_interval: int = 30,  # Run monthly workers every N simulated days
+        forecast_interval_runs_per_day: Optional[int] = None,  # Extra intraday forecast passes
         production_parity: bool = False,  # Route through /v2/turn endpoint
     ):
         """
@@ -216,7 +227,12 @@ class SimulationHarness:
             simulation_start: Start date (default: 90 days ago)
             snapshot_interval: Days between state snapshots
             run_workers: Whether to run workers after entries
-            daily_worker_interval: Run daily workers every N simulated days
+            daily_worker_interval: Run daily workers every N simulated days.
+                Use 1 for production-like daily cadence.
+            weekly_worker_interval: Run weekly workers every N simulated days.
+            monthly_worker_interval: Run monthly workers every N simulated days.
+            forecast_interval_runs_per_day: Number of extra intraday forecast
+                passes per simulated day (None = derive from FORECAST_INTERVAL_HOURS).
             production_parity: If True, route entries through the real /v2/turn
                 endpoint (same code path as production) instead of direct DB
                 inserts + manual worker calls.
@@ -229,7 +245,12 @@ class SimulationHarness:
         )
         self.snapshot_interval = snapshot_interval
         self.run_workers = run_workers
-        self.daily_worker_interval = daily_worker_interval
+        self.daily_worker_interval = max(1, daily_worker_interval)
+        self.weekly_worker_interval = max(1, weekly_worker_interval)
+        self.monthly_worker_interval = max(1, monthly_worker_interval)
+        self.forecast_interval_runs_per_day = resolve_forecast_runs_per_day(
+            forecast_interval_runs_per_day
+        )
         self.production_parity = production_parity
 
         self.user_id: Optional[str] = None
@@ -239,6 +260,7 @@ class SimulationHarness:
         self._last_entry_content: str = ""
         self._last_entry_ts: datetime = datetime.now(timezone.utc)
         self._parity_client: Optional[Any] = None  # httpx.AsyncClient for parity mode
+        self._total_days: int = 0
 
     async def setup(self) -> str:
         """
@@ -466,6 +488,7 @@ class SimulationHarness:
             await self._init_parity_client()
 
         total_days = max_days or self.persona.arc.total_days
+        self._total_days = total_days
         self.result = SimulationResult(
             persona_id=self.persona.id,
             user_id=self.user_id,
@@ -506,10 +529,17 @@ class SimulationHarness:
         # Let background tasks (soul_extract, context_refresh) drain before daily workers
         await asyncio.sleep(2)
 
-        # Run all daily workers one final time to ensure brain is fully populated
+        # Flush any cadence groups that did not run on the final simulated day.
         if self.run_workers:
-            final_worker_results = await self._run_daily_workers(total_days)
-            self._last_worker_results = final_worker_results
+            final_worker_results: Dict[str, Any] = {}
+            if total_days % self.daily_worker_interval != 0:
+                final_worker_results.update(await self._run_daily_workers(total_days))
+            if total_days % self.weekly_worker_interval != 0:
+                final_worker_results.update(await self._run_weekly_workers(total_days))
+            if total_days % self.monthly_worker_interval != 0:
+                final_worker_results.update(await self._run_monthly_workers(total_days))
+            if final_worker_results:
+                self._last_worker_results = final_worker_results
 
         # Final snapshot
         final_snapshot = await self._capture_snapshot(total_days, include_checkpoint=True)
@@ -562,22 +592,38 @@ class SimulationHarness:
             })
             self.result.total_entries += 1
 
-        # Run ALL production daily workers every N simulated days.
-        # These are the same functions scheduler.py enqueues in production.
-        if self.run_workers and day % self.daily_worker_interval == 0:
-            # Drain any lingering background tasks from the last parity turn
-            # before running daily workers. Without this, undrained tasks can
-            # hold DB pool connections and starve daily workers.
-            if self.production_parity:
-                self._tasks_before_turn = self._snapshot_tasks()
-                await self._drain_background_tasks(timeout=15.0)
-            worker_results = await self._run_daily_workers(day)
-            # Drain any background tasks spawned by daily workers themselves
-            if self.production_parity:
-                self._tasks_before_turn = self._snapshot_tasks()
-                await self._drain_background_tasks(timeout=15.0)
-            # Store for provenance in next snapshot
-            self._last_worker_results = worker_results
+        # Run production worker cadence across daily + weekly + monthly + intraday.
+        if self.run_workers:
+            should_run_daily = day % self.daily_worker_interval == 0
+            should_run_weekly = day % self.weekly_worker_interval == 0
+            should_run_monthly = day % self.monthly_worker_interval == 0
+            should_run_interval = self.forecast_interval_runs_per_day > 0
+
+            if should_run_daily or should_run_weekly or should_run_monthly or should_run_interval:
+                # Drain any lingering background tasks from the last parity turn
+                # before running cadence workers. Without this, undrained tasks can
+                # hold DB pool connections and starve worker execution.
+                if self.production_parity:
+                    self._tasks_before_turn = self._snapshot_tasks()
+                    await self._drain_background_tasks(timeout=15.0)
+
+                worker_results: Dict[str, Any] = {}
+                if should_run_daily:
+                    worker_results.update(await self._run_daily_workers(day))
+                if should_run_weekly:
+                    worker_results.update(await self._run_weekly_workers(day))
+                if should_run_monthly:
+                    worker_results.update(await self._run_monthly_workers(day))
+                if should_run_interval:
+                    worker_results.update(await self._run_interval_workers(day))
+
+                # Drain any background tasks spawned by cadence workers.
+                if self.production_parity:
+                    self._tasks_before_turn = self._snapshot_tasks()
+                    await self._drain_background_tasks(timeout=15.0)
+
+                # Store for provenance in next snapshot
+                self._last_worker_results = worker_results
 
         if day % 10 == 0:
             LOGGER.info(
@@ -921,52 +967,24 @@ class SimulationHarness:
                     except (asyncio.CancelledError, Exception):
                         pass
 
-    # Canonical list of brain-state workers that the simulation runs.
-    # These are the production daily workers (from scheduler.py) that write
-    # to personal_model or tables the conversation engine reads.
-    #
-    # NOT included (by design):
-    #   - Notification/presence workers (outreach, nudge, evening_summary, etc.)
-    #   - Workers that write to non-existent tables (dead code in scheduler)
-    #   - Batch workers with no person_id arg (consolidate_person_models, etc.)
-    #   - Weekly/monthly aggregation (covered by daily equivalents)
-    #
-    # If you add a new daily worker to scheduler.py that writes brain state,
-    # add it here too. Count: 15.
-    DAILY_WORKER_SPECS = [
-        ("daily_reflection", "sakhi.apps.worker.tasks.daily_reflection_worker", "run_daily_reflection"),
-        ("ayurvedic_pipeline", "sakhi.apps.worker.tasks.ayurvedic_pipeline", "run_ayurvedic_pipeline"),
-        ("esr", "sakhi.apps.worker.tasks.esr_worker", "run_emotion_state_refresh"),
-        ("soul_refresh", "sakhi.apps.worker.tasks.soul_refresh_worker", "soul_refresh_worker"),
-        ("identity_momentum", "sakhi.apps.worker.identity_momentum_deep", "run_identity_momentum_deep"),
-        ("emotion_soul_rhythm", "sakhi.apps.worker.tasks.emotion_soul_rhythm_deep", "run_emotion_soul_rhythm_deep"),
-        ("rhythm_soul", "sakhi.apps.worker.rhythm_soul_deep", "run_rhythm_soul_deep"),
-        ("alignment_refresh", "sakhi.apps.worker.tasks.alignment_refresh", "run_alignment_refresh"),
-        ("coherence_refresh", "sakhi.apps.worker.tasks.coherence_refresh", "run_coherence_refresh"),
-        ("crystallization", "sakhi.apps.worker.tasks.pattern_crystallization_worker", "run_daily_crystallization"),
-        ("theme_uprank", "sakhi.apps.worker.tasks.theme_inference", "run_theme_inference_incremental"),
-        ("intent_decay", "sakhi.apps.worker.tasks.intent_evolution_decay", "intent_evolution_decay"),
-        ("emotion_loop", "sakhi.apps.worker.tasks.emotion_loop_refresh", "emotion_loop_refresh"),
-        ("task_weaver", "sakhi.apps.worker.tasks.task_weaver_refresh", "task_weaver_refresh"),
-        ("forecast", "sakhi.apps.worker.tasks.forecast", "run_forecast"),
-    ]
+    # Canonical production-aligned worker lists shared across simulation
+    # harnesses and the profile updater.
+    DAILY_WORKER_SPECS = as_import_tuples()
+    WEEKLY_WORKER_SPECS = weekly_import_tuples()
+    MONTHLY_WORKER_SPECS = monthly_import_tuples()
+    INTERVAL_WORKER_SPECS = interval_import_tuples()
 
-    async def _run_daily_workers(self, day: int) -> Dict[str, Any]:
-        """
-        Run ALL production daily workers for this simulated day.
-
-        Calls the same functions that scheduler.py enqueues in production.
-        Every function takes (person_id: str) and writes to personal_model.
-        Non-fatal: each worker is try/except'd so simulation continues.
-
-        Uses (module_path, function_name) tuples with lazy imports so that
-        a broken import in one worker doesn't block the others.
-        """
-        worker_specs = self.DAILY_WORKER_SPECS
-
+    async def _run_worker_group(
+        self,
+        *,
+        day: int,
+        phase_name: str,
+        worker_specs: List[tuple[str, str, str]],
+        key_prefix: str,
+    ) -> Dict[str, Any]:
+        """Run one cadence worker group with lazy imports and per-worker isolation."""
         import importlib
 
-        # Build workers list with lazy import — skip workers that fail to import
         workers = []
         for name, mod_path, fn_name in worker_specs:
             try:
@@ -974,32 +992,87 @@ class SimulationHarness:
                 fn = getattr(mod, fn_name)
                 workers.append((name, fn))
             except Exception as exc:
-                LOGGER.warning(f"[Simulation] Could not import {name} ({mod_path}.{fn_name}): {exc}")
-                workers.append((name, None))  # Mark as failed import
+                LOGGER.warning(
+                    f"[Simulation] Could not import {phase_name}.{name} "
+                    f"({mod_path}.{fn_name}): {exc}"
+                )
+                workers.append((name, None))
 
-        LOGGER.info(f"[Simulation] Running {len(workers)} production workers (day {day})")
+        LOGGER.info(
+            f"[Simulation] Running {len(workers)} {phase_name} workers (day {day})"
+        )
         results: Dict[str, Any] = {}
         succeeded = 0
-        worker_timeout = 60.0  # Max seconds per worker — prevents hanging
+        worker_timeout = 60.0
         for name, fn in workers:
+            key = f"{key_prefix}{name}"
             if fn is None:
-                results[name] = {"ok": False, "error": "import failed"}
+                results[key] = {"ok": False, "error": "import failed"}
                 continue
             try:
                 result = await asyncio.wait_for(fn(self.user_id), timeout=worker_timeout)
-                results[name] = {"ok": True, "result": str(result)[:200] if result else None}
+                results[key] = {"ok": True, "result": str(result)[:200] if result else None}
                 succeeded += 1
-                LOGGER.info(f"[Simulation]   {name} OK (day {day})")
+                LOGGER.info(f"[Simulation]   {phase_name}.{name} OK (day {day})")
             except asyncio.TimeoutError:
-                results[name] = {"ok": False, "error": f"timeout ({worker_timeout}s)"}
-                LOGGER.warning(f"[Simulation]   {name} TIMEOUT (day {day}): exceeded {worker_timeout}s")
+                results[key] = {"ok": False, "error": f"timeout ({worker_timeout}s)"}
+                LOGGER.warning(
+                    f"[Simulation]   {phase_name}.{name} TIMEOUT (day {day}): "
+                    f"exceeded {worker_timeout}s"
+                )
             except Exception as exc:
-                results[name] = {"ok": False, "error": str(exc)}
-                LOGGER.warning(f"[Simulation]   {name} FAILED (day {day}): {exc}")
+                results[key] = {"ok": False, "error": str(exc)}
+                LOGGER.warning(f"[Simulation]   {phase_name}.{name} FAILED (day {day}): {exc}")
 
         LOGGER.info(
-            f"[Simulation] Daily workers done: {succeeded}/{len(workers)} succeeded (day {day})"
+            f"[Simulation] {phase_name} workers done: "
+            f"{succeeded}/{len(workers)} succeeded (day {day})"
         )
+        return results
+
+    async def _run_daily_workers(self, day: int) -> Dict[str, Any]:
+        """
+        Run production daily workers for this simulated day.
+        """
+        return await self._run_worker_group(
+            day=day,
+            phase_name="daily",
+            worker_specs=self.DAILY_WORKER_SPECS,
+            key_prefix="",
+        )
+
+    async def _run_weekly_workers(self, day: int) -> Dict[str, Any]:
+        """Run production weekly workers on simulation cadence."""
+        return await self._run_worker_group(
+            day=day,
+            phase_name="weekly",
+            worker_specs=self.WEEKLY_WORKER_SPECS,
+            key_prefix="weekly.",
+        )
+
+    async def _run_monthly_workers(self, day: int) -> Dict[str, Any]:
+        """Run production monthly workers on simulation cadence."""
+        return await self._run_worker_group(
+            day=day,
+            phase_name="monthly",
+            worker_specs=self.MONTHLY_WORKER_SPECS,
+            key_prefix="monthly.",
+        )
+
+    async def _run_interval_workers(self, day: int) -> Dict[str, Any]:
+        """Run extra intraday workers (forecast refresh intervals)."""
+        if self.forecast_interval_runs_per_day <= 0:
+            return {}
+        results: Dict[str, Any] = {}
+        for pass_index in range(1, self.forecast_interval_runs_per_day + 1):
+            phase = f"interval#{pass_index}"
+            pass_results = await self._run_worker_group(
+                day=day,
+                phase_name=phase,
+                worker_specs=self.INTERVAL_WORKER_SPECS,
+                key_prefix=f"interval.{pass_index}.",
+            )
+            results.update(pass_results)
         return results
 
     async def _run_conversation_demo(

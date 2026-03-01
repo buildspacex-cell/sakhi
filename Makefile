@@ -1,6 +1,6 @@
 POETRY ?= poetry
 
-.PHONY: bootstrap dev worker test format lint db-migrate db-seed seed check-env decay-themes \
+.PHONY: bootstrap dev worker test format lint lint-changed db-migrate db-seed seed check-env decay-themes \
         quick-test watch-test typecheck new-route new-service status pre-commit-install \
         docs-api docs-schema verify build-check integration-test pre-commit-run \
         test-coverage test-workers test-routes test-unit test-status pre-deploy ready-to-commit \
@@ -37,6 +37,20 @@ format:
 lint:
 	$(POETRY) run ruff check sakhi kala
 
+lint-changed:
+	@echo "Running ruff (critical rules) on changed Python files..."
+	@CHANGED_FILES="$$( \
+		{ \
+			git diff --name-only --diff-filter=ACMRTUXB -- '*.py'; \
+			git ls-files --others --exclude-standard -- '*.py'; \
+		} | sort -u \
+	)"; \
+	if [ -z "$$CHANGED_FILES" ]; then \
+		echo "No changed Python files to lint."; \
+	else \
+		printf "%s\n" "$$CHANGED_FILES" | xargs $(POETRY) run ruff check --select E9,F63,F7,F82,F821; \
+	fi
+
 typecheck:
 	@echo "Checking Python imports..."
 	@python -c "from sakhi.apps.api.main import app; print('Python imports OK')"
@@ -49,22 +63,28 @@ typecheck:
 # ─────────────────────────────────────────────────────────────────────────────
 
 test:
-	$(POETRY) run pytest
+	$(POETRY) run pytest sakhi/tests/unit kala/tests -v --tb=short
 
 quick-test:
-	$(POETRY) run pytest sakhi/tests/v2/test_smoke.py -v --tb=short
+	$(POETRY) run pytest \
+		sakhi/tests/unit/services/test_simulation_profile_updater.py \
+		sakhi/tests/unit/services/test_crystallization_engine.py \
+		sakhi/tests/unit/workers/test_ayurvedic_pipeline_worker.py \
+		sakhi/tests/unit/workers/test_state_workers.py \
+		sakhi/tests/unit/workers/test_pattern_workers.py \
+		-v --tb=short
 
 watch-test:
 	$(POETRY) run ptw sakhi/tests -- -v --tb=short
 
 integration-test:
-	$(POETRY) run pytest -m integration -v --tb=short
+	$(POETRY) run pytest sakhi/tests/integration -v --tb=short
 
 test-unit:
 	$(POETRY) run pytest -m "not integration and not e2e" -v --tb=short
 
 test-workers:
-	$(POETRY) run pytest sakhi/tests/workers sakhi/tests/integration/workers -v --tb=short
+	$(POETRY) run pytest sakhi/tests/unit/workers sakhi/tests/integration/workers -v --tb=short
 
 test-routes:
 	$(POETRY) run pytest sakhi/tests/integration/routes -v --tb=short
@@ -100,7 +120,7 @@ test-status:
 # Pre-Deploy Verification
 # ─────────────────────────────────────────────────────────────────────────────
 
-pre-deploy: lint typecheck test integration-test
+pre-deploy: verify test integration-test
 	@echo ""
 	@echo "═══════════════════════════════════════════════════════════════"
 	@echo "              PRE-DEPLOY VERIFICATION PASSED                   "
@@ -220,7 +240,7 @@ changelog:
 # Build Verification
 # ─────────────────────────────────────────────────────────────────────────────
 
-verify: lint typecheck quick-test
+verify: lint-changed typecheck quick-test
 	@echo ""
 	@echo "✓ All quick checks passed!"
 

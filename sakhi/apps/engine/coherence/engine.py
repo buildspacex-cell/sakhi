@@ -1,11 +1,31 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 from statistics import mean
 from typing import Any, Dict, List
 
 from sakhi.apps.api.core.db import q
 from sakhi.apps.api.core.person_utils import resolve_person_id
+
+
+def _parse_json(value: Any, default: Any) -> Any:
+    """Return a parsed dict/list from a DB value that may be a string-encoded JSON.
+
+    asyncpg returns JSONB columns as serialized strings, not Python objects.
+    This normalises both cases so callers can always use .get() safely.
+    """
+    if value is None:
+        return default
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if parsed is not None else default
+        except Exception:
+            return default
+    return default
 
 
 async def compute_coherence(person_id: str) -> Dict[str, Any]:
@@ -19,10 +39,10 @@ async def compute_coherence(person_id: str) -> Dict[str, Any]:
         person_id,
         one=True,
     ) or {}
-    body_score = (wellness.get("body") or {}).get("score", 0) if isinstance(wellness.get("body"), dict) else 0
-    mind_score = (wellness.get("mind") or {}).get("score", 0) if isinstance(wellness.get("mind"), dict) else 0
-    emotion_score = (wellness.get("emotion") or {}).get("score", 0) if isinstance(wellness.get("emotion"), dict) else 0
-    energy_score = (wellness.get("energy") or {}).get("score", 0) if isinstance(wellness.get("energy"), dict) else 0
+    body_score = _parse_json(wellness.get("body"), {}).get("score", 0)
+    mind_score = _parse_json(wellness.get("mind"), {}).get("score", 0)
+    emotion_score = _parse_json(wellness.get("emotion"), {}).get("score", 0)
+    energy_score = _parse_json(wellness.get("energy"), {}).get("score", 0)
 
     # personal model aggregates
     pm_row = await q(
@@ -30,16 +50,17 @@ async def compute_coherence(person_id: str) -> Dict[str, Any]:
         person_id,
         one=True,
     ) or {}
-    arcs = pm_row.get("narrative_arcs") or []
-    identity_state = pm_row.get("identity_state") or {}
-    conflict_state = pm_row.get("conflict_state") or {}
-    emotion_state = pm_row.get("emotion_state") or {}
-    pattern_sense = pm_row.get("pattern_sense") or {}
-    prior_confidence = float((pm_row.get("coherence_report") or {}).get("confidence") or 1.0)
+    arcs = _parse_json(pm_row.get("narrative_arcs"), [])
+    identity_state = _parse_json(pm_row.get("identity_state"), {})
+    conflict_state = _parse_json(pm_row.get("conflict_state"), {})
+    emotion_state = _parse_json(pm_row.get("emotion_state"), {})
+    pattern_sense = _parse_json(pm_row.get("pattern_sense"), {})
+    coherence_report = _parse_json(pm_row.get("coherence_report"), {})
+    prior_confidence = float(coherence_report.get("confidence") or 1.0)
 
     # emotion loop
-    drift = float((emotion_state or {}).get("trend") or (emotion_state or {}).get("drift") or 0)
-    volatility = float((emotion_state or {}).get("volatility") or 0)
+    drift = float(emotion_state.get("trend") or emotion_state.get("drift") or 0)
+    volatility = float(emotion_state.get("volatility") or 0)
 
     # intents
     intents = await q(
@@ -53,7 +74,7 @@ async def compute_coherence(person_id: str) -> Dict[str, Any]:
         person_id,
         one=True,
     ) or {}
-    alignment_map = alignment.get("alignment_map") or {}
+    alignment_map = _parse_json(alignment.get("alignment_map"), {})
 
     # tasks
     tasks = await q(
@@ -83,7 +104,7 @@ async def compute_coherence(person_id: str) -> Dict[str, Any]:
     behavior_score = 0.8 - (len(open_heavy) * 0.05)
 
     # identity coherence
-    anchor_alignment = identity_state.get("anchor_alignment") or {}
+    anchor_alignment = _parse_json(identity_state.get("anchor_alignment"), {})
     identity_score = _safe_mean([float(v or 0) for v in anchor_alignment.values()]) if anchor_alignment else 0.6
 
     # alignment coherence
@@ -92,7 +113,7 @@ async def compute_coherence(person_id: str) -> Dict[str, Any]:
         alignment_score -= 0.2
 
     # narrative coherence
-    arc_momentum = [float(a.get("momentum") or 0) for a in arcs]
+    arc_momentum = [float(a.get("momentum") or 0) for a in arcs if isinstance(a, dict)]
     narrative_score = 0.7 + (_safe_mean(arc_momentum) * 0.2)
 
     coherence_map = {
@@ -109,7 +130,8 @@ async def compute_coherence(person_id: str) -> Dict[str, Any]:
     # fragmentation index
     intent_switch = max(0, (len(strong_intents) - 1) * 0.1)
     drift_slope = float(identity_state.get("drift_score") or 0)
-    conflict_density = len(conflict_state.get("conflicts") or []) * 0.05
+    conflicts_raw = _parse_json(conflict_state.get("conflicts"), [])
+    conflict_density = len(conflicts_raw) * 0.05
     fragmentation_index = _safe_mean(
         [
             abs(volatility),
