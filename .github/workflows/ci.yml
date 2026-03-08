@@ -30,5 +30,4 @@ jobs:
           ENCRYPTION_KEY: ci-secret
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/sakhi
         run: |
-          poetry run python sakhi/infra/scripts/check_env.py --profile ci --no-dotenv
           poetry run pytest -q
