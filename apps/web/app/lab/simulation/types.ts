@@ -194,6 +194,100 @@ export interface ReplayFrictionState {
   primary_contributor?: string;
 }
 
+export interface TurnContinuityEvidenceDebug {
+  ts?: string;
+  source_ref?: string;
+  snippet?: string;
+  confidence?: number;
+}
+
+export interface TurnContinuityPackDebug {
+  topic_key?: string;
+  topic_label?: string;
+  topic_confidence?: number;
+  arc_compact?: {
+    start_signal?: string;
+    pivots_signal?: string;
+    current_signal?: string;
+    disclaimer?: string;
+  };
+  evidence?: TurnContinuityEvidenceDebug[];
+}
+
+export interface TurnConversationEngineDebug {
+  base_prompt?: string;
+  prompt?: string;
+  metadata?: Record<string, any>;
+  recall_context?: string;
+}
+
+export interface TurnDebugData {
+  continuity_pack?: TurnContinuityPackDebug;
+  conversation_engine_debug?: TurnConversationEngineDebug;
+  governance_decision?: Record<string, any> | null;
+  governance_guard?: string;
+  [key: string]: any;
+}
+
+export interface SimulationAddJournalResult {
+  status?: string;
+  persona_id: string;
+  entry: JournalEntry;
+  snapshot_day: number;
+  total_days: number;
+  total_entries: number;
+  updated_at: string;
+  turn_debug?: TurnDebugData;
+}
+
+export interface ContinuityDeepReflectionResultBody {
+  reflection_mode?: "deep_answer" | "topic_reflection" | string;
+  query_context?: {
+    active_query?: string;
+    active_query_source?: "provided" | "topic_turn_recovery" | "derived_or_none" | "none" | string;
+  };
+  topic_key?: string;
+  topic_label?: string;
+  chat_response?: string;
+  deterministic_chat_response?: string;
+  chat_response_source?: "llm" | "deterministic" | string;
+  llm_reflection?: {
+    enabled?: boolean;
+    reason?: string;
+    router_source?: string;
+    model?: string;
+    provider?: string;
+    usage?: Record<string, any>;
+    input_packet?: Record<string, any>;
+    prompt_messages?: Array<Record<string, any>>;
+    response_text?: string;
+    generated_at?: string;
+    error?: string;
+    [key: string]: any;
+  };
+  origin_story?: string;
+  key_pivots?: string[];
+  current_stage?: string;
+  recurring_tensions?: string[];
+  open_questions?: string[];
+  window?: {
+    from?: string;
+    to?: string;
+  };
+  arc_summary?: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface ContinuityDeepReflectionResponse {
+  reflection_id: string;
+  topic_key?: string;
+  status: string;
+  mode?: "deep_answer" | "topic_reflection" | string;
+  user_query_present?: boolean;
+  error?: string | null;
+  result?: ContinuityDeepReflectionResultBody;
+}
+
 export interface JournalEntry {
   day: number;
   time_of_day: string;
@@ -201,6 +295,88 @@ export interface JournalEntry {
   timestamp: string;
   reply?: string;
   friction_state?: ReplayFrictionState;
+}
+
+export interface CompiledContinuityEntryTag {
+  facet: string | null;
+  anchor_state?: "CONFIDENT" | "UNCERTAIN" | "UNKNOWN";
+  facet_state?: "CONFIDENT" | "UNCERTAIN" | "UNKNOWN";
+  decision_state: string | null;
+  stance: string | null;
+  scalar: number | null;
+  confidence: number;
+  matched_terms?: string[];
+  trace?: Record<string, any>;
+}
+
+export interface CompiledContinuityEventRef {
+  day: number;
+  ts: string;
+  time_of_day: string;
+  facet: string | null;
+  anchor_state?: "CONFIDENT" | "UNCERTAIN" | "UNKNOWN";
+  facet_state?: "CONFIDENT" | "UNCERTAIN" | "UNKNOWN";
+  decision_state: string | null;
+  stance: string | null;
+  scalar: number | null;
+  excerpt: string;
+}
+
+export interface CompiledContinuityArc {
+  id: string;
+  key: string;
+  start_ts: string;
+  end_ts: string;
+  span_days: number;
+  element_count: number;
+  phase_count: number;
+  phases: Array<{
+    index: number;
+    start_ts: string;
+    end_ts: string;
+    start_day: number;
+    end_day: number;
+    element_count: number;
+    stats: Record<string, any>;
+  }>;
+  features: {
+    direction: string;
+    stability: number;
+    oscillation: number;
+    momentum: number | null;
+    average_rate: number | null;
+    density: number | null;
+    change_points: number[];
+  } | null;
+  event_refs: CompiledContinuityEventRef[];
+}
+
+export interface CompiledContinuityTopic {
+  anchor: string;
+  label: string;
+  confidence: number;
+  selected_count: number;
+  entry_days: number[];
+  entry_tags: Record<string, CompiledContinuityEntryTag>;
+  surface?: {
+    mirror_allowed: boolean;
+    detail_allowed: boolean;
+    classification_score: number;
+    coherence_score: number;
+    blocked_reason: string | null;
+  };
+  arc: CompiledContinuityArc;
+}
+
+export interface SimulationContinuityData {
+  version: number;
+  taxonomy_version?: string;
+  compiler_version?: string;
+  threshold_profile_version?: string;
+  compiled_at?: string;
+  inputs_hash?: string;
+  generated_at: string;
+  topics: CompiledContinuityTopic[];
 }
 
 export interface SimulationData {
@@ -239,6 +415,7 @@ export interface SimulationData {
       message: string;
     }>;
   };
+  continuity?: SimulationContinuityData;
 }
 
 // Phase boundary for timeline visualization

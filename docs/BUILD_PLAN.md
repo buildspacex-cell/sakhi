@@ -2,11 +2,11 @@
 
 > Living document tracking all planned work. Update checkboxes as items are completed.
 >
-> Last Updated: 2026-02-26
+> Last Updated: 2026-03-07
 >
 > **Coverage**: 100% — All demo capabilities have paths to become REAL (not just simulated)
 >
-> **Latest**: Governance kernel (kala) COMPLETE. "A Day with Sakhi" simulation demo COMPLETE. Conversation quality (personalization, adaptive prompt) COMPLETE. Pipeline fixes (coherence, alignment, identity, themes) COMPLETE. Mobile apps TOP PRIORITY.
+> **Latest**: Governance kernel (kala) COMPLETE. Continuity arc surface + deep reflection COMPLETE. "A Day with Sakhi" simulation demo COMPLETE. Conversation quality (personalization, adaptive prompt) COMPLETE. Pipeline fixes (coherence, alignment, identity, themes) COMPLETE. Mobile apps TOP PRIORITY.
 
 ---
 
@@ -82,7 +82,7 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 | ✅ | Temporal substrate | Timeline, trends, moving averages, pattern crystallization | `kala/temporal/` |
 | ✅ | State reducer | Event replay → deterministic state snapshots | `kala/state/` |
 | ✅ | Sakhi integration | GovernanceGate wired into conversation pipeline | `services/governance/service.py` |
-| ✅ | 547 tests | Full coverage, pure computation | `kala/tests/` |
+| ✅ | 552 tests | Full coverage, pure computation | `kala/tests/` |
 
 ### ✅ Phase: "A Day with Sakhi" Simulation Demo (COMPLETE)
 
@@ -95,6 +95,20 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 | ✅ | Simulation profile updater | Add journal entries through real pipeline | `services/demo/simulation_profile_updater.py` |
 | ✅ | Governance seeder | Seed constraints, objectives, events | `services/demo/governance_seeder.py` |
 | ✅ | Pipeline fixes | JSONB parsing, alignment SQL, identity guard, theme fallback | `sakhi/apps/engine/` |
+
+### ✅ Phase: Continuity Arc Surface (COMPLETE)
+
+| Status | Item | Description | Files |
+|--------|------|-------------|-------|
+| ✅ | Continuity policy + exclusions | Per-person policy + explicit source exclusion control | `sakhi/apps/api/routes/continuity.py`, `sakhi/apps/api/services/continuity/service.py` |
+| ✅ | Deterministic topic/arc APIs | Windowed topic compilation and anchor arc retrieval | `sakhi/apps/api/services/continuity/compiler.py`, `sakhi/apps/api/services/continuity/service.py` |
+| ✅ | Deep reflection job flow | Async run/status/result for continuity reflections with compact LLM synthesis packet, surface-policy carry-through (mirror-only when detail is blocked), deterministic fallback response, split run modes (`deep_answer` with current query vs `topic_reflection` without query), and deep-answer quality gate (long-form sectioned contract + one-pass regen) | `sakhi/apps/api/services/continuity/reflection.py`, `sakhi/infra/scripts/migrations/0014_continuity_deep_reflection.sql` |
+| ✅ | Turn-level continuity pack | Continuity evidence injected into `turn_v2` metadata + prompt, now with compact history stats/phase path/anchor moments, deterministic qualitative arc summary, and a chronological decision ledger for richer normal-chat continuity | `sakhi/apps/api/routes/turn_v2.py`, `sakhi/apps/api/services/conversation_v2/conversation_reasoner.py` |
+| ✅ | Web continuity controls | Chat continuity toggle + deep reflection actions + proxy routes | `apps/web/app/experience/converse/page.tsx`, `apps/web/app/api/continuity/**/route.ts` |
+| ✅ | Simulation Ask-Sakhi debug inspector | `/demo/simulation/add-journal` returns `turn_debug` (`debug_data`) and simulation UI renders continuity evidence + prompt payload plus deep reflection run/status/result controls (disabled reason when topic missing, cache-busted polling, and chat-response surfacing) for rapid product iteration | `sakhi/apps/api/services/demo/simulation_profile_updater.py`, `apps/web/app/lab/simulation/client.tsx` |
+| ✅ | Simulation continuity mirror | Precompiled continuity arcs and explainability views in demo UI | `sakhi/apps/api/services/demo/simulation_continuity.py`, `apps/web/app/lab/simulation/` |
+
+Feature detail: `docs/features/continuity-arc-surface.md`
 
 ---
 
@@ -118,7 +132,7 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 │  └── ✅ Demo UI Framework                                                   │
 │                                                                              │
 │  PHASE: Governance Kernel (kala) ✅ COMPLETE                                │
-│  ├── ✅ Constraint evaluation (11 operators, 547 tests)                    │
+│  ├── ✅ Constraint evaluation (11 operators, 552 tests)                    │
 │  ├── ✅ Drift gating + contradiction detection                             │
 │  └── ✅ Sakhi pipeline integration                                         │
 │                                                                              │
@@ -1526,10 +1540,11 @@ Phase J.4 → User custom skills + marketplace (long-term)
 
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
-| ⬜ | Health Endpoints | `/health` with component status | `routes/health.py` | All components report status |
+| ✅ | Health Endpoints | Liveness + readiness health contracts (`/health/live`, `/health`, `/health/ready`) with dependency checks and readiness status code | `sakhi/apps/api/main.py` | DB failure returns readiness degradation (`503`), liveness remains available |
 | ⬜ | Diagnostics | Debug endpoint | `routes/diagnostics.py` | System state visible |
-| ⬜ | Error Monitoring | Sentry or similar | `apps/api/core/monitoring.py` | Errors tracked |
-| ⬜ | Performance Metrics | Response times, token usage | `apps/api/core/metrics.py` | Metrics collected |
+| ✅ | Error Monitoring | External on-call sink wiring (Sentry optional + webhook relay) with API unhandled-exception capture, worker job-failure hooks, crash reporting, and dedupe window controls | `sakhi/apps/api/core/monitoring.py`, `sakhi/apps/api/main.py`, `sakhi/apps/worker/main.py` | Unhandled API/worker exceptions emit external alerts when monitoring env vars are configured |
+| ✅ | Performance Metrics | Prometheus metrics endpoint + request telemetry persistence | `sakhi/apps/api/main.py`, `sakhi/apps/api/middleware/telemetry.py` | `/metrics` scrapes and request logs record duration/path/status |
+| ✅ | Env Contract Gates | Profile-based env validation (`local`, `prod_api`, `prod_web`, `ci`) wired into `make verify` and CI smoke checks | `sakhi/infra/scripts/check_env.py`, `Makefile`, `.github/workflows/ci.yml` | Build workflow fails fast on missing required config |
 | ⬜ | Windows Agent | Electron agent for Windows | `desktop-agent/` | Works on Windows |
 
 ---

@@ -1,0 +1,942 @@
+from __future__ import annotations
+
+import json
+from typing import Any, Dict, List
+
+from sakhi.libs.json_utils import json_safe
+
+
+# =============================================================================
+# Tier 1: 360° Context Scan (always present)
+# =============================================================================
+
+
+def build_context_scan(metadata: Dict[str, Any]) -> str:
+    """
+    Build a compact 360° context scan from always-computed (cheap) data.
+    One line per module with key metrics. Omit lines for modules with no data.
+    """
+    lines = []
+
+    # Identity
+    narrative = metadata.get("narrative_trace") or {}
+    alignment = metadata.get("alignment_frame") or {}
+    momentum = metadata.get("identity_momentum_frame") or {}
+    timeline = metadata.get("identity_timeline_frame") or {}
+    id_parts = []
+    if momentum.get("momentum_direction"):
+        id_parts.append(f"momentum={momentum['momentum_direction']}")
+    if momentum.get("momentum_score") is not None:
+        id_parts.append(f"score={momentum['momentum_score']}")
+    if alignment.get("alignment_score") is not None:
+        id_parts.append(f"alignment={alignment['alignment_score']}")
+    if timeline.get("current_phase"):
+        id_parts.append(f"phase={timeline['current_phase']}")
+    if narrative.get("dominant_theme"):
+        id_parts.append(f"narrative={narrative['dominant_theme']}")
+    if id_parts:
+        lines.append("Identity: " + ", ".join(id_parts))
+
+    # Emotional
+    empathy_st = metadata.get("empathy_state") or {}
+    microreg = metadata.get("microreg_state") or {}
+    emo_parts = []
+    if empathy_st.get("pattern"):
+        emo_parts.append(f"empathy={empathy_st['pattern']}")
+    if microreg.get("shift"):
+        emo_parts.append(f"microreg={microreg['shift']}")
+    if microreg.get("amplitude") is not None:
+        emo_parts.append(f"amplitude={microreg['amplitude']}")
+    if microreg.get("risk"):
+        emo_parts.append(f"risk={microreg['risk']}")
+    if emo_parts:
+        lines.append("Emotional: " + ", ".join(emo_parts))
+
+    # Moment
+    moment = metadata.get("moment_model") or {}
+    mom_parts = []
+    if moment.get("recommended_companion_mode"):
+        mom_parts.append(f"mode={moment['recommended_companion_mode']}")
+    if moment.get("cognitive_load"):
+        mom_parts.append(f"load={moment['cognitive_load']}")
+    if moment.get("energy_state"):
+        mom_parts.append(f"energy={moment['energy_state']}")
+    if moment.get("dominant_need"):
+        mom_parts.append(f"need={moment['dominant_need']}")
+    if mom_parts:
+        lines.append("Moment: " + ", ".join(mom_parts))
+
+    # Micro flow scaffolds (generated on-demand)
+    micro_parts = []
+    if metadata.get("focus_path"):
+        micro_parts.append("focus_path=ready")
+    if metadata.get("mini_flow"):
+        micro_parts.append("mini_flow=ready")
+    if metadata.get("micro_journey"):
+        micro_parts.append("journey=active")
+    if micro_parts:
+        lines.append("Micro: " + ", ".join(micro_parts))
+
+    # Friction
+    friction = metadata.get("friction_state") or {}
+    if friction.get("state"):
+        drift = friction.get("drift_percentage", 0)
+        lines.append(f"Friction: {friction['state']} (drift={drift:.0f}%)")
+
+    # Body (health data — current + trends)
+    body = metadata.get("body_state") or {}
+    body_parts: List[str] = []
+    body_sleep = body.get("sleep", {})
+    if body_sleep.get("quality"):
+        body_parts.append(f"sleep={body_sleep['quality']}")
+    if isinstance(body_sleep.get("duration_hours"), (int, float)):
+        body_parts.append(f"{body_sleep['duration_hours']:.1f}h")
+    body_vitals = body.get("vitals", {})
+    rhr = body_vitals.get("resting_heart_rate") or body_vitals.get("resting_hr")
+    if rhr:
+        body_parts.append(f"rhr={rhr}")
+    hrv = body_vitals.get("heart_rate_variability") or body_vitals.get("hrv_sdnn")
+    if hrv:
+        body_parts.append(f"hrv={hrv}")
+    body_energy = body.get("energy")
+    if isinstance(body_energy, dict) and body_energy.get("level"):
+        body_parts.append(f"energy={body_energy['level']}")
+    elif isinstance(body_energy, (int, float)):
+        body_parts.append(f"energy={body_energy}")
+    body_dosha = body.get("dosha_body")
+    if isinstance(body_dosha, dict) and body_dosha.get("dominant_imbalance"):
+        body_parts.append(f"dosha_body={body_dosha['dominant_imbalance']}")
+    # Health trends (longitudinal)
+    trends = metadata.get("health_trends") or {}
+    for trend_key in ("sleep_trend", "hrv_trend", "energy_trend"):
+        val = trends.get(trend_key)
+        if val and val not in ("stable", "insufficient_data"):
+            body_parts.append(f"{trend_key}={val}")
+    if body_parts:
+        lines.append("Body: " + ", ".join(body_parts))
+
+    if not lines:
+        return ""
+
+    return (
+        "\n[CONTEXT SCAN — 360° awareness, use as background intelligence]\n"
+        + "\n".join(lines)
+        + "\n"
+    )
+
+
+# =============================================================================
+# Tier 2: Deep Context Sections (router-gated)
+# =============================================================================
+
+
+def build_tier2_section(module_name: str, metadata: Dict[str, Any]) -> str:
+    """
+    Build a full detailed prompt section for a given module.
+    Returns empty string if the module has no data to contribute.
+    """
+    builder = _TIER2_BUILDERS.get(module_name)
+    if builder:
+        return builder(metadata)
+    return ""
+
+
+def _build_identity_section(m: Dict[str, Any]) -> str:
+    narrative = m.get("narrative_trace") or {}
+    alignment = m.get("alignment_frame") or {}
+    rhythm = m.get("rhythm_soul_frame") or {}
+    momentum = m.get("identity_momentum_frame") or {}
+    timeline = m.get("identity_timeline_frame") or {}
+
+    if not any([narrative, alignment, momentum, timeline]):
+        return ""
+
+    parts = []
+    if narrative.get("dominant_theme"):
+        parts.append(f"Narrative: {narrative['dominant_theme']}, trend={narrative.get('emotional_trend', '?')}, shadow={narrative.get('shadow_pressure', 'none')}")
+    if alignment.get("alignment_score") is not None:
+        conflicts = alignment.get("conflict_zones") or "none"
+        parts.append(f"Values alignment: {alignment['alignment_score']} — conflicts: {conflicts}")
+    if momentum.get("momentum_score") is not None:
+        parts.append(f"Identity momentum: {momentum['momentum_score']} ({momentum.get('momentum_direction', '?')}), drag={momentum.get('emotional_drag', 'none')}")
+    if timeline.get("current_phase"):
+        parts.append(f"Phase: {timeline['current_phase']} (intensity={timeline.get('phase_intensity', '?')}), emerging={timeline.get('emerging_signal', 'none')}")
+    if rhythm.get("coherence_score") is not None:
+        parts.append(f"Rhythm coherence: {rhythm['coherence_score']}, tone={rhythm.get('rhythm_tone', '?')}")
+
+    if not parts:
+        return ""
+
+    return (
+        "\n[IDENTITY & GROWTH — Deep Context]\n"
+        + "\n".join(parts)
+        + "\n\nGuidance: Reflect their narrative arc. Acknowledge growth direction and resistance.\n"
+        "If alignment conflicts exist, gently name the tension. Honor their current phase.\n"
+    )
+
+
+def _build_emotional_section(m: Dict[str, Any]) -> str:
+    inner = m.get("inner_dialogue") or {}
+    empathy_st = m.get("empathy_state") or {}
+    microreg = m.get("microreg_state") or {}
+    nudge = m.get("nudge_state") or {}
+
+    if not any([inner, empathy_st.get("pattern"), microreg.get("pattern")]):
+        return ""
+
+    parts = []
+    if inner.get("guidance_intention"):
+        parts.append(f"Inner voice: {inner['guidance_intention']} (tone={inner.get('tone', '?')})")
+    if inner.get("reflections"):
+        reflections = inner["reflections"]
+        if isinstance(reflections, list):
+            parts.append("Reflections: " + "; ".join(str(r) for r in reflections[:2]))
+        else:
+            parts.append(f"Reflections: {reflections}")
+    if empathy_st.get("pattern"):
+        parts.append(f"Empathy: {empathy_st['pattern']} — {empathy_st.get('instruction', '')}")
+    if empathy_st.get("emotion_context"):
+        parts.append(f"Emotion context: {empathy_st['emotion_context']}")
+    if microreg.get("pattern"):
+        parts.append(f"Micro-regulation: {microreg['pattern']}, shift={microreg.get('shift', '?')}, amplitude={microreg.get('amplitude', '?')}")
+    if nudge:
+        parts.append(f"Active nudges: {json.dumps(json_safe(nudge), ensure_ascii=False)[:120]}")
+
+    if not parts:
+        return ""
+
+    return (
+        "\n[EMOTIONAL ATTUNEMENT — Deep Context]\n"
+        + "\n".join(parts)
+        + "\n\nGuidance: Embody the inner voice intention (don't state it). Follow empathy pattern —\n"
+        "match emotional register first. If microreg suggests a shift, steer conversation rhythm gently.\n"
+    )
+
+
+def _build_moment_section(m: Dict[str, Any]) -> str:
+    moment = m.get("moment_model") or {}
+    evidence = m.get("evidence_pack") or {}
+    deliberation = m.get("deliberation_scaffold") or {}
+
+    if not any([moment.get("recommended_companion_mode"), evidence.get("anchors"), deliberation.get("current_tension")]):
+        return ""
+
+    parts = []
+    if moment.get("recommended_companion_mode"):
+        parts.append(f"Companion mode: {moment['recommended_companion_mode']}")
+    if moment.get("emotional_intensity") is not None:
+        parts.append(f"Intensity={moment['emotional_intensity']}, Stability={moment.get('stability', '?')}")
+    if moment.get("cognitive_load"):
+        parts.append(f"Load={moment['cognitive_load']}, Energy={moment.get('energy_state', '?')}")
+    if moment.get("dominant_need"):
+        parts.append(f"Dominant need: {moment['dominant_need']}")
+
+    # Evidence anchors
+    anchors = evidence.get("anchors") or []
+    if anchors:
+        parts.append("")
+        parts.append("Evidence anchors (from lived experience):")
+        for a in anchors[:3]:
+            if isinstance(a, dict):
+                parts.append(f"  - {a.get('summary', a.get('text', str(a)))}")
+            else:
+                parts.append(f"  - {a}")
+
+    # Deliberation
+    if deliberation.get("current_tension"):
+        parts.append("")
+        parts.append(f"Decision tension: {deliberation['current_tension']}")
+        if deliberation.get("decision_domain"):
+            parts.append(f"Domain: {deliberation['decision_domain']}")
+        options = deliberation.get("options") or []
+        if options:
+            parts.append(f"Options: {', '.join(str(o) for o in options[:3])}")
+
+    if not parts:
+        return ""
+
+    return (
+        "\n[MOMENT INTELLIGENCE — Deep Context]\n"
+        + "\n".join(parts)
+        + "\n\nGuidance: Adopt recommended companion mode. If load high, simplify.\n"
+        "Ground in evidence anchors. For decisions, help think through — don't decide for them.\n"
+    )
+
+
+def _build_micro_flow_section(m: Dict[str, Any]) -> str:
+    focus = m.get("focus_path") or {}
+    flow = m.get("mini_flow") or {}
+    journey = m.get("micro_journey") or {}
+
+    parts = []
+    if focus.get("anchor_step"):
+        parts.append(f"Focus path: anchor={focus['anchor_step']}, progress={focus.get('progress_step', '?')}, closure={focus.get('closure_step', '?')}")
+    if flow.get("warmup_step"):
+        parts.append(f"Mini flow: warmup={flow['warmup_step']}, focus={flow.get('focus_block_step', '?')}, closure={flow.get('closure_step', '?')}")
+    if journey.get("flow_count") is not None:
+        parts.append(f"Journey: {journey['flow_count']} flows, slot={journey.get('rhythm_slot', '?')}")
+
+    if not parts:
+        return ""
+
+    guards = " ".join(filter(None, [
+        m.get("focus_path_guard", ""),
+        m.get("mini_flow_guard", ""),
+        m.get("micro_journey_guard", ""),
+    ]))
+
+    return (
+        "\n[MICRO FLOW — Active Scaffolds]\n"
+        + "\n".join(parts)
+        + "\n\nGuidance: Use whichever scaffold fits. Focus path for 'where do I start?',\n"
+        f"mini flow for short routines.\n{guards}\n"
+    )
+
+
+def _build_body_section(m: Dict[str, Any]) -> str:
+    """Build deep body/health context section with current state + longitudinal trends."""
+    body = m.get("body_state") or {}
+    trends = m.get("health_trends") or {}
+    if not body and not trends:
+        return ""
+
+    parts = []
+
+    # Current state
+    sleep = body.get("sleep", {})
+    if sleep.get("quality") or sleep.get("duration_hours"):
+        sleep_str = f"Sleep: {sleep.get('quality', '?')} quality"
+        if sleep.get("duration_hours"):
+            sleep_str += f", {sleep['duration_hours']}h"
+        if sleep.get("deep_sleep_percent"):
+            sleep_str += f", deep={sleep['deep_sleep_percent']}%"
+        parts.append(sleep_str)
+
+    vitals = body.get("vitals", {})
+    rhr = vitals.get("resting_heart_rate") or vitals.get("resting_hr")
+    hrv = vitals.get("heart_rate_variability") or vitals.get("hrv_sdnn")
+    if rhr or hrv:
+        v_str = "Vitals:"
+        if rhr:
+            v_str += f" RHR={rhr}bpm"
+        if hrv:
+            v_str += f" HRV={hrv}ms"
+        parts.append(v_str)
+
+    energy = body.get("energy")
+    if isinstance(energy, dict) and energy.get("level"):
+        e_str = f"Energy: {energy['level']}"
+        if energy.get("trend"):
+            e_str += f" ({energy['trend']})"
+        parts.append(e_str)
+    elif isinstance(energy, (int, float)):
+        parts.append(f"Energy: {energy}")
+
+    dosha = body.get("dosha_body")
+    if isinstance(dosha, dict) and dosha.get("dominant_imbalance"):
+        parts.append(f"Body dosha: {dosha['dominant_imbalance']} dominant")
+
+    agni = body.get("agni")
+    if isinstance(agni, dict) and agni.get("strength"):
+        parts.append(f"Agni: {agni['strength']}")
+
+    ojas = body.get("ojas")
+    if isinstance(ojas, dict) and isinstance(ojas.get("level"), (int, float)):
+        parts.append(f"Ojas: {ojas['level']:.1f}")
+
+    # Longitudinal trends
+    if trends and trends.get("data_points", 0) >= 3:
+        trend_parts = []
+        for key in ("sleep_trend", "energy_trend", "ojas_trend"):
+            val = trends.get(key)
+            if val and val not in ("stable", "insufficient_data"):
+                trend_parts.append(f"{key.replace('_trend', '')}={val}")
+        dosha_traj = trends.get("dosha_trajectory", {})
+        for d in ("vata", "pitta", "kapha"):
+            val = dosha_traj.get(d)
+            if val and val not in ("stable", "insufficient_data"):
+                trend_parts.append(f"{d}={val}")
+        if trend_parts:
+            window = trends.get("window_days", 14)
+            parts.append(f"Trends ({window}d): " + ", ".join(trend_parts))
+
+    if not parts:
+        return ""
+
+    return (
+        "\n[BODY & PHYSICAL STATE — Deep Context]\n"
+        + "\n".join(parts)
+        + "\n\nGuidance: Connect physical signals to emotional/behavioral patterns. "
+        "Declining HRV + journal stress = corroborating evidence. Use trends, not just snapshots. "
+        "Poor sleep causes scattered energy; elevated HR signals stress response; low energy suggests stagnation.\n"
+    )
+
+
+# Registry of tier 2 builder functions
+_TIER2_BUILDERS: Dict[str, Any] = {
+    "identity": _build_identity_section,
+    "emotional_depth": _build_emotional_section,
+    "moment": _build_moment_section,
+    "micro_flow": _build_micro_flow_section,
+    "body": _build_body_section,
+}
+
+
+# =============================================================================
+# Main Prompt Builder
+# =============================================================================
+
+
+def _timeline_label(
+    index: int,
+    total: int,
+    *,
+    single: str,
+    first: str,
+    middle: str,
+    last: str,
+) -> str:
+    if total <= 1:
+        return single
+    if index == 0:
+        return first
+    if index == total - 1:
+        return last
+    return middle
+
+
+def _strip_phase_date_prefix(line: str) -> str:
+    text = line.strip()
+    if not text or ":" not in text:
+        return text
+    prefix, remainder = text.split(":", 1)
+    if "->" in prefix.replace(" ", ""):
+        cleaned = remainder.strip()
+        if cleaned:
+            return cleaned
+    return text
+
+
+def build_prompt(
+    user_text: str,
+    context: Dict[str, Any],
+    tone: Dict[str, Any],
+    *,
+    metadata: Dict[str, Any] | None = None,
+) -> str:
+    """
+    Compose the final LLM prompt using the conversation context, tone guidance, and metadata.
+    """
+
+    short_term = context.get("short_term") or {}
+    texts: List[str] = []
+    if isinstance(short_term.get("texts"), list):
+        texts = [str(t) for t in short_term["texts"] if isinstance(t, str)]
+    st_block = "\n".join(f"- {line}" for line in texts[-3:]) or "- (no recent short-term memories)"
+
+    themes = ", ".join(t.get("theme") for t in context.get("themes", []) if t.get("theme")) or "none"
+
+    tone_style = tone.get("style", "warm and reflective")
+    pace = tone.get("pace", "balanced")
+    concise = tone.get("concise", False)
+    micro = tone.get("micro", {})
+    mirroring = tone.get("mirroring", {})
+    ritual = tone.get("ritual", {})
+    empathy = tone.get("empathy", {})
+    stability = tone.get("stability", {})
+    memory_thread = tone.get("memory_thread")
+    pacing_rationale = tone.get("pacing_rationale")
+
+    clarity_level = context.get("continuity", {}).get("clarity_level", 0.5)
+    last_emotion = context.get("conversation", {}).get("last_emotion", "neutral")
+    energy_level = context.get("conversation", {}).get("energy_level", 0.5)
+
+    persona_mode = context.get("persona_mode", "Reflective")
+
+    metadata_payload = metadata or {}
+    behavior_profile = metadata_payload.get("behavior_profile") or {}
+    behavior_block = json_safe(behavior_profile) if behavior_profile else {}
+    enriched_context = {
+        "topics": metadata_payload.get("topics"),
+        "emotion_hint": metadata_payload.get("emotion"),
+        "intents": metadata_payload.get("intents"),
+        "plans": metadata_payload.get("plans"),
+        "rhythm_trigger": metadata_payload.get("rhythm_triggers"),
+        "meta_reflection_trigger": metadata_payload.get("meta_reflection_triggers"),
+        "continuity_topic": (metadata_payload.get("continuity_pack") or {}).get("topic_key"),
+        "behavior_profile": behavior_profile,
+    }
+    # --- Operating System / Constitution Section ---
+    os_type = metadata_payload.get("operating_system") or ""  # plain string e.g. "Conservation"
+    dosha_baseline = metadata_payload.get("dosha_baseline") or {}
+
+    os_section = ""
+    if os_type and isinstance(os_type, str):
+        from sakhi.apps.api.routes.friction_framework import OS_TYPE_DEFINITIONS
+        os_def = OS_TYPE_DEFINITIONS.get(os_type, OS_TYPE_DEFINITIONS.get("Balanced", {}))
+
+        dosha_parts = []
+        for d in ["vata", "pitta", "kapha"]:
+            pct = dosha_baseline.get(d, 0) if isinstance(dosha_baseline, dict) else 0
+            if pct:
+                dosha_parts.append(f"{d.title()}: {pct:.0f}%")
+        dosha_str = ", ".join(dosha_parts) if dosha_parts else "not yet calibrated"
+
+        os_section = (
+            f"\nUser's Operating System: {os_type}\n"
+            f"Description: {os_def.get('description', '')}\n"
+            f"Constitution baseline: {dosha_str}\n"
+            f"Strengths: {', '.join(os_def.get('strengths', []))}\n"
+            f"Vulnerabilities: {', '.join(os_def.get('vulnerabilities', []))}\n"
+            "Guidance: Use this to personalize your response. "
+            "Connect symptoms and patterns to their natural tendencies — "
+            "let this inform what you suggest and how you frame things.\n"
+        )
+
+    # --- Governance Guard Section (MANDATORY when present) ---
+    governance_guard = metadata_payload.get("governance_guard", "")
+    governance_section = ""
+    if governance_guard:
+        governance_section = f"\n{governance_guard}\n"
+
+    journaling_ai = context.get("journaling_ai")
+    journal_section = ""
+    if journaling_ai:
+        journal_section = "\nJournaling cues:\n" + json.dumps(json_safe(journaling_ai), ensure_ascii=False) + "\n"
+
+    # Personalized Recommendations Integration
+    recommendation_section = ""
+    recommendations = metadata_payload.get("personalized_recommendations") or {}
+    recommendation_trigger = metadata_payload.get("recommendation_trigger")
+    friction_state = metadata_payload.get("friction_state") or {}
+    recommendation_guard = metadata_payload.get("recommendation_guard", "")
+
+    if recommendations and recommendation_trigger:
+        trigger_reason = recommendations.get("trigger_reason", "")
+        friction_info = friction_state.get("state", "Balanced")
+        drift_pct = friction_state.get("drift_percentage", 0)
+
+        # Build a concise recommendations block
+        immediate = recommendations.get("immediate_actions", [])
+        foods = recommendations.get("foods", [])
+        practices = recommendations.get("practices", [])
+        personal_insight = recommendations.get("personal_insight", "")
+
+        rec_items = []
+        if immediate:
+            rec_items.append("Quick actions: " + ", ".join(a.get("name", "") for a in immediate[:2]))
+        if foods:
+            rec_items.append("Foods to try: " + ", ".join(f.get("name", "") for f in foods[:3]))
+        if practices:
+            rec_items.append("Practices: " + ", ".join(p.get("name", "") for p in practices[:2]))
+
+        rec_list = "\n".join(f"  - {item}" for item in rec_items) if rec_items else "  - (none ready)"
+
+        # Different framing based on trigger type
+        if recommendation_trigger == "reactive":
+            rec_intro = "The user asked for suggestions. Here are personalized recommendations:"
+            rec_instruction = "Directly share these recommendations, explaining why they're suited to the user."
+        elif recommendation_trigger == "proactive":
+            rec_intro = f"User's friction state: {friction_info} (drift: {drift_pct:.0f}%). Proactive suggestions available:"
+            rec_instruction = "Gently weave in 1-2 relevant suggestions. Don't overwhelm - offer support naturally."
+        elif recommendation_trigger == "contextual":
+            rec_intro = f"It's a good moment for a gentle check-in ({trigger_reason}). Available suggestions:"
+            rec_instruction = "If appropriate, mention one suggestion as part of natural conversation. No pressure."
+        else:  # nudge
+            rec_intro = "Subtle nudge opportunity based on patterns:"
+            rec_instruction = "Only mention if it feels natural. The user may not need explicit recommendations."
+
+        recommendation_section = f"""
+[Personalized Recommendations - {recommendation_trigger.upper()} TRIGGER]
+{rec_intro}
+{rec_list}
+{f'Personal insight: {personal_insight}' if personal_insight else ''}
+
+Guidance: {rec_instruction}
+{recommendation_guard}
+"""
+
+    # Scheduling & Calendar Integration
+    scheduling_section = ""
+    scheduling_context = metadata_payload.get("scheduling_context") or {}
+    scheduling_intent = metadata_payload.get("scheduling_intent")
+    relationship_nudges = metadata_payload.get("relationship_nudges") or []
+    scheduling_guard = metadata_payload.get("scheduling_guard", "")
+
+    if scheduling_context or relationship_nudges:
+        intent_type = scheduling_context.get("intent") or scheduling_intent
+
+        # Handle confirmation result first
+        if scheduling_intent == "confirmed" and scheduling_context.get("confirmation"):
+            confirmation = scheduling_context["confirmation"]
+            conf_status = confirmation.get("status", "")
+            conf_message = confirmation.get("message", "")
+            created_event = confirmation.get("created_event", {})
+
+            if conf_status == "confirmed" and created_event:
+                event_title = created_event.get("title", "your event")
+                start_time = created_event.get("start_time", "")
+
+                scheduling_section = f"""
+[EVENT CREATED - User confirmed scheduling request]
+The event has been created successfully!
+Event: {event_title}
+Time: {start_time}
+
+Guidance: Celebrate this! Confirm the event is on their calendar with warmth.
+Say something like: "{conf_message}" followed by a supportive note.
+Be brief and positive - the scheduling is complete.
+"""
+            else:
+                # Confirmation failed
+                scheduling_section = f"""
+[SCHEDULING ISSUE]
+There was a problem: {conf_message}
+
+Guidance: Acknowledge the issue and offer to help find another time.
+"""
+
+        elif intent_type == "query":
+            # Calendar query: "What's my week look like?"
+            today_events = scheduling_context.get("today_events", [])
+            week_summary = scheduling_context.get("week_summary", {})
+
+            today_str = ""
+            if today_events:
+                today_str = "Today's events:\n" + "\n".join(
+                    f"  - {e.get('title')} at {e.get('start')}" +
+                    (f" (with {e.get('relationship_note')})" if e.get('relationship_note') else "")
+                    for e in today_events[:4]
+                )
+            else:
+                today_str = "Today: No events scheduled"
+
+            week_str = ""
+            if week_summary:
+                event_count = week_summary.get("event_count", 0)
+                energy_note = week_summary.get("energy_prediction", "")
+                week_str = f"This week: {event_count} events planned"
+                if energy_note:
+                    week_str += f". {energy_note}"
+
+            scheduling_section = f"""
+[CALENDAR CONTEXT - User asked about their schedule]
+{today_str}
+{week_str}
+
+Guidance: Share the calendar summary with relationship and energy context.
+{scheduling_guard}
+"""
+
+        elif intent_type in ("create", "block", "find_time"):
+            # Explicit scheduling request
+            parsed = scheduling_context.get("parsed_request", {})
+            suggested_times = scheduling_context.get("suggested_times", [])
+            participant_context = scheduling_context.get("participant_context", [])
+
+            event_type = parsed.get("event_type", "meeting")
+            participants = parsed.get("participants", [])
+            missing = parsed.get("missing_slots", [])
+
+            times_str = ""
+            if suggested_times:
+                times_str = "Available times (quality-ranked):\n" + "\n".join(
+                    f"  - {t.get('start')} ({t.get('quality')}: {t.get('quality_reason', '')})"
+                    for t in suggested_times[:3]
+                )
+            else:
+                times_str = "  (Checking availability...)"
+
+            participant_str = ""
+            if participant_context:
+                participant_str = "Participant context:\n" + "\n".join(
+                    f"  - {p.get('name')}: last seen {p.get('last_seen') or 'unknown'}, "
+                    f"usually meet for {', '.join(p.get('usual_activities', ['various'])[:2])}"
+                    for p in participant_context[:2]
+                )
+
+            missing_str = f"Still need to know: {', '.join(missing)}" if missing else ""
+
+            scheduling_section = f"""
+[SCHEDULING REQUEST - {intent_type.upper()}]
+Event type: {event_type}
+For: {', '.join(participants) if participants else '(not specified)'}
+{participant_str}
+{times_str}
+{missing_str}
+
+Guidance: Present 2-3 time options with quality context. Ask for confirmation before blocking.
+CRITICAL: Do NOT create the event. Ask: "Would you like me to block one of these times?"
+{scheduling_guard}
+"""
+
+        elif intent_type == "journal_hint":
+            # Proactive detection from journal content
+            hints = scheduling_context.get("journal_hint", {})
+            detected = hints.get("detected_patterns", [])
+
+            scheduling_section = f"""
+[SCHEDULING OPPORTUNITY - Detected intent in what user shared]
+Patterns detected: {', '.join(detected)}
+
+Guidance: Gently offer to help schedule. Say something like:
+"Would you like me to help find a time for that?"
+Do NOT assume they want to schedule - offer and let them decide.
+{scheduling_guard}
+"""
+
+        elif relationship_nudges and not intent_type:
+            # Relationship nudges (only if no other scheduling context)
+            nudge_str = "\n".join(
+                f"  - {n.get('name')}: last seen {n.get('days_since', '?')} days ago "
+                f"(target: {n.get('frequency_target', 'periodic')})"
+                for n in relationship_nudges[:2]
+            )
+
+            scheduling_section = f"""
+[RELATIONSHIP REMINDER - People who might appreciate connection]
+{nudge_str}
+
+Guidance: Only mention if natural in conversation. Something like:
+"By the way, you haven't seen [name] in a while - want me to help schedule something?"
+Do NOT force this. Only bring up if it flows naturally.
+{scheduling_guard}
+"""
+
+    # 360° Context Scan (Tier 1 — always present)
+    context_scan = build_context_scan(metadata_payload)
+
+    continuity_section = ""
+    continuity_pack = metadata_payload.get("continuity_pack") or {}
+    if continuity_pack:
+        arc_compact = continuity_pack.get("arc_compact") or {}
+        history_compact = continuity_pack.get("history_compact") or {}
+        evidence = continuity_pack.get("evidence") or []
+        qualitative_summary = str(history_compact.get("qualitative_arc_summary") or "").strip()
+        qualitative_mode = str(history_compact.get("qualitative_mode") or "").strip() or "mirror_only"
+        decision_ledger = history_compact.get("decision_ledger") or []
+        span_days = history_compact.get("span_days")
+        element_count = history_compact.get("element_count")
+        phase_count = history_compact.get("phase_count")
+        stats_bits = []
+        if isinstance(span_days, (int, float)) and span_days > 0:
+            stats_bits.append(f"span={span_days:.0f}d")
+        if isinstance(element_count, int) and element_count > 0:
+            stats_bits.append(f"moments={element_count}")
+        if isinstance(phase_count, int) and phase_count > 0:
+            stats_bits.append(f"phases={phase_count}")
+        thread_stats = ", ".join(stats_bits) if stats_bits else "unknown"
+
+        phase_path = history_compact.get("phase_path") or []
+        phase_entries = [line.strip() for line in phase_path[:4] if isinstance(line, str) and line.strip()]
+        phase_lines = []
+        for idx, line in enumerate(phase_entries):
+            summary = _strip_phase_date_prefix(line)
+            marker = _timeline_label(
+                idx,
+                len(phase_entries),
+                single="Now",
+                first="First",
+                middle="Then",
+                last="Now",
+            )
+            phase_lines.append(f"  - {marker}: {summary}")
+        phase_block = "\n".join(phase_lines) if phase_lines else "  - (phase path unavailable)"
+
+        anchor_points = history_compact.get("anchor_points") or []
+        anchor_lines = []
+        anchor_entries = [
+            item
+            for item in anchor_points[:3]
+            if isinstance(item, dict) and str(item.get("snippet") or "").strip()
+        ]
+        for idx, item in enumerate(anchor_entries):
+            snippet = str(item.get("snippet") or "").strip()
+            marker = _timeline_label(
+                idx,
+                len(anchor_entries),
+                single="Signal",
+                first="Early signal",
+                middle="Middle signal",
+                last="Recent signal",
+            )
+            anchor_lines.append(f"  - {marker}: {snippet}")
+        anchor_block = "\n".join(anchor_lines) if anchor_lines else "  - (anchors unavailable)"
+
+        decision_lines = []
+        decision_entries = [
+            item
+            for item in decision_ledger[:6]
+            if isinstance(item, dict) and str(item.get("decision") or "").strip()
+        ]
+        for idx, item in enumerate(decision_entries):
+            status = str(item.get("status") or "").strip() or "noted"
+            source = str(item.get("source") or "").strip() or "unknown"
+            decision = str(item.get("decision") or "").strip()
+            marker = _timeline_label(
+                idx,
+                len(decision_entries),
+                single="Decision",
+                first="Early decision",
+                middle="Later decision",
+                last="Recent decision",
+            )
+            decision_lines.append(f"  - {marker} [{status}] ({source}) {decision}")
+        decision_block = "\n".join(decision_lines) if decision_lines else "  - (no explicit decisions captured)"
+
+        evidence_lines = []
+        evidence_entries = [
+            item
+            for item in evidence[:6]
+            if isinstance(item, dict) and str(item.get("snippet") or "").strip()
+        ]
+        for idx, item in enumerate(evidence_entries):
+            snippet = str(item.get("snippet") or "").strip()
+            marker = _timeline_label(
+                idx,
+                len(evidence_entries),
+                single="Evidence",
+                first="Early evidence",
+                middle="Later evidence",
+                last="Recent evidence",
+            )
+            evidence_lines.append(f"  - {marker}: {snippet}")
+        evidence_block = "\n".join(evidence_lines) if evidence_lines else "  - (no evidence selected)"
+        continuity_section = f"""
+[LONGITUDINAL CONTINUITY — Hidden Context]
+This is the history on this topic:
+Topic: {continuity_pack.get("topic_label") or continuity_pack.get("topic_key") or "unknown"}
+Start signal: {arc_compact.get("start_signal") or "unknown"}
+Pivots signal: {arc_compact.get("pivots_signal") or "unknown"}
+Current signal: {arc_compact.get("current_signal") or "unknown"}
+Direction note: {arc_compact.get("disclaimer") or "Direction reflects consistency over time."}
+Phase path (compressed history):
+{phase_block}
+Anchor moments (early/middle/recent):
+{anchor_block}
+Decision ledger (chronological):
+{decision_block}
+Recent evidence (chronological):
+{evidence_block}
+
+This is what we know about the person on this topic:
+Thread stats: {thread_stats}
+Qualitative arc summary ({qualitative_mode}):
+{qualitative_summary or "(qualitative summary unavailable)"}
+
+Current query now:
+{user_text}
+
+Guidance: Answer the current query using topic history and person context.
+Use this to improve coherence and avoid repeating already-resolved points.
+Do NOT quote, summarize, or mention specific past entries unless the user explicitly asks for history or evidence.
+"""
+
+    # Tier 2 deep sections (router-gated)
+    active_modules = set(metadata_payload.get("active_modules") or [])
+    tier2_parts = []
+    for mod in sorted(active_modules):
+        section = build_tier2_section(mod, metadata_payload)
+        if section:
+            tier2_parts.append(section)
+    tier2_sections = "\n".join(tier2_parts)
+
+    # Email Intelligence Context (reactive only — present when user asked about email)
+    email_section = ""
+    email_context = metadata_payload.get("email_context")
+    contact_prefs = metadata_payload.get("contact_preferences")
+
+    if email_context:
+        email_section = (
+            "\n[EMAIL INTELLIGENCE - User asked about their inbox]\n"
+            f"{email_context}\n\n"
+            "Guidance: The user asked about email — share these patterns directly and helpfully.\n"
+            "- Mention avoidance patterns, boundary erosion, cognitive load as relevant\n"
+            "- Offer to help prioritize or suggest what to tackle first\n"
+            "- Never share specific email content, only patterns and signals\n"
+        )
+
+    if contact_prefs:
+        email_section += f"\n{contact_prefs}\n"
+
+    # Causal Reasoning Context (why the user is in this friction state)
+    causal_section = ""
+    causal = metadata_payload.get("causal_explanation")
+    if causal:
+        dosha_ctx = causal.get("dosha_context") or ""
+        explanation = causal.get("explanation_text") or ""
+        causal_section = (
+            "\n[WHY YOU MIGHT BE FEELING THIS WAY]\n"
+            f"{dosha_ctx}\n{explanation}\n\n"
+            "Guidance: Use this to inform your understanding, not to lecture.\n"
+            "- Connect the user's words to these patterns naturally\n"
+            "- Offer insights about their natural patterns as a way to understand, not diagnose\n"
+            "- If the user asks 'why am I feeling X', draw from this analysis\n"
+            "- Keep it grounded and practical\n"
+        )
+
+    # Vision Context (images the user shared in this conversation)
+    vision_section = ""
+    vision = metadata_payload.get("vision_context")
+    if vision:
+        parts = []
+        current = vision.get("current_image")
+        if current:
+            desc = current.get("description") or ""
+            text_extract = current.get("extracted_text") or ""
+            parts.append(f"Image shared: {desc}")
+            if text_extract:
+                parts.append(f"Text in image: {text_extract}")
+        for ref in vision.get("referenced_media", []):
+            if ref.get("analysis"):
+                parts.append(f"Earlier image: {ref['analysis'].get('description', '')}")
+        if parts:
+            vision_section = (
+                "\n[VISUAL CONTEXT]\n"
+                + "\n".join(f"- {p}" for p in parts) + "\n"
+                "Guidance: Reference what you see naturally. Don't describe the image back unless asked.\n"
+            )
+
+    return f"""
+You are Sakhi — a friend who really gets this person. You understand their patterns.
+
+VOICE: Talk like a friend. Not a therapist, not formal. Just real.
+- Simple words. Short sentences. Say what matters.
+- Never use Ayurvedic jargon in your reply (vata, pitta, kapha, dosha = internal context only, never say these to the user).
+- Warm but direct. Skip fluff.
+
+Tone: {tone_style} (pace={pace})
+Emotion state: {last_emotion}
+Energy level: {energy_level}
+Mirroring: {mirroring.get("strategy", "mirror emotion before guiding forward")}
+Active themes: {themes}
+
+Recent short-term thoughts:
+{st_block}
+
+Additional context:
+{json.dumps(json_safe(enriched_context), ensure_ascii=False)}
+Behavior cues:
+{json.dumps(behavior_block, ensure_ascii=False) if behavior_block else "none"}
+{journal_section}
+{recommendation_section}
+{scheduling_section}
+{context_scan}
+{continuity_section}
+{os_section}
+{governance_section}
+{tier2_sections}
+{email_section}
+{causal_section}
+{vision_section}
+User message:
+{user_text.strip()}
+
+Keep it short. 30-50 words usually. Say what matters.
+If you have enough context to help, help. Don't ask just to ask.
+Max 2 questions. Make them feel natural.
+For scheduling: suggest options and ALWAYS ask for confirmation before creating events.
+""".strip()
+
+
+__all__ = ["build_prompt", "build_context_scan", "build_tier2_section"]

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type React from "react";
@@ -111,6 +111,23 @@ interface FrictionState {
   severity: string | null;
 }
 
+interface ContinuityPolicyState {
+  enabled: boolean;
+  exclusions: Array<{ source?: string; id?: string }>;
+}
+
+interface ContinuityPackDebug {
+  topic_key: string;
+  topic_label?: string;
+  arc_compact?: {
+    start_signal?: string;
+    pivots_signal?: string;
+    current_signal?: string;
+  };
+}
+
+type DeepReflectionRunMode = "deep_answer" | "topic_reflection";
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -152,6 +169,12 @@ function ConverseContent() {
 
   // Friction state for UX indicator
   const [frictionState, setFrictionState] = useState<FrictionState | null>(null);
+  const [continuityPolicy, setContinuityPolicy] = useState<ContinuityPolicyState | null>(null);
+  const [isUpdatingContinuity, setIsUpdatingContinuity] = useState(false);
+  const [activeContinuityPack, setActiveContinuityPack] = useState<ContinuityPackDebug | null>(null);
+  const [isRunningDeepReflection, setIsRunningDeepReflection] = useState(false);
+  const [deepReflectionStatus, setDeepReflectionStatus] = useState<string>("");
+  const [deepReflectionMode, setDeepReflectionMode] = useState<DeepReflectionRunMode | null>(null);
 
   // Agent task state
   const [activeTask, setActiveTask] = useState<AgentTaskContext | null>(null);
@@ -224,6 +247,39 @@ function ConverseContent() {
     };
     loadAuth();
   }, []);
+
+  const latestUserMessage = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const item = messages[i];
+      if (item.role === "user") {
+        const text = String(item.content || "").trim();
+        if (text) return text;
+      }
+    }
+    return "";
+  }, [messages]);
+
+  const loadContinuityPolicy = useCallback(async () => {
+    if (!authUser?.person_id) return;
+    try {
+      const res = await fetch(
+        `/api/continuity/policy?person_id=${encodeURIComponent(authUser.person_id)}`,
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      setContinuityPolicy({
+        enabled: !!data.enabled,
+        exclusions: Array.isArray(data.exclusions) ? data.exclusions : [],
+      });
+    } catch (err) {
+      console.error("Continuity policy load error:", err);
+    }
+  }, [authUser?.person_id]);
+
+  useEffect(() => {
+    if (!authUser?.person_id) return;
+    void loadContinuityPolicy();
+  }, [authUser?.person_id, loadContinuityPolicy]);
 
   // Track previous friction state for change notifications
   const prevFrictionStateRef = useRef<string | null>(null);
@@ -462,6 +518,219 @@ function ConverseContent() {
     [authUser?.person_id]
   );
 
+  const formatDeepReflectionResult = useCallback((payload: Record<string, unknown>) => {
+    const result = (payload.result as Record<string, unknown> | undefined) || {};
+    const chatResponse = String(result.chat_response || "").trim();
+    if (chatResponse) {
+      return chatResponse;
+    }
+    const topicLabel = String(result.topic_label || payload.topic_key || "this thread");
+    const lines = [`Deep reflection on ${topicLabel}:`];
+
+    const originStory = String(result.origin_story || "").trim();
+    const keyPivots = Array.isArray(result.key_pivots) ? result.key_pivots : [];
+    const currentStage = String(result.current_stage || "").trim();
+    const recurringTensions = Array.isArray(result.recurring_tensions)
+      ? result.recurring_tensions
+      : [];
+
+    if (originStory) lines.push(`Start: ${originStory}`);
+    if (typeof keyPivots[0] === "string" && keyPivots[0].trim()) {
+      lines.push(`Pivot: ${keyPivots[0].trim()}`);
+    }
+    if (currentStage) lines.push(`Current: ${currentStage}`);
+    if (typeof recurringTensions[0] === "string" && recurringTensions[0].trim()) {
+      lines.push(`Recurring: ${recurringTensions[0].trim()}`);
+    }
+
+    return lines.join("\n");
+  }, []);
+
+  const pollDeepReflection = useCallback(
+    async (reflectionId: string) => {
+      const fetchResult = async () => {
+        const nonce = Date.now();
+        const resultRes = await fetch(
+          `/api/continuity/reflection/result?id=${encodeURIComponent(reflectionId)}&t=${nonce}`,
+          { cache: "no-store" },
+        );
+        if (!resultRes.ok) return null;
+        return (await resultRes.json()) as Record<string, unknown>;
+      };
+
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        try {
+          const statusNonce = Date.now();
+          const statusRes = await fetch(
+            `/api/continuity/reflection/status?id=${encodeURIComponent(reflectionId)}&t=${statusNonce}`,
+            { cache: "no-store" },
+          );
+          if (!statusRes.ok) break;
+          const statusData = await statusRes.json();
+          const status = String(statusData.status || "queued");
+          setDeepReflectionStatus(status);
+
+          if (status === "done") {
+            const resultData = await fetchResult();
+            if (resultData) {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `reflection-${Date.now()}`,
+                  role: "sakhi",
+                  content: formatDeepReflectionResult(resultData),
+                  timestamp: new Date(),
+                  source: "text",
+                },
+              ]);
+            }
+            setIsRunningDeepReflection(false);
+            setDeepReflectionStatus("");
+            return;
+          }
+
+          if (status === "failed") {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `reflection-failed-${Date.now()}`,
+                role: "sakhi",
+                content: "Deep reflection could not complete for this thread.",
+                timestamp: new Date(),
+                source: "text",
+              },
+            ]);
+            setIsRunningDeepReflection(false);
+            setDeepReflectionStatus("");
+            return;
+          }
+
+          if (attempt % 3 === 0) {
+            const resultData = await fetchResult();
+            const resultStatus = String(resultData?.status || "queued");
+            if (resultData && resultStatus === "done") {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `reflection-${Date.now()}`,
+                  role: "sakhi",
+                  content: formatDeepReflectionResult(resultData),
+                  timestamp: new Date(),
+                  source: "text",
+                },
+              ]);
+              setIsRunningDeepReflection(false);
+              setDeepReflectionStatus("");
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Deep reflection poll error:", err);
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
+      const finalResult = await fetchResult().catch(() => null);
+      if (finalResult && String(finalResult.status || "queued") === "done") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `reflection-${Date.now()}`,
+            role: "sakhi",
+            content: formatDeepReflectionResult(finalResult),
+            timestamp: new Date(),
+            source: "text",
+          },
+        ]);
+      }
+
+      setIsRunningDeepReflection(false);
+      setDeepReflectionStatus("");
+    },
+    [formatDeepReflectionResult]
+  );
+
+  const handleRunDeepReflection = useCallback(async (mode: DeepReflectionRunMode) => {
+    if (!authUser?.person_id || !activeContinuityPack?.topic_key || isRunningDeepReflection) return;
+    const queryText = mode === "deep_answer" ? latestUserMessage : "";
+    if (mode === "deep_answer" && !queryText) return;
+
+    setIsRunningDeepReflection(true);
+    setDeepReflectionStatus("queued");
+    setDeepReflectionMode(mode);
+
+    try {
+      const res = await fetch("/api/continuity/reflection/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: authUser.person_id,
+          topic_key: activeContinuityPack.topic_key,
+          window: "3650d",
+          mode,
+          user_query: mode === "deep_answer" ? queryText : undefined,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(`Reflection request failed (${res.status})`);
+      }
+      const data = await res.json();
+      setDeepReflectionStatus(String(data.status || "queued"));
+      void pollDeepReflection(String(data.reflection_id || ""));
+    } catch (err) {
+      console.error("Deep reflection run error:", err);
+      setIsRunningDeepReflection(false);
+      setDeepReflectionStatus("");
+      setDeepReflectionMode(null);
+    }
+  }, [
+    activeContinuityPack?.topic_key,
+    authUser?.person_id,
+    isRunningDeepReflection,
+    latestUserMessage,
+    pollDeepReflection,
+  ]);
+
+  const handleContinuityToggle = useCallback(async () => {
+    if (!authUser?.person_id || isUpdatingContinuity) return;
+
+    setIsUpdatingContinuity(true);
+    try {
+      const nextEnabled = !Boolean(continuityPolicy?.enabled);
+      const res = await fetch("/api/continuity/policy", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: authUser.person_id,
+          enabled: nextEnabled,
+          exclusions: continuityPolicy?.exclusions || [],
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(`Continuity update failed (${res.status})`);
+      }
+      const data = await res.json();
+      setContinuityPolicy({
+        enabled: !!data.enabled,
+        exclusions: Array.isArray(data.exclusions) ? data.exclusions : [],
+      });
+      if (!data.enabled) {
+        setActiveContinuityPack(null);
+      }
+    } catch (err) {
+      console.error("Continuity update error:", err);
+    } finally {
+      setIsUpdatingContinuity(false);
+    }
+  }, [
+    authUser?.person_id,
+    continuityPolicy?.enabled,
+    continuityPolicy?.exclusions,
+    isUpdatingContinuity,
+  ]);
+
   // Send message to API
   const sendMessage = useCallback(
     async (text: string) => {
@@ -496,6 +765,9 @@ function ConverseContent() {
           const debugData = data.debug_data || {};
           const internalState = debugData.internal_state || {};
           const engineDebug = debugData.conversation_engine_debug || {};
+          const continuityPack = (debugData.continuity_pack ||
+            engineDebug.metadata?.continuity_pack ||
+            null) as ContinuityPackDebug | null;
 
           // Parse recall_context string into structured memory_recall array
           // Format: "- [type] text (s=0.85)\n"
@@ -526,6 +798,7 @@ function ConverseContent() {
             behavior_profile: engineDebug.metadata?.behavior_profile || data.behavior_profile,
             tone_state: debugData.tone_state || data.tone_state,
             continuity: engineDebug.metadata?.continuity || data.continuity,
+            continuity_pack: continuityPack,
             // Parse recall data from engine debug string into structured format
             memory_recall: parsedRecalls.length > 0 ? parsedRecalls : data.memory_recall,
             // Map debug_data to debug key that DebugPanel expects
@@ -536,6 +809,10 @@ function ConverseContent() {
               used_fallback: engineDebug.used_fallback,
             },
           });
+
+          setActiveContinuityPack(
+            continuityPack && continuityPack.topic_key ? continuityPack : null,
+          );
 
           // Handle agent task context
           const taskContext = data.agent_task_context as AgentTaskContext | null;
@@ -1032,6 +1309,93 @@ function ConverseContent() {
             <div style={greetingStyle}>
               {getGreeting()}
               {displayName && `, ${displayName}`}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+                marginTop: "10px",
+              }}
+            >
+              <button
+                onClick={() => {
+                  void handleContinuityToggle();
+                }}
+                disabled={!authUser?.person_id || isUpdatingContinuity}
+                style={{
+                  background: continuityPolicy?.enabled ? "rgba(34, 197, 94, 0.12)" : palette.cardBg,
+                  border: `1px solid ${continuityPolicy?.enabled ? "rgba(34, 197, 94, 0.35)" : palette.border}`,
+                  color: continuityPolicy?.enabled ? palette.success : palette.muted,
+                  fontSize: "12px",
+                  cursor: authUser?.person_id && !isUpdatingContinuity ? "pointer" : "default",
+                  padding: "6px 10px",
+                  borderRadius: "999px",
+                }}
+              >
+                {isUpdatingContinuity
+                  ? "Updating continuity..."
+                  : `Continuity ${continuityPolicy?.enabled ? "On" : "Off"}`}
+              </button>
+
+              {continuityPolicy?.enabled && activeContinuityPack?.topic_key && (
+                <>
+                  <span
+                    style={{
+                      background: "rgba(99, 102, 241, 0.12)",
+                      border: `1px solid rgba(99, 102, 241, 0.3)`,
+                      color: palette.fg,
+                      fontSize: "12px",
+                      padding: "6px 10px",
+                      borderRadius: "999px",
+                    }}
+                  >
+                    Using continuity: {activeContinuityPack.topic_label || activeContinuityPack.topic_key}
+                  </span>
+                  <button
+                    onClick={() => {
+                      void handleRunDeepReflection("deep_answer");
+                    }}
+                    disabled={isRunningDeepReflection || !latestUserMessage}
+                    style={{
+                      background: palette.cardBg,
+                      border: `1px solid ${palette.border}`,
+                      color: palette.fg,
+                      fontSize: "12px",
+                      cursor: isRunningDeepReflection || !latestUserMessage ? "default" : "pointer",
+                      padding: "6px 10px",
+                      borderRadius: "999px",
+                      opacity: isRunningDeepReflection || !latestUserMessage ? 0.7 : 1,
+                    }}
+                    title={latestUserMessage ? "Run deep answer with current query + full history" : "Send a user message first to run Deep Answer"}
+                  >
+                    {isRunningDeepReflection && deepReflectionMode === "deep_answer"
+                      ? `Deep Answer: ${deepReflectionStatus || "running"}`
+                      : "Run Deep Answer"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      void handleRunDeepReflection("topic_reflection");
+                    }}
+                    disabled={isRunningDeepReflection}
+                    style={{
+                      background: palette.cardBg,
+                      border: `1px solid ${palette.border}`,
+                      color: palette.fg,
+                      fontSize: "12px",
+                      cursor: isRunningDeepReflection ? "default" : "pointer",
+                      padding: "6px 10px",
+                      borderRadius: "999px",
+                      opacity: isRunningDeepReflection ? 0.7 : 1,
+                    }}
+                    title="Run longitudinal topic reflection without requiring a current query"
+                  >
+                    {isRunningDeepReflection && deepReflectionMode === "topic_reflection"
+                      ? `Topic Reflection: ${deepReflectionStatus || "running"}`
+                      : "Run Topic Reflection"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
           {/* Friction State Indicator */}

@@ -166,6 +166,14 @@ async def _ensure_profile_user(user_id: str, persona: Dict[str, Any]) -> None:
         user_id,
     )
     await dbexec(
+        """INSERT INTO users (id, email, full_name, created_at, updated_at)
+           VALUES ($1, $2, $3, NOW(), NOW())
+           ON CONFLICT (id) DO NOTHING""",
+        user_id,
+        email,
+        str(persona.get("name") or "Simulation User"),
+    )
+    await dbexec(
         "INSERT INTO auth_users (id, email, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING",
         user_id,
         email,
@@ -299,7 +307,7 @@ async def _run_turn_for_journal(
     ) as client:
         response = await client.post(
             "/v2/turn",
-            params={"user": user_id},
+            params={"user": user_id, "debug": "1"},
             json={"text": content, "ts": timestamp.isoformat()},
         )
     if response.status_code != 200:
@@ -322,6 +330,7 @@ async def _run_turn_for_journal(
         "entry_id": str(entry_id) if entry_id else None,
         "reply": payload.get("reply", ""),
         "friction_state": payload.get("friction_state"),
+        "debug_data": payload.get("debug_data"),
     }
 
 
@@ -650,6 +659,19 @@ async def add_journal_to_simulation_profile(
         sim_data["generated_at"] = datetime.now(timezone.utc).isoformat()
         sim_data.setdefault("errors", [])
         sim_data["errors"] = [e for e in sim_data["errors"] if e]  # keep shape consistent
+        try:
+            # Best-effort enrichment; do not block add-journal flow if continuity imports fail.
+            from sakhi.apps.api.services.demo.simulation_continuity import (
+                enrich_simulation_payload,
+            )
+
+            enrich_simulation_payload(sim_data, persona_id=persona_id)
+        except Exception as exc:
+            LOGGER.warning(
+                "Skipping simulation continuity enrichment for %s due to error: %s",
+                persona_id,
+                exc,
+            )
 
         with path.open("w", encoding="utf-8") as handle:
             json.dump(sim_data, handle, indent=2, default=str, ensure_ascii=False)
@@ -661,4 +683,5 @@ async def add_journal_to_simulation_profile(
             "total_days": sim_data["total_days"],
             "total_entries": sim_data["total_entries"],
             "updated_at": sim_data["generated_at"],
+            "turn_debug": turn_result.get("debug_data") or {},
         }

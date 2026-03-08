@@ -80,6 +80,8 @@ async def test_get_historical_effectiveness_filters_null_and_invalid_items(monke
 
 @pytest.mark.asyncio
 async def test_weekly_rollup_skips_when_rhythm_daily_curve_table_missing(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(weekly_rhythm_rollup_worker, "ENABLE_WEEKLY_RHYTHM_ROLLUP", True)
+
     async def fake_q(sql: str, *args, one: bool = False):
         if "to_regclass" in sql:
             table_name = args[0]
@@ -100,6 +102,8 @@ async def test_weekly_rollup_skips_when_rhythm_daily_curve_table_missing(monkeyp
 
 @pytest.mark.asyncio
 async def test_weekly_rollup_continues_when_rhythm_events_table_missing(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(weekly_rhythm_rollup_worker, "ENABLE_WEEKLY_RHYTHM_ROLLUP", True)
+
     async def fake_q(sql: str, *args, one: bool = False):
         if "to_regclass" in sql:
             table_name = args[0]
@@ -121,3 +125,18 @@ async def test_weekly_rollup_continues_when_rhythm_events_table_missing(monkeypa
 
     assert result == {"processed": 1, "updated": 1}
     assert mock_dbexec.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_weekly_rollup_skips_when_disabled_by_policy(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(weekly_rhythm_rollup_worker, "ENABLE_WEEKLY_RHYTHM_ROLLUP", False)
+    mock_q = AsyncMock()
+    mock_dbexec = AsyncMock()
+    monkeypatch.setattr(weekly_rhythm_rollup_worker, "q", mock_q)
+    monkeypatch.setattr(weekly_rhythm_rollup_worker, "dbexec", mock_dbexec)
+
+    result = await weekly_rhythm_rollup_worker.run_weekly_rhythm_rollup(person_id="person-1")
+
+    assert result == {"processed": 0, "updated": 0, "skipped": "disabled_by_policy"}
+    mock_q.assert_not_called()
+    mock_dbexec.assert_not_called()

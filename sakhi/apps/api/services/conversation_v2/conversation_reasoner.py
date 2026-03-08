@@ -387,6 +387,45 @@ _TIER2_BUILDERS: Dict[str, Any] = {
 # =============================================================================
 
 
+def _timeline_label(
+    index: int,
+    total: int,
+    *,
+    single: str,
+    first: str,
+    middle: str,
+    last: str,
+) -> str:
+    if total <= 1:
+        return single
+    if index == 0:
+        return first
+    if index == total - 1:
+        return last
+    return middle
+
+
+def _strip_phase_date_prefix(line: str) -> str:
+    text = line.strip()
+    if not text or ":" not in text:
+        return _strip_phase_detail_suffix(text)
+    prefix, remainder = text.split(":", 1)
+    if "->" in prefix.replace(" ", ""):
+        cleaned = remainder.strip()
+        if cleaned:
+            return _strip_phase_detail_suffix(cleaned)
+    return _strip_phase_detail_suffix(text)
+
+
+def _strip_phase_detail_suffix(text: str) -> str:
+    value = text.strip()
+    if value.endswith(")") and "(" in value:
+        prefix, suffix = value.rsplit("(", 1)
+        if "moment" in suffix.lower():
+            return prefix.strip()
+    return value
+
+
 def build_prompt(
     user_text: str,
     context: Dict[str, Any],
@@ -433,6 +472,7 @@ def build_prompt(
         "plans": metadata_payload.get("plans"),
         "rhythm_trigger": metadata_payload.get("rhythm_triggers"),
         "meta_reflection_trigger": metadata_payload.get("meta_reflection_triggers"),
+        "continuity_topic": (metadata_payload.get("continuity_pack") or {}).get("topic_key"),
         "behavior_profile": behavior_profile,
     }
     # --- Operating System / Constitution Section ---
@@ -675,6 +715,120 @@ Do NOT force this. Only bring up if it flows naturally.
     # 360° Context Scan (Tier 1 — always present)
     context_scan = build_context_scan(metadata_payload)
 
+    continuity_section = ""
+    continuity_pack = metadata_payload.get("continuity_pack") or {}
+    if continuity_pack:
+        arc_compact = continuity_pack.get("arc_compact") or {}
+        history_compact = continuity_pack.get("history_compact") or {}
+        evidence = continuity_pack.get("evidence") or []
+        qualitative_summary = str(history_compact.get("qualitative_arc_summary") or "").strip()
+        qualitative_mode = str(history_compact.get("qualitative_mode") or "").strip() or "mirror_only"
+        decision_ledger = history_compact.get("decision_ledger") or []
+
+        phase_path = history_compact.get("phase_path") or []
+        phase_entries = [line.strip() for line in phase_path[:4] if isinstance(line, str) and line.strip()]
+        phase_lines = []
+        for idx, line in enumerate(phase_entries):
+            summary = _strip_phase_date_prefix(line)
+            marker = _timeline_label(
+                idx,
+                len(phase_entries),
+                single="Now",
+                first="First",
+                middle="Then",
+                last="Now",
+            )
+            phase_lines.append(f"  - {marker}: {summary}")
+        phase_block = "\n".join(phase_lines) if phase_lines else "  - (phase path unavailable)"
+
+        anchor_points = history_compact.get("anchor_points") or []
+        anchor_lines = []
+        anchor_entries = [
+            item
+            for item in anchor_points[:3]
+            if isinstance(item, dict) and str(item.get("snippet") or "").strip()
+        ]
+        for idx, item in enumerate(anchor_entries):
+            snippet = str(item.get("snippet") or "").strip()
+            marker = _timeline_label(
+                idx,
+                len(anchor_entries),
+                single="Signal",
+                first="Early signal",
+                middle="Middle signal",
+                last="Recent signal",
+            )
+            anchor_lines.append(f"  - {marker}: {snippet}")
+        anchor_block = "\n".join(anchor_lines) if anchor_lines else "  - (anchors unavailable)"
+
+        decision_lines = []
+        decision_entries = [
+            item
+            for item in decision_ledger[:6]
+            if isinstance(item, dict) and str(item.get("decision") or "").strip()
+        ]
+        for idx, item in enumerate(decision_entries):
+            status = str(item.get("status") or "").strip() or "noted"
+            source = str(item.get("source") or "").strip() or "unknown"
+            decision = str(item.get("decision") or "").strip()
+            marker = _timeline_label(
+                idx,
+                len(decision_entries),
+                single="Decision",
+                first="Early decision",
+                middle="Later decision",
+                last="Recent decision",
+            )
+            decision_lines.append(f"  - {marker} [{status}] ({source}) {decision}")
+        decision_block = "\n".join(decision_lines) if decision_lines else "  - (no explicit decisions captured)"
+
+        evidence_lines = []
+        evidence_entries = [
+            item
+            for item in evidence[:6]
+            if isinstance(item, dict) and str(item.get("snippet") or "").strip()
+        ]
+        for idx, item in enumerate(evidence_entries):
+            snippet = str(item.get("snippet") or "").strip()
+            marker = _timeline_label(
+                idx,
+                len(evidence_entries),
+                single="Evidence",
+                first="Early evidence",
+                middle="Later evidence",
+                last="Recent evidence",
+            )
+            evidence_lines.append(f"  - {marker}: {snippet}")
+        evidence_block = "\n".join(evidence_lines) if evidence_lines else "  - (no evidence selected)"
+        continuity_section = f"""
+[LONGITUDINAL CONTINUITY — Hidden Context]
+History on this topic:
+Topic: {continuity_pack.get("topic_label") or continuity_pack.get("topic_key") or "unknown"}
+Where it began: {arc_compact.get("start_signal") or "unknown"}
+Key shifts: {arc_compact.get("pivots_signal") or "unknown"}
+Where it is now: {arc_compact.get("current_signal") or "unknown"}
+Story flow:
+{phase_block}
+Anchor moments:
+{anchor_block}
+
+What we know about this person on this topic:
+Qualitative summary ({qualitative_mode}):
+{qualitative_summary or "(qualitative summary unavailable)"}
+Decision ledger:
+{decision_block}
+Evidence we can rely on:
+{evidence_block}
+
+Current query now:
+{user_text}
+
+Guidance: Answer the current query using topic history and person context.
+Prioritize answering the current query directly. Use history as grounding, not as a detour.
+Use this to improve coherence and avoid repeating already-resolved points.
+Do NOT quote, summarize, or mention specific past entries unless the user explicitly asks for history or evidence.
+"""
+
     # Tier 2 deep sections (router-gated)
     active_modules = set(metadata_payload.get("active_modules") or [])
     tier2_parts = []
@@ -765,6 +919,7 @@ Behavior cues:
 {recommendation_section}
 {scheduling_section}
 {context_scan}
+{continuity_section}
 {os_section}
 {governance_section}
 {tier2_sections}
@@ -774,9 +929,9 @@ Behavior cues:
 User message:
 {user_text.strip()}
 
-Keep it short. 30-50 words usually. Say what matters.
+Keep it focused. 60-120 words usually. Lead with practical help.
 If you have enough context to help, help. Don't ask just to ask.
-Max 2 questions. Make them feel natural.
+Max 1 question. Make it feel natural.
 For scheduling: suggest options and ALWAYS ask for confirmation before creating events.
 """.strip()
 

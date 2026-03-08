@@ -78,6 +78,7 @@ load_dotenv()
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 DEMO_USER_ID = os.getenv("DEMO_USER_ID")
+ENABLE_WEEKLY_RHYTHM_ROLLUP = os.getenv("SAKHI_ENABLE_WEEKLY_RHYTHM_ROLLUP", "0").lower() in {"1", "true", "yes", "on"}
 
 _redis = redis.from_url(REDIS_URL)
 _queue = Queue(os.getenv("REFLECTION_QUEUE", "reflection"), connection=_redis)
@@ -498,6 +499,8 @@ def schedule_weekly_learning() -> None:
 
 def schedule_rhythm_rollup_weekly() -> None:
     """Weekly rhythm rollup (deterministic capacity patterns)."""
+    if not ENABLE_WEEKLY_RHYTHM_ROLLUP:
+        return
     if not _should_run_today(RHYTHM_ROLLUP_WEEKLY_DAYS):
         return
     if not _should_run_hour(RHYTHM_ROLLUP_WEEKLY_HOUR):

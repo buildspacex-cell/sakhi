@@ -158,6 +158,15 @@ Workers run in background. Faster responses, requires Redis.
 
 ## Full Environment Variables Reference
 
+**Source-of-truth policy**
+- Local development:
+  - API/worker runtime reads `.env.local` (if present), then `.env`.
+  - Web runtime reads `apps/web/.env.local`.
+- Production:
+  - Set env vars in Railway (API/worker) and Vercel (web).
+  - Do not rely on `.env` files in production containers.
+- `.env.example` and `.env.local.example` are templates only.
+
 ### Next.js (`apps/web/.env.local`)
 
 | Variable | Required | Description |

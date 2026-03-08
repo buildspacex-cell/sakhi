@@ -2,7 +2,7 @@
 
 > **This file provides instructions for Claude and other LLMs working on this codebase.**
 >
-> Last Updated: 2026-02-26
+> Last Updated: 2026-03-05
 
 ---
 
@@ -15,15 +15,15 @@ sakhi-monorepo/
 │   └── mobile/                # React Native (Expo)
 ├── sakhi/                     # Python backend (CANONICAL)
 │   ├── apps/api/              # FastAPI API
-│   │   ├── routes/            # 75+ API route modules
-│   │   └── services/          # Business logic (50+ modules)
-│   ├── apps/engine/           # 30 computational engines
+│   │   ├── routes/            # 80+ API route modules
+│   │   └── services/          # Business logic (230+ modules)
+│   ├── apps/engine/           # 34 computational engines
 │   ├── apps/worker/           # RQ background workers
 │   ├── libs/                  # Shared Python libraries
 │   ├── tests/                 # All Python tests
 │   └── infra/scripts/
 │       └── migrations/        # SINGLE migration location
-├── kala/                      # Governance kernel (pure computation, 547 tests)
+├── kala/                      # Governance kernel (pure computation, 552 tests)
 ├── docs/                      # All documentation
 │   ├── ARCHITECTURE.md        # System architecture
 │   ├── DATABASE_SCHEMA.md     # 179 tables reference
@@ -46,10 +46,11 @@ sakhi-monorepo/
 | Start web | `pnpm dev:web` |
 | Start workers | `make worker` |
 | Run tests | `make test` |
-| Quick tests only | `make quick-test` |
+| Quick tests only | `make quick-test` (currently stale target; use explicit pytest targets) |
 | Format code | `make format` |
 | Lint code | `make lint` |
 | Type check | `make typecheck` |
+| Env contract check | `make check-env` |
 | Run migrations | `make db-migrate` |
 | Build web | `cd apps/web && pnpm build` |
 | Dev status dashboard | `make status` |
@@ -168,6 +169,19 @@ make status
 # Shows: Git status, running services, test counts, env vars
 ```
 
+### Localhost Auth Bypass (Web Dev)
+For localhost-only web testing without Supabase login:
+
+```bash
+# In .env.local (development only)
+DEV_AUTH_BYPASS_PERSON_ID=a1b2c3d4-1111-4000-8000-000000000001
+```
+
+Notes:
+- Active only when `NODE_ENV=development` and host is `localhost`/`127.0.0.1`
+- Used by middleware and `GET /api/auth/me` to bypass login for protected web routes
+- Set `DEV_AUTH_BYPASS_PERSON_ID=` (empty) to disable
+
 ### Documentation Generation
 Auto-generate docs from code:
 
@@ -213,6 +227,7 @@ make docs-schema
 | `services/ayurveda/` | Ayurvedic intelligence (prakruti, vikriti, causal reasoning) |
 | `services/memory/` | Memory system (STM, episodic, recall, preferences) |
 | `services/conversation_v2/` | Conversation engine, reasoner, synthesis |
+| `services/continuity/` | Continuity policy, arc surfacing, deep reflection jobs |
 | `services/turn/` | Per-turn orchestration, context loading |
 | `services/governance/` | Kala governance bridge (constraints, drift gating, event ledger) |
 | `services/demo/` | Demo seeding, simulation harness, governance seeder |
@@ -235,8 +250,11 @@ async def my_function():
 ```
 
 ### Environment variables
-- Defined in `.env` at project root
+- Local runtime source of truth is `.env.local` (dev) with fallback to `.env`
+- Production source of truth is platform env settings (Railway/Vercel), not local files
+- `.env.example` and `.env.local.example` are templates only (not loaded at runtime)
 - Access via `os.environ['VAR_NAME']` or `from dotenv import load_dotenv`
+- Production alerting supports optional external sinks via `SAKHI_MONITORING_ENABLED`, `SAKHI_SENTRY_DSN`, and `SAKHI_ALERT_WEBHOOK_URL`
 
 ---
 
@@ -345,6 +363,7 @@ make pre-deploy          # ~2-5 minutes
 # This runs:
 # ✓ Linting
 # ✓ Type checking
+# ✓ Local env contract (`.env.local` -> `.env`)
 # ✓ All unit tests
 # ✓ All integration tests
 ```

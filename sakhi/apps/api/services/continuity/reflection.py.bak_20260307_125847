@@ -1,0 +1,896 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import os
+import re
+from collections import Counter
+from datetime import UTC, datetime
+from typing import Any
+from uuid import uuid4
+
+from sakhi.apps.api.core.db import exec as dbexec
+from sakhi.apps.api.core.db import q as dbfetch
+from sakhi.apps.api.core.llm import get_router
+from sakhi.apps.api.services.governance.service import log_turn_event
+from sakhi.apps.api.services.continuity.service import (
+    CONTINUITY_SCOPE,
+    get_continuity_arc,
+)
+
+LOGGER = logging.getLogger(__name__)
+_TOKEN_RE = re.compile(r"[a-z0-9']+")
+_TOPIC_STOPWORDS = {
+    "the",
+    "and",
+    "for",
+    "with",
+    "this",
+    "that",
+    "from",
+    "into",
+    "about",
+    "around",
+    "current",
+    "phase",
+    "thread",
+    "started",
+    "currently",
+    "return",
+}
+_DEEP_REFLECTION_SYSTEM = """You are Sakhi - a friend who gets this person deeply.
+Speak naturally, warm and direct. Keep it grounded in the packet evidence.
+Do not use therapy-speak or Ayurvedic jargon.
+Do not introduce themes that are not explicitly present in the packet.
+Keep it concise (40-80 words), one short paragraph, max one natural question."""
+
+
+async def create_deep_reflection_job(
+    person_id: str,
+    topic_key: str,
+    *,
+    window: str = "3650d",
+) -> dict[str, Any]:
+    reflection_id = str(uuid4())
+    await dbexec(
+        """
+        INSERT INTO deep_reflections (
+            id, person_id, topic_key, status, inputs_hash, created_at, updated_at
+        )
+        VALUES ($1::uuid, $2::uuid, $3, 'queued', '', now(), now())
+        """,
+        reflection_id,
+        person_id,
+        topic_key,
+    )
+    asyncio.create_task(
+        _run_deep_reflection_job(
+            reflection_id=reflection_id,
+            person_id=person_id,
+            topic_key=topic_key,
+            window=window,
+        )
+    )
+    await log_turn_event(
+        person_id=person_id,
+        action="deep_reflection_run",
+        event_type="observed",
+        actor="system",
+        data={"reflection_id": reflection_id, "topic_key": topic_key, "window": window},
+        reason="deep reflection queued",
+    )
+    return {
+        "reflection_id": reflection_id,
+        "status": "queued",
+        "topic_key": topic_key,
+        "window": window,
+    }
+
+
+async def get_deep_reflection_status(reflection_id: str) -> dict[str, Any]:
+    row = await dbfetch(
+        """
+        SELECT id, person_id, topic_key, status, error, created_at, updated_at
+        FROM deep_reflections
+        WHERE id = $1::uuid
+        """,
+        reflection_id,
+        one=True,
+    )
+    if not row:
+        raise LookupError("Deep reflection not found")
+    return {
+        "reflection_id": str(row.get("id")),
+        "person_id": str(row.get("person_id")),
+        "topic_key": str(row.get("topic_key") or ""),
+        "status": str(row.get("status") or "queued"),
+        "error": row.get("error"),
+        "created_at": _iso(row.get("created_at")),
+        "updated_at": _iso(row.get("updated_at")),
+    }
+
+
+async def get_deep_reflection_result(reflection_id: str) -> dict[str, Any]:
+    row = await dbfetch(
+        """
+        SELECT id, person_id, topic_key, status, result_json, error
+        FROM deep_reflections
+        WHERE id = $1::uuid
+        """,
+        reflection_id,
+        one=True,
+    )
+    if not row:
+        raise LookupError("Deep reflection not found")
+    status = str(row.get("status") or "queued")
+    if status != "done":
+        return {
+            "reflection_id": str(row.get("id")),
+            "topic_key": str(row.get("topic_key") or ""),
+            "status": status,
+            "error": row.get("error"),
+        }
+
+    result = _parse_json_object(row.get("result_json"))
+    await log_turn_event(
+        person_id=str(row.get("person_id")),
+        action="deep_reflection_viewed",
+        event_type="observed",
+        actor="system",
+        data={"reflection_id": reflection_id, "topic_key": str(row.get("topic_key") or "")},
+        reason="deep reflection viewed",
+    )
+    return {
+        "reflection_id": str(row.get("id")),
+        "topic_key": str(row.get("topic_key") or ""),
+        "status": status,
+        "result": result,
+    }
+
+
+async def _run_deep_reflection_job(
+    *,
+    reflection_id: str,
+    person_id: str,
+    topic_key: str,
+    window: str,
+) -> None:
+    try:
+        await dbexec(
+            """
+            UPDATE deep_reflections
+            SET status = 'running', updated_at = now()
+            WHERE id = $1::uuid
+            """,
+            reflection_id,
+        )
+        arc_payload = await get_continuity_arc(
+            person_id,
+            topic_key,
+            window=window,
+            debug=True,
+            log_access=False,
+            scope=CONTINUITY_SCOPE,
+        )
+        deterministic = _build_reflection_result(arc_payload)
+        result = await _enrich_reflection_with_llm(
+            person_id=person_id,
+            topic_key=topic_key,
+            arc_payload=arc_payload,
+            deterministic=deterministic,
+        )
+        await _persist_deep_reflection_done(reflection_id, result)
+    except Exception as exc:
+        await dbexec(
+            """
+            UPDATE deep_reflections
+            SET status = 'failed',
+                error = $2,
+                updated_at = now()
+            WHERE id = $1::uuid
+            """,
+            reflection_id,
+            str(exc),
+        )
+
+
+async def _persist_deep_reflection_done(reflection_id: str, result: dict[str, Any]) -> None:
+    inputs_hash = str((result.get("versions") or {}).get("inputs_hash") or "")
+    result_json = json.dumps(result, ensure_ascii=False)
+    window = result.get("window") or {}
+    window_start = _coerce_ts(window.get("from"))
+    window_end = _coerce_ts(window.get("to"))
+
+    if window_start and window_end:
+        try:
+            await dbexec(
+                """
+                UPDATE deep_reflections
+                SET status = 'done',
+                    window_start = $2::timestamptz,
+                    window_end = $3::timestamptz,
+                    inputs_hash = $4,
+                    result_json = $5::jsonb,
+                    error = NULL,
+                    updated_at = now()
+                WHERE id = $1::uuid
+                """,
+                reflection_id,
+                window_start.isoformat(),
+                window_end.isoformat(),
+                inputs_hash,
+                result_json,
+            )
+            return
+        except Exception as exc:
+            LOGGER.warning(
+                "Deep reflection window write failed for %s; falling back to payload-only update: %s",
+                reflection_id,
+                exc,
+            )
+
+    await dbexec(
+        """
+        UPDATE deep_reflections
+        SET status = 'done',
+            inputs_hash = $2,
+            result_json = $3::jsonb,
+            error = NULL,
+            updated_at = now()
+        WHERE id = $1::uuid
+        """,
+        reflection_id,
+        inputs_hash,
+        result_json,
+    )
+
+
+def _build_reflection_result(arc_payload: dict[str, Any]) -> dict[str, Any]:
+    arc = arc_payload.get("arc") or {}
+    included = arc_payload.get("included_moments") or []
+    phase_packets = _build_phase_packets(arc, included)
+    recurring = _recurring_threads(included)
+    start_signal = _phase_signal(phase_packets[0]) if phase_packets else "Started as one continuous thread."
+    current_signal = _current_signal(phase_packets[-1]) if phase_packets else "Current thread remains active."
+    pivot_summaries = _pivot_summaries(phase_packets)
+    open_questions = _open_questions(phase_packets[-1] if phase_packets else None)
+
+    return {
+        "topic_key": arc_payload.get("anchor"),
+        "topic_label": arc_payload.get("label"),
+        "window": arc_payload.get("window") or {},
+        "versions": arc_payload.get("versions") or {},
+        "surface": arc_payload.get("surface") or {},
+        "arc_summary": {
+            "span_days": arc.get("span_days"),
+            "element_count": arc.get("element_count"),
+            "phase_count": arc.get("phase_count"),
+            "direction": ((arc.get("features") or {}).get("direction")),
+            "coherence": ((arc_payload.get("surface") or {}).get("coherence_score")),
+        },
+        "origin_story": start_signal,
+        "key_pivots": pivot_summaries,
+        "recurring_tensions": recurring,
+        "current_stage": current_signal,
+        "open_questions": open_questions,
+        "chat_response": _compose_chat_response(
+            origin_story=start_signal,
+            key_pivots=pivot_summaries,
+            current_stage=current_signal,
+            recurring_tensions=recurring,
+            open_questions=open_questions,
+        ),
+        "phase_packets": phase_packets,
+    }
+
+
+async def _enrich_reflection_with_llm(
+    *,
+    person_id: str,
+    topic_key: str,
+    arc_payload: dict[str, Any],
+    deterministic: dict[str, Any],
+) -> dict[str, Any]:
+    result = dict(deterministic)
+    deterministic_chat_response = str(result.get("chat_response") or "").strip()
+    result["deterministic_chat_response"] = deterministic_chat_response
+    result["chat_response_source"] = "deterministic"
+
+    router = _get_deep_reflection_router()
+    if router is None:
+        result["llm_reflection"] = {
+            "enabled": False,
+            "reason": "llm_router_unavailable",
+        }
+        return result
+
+    try:
+        packet = await _build_reflection_llm_packet(
+            person_id=person_id,
+            topic_key=topic_key,
+            arc_payload=arc_payload,
+            deterministic=deterministic,
+        )
+        prompt_messages = _build_deep_reflection_prompt_messages(packet)
+        model = os.getenv("MODEL_DEEP_REFLECTION_CHAT", os.getenv("MODEL_CHAT", "gpt-4o-mini"))
+        llm_response = await router.chat(
+            messages=prompt_messages,
+            model=model,
+            temperature=0.35,
+            max_tokens=220,
+        )
+        llm_text = _normalize_llm_text(llm_response.text or "")
+        if llm_text:
+            result["chat_response"] = llm_text
+            result["chat_response_source"] = "llm"
+
+        result["llm_reflection"] = {
+            "enabled": True,
+            "router_source": "global_router",
+            "model": llm_response.model or model,
+            "provider": llm_response.provider,
+            "usage": dict(llm_response.usage or {}),
+            "prompt_messages": prompt_messages,
+            "input_packet": packet,
+            "response_text": llm_text,
+            "generated_at": datetime.now(UTC).isoformat(),
+        }
+    except Exception as exc:
+        LOGGER.warning("Deep reflection LLM synthesis failed for %s: %s", person_id, exc)
+        result["llm_reflection"] = {
+            "enabled": True,
+            "error": str(exc),
+        }
+    return result
+
+
+def _get_deep_reflection_router() -> Any | None:
+    try:
+        return get_router()
+    except Exception as exc:
+        LOGGER.info("Deep reflection router unavailable; deterministic fallback: %s", exc)
+        return None
+
+
+async def _build_reflection_llm_packet(
+    *,
+    person_id: str,
+    topic_key: str,
+    arc_payload: dict[str, Any],
+    deterministic: dict[str, Any],
+) -> dict[str, Any]:
+    evidence = _build_evidence_anchors(arc_payload.get("included_moments") or [], limit=8)
+    topic_keywords = _topic_keywords(topic_key, deterministic, evidence)
+    surface = deterministic.get("surface") or {}
+    detail_allowed = bool(surface.get("detail_allowed"))
+    mirror_allowed = bool(surface.get("mirror_allowed", True))
+    recent_episodes = await _load_recent_topic_episodes(
+        person_id=person_id,
+        topic_keywords=topic_keywords,
+    )
+    delta_since_last = await _build_delta_since_last_reflection(
+        person_id=person_id,
+        topic_key=topic_key,
+        deterministic=deterministic,
+    )
+    latest_turn_context = await _load_latest_turn_context(
+        person_id=person_id,
+        topic_keywords=topic_keywords,
+    )
+
+    return {
+        "topic_key": topic_key,
+        "topic_label": deterministic.get("topic_label"),
+        "window": deterministic.get("window") or {},
+        "surface": surface,
+        "arc_compact_global": _build_arc_compact_global(deterministic),
+        "recent_episode_compact": recent_episodes,
+        "evidence_anchors": evidence,
+        "delta_since_last_reflection": delta_since_last,
+        "latest_turn_context": latest_turn_context,
+        "response_contract": {
+            "voice": "friend, warm, direct",
+            "length_words": "40-80",
+            "max_questions": 1,
+            "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
+            "format": "single short paragraph",
+            "detail_allowed": detail_allowed,
+            "mirror_allowed": mirror_allowed,
+            "nudge_policy": "grounded_next_step" if detail_allowed else "mirror_only",
+        },
+    }
+
+
+def _build_arc_compact_global(deterministic: dict[str, Any]) -> dict[str, Any]:
+    phase_packets = deterministic.get("phase_packets") or []
+    return {
+        "origin_story": deterministic.get("origin_story"),
+        "key_pivots": list(deterministic.get("key_pivots") or [])[:3],
+        "current_stage": deterministic.get("current_stage"),
+        "recurring_tensions": list(deterministic.get("recurring_tensions") or [])[:3],
+        "open_questions": list(deterministic.get("open_questions") or [])[:2],
+        "arc_summary": deterministic.get("arc_summary") or {},
+        "phase_compaction": [
+            {
+                "index": int(phase.get("index") or 0),
+                "summary": phase.get("summary"),
+                "dominant_tag": phase.get("dominant_tag"),
+                "element_count": int(phase.get("element_count") or 0),
+                "window": {
+                    "start": phase.get("start_ts"),
+                    "end": phase.get("end_ts"),
+                },
+            }
+            for phase in phase_packets
+        ],
+    }
+
+
+def _build_evidence_anchors(included_moments: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+    if not included_moments:
+        return []
+    ordered = sorted(
+        included_moments,
+        key=lambda item: (
+            str(item.get("ts") or ""),
+            str(item.get("source_ref") or ""),
+        ),
+    )
+    total = len(ordered)
+    early = ordered[: min(3, total)]
+    middle = ordered[max(0, (total // 2) - 1): max(0, (total // 2) + 2)]
+    late = ordered[max(0, total - 6):]
+
+    selected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in early + middle + late:
+        key = f"{item.get('ts')}|{item.get('source_ref')}"
+        if key in seen:
+            continue
+        seen.add(key)
+        snippet = str(item.get("short_snippet") or item.get("snippet") or "").strip()
+        selected.append(
+            {
+                "ts": item.get("ts"),
+                "source_ref": item.get("source_ref"),
+                "facet": item.get("facet"),
+                "decision_state": item.get("decision_state"),
+                "stance": item.get("stance"),
+                "snippet": _truncate(snippet, 220),
+            }
+        )
+        if len(selected) >= limit:
+            break
+    return selected
+
+
+async def _load_recent_topic_episodes(
+    *,
+    person_id: str,
+    topic_keywords: set[str],
+) -> list[dict[str, Any]]:
+    try:
+        rows = await dbfetch(
+            """
+            SELECT id, COALESCE(record->>'summary', text, '') AS summary, ts
+            FROM memory_episodic
+            WHERE (person_id = $1::uuid OR user_id = $2)
+            ORDER BY ts DESC
+            LIMIT 80
+            """,
+            person_id,
+            person_id,
+        )
+    except Exception as exc:
+        LOGGER.info("Recent episodic compaction unavailable for %s: %s", person_id, exc)
+        return []
+
+    ranked: list[tuple[int, float, dict[str, Any]]] = []
+    for row in rows or []:
+        summary = str(row.get("summary") or "").strip()
+        if not summary:
+            continue
+        matched = _matched_keywords(summary, topic_keywords)
+        overlap = len(matched)
+        ts_iso = _iso(row.get("ts"))
+        recency = _recency_score(row.get("ts"))
+        ranked.append(
+            (
+                overlap,
+                recency,
+                {
+                    "id": str(row.get("id") or ""),
+                    "ts": ts_iso,
+                    "summary": _truncate(summary, 260),
+                    "topic_overlap": overlap,
+                    "matched_keywords": matched[:5],
+                },
+            )
+        )
+
+    overlap_rows = [item for item in ranked if item[0] > 0]
+    if overlap_rows:
+        overlap_rows.sort(key=lambda item: (-item[0], -item[1]))
+        return [item[2] for item in overlap_rows[:5]]
+
+    ranked.sort(key=lambda item: item[1], reverse=True)
+    return [item[2] for item in ranked[:3]]
+
+
+async def _build_delta_since_last_reflection(
+    *,
+    person_id: str,
+    topic_key: str,
+    deterministic: dict[str, Any],
+) -> dict[str, Any]:
+    try:
+        row = await dbfetch(
+            """
+            SELECT result_json, created_at
+            FROM deep_reflections
+            WHERE person_id = $1::uuid
+              AND topic_key = $2
+              AND status = 'done'
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            person_id,
+            topic_key,
+            one=True,
+        )
+    except Exception as exc:
+        LOGGER.info("Delta lookup unavailable for deep reflection %s/%s: %s", person_id, topic_key, exc)
+        return {"has_previous": False, "error": str(exc)}
+
+    if not row:
+        return {"has_previous": False}
+
+    previous = _parse_json_object(row.get("result_json"))
+    prev_current = str(previous.get("current_stage") or "").strip()
+    prev_recurring = [str(x).strip() for x in (previous.get("recurring_tensions") or []) if str(x).strip()]
+    prev_pivots = [str(x).strip() for x in (previous.get("key_pivots") or []) if str(x).strip()]
+
+    curr_current = str(deterministic.get("current_stage") or "").strip()
+    curr_recurring = [str(x).strip() for x in (deterministic.get("recurring_tensions") or []) if str(x).strip()]
+    curr_pivots = [str(x).strip() for x in (deterministic.get("key_pivots") or []) if str(x).strip()]
+
+    return {
+        "has_previous": True,
+        "previous_reflection_at": _iso(row.get("created_at")),
+        "current_stage_changed": bool(prev_current and curr_current and prev_current != curr_current),
+        "previous_current_stage": prev_current or None,
+        "current_current_stage": curr_current or None,
+        "new_recurring_tensions": [item for item in curr_recurring if item not in prev_recurring][:3],
+        "persisting_recurring_tensions": [item for item in curr_recurring if item in prev_recurring][:3],
+        "pivot_count_delta": len(curr_pivots) - len(prev_pivots),
+    }
+
+
+async def _load_latest_turn_context(
+    person_id: str,
+    *,
+    topic_keywords: set[str],
+) -> dict[str, Any]:
+    topic_user_turns: list[dict[str, Any]] = []
+    try:
+        rows = await dbfetch(
+            """
+            SELECT role, text, created_at
+            FROM conversation_turns
+            WHERE user_id = $1::uuid OR person_id = $1::uuid
+            ORDER BY created_at DESC
+            LIMIT 6
+            """,
+            person_id,
+        )
+        for row in rows or []:
+            role = str(row.get("role") or "").lower()
+            text = str(row.get("text") or "").strip()
+            if role != "user" or not text:
+                continue
+            matched = _matched_keywords(text, topic_keywords)
+            if not matched:
+                continue
+            topic_user_turns.append(
+                {
+                    "role": "user",
+                    "ts": _iso(row.get("created_at")),
+                    "text": _truncate(text, 220),
+                    "matched_keywords": matched[:5],
+                }
+            )
+        topic_user_turns.reverse()
+    except Exception as exc:
+        LOGGER.info("Latest turn context unavailable for %s: %s", person_id, exc)
+
+    state_hints: dict[str, Any] = {}
+    try:
+        state_row = await dbfetch(
+            """
+            SELECT emotion_state, rhythm_state, longitudinal_state, identity_momentum_state
+            FROM personal_model
+            WHERE person_id = $1::uuid
+            """,
+            person_id,
+            one=True,
+        )
+        if state_row:
+            emotion_state = _parse_json_object(state_row.get("emotion_state"))
+            rhythm_state = _parse_json_object(state_row.get("rhythm_state"))
+            longitudinal_state = _parse_json_object(state_row.get("longitudinal_state"))
+            identity_state = _parse_json_object(state_row.get("identity_momentum_state"))
+            state_hints = {
+                "emotion_hint": _extract_signal(emotion_state, ("emotion", "mood", "state", "dominant_emotion")),
+                "companion_mode": _extract_signal(longitudinal_state, ("mode", "companion_mode", "state")),
+                "load_hint": _extract_signal(longitudinal_state, ("load", "load_level", "cognitive_load")),
+                "energy_hint": _extract_signal(rhythm_state, ("energy", "energy_level", "energy_mode")),
+                "identity_phase": _extract_signal(identity_state, ("phase", "momentum", "direction")),
+            }
+    except Exception as exc:
+        LOGGER.info("State hints unavailable for %s: %s", person_id, exc)
+
+    latest_user_message = next(
+        (item["text"] for item in reversed(topic_user_turns) if item.get("text")),
+        "",
+    )
+
+    return {
+        "latest_topic_user_message": latest_user_message,
+        "recent_topic_user_turns": topic_user_turns[-3:],
+        "state_hints": state_hints,
+    }
+
+
+def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[str, str]]:
+    user_prompt = (
+        "Use the compact packet to write one deep reflection reply for the user.\n"
+        "Stay strictly within packet evidence for this topic.\n"
+        "Respect packet.surface and packet.response_contract constraints.\n"
+        "If detail_allowed is false, keep it mirror-only and avoid prescriptive advice.\n"
+        "Do not import concerns from unrelated topics or turns.\n"
+        "Prioritize what changed, what repeats, and what matters now.\n"
+        "If context is enough, offer one grounded next-step nudge.\n"
+        "Return plain text only.\n\n"
+        f"PACKET:\n{json.dumps(packet, ensure_ascii=False, indent=2)}"
+    )
+    return [
+        {"role": "system", "content": _DEEP_REFLECTION_SYSTEM},
+        {"role": "user", "content": user_prompt},
+    ]
+
+
+def _topic_keywords(
+    topic_key: str,
+    deterministic: dict[str, Any],
+    evidence: list[dict[str, Any]],
+) -> set[str]:
+    raw_parts: list[str] = [topic_key, str(deterministic.get("topic_label") or "")]
+    raw_parts.extend(str(item.get("facet") or "") for item in evidence if item.get("facet"))
+    raw_parts.extend(str(item) for item in (deterministic.get("recurring_tensions") or []))
+    tokens = {
+        token
+        for token in _tokenize(" ".join(raw_parts))
+        if len(token) > 2 and token not in _TOPIC_STOPWORDS
+    }
+    return tokens
+
+
+def _matched_keywords(text: str, keywords: set[str]) -> list[str]:
+    if not keywords:
+        return []
+    present = set(_tokenize(text))
+    return sorted(present.intersection(keywords))
+
+
+def _tokenize(text: str) -> list[str]:
+    return _TOKEN_RE.findall((text or "").lower())
+
+
+def _normalize_llm_text(text: str) -> str:
+    value = " ".join((text or "").strip().split())
+    if not value:
+        return ""
+    return _truncate(value, 700)
+
+
+def _truncate(text: str, max_chars: int) -> str:
+    value = (text or "").strip()
+    if len(value) <= max_chars:
+        return value
+    return value[: max_chars - 3].rstrip() + "..."
+
+
+def _recency_score(value: Any) -> float:
+    if isinstance(value, datetime):
+        ts = value if value.tzinfo else value.replace(tzinfo=UTC)
+    elif isinstance(value, str):
+        ts = _coerce_ts(value)
+        if ts is None:
+            return 0.0
+    else:
+        return 0.0
+    return ts.timestamp()
+
+
+def _extract_signal(state: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        value = state.get(key)
+        if value not in (None, "", [], {}):
+            return value
+    return None
+
+
+def _build_phase_packets(arc: dict[str, Any], included_moments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    packets: list[dict[str, Any]] = []
+    for phase in arc.get("phases") or []:
+        start_ts = _coerce_ts(phase.get("start_ts"))
+        end_ts = _coerce_ts(phase.get("end_ts"))
+        phase_moments = []
+        for item in included_moments:
+            ts = _coerce_ts(item.get("ts"))
+            if ts is None or start_ts is None or end_ts is None:
+                continue
+            if start_ts <= ts <= end_ts:
+                phase_moments.append(item)
+        stats = phase.get("stats") or {}
+        dominant = stats.get("dominant_tag") or {}
+        label = str((dominant or {}).get("label") or "")
+        packets.append(
+            {
+                "index": int(phase.get("index") or 0),
+                "start_ts": phase.get("start_ts"),
+                "end_ts": phase.get("end_ts"),
+                "element_count": int(phase.get("element_count") or 0),
+                "dominant_tag": label or None,
+                "summary": _phase_signal(
+                    {
+                        "label": label,
+                        "element_count": int(phase.get("element_count") or 0),
+                        "start_ts": phase.get("start_ts"),
+                        "end_ts": phase.get("end_ts"),
+                    }
+                ),
+                "evidence": [
+                    {
+                        "source_ref": item.get("source_ref"),
+                        "ts": item.get("ts"),
+                        "snippet": str(item.get("short_snippet") or "")[:200],
+                    }
+                    for item in phase_moments[:3]
+                ],
+            }
+        )
+    return packets
+
+
+def _phase_signal(phase: dict[str, Any]) -> str:
+    label = str(phase.get("label") or phase.get("dominant_tag") or "").strip()
+    if label:
+        return f"Started around {label}." if int(phase.get("index") or 0) == 0 else f"Centered on {label}."
+    density = _phase_density(phase)
+    if density >= 0.12:
+        descriptor = "dense"
+    elif density <= 0.04:
+        descriptor = "sparse"
+    else:
+        descriptor = "steady"
+    return f"This phase was {descriptor} and exploratory."
+
+
+def _current_signal(phase: dict[str, Any]) -> str:
+    label = str(phase.get("dominant_tag") or "").strip()
+    if label:
+        return f"Currently centered on {label}."
+    density = _phase_density(phase)
+    if density >= 0.12:
+        return "Currently dense and sustained."
+    if density <= 0.04:
+        return "Currently quieter and lighter."
+    return "Currently holding a steady thread."
+
+
+def _pivot_summaries(phase_packets: list[dict[str, Any]]) -> list[str]:
+    summaries: list[str] = []
+    for prev, current in zip(phase_packets, phase_packets[1:]):
+        prev_label = str(prev.get("dominant_tag") or "").strip()
+        current_label = str(current.get("dominant_tag") or "").strip()
+        if prev_label and current_label and prev_label != current_label:
+            summaries.append(f"Phase {current['index'] + 1} shifted from {prev_label} toward {current_label}.")
+        else:
+            summaries.append(f"Phase {current['index'] + 1} reorganized the thread.")
+    return summaries
+
+
+def _recurring_threads(included_moments: list[dict[str, Any]]) -> list[str]:
+    facets = [
+        str(item.get("facet") or "").strip()
+        for item in included_moments
+        if str(item.get("facet") or "").strip()
+    ]
+    counts = Counter(facets)
+    recurring = [facet for facet, count in counts.items() if count >= 2]
+    if not recurring:
+        return ["No recurring sub-thread cleared the current threshold."]
+    return [f"Recurring return to {facet.replace('_', ' ')}." for facet in recurring[:3]]
+
+
+def _open_questions(phase: dict[str, Any] | None) -> list[str]:
+    if not phase:
+        return ["Whether this thread stays coherent in the next window."]
+    label = str(phase.get("dominant_tag") or "").strip()
+    if label:
+        return [f"Whether the current thread stays centered on {label}."]
+    return ["Whether the current thread holds or reorganizes again."]
+
+
+def _compose_chat_response(
+    *,
+    origin_story: str,
+    key_pivots: list[str],
+    current_stage: str,
+    recurring_tensions: list[str],
+    open_questions: list[str],
+) -> str:
+    parts = [
+        origin_story.strip(),
+        key_pivots[0].strip() if key_pivots else "",
+        current_stage.strip(),
+        recurring_tensions[0].strip() if recurring_tensions else "",
+        f"One question to sit with: {open_questions[0].strip()}" if open_questions else "",
+    ]
+    return " ".join(part for part in parts if part)
+
+
+def _phase_density(phase: dict[str, Any] | None) -> float:
+    if not phase:
+        return 0.0
+    element_count = max(int(phase.get("element_count") or 0), 0)
+    start = _coerce_ts(phase.get("start_ts"))
+    end = _coerce_ts(phase.get("end_ts"))
+    if not start or not end:
+        return 0.0
+    duration_days = max(1.0, (end - start).total_seconds() / 86400.0)
+    return element_count / duration_days
+
+
+def _coerce_ts(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        ts = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if ts.tzinfo is None:
+        return ts.replace(tzinfo=UTC)
+    return ts.astimezone(UTC)
+
+
+def _iso(value: Any) -> str | None:
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC).isoformat()
+        return value.astimezone(UTC).isoformat()
+    if isinstance(value, str):
+        return value
+    return None
+
+
+def _parse_json_object(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            return {}
+    return {}
+
+
+__all__ = [
+    "create_deep_reflection_job",
+    "get_deep_reflection_result",
+    "get_deep_reflection_status",
+]

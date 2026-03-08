@@ -37,6 +37,7 @@ from __future__ import annotations
 import json
 import datetime
 import logging
+import os
 from typing import Any, Dict, Optional
 from dataclasses import dataclass, field
 
@@ -46,6 +47,16 @@ from sakhi.apps.api.services.mind_engine import compute as compute_mind_state
 from sakhi.apps.engine.continuity import load_continuity, DEFAULT_STATE as CONTINUITY_DEFAULT
 
 logger = logging.getLogger(__name__)
+
+
+def _env_enabled(name: str, default: bool = False) -> bool:
+    raw = str(os.getenv(name, "1" if default else "0")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+# Deferred for now: this path queries rhythm-planner alignment tables that are
+# not guaranteed to exist in all environments.
+ENABLE_RHYTHM_PLANNER_ALIGNMENT = _env_enabled("SAKHI_ENABLE_RHYTHM_PLANNER_ALIGNMENT", default=False)
 
 
 @dataclass
@@ -685,8 +696,11 @@ async def load_deterministic_context(
     # the tables had 0 rows globally. Scaffolds (focus_path, mini_flow) are
     # generated on-demand in turn_v2.py when triggered by user messages.
 
-    # Load rhythm-planner alignment
-    ctx.rhythm_planner_alignment = await load_rhythm_planner_alignment(person_id)
+    # Load rhythm-planner alignment only when explicitly enabled.
+    if ENABLE_RHYTHM_PLANNER_ALIGNMENT:
+        ctx.rhythm_planner_alignment = await load_rhythm_planner_alignment(person_id)
+    else:
+        ctx.rhythm_planner_alignment = None
 
     return ctx
 

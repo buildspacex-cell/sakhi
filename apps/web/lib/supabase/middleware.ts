@@ -1,11 +1,13 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isDevAuthBypassEnabled } from "@/lib/devAuthBypass";
 
 /**
  * Create a Supabase client for middleware usage.
  * Handles session refresh and cookie management.
  */
 export async function updateSession(request: NextRequest) {
+  const devBypassEnabled = isDevAuthBypassEnabled(request);
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const supabaseAnonKey =
@@ -64,7 +66,7 @@ export async function updateSession(request: NextRequest) {
     const supabaseCookies = request.cookies
       .getAll()
       .filter((c) => c.name.startsWith("sb-"));
-    if (isOnAuthRoute) {
+    if (isOnAuthRoute || devBypassEnabled) {
       // Already on login page — just clear cookies and let the page render
       supabaseResponse = NextResponse.next({ request });
       supabaseCookies.forEach((c) => supabaseResponse.cookies.delete(c.name));
@@ -85,7 +87,7 @@ export async function updateSession(request: NextRequest) {
   );
 
   // If accessing a protected route without auth, redirect to login
-  if (isProtectedRoute && !user) {
+  if (isProtectedRoute && !user && !devBypassEnabled) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);

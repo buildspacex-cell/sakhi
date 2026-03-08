@@ -16,7 +16,7 @@ import logging
 from typing import Any, Dict, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,6 +56,29 @@ class SimulationAddJournalRequest(BaseModel):
     persona_id: str
     content: str
     time_of_day: Literal["morning", "afternoon", "evening"] = "evening"
+
+
+class SimulationContinuityEntry(BaseModel):
+    """Selected simulation entry to include in a continuity arc."""
+
+    day: int
+    timestamp: str
+    content: str
+    time_of_day: Optional[str] = None
+    scalar: Optional[float] = None
+    facet: Optional[str] = None
+    decision_state: Optional[str] = None
+    stance: Optional[str] = None
+
+
+class SimulationContinuityRequest(BaseModel):
+    """Request to compute a continuity arc over selected simulation entries."""
+
+    persona_id: str
+    anchor: str
+    entries: list[SimulationContinuityEntry]
+    max_gap_days: int = 21
+    min_len: int = 3
 
 
 # =============================================================================
@@ -583,6 +606,31 @@ async def add_simulation_journal(body: SimulationAddJournalRequest, request: Req
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         LOGGER.exception("[demo] Simulation add-journal failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/simulation/continuity")
+async def build_simulation_continuity(body: SimulationContinuityRequest):
+    """Build a continuity arc over selected simulation entries."""
+    try:
+        from sakhi.apps.api.services.demo.simulation_continuity import (
+            build_simulation_continuity_arc,
+        )
+
+        result = build_simulation_continuity_arc(
+            persona_id=body.persona_id,
+            anchor=body.anchor,
+            entries=[entry.model_dump() for entry in body.entries],
+            max_gap_days=body.max_gap_days,
+            min_len=body.min_len,
+        )
+        return {"status": "success", **result}
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        LOGGER.exception("[demo] Simulation continuity failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

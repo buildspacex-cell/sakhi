@@ -71,6 +71,46 @@ class AppSettings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("EVENT_BRIDGE_URL", "SAKHI_EVENT_BRIDGE_URL"),
     )
+    monitoring_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("MONITORING_ENABLED", "SAKHI_MONITORING_ENABLED"),
+    )
+    alert_webhook_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ALERT_WEBHOOK_URL", "SAKHI_ALERT_WEBHOOK_URL"),
+    )
+    alert_webhook_bearer_token: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "ALERT_WEBHOOK_BEARER_TOKEN", "SAKHI_ALERT_WEBHOOK_BEARER_TOKEN"
+        ),
+    )
+    alert_webhook_timeout_sec: float = Field(
+        default=4.0,
+        validation_alias=AliasChoices(
+            "ALERT_WEBHOOK_TIMEOUT_SEC", "SAKHI_ALERT_WEBHOOK_TIMEOUT_SEC"
+        ),
+    )
+    alert_dedupe_window_sec: int = Field(
+        default=180,
+        validation_alias=AliasChoices(
+            "ALERT_DEDUPE_WINDOW_SEC", "SAKHI_ALERT_DEDUPE_WINDOW_SEC"
+        ),
+    )
+    sentry_dsn: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("SENTRY_DSN", "SAKHI_SENTRY_DSN"),
+    )
+    sentry_traces_sample_rate: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices(
+            "SENTRY_TRACES_SAMPLE_RATE", "SAKHI_SENTRY_TRACES_SAMPLE_RATE"
+        ),
+    )
+    release: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("RELEASE", "SAKHI_RELEASE"),
+    )
     demo_mode: bool = Field(
         default=False,
         validation_alias=AliasChoices("DEMO_MODE", "SAKHI_DEMO_MODE"),

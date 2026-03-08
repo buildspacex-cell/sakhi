@@ -51,16 +51,16 @@ sakhi-monorepo/
 │   └── mobile/                # React Native (Expo)
 ├── sakhi/                     # Python backend (CANONICAL)
 │   ├── apps/api/              # FastAPI API
-│   │   ├── routes/            # 75+ API route modules
-│   │   └── services/          # Business logic (50+ modules)
-│   ├── apps/engine/           # 30 computational engines
+│   │   ├── routes/            # 80+ API route modules
+│   │   └── services/          # Business logic (230+ modules)
+│   ├── apps/engine/           # 34 computational engines
 │   ├── apps/worker/           # Background job workers
 │   │   ├── pipelines/         # Worker orchestration
-│   │   └── tasks/             # 64 individual worker tasks
+│   │   └── tasks/             # 86 individual worker tasks
 │   ├── libs/                  # Shared Python libraries
 │   ├── tests/                 # All Python tests
 │   └── infra/scripts/         # DB migrations, scripts
-├── kala/                      # Governance kernel (pure computation, 547 tests)
+├── kala/                      # Governance kernel (pure computation, 552 tests)
 ├── docs/                      # All documentation
 │   └── kala/                  # Governance kernel documentation
 ├── scripts/                   # Dev/utility scripts
@@ -80,6 +80,7 @@ User Message
 ┌─────────────────────────────────────────────────────────────────┐
 │  PHASE 1: SYNCHRONOUS RESPONSE (< 500ms)                        │
 │  ├── Load deterministic context (pre-computed intelligence)     │
+│  ├── Inject continuity pack when policy-enabled                  │
 │  ├── Run adaptive response pipeline                             │
 │  ├── Generate reply with LLM                                    │
 │  └── Return response to user                                    │
@@ -106,9 +107,13 @@ User Message
 |---------|------|
 | Turn endpoint | `sakhi/apps/api/routes/turn_v2.py` |
 | Context router | `sakhi/apps/api/services/context_router.py` |
+| Continuity pack builder | `sakhi/apps/api/services/continuity/chat.py` |
 | Prompt builder | `sakhi/apps/api/services/conversation_v2/conversation_reasoner.py` |
 | Context loader | `sakhi/apps/api/services/turn/deterministic_context_loader.py` |
 | Worker runner | `sakhi/apps/worker/pipelines/turn_updates/runner.py` |
+
+Turn-level continuity now injects compact history structure (`history_compact` with sampled phase path, anchor moments, qualitative arc summary, and decision ledger) in addition to start/pivot/current arc signals, and frames prompt input in language-first sections: history + person understanding + current query.
+Turn-level rhythm planner alignment loading is deferred by default and only enabled when `SAKHI_ENABLE_RHYTHM_PLANNER_ALIGNMENT=1`.
 
 ---
 
@@ -186,6 +191,24 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 | `POST /v2/turn` | Main conversation endpoint |
 | `GET /v2/conversation/history` | Conversation history |
 
+### System Health
+| Route | Purpose |
+|-------|---------|
+| `GET /health/live` | Liveness probe (process up) |
+| `GET /health` | Readiness + dependency checks (DB required, Redis optional) |
+| `GET /health/ready` | Alias readiness endpoint (same payload/contract as `/health`) |
+
+### Continuity Intelligence
+| Route | Purpose |
+|-------|---------|
+| `GET /continuity/policy` | Read continuity surface policy (per person + scope) |
+| `PUT /continuity/policy` | Update continuity surface policy + exclusions |
+| `GET /continuity/topics` | Compile and list continuity topics for a window |
+| `GET /continuity/arc` | Return a deterministic continuity arc for an anchor |
+| `POST /continuity/reflection/run` | Queue deep reflection job for a topic (`mode=deep_answer` with `user_query` and long-form contract gate, or `mode=topic_reflection`) |
+| `GET /continuity/reflection/status` | Poll deep reflection job status |
+| `GET /continuity/reflection/result` | Fetch deep reflection result payload (LLM `chat_response` when router available, deterministic fallback + source/debug metadata, and surface-policy-aware mirror-only gating when detail is blocked) |
+
 ### Voice
 | Route | Purpose |
 |-------|---------|
@@ -211,6 +234,9 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 | `/lab/memory-details` | View all intelligence for a user |
 | `/lab/run-worker` | Test individual workers |
 | `/lab/live-turn` | Test turn with debug output |
+
+Production guardrail: internal routes (`/lab`, `/dev`, `/demo`, `/admin`) are blocked by default in production runtime unless `SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD=1`.
+Observability guardrail: unhandled API exceptions and worker failures route through `sakhi/apps/api/core/monitoring.py`, which can forward incidents to Sentry (`SAKHI_SENTRY_DSN`) and/or webhook-based on-call sinks (`SAKHI_ALERT_WEBHOOK_URL`).
 
 ### Email Intelligence
 | Route | Purpose |
@@ -332,7 +358,7 @@ Workers update intelligence after each conversation turn:
 
 ## Engine Layer
 
-30 standalone computational engines at `sakhi/apps/engine/`, each with its own `engine.py`. These produce deterministic intelligence that feeds the conversation pipeline:
+34 standalone computational engines at `sakhi/apps/engine/`, each with its own `engine.py`. These produce deterministic intelligence that feeds the conversation pipeline:
 
 | Category | Engines |
 |----------|---------|
@@ -348,7 +374,7 @@ Workers update intelligence after each conversation turn:
 
 ## Governance Integration (Kala)
 
-The **kala** governance kernel is a pure-computation package with 547 tests. It is integrated into Sakhi's conversation pipeline:
+The **kala** governance kernel is a pure-computation package with 552 tests. It is integrated into Sakhi's conversation pipeline:
 
 ```
 Proposed Action → GovernanceGate
@@ -472,6 +498,12 @@ embedding vector(1536)
 
 ## Environment Variables
 
+Runtime source of truth:
+- Local API/worker runtime loads `.env.local` when present, with fallback to `.env`.
+- Production reads environment from platform settings (Railway/Vercel).
+- `.env.example` / `.env.local.example` are template references only.
+- Contract checks are automated via `sakhi/infra/scripts/check_env.py` (`local`, `prod_api`, `prod_web`, `ci`) and wired into `make verify` + CI.
+
 ### Required
 ```bash
 DATABASE_URL=postgresql://...
@@ -484,6 +516,9 @@ OPENAI_API_KEY=sk-...
 SUPABASE_URL=https://...
 SUPABASE_SERVICE_ROLE_KEY=...
 SAKHI_DISABLE_QUEUE=1  # Run workers inline (dev)
+SAKHI_MONITORING_ENABLED=1
+SAKHI_SENTRY_DSN=https://...
+SAKHI_ALERT_WEBHOOK_URL=https://...
 ```
 
 ---

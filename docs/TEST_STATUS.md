@@ -1,6 +1,6 @@
 # Test Status Tracking
 
-> Last Updated: 2026-02-26
+> Last Updated: 2026-03-08
 >
 > Run `make test-coverage` to regenerate this report.
 
@@ -10,9 +10,9 @@
 
 | Category | Total | Tested | Coverage |
 |----------|-------|--------|----------|
-| Workers | 64 task files | 48 | ~75% |
-| Routes | 75 | 47 | ~63% |
-| Kala (governance) | 46 source files | 547 tests | 100% |
+| Workers | 86 task files | 48 | ~56% |
+| Routes | 80 | 47 | ~59% |
+| Kala (governance) | 49 source files | 552 tests | 100% |
 | Services | TBD | TBD | TBD |
 
 **Target: 90% coverage before production deploy**
@@ -153,6 +153,21 @@ sakhi/tests/
 |-------|--------|-----------|-------|
 | `mesh.py` | ⬜ | - | Inter-Sakhi |
 | `knowledge_graph.py` | ⬜ | - | Graph queries |
+
+---
+
+## Recent Additions (2026-03-08)
+
+| Area | Status | Test Files | Notes |
+|------|--------|------------|-------|
+| Continuity service | ✅ | `unit/services/test_continuity_service.py`, `unit/services/test_continuity_chat.py`, `unit/services/test_continuity_reflection.py` | Policy gating, arc payload shaping, continuity pack generation (including compact history stats/phase path/anchors, qualitative arc summary with mirror-only mode, and decision ledger with acknowledged Sakhi suggestions), deep reflection job lifecycle, deterministic+LLM response persistence contract, window-write fallback persistence, topic-drift filtering, surface-policy mirror-only packet contract, deep-answer mode query preference over reconstructed turn context, and deep-answer quality-gate regeneration coverage |
+| Monitoring / on-call sink | ✅ | `unit/services/test_monitoring.py` | Webhook alert payload shaping, dedupe window behavior, disabled no-op behavior, and sync exception-report bridge for worker runtime |
+| Env contract checker | ✅ | `unit/services/test_check_env.py` | Profile-based env contract validation (`local`, `prod_api`, `prod_web`, `ci`), alias handling, queue-mode Redis gating, and monitoring sink requirement checks |
+| Deterministic context loader | ✅ | `unit/services/test_deterministic_context_loader.py` | Confirms turn-time rhythm planner alignment is deferred by default and only loaded when explicitly enabled via feature flag |
+| Pipeline hardening | ✅ | `unit/services/test_pipeline_hardening.py` | Continuity fallback resilience, recommendation filtering hygiene, and weekly rhythm rollup safeguards (disabled-by-policy, missing-table skip, missing-events fallback) |
+| Simulation continuity compiler | ✅ | `unit/services/test_simulation_continuity.py`, `unit/services/test_simulation_continuity_benchmark.py` | Topic classification benchmark, deterministic compile output, arc construction safeguards |
+| Kala arc primitives | ✅ | `kala/tests/test_arc.py` | Deterministic IDs, segmentation, features, structure-only summary |
+| Web continuity mirror | ✅ | `apps/web/app/lab/simulation/__tests__/continuityMirror.spec.ts`, `apps/web/app/lab/simulation/__tests__/continuityArcDetail.spec.ts` | Mirror copy/recap behavior and explainability anchors |
 
 ---
 

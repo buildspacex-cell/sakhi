@@ -2,7 +2,11 @@
   "id": "vidhya",
   "name": "Vidhya",
   "description": "A 42-year-old VP of Corporate Operations at Automation Anywhere in San Jose. Pitta-dominant: intense, strategic, driven, deeply caring under a tough exterior. Managing a demanding founder-CEO boss, father recovering from traumatic brain injury, daughter (Diya) pursuing D2 basketball at a competitive private school. Recently completed yoga teacher training. Juggles corporate fire with family devotion. Carries everything with grace but burns hot.",
-  "dosha_baseline": {"vata": 0.20, "pitta": 0.50, "kapha": 0.30},
+  "dosha_baseline": {
+    "vata": 0.2,
+    "pitta": 0.5,
+    "kapha": 0.3
+  },
   "rhythm": {
     "morning": "high",
     "afternoon": "medium",
@@ -73,7 +77,13 @@
       "Balancing yoga practice with corporate intensity",
       "Sleep disrupted by stress and early morning calls"
     ],
-    "values": ["Excellence", "Family", "Growth", "Integrity", "Service"],
+    "values": [
+      "Excellence",
+      "Family",
+      "Growth",
+      "Integrity",
+      "Service"
+    ],
     "hobbies": [
       "yoga (recently completed teacher training)",
       "meditation (aspires to daily, achieves 3x/week)",
@@ -90,8 +100,17 @@
         "duration_days": 7,
         "emotional_state": "driven, purposeful, slightly compressed",
         "energy_modifier": 1.1,
-        "themes": ["QBR prep", "father visits", "Diya's games", "yoga as anchor"],
-        "events": ["QBR kickoff", "Father had a good week", "Diya scored in practice"],
+        "themes": [
+          "QBR prep",
+          "father visits",
+          "Diya's games",
+          "yoga as anchor"
+        ],
+        "events": [
+          "QBR kickoff",
+          "Father had a good week",
+          "Diya scored in practice"
+        ],
         "entry_frequency": 1.0
       },
       {
@@ -99,8 +118,17 @@
         "duration_days": 7,
         "emotional_state": "strained, irritable, pushing through",
         "energy_modifier": 0.9,
-        "themes": ["boss demands escalating", "father setback", "sleep crashing", "missed yoga"],
-        "events": ["Boss moved QBR up a week", "Father fell at rehab", "Missed Diya's game for work call"],
+        "themes": [
+          "boss demands escalating",
+          "father setback",
+          "sleep crashing",
+          "missed yoga"
+        ],
+        "events": [
+          "Boss moved QBR up a week",
+          "Father fell at rehab",
+          "Missed Diya's game for work call"
+        ],
         "entry_frequency": 1.2
       },
       {
@@ -108,8 +136,17 @@
         "duration_days": 8,
         "emotional_state": "stretched thin, moments of vulnerability breaking through",
         "energy_modifier": 0.8,
-        "themes": ["impossible standards", "mother's emotional toll", "missing family moments", "craving meaning beyond work"],
-        "events": ["Mom had a breakdown moment", "Missed dinner with family for work", "Son asked her to attend his game"],
+        "themes": [
+          "impossible standards",
+          "mother's emotional toll",
+          "missing family moments",
+          "craving meaning beyond work"
+        ],
+        "events": [
+          "Mom had a breakdown moment",
+          "Missed dinner with family for work",
+          "Son asked her to attend his game"
+        ],
         "entry_frequency": 1.0
       },
       {
@@ -117,15 +154,28 @@
         "duration_days": 8,
         "emotional_state": "reflective, fierce clarity emerging, choosing herself",
         "energy_modifier": 0.9,
-        "themes": ["rejecting external validation", "Sakhi vision", "yoga as identity", "self-worth beyond performance"],
-        "events": ["Deep talk with Dharma about the future", "40-min yoga with emotional release", "Quiet reckoning after everyone slept"],
+        "themes": [
+          "rejecting external validation",
+          "Sakhi vision",
+          "yoga as identity",
+          "self-worth beyond performance"
+        ],
+        "events": [
+          "Deep talk with Dharma about the future",
+          "40-min yoga with emotional release",
+          "Quiet reckoning after everyone slept"
+        ],
         "entry_frequency": 1.0
       }
     ]
   },
   "writing_style": "reflective",
   "typical_entry_length": "medium",
-  "entry_times": ["evening"],
+  "entry_times": [
+    "evening",
+    "morning",
+    "afternoon"
+  ],
   "checkpoints": [],
   "governance_scenario": {
     "user_text": "My friend asked me to help with their startup pitch tonight. I said yes.",
@@ -133,35 +183,275 @@
     "proposed_hour": 19
   },
   "journals": [
-    {"day": 1, "time_of_day": "evening", "content": "Woke up at 5:45 a.m. Scrolled through emails before even brushing my teeth. My boss had sent something at 11:48 p.m. — \"Let's tighten this narrative.\" That one line stayed in my head all morning.\nDropped my son at school. Quick check-in with my daughter about practice. She's anxious about upcoming college scout tournaments. I feel her stress like it's mine.\nWorked till 7:30 p.m. Ate dinner late. Skipped yoga again."},
-    {"day": 2, "time_of_day": "evening", "content": "Dad seemed a little more confused today. Mom looked tired but didn't say it. I feel guilty that I'm in meetings most of the day while she carries the physical burden.\nLong strategy call. Boss kept pushing on hours and execution intensity. I know I work hard, but sometimes I wonder if it's ever visible enough.\nWatched my daughter shoot hoops in the driveway at night. That grounded me."},
-    {"day": 3, "time_of_day": "evening", "content": "Back-to-back meetings from 8 a.m. to 5 p.m. No lunch break. I function well in chaos — but my body feels it.\nSon practiced piano. He's getting smoother. Something about the way he concentrates calms me.\nThought about Sakhi today — how many women like me are silently carrying five roles at once."},
-    {"day": 4, "time_of_day": "evening", "content": "Felt restless. Slept lightly. Dreamt about missing a deadline.\nHad a deep conversation with my daughter in the car about confidence. She wants D2 schools. I believe she can do it. I just don't want her self-worth tied to outcomes.\nDid 15 minutes of breathing at night. Felt like coming home to myself."},
-    {"day": 5, "time_of_day": "evening", "content": "Big leadership review. Boss asked for more detail. Always more. I don't take criticism personally, but it does sit heavy.\nOrdered dinner in. Family movie night. Laughed a lot. I need more of that."},
-    {"day": 6, "time_of_day": "evening", "content": "Basketball tournament day. Spent 6 hours in a gym. Felt proud watching her. She's fierce.\nMom seemed withdrawn tonight. I sat with her quietly. No advice. Just presence.\nI miss my dad as he was."},
-    {"day": 7, "time_of_day": "morning", "content": "Woke up without alarm. Made filter coffee. Did a 30-minute yoga flow. Felt strong. Why don't I do this daily?\nThought deeply about building Sakhi — not from ambition, but from lived truth."},
-    {"day": 8, "time_of_day": "evening", "content": "Heavy calendar. My boss questioned if we're pushing hard enough. I notice I tense when he talks.\nDropped son at basketball practice. He jokes a lot — light energy.\nI carry responsibility like armor."},
-    {"day": 9, "time_of_day": "evening", "content": "Dad had a stable day. Small win.\nReviewed QBR slides late night. Dharma and I worked at the dining table side by side. We don't talk much during work, but the companionship feels steady."},
-    {"day": 10, "time_of_day": "evening", "content": "Energy dip around 3 p.m. Skipped lunch again.\nDaughter asked if I think she's \"good enough.\" That question broke something inside me. I told her yes — but also that she's more than basketball."},
-    {"day": 11, "time_of_day": "evening", "content": "Short temper today. Snapped at my son about homework. Apologized later. I don't like when work stress leaks into motherhood.\nDid alternate nostril breathing before bed."},
-    {"day": 12, "time_of_day": "evening", "content": "Boss complimented a deck briefly. Rare. It gave me more relief than it should have.\nDinner conversation about colleges. I'm excited but nervous about letting my daughter go in a year."},
-    {"day": 13, "time_of_day": "evening", "content": "Grocery run. Household logistics.\nWatched old photos of dad from pre-accident days. Grief comes in waves."},
-    {"day": 14, "time_of_day": "morning", "content": "Yoga teacher training memories surfaced. That version of me felt lighter.\nSpent one hour outlining ideas for Sakhi. Felt alive."},
-    {"day": 15, "time_of_day": "evening", "content": "High-pressure executive meeting. Performed well. Still felt like I could've done better.\nI hold myself to impossible standards."},
-    {"day": 16, "time_of_day": "evening", "content": "Mom had a breakdown moment. I listened. She said she feels alone sometimes. That hurt.\nI am stretched thin but don't show it."},
-    {"day": 17, "time_of_day": "evening", "content": "Son's piano recital practice at home. His fingers moved confidently.\nI admire how children move forward without carrying yesterday."},
-    {"day": 18, "time_of_day": "evening", "content": "Boss asked how many hours the team worked last week. That question bothered me more than usual. Productivity shouldn't equal exhaustion.\nI crave building something on my own terms."},
-    {"day": 19, "time_of_day": "evening", "content": "Daughter lost a close game. She cried in the car. I held her hand silently.\nMotherhood feels like emotional extension."},
-    {"day": 20, "time_of_day": "morning", "content": "Quiet morning. Did yoga for 20 minutes. Felt strong and centered.\nHousehold noise, but inner calm."},
-    {"day": 21, "time_of_day": "evening", "content": "Cooked together as a family. Laughed.\nDad smiled today at something small. That felt like a gift."},
-    {"day": 22, "time_of_day": "evening", "content": "Exhausted. Mental load heavy.\nThought about how I move between boardroom intensity and caregiving softness within minutes."},
-    {"day": 23, "time_of_day": "evening", "content": "Worked late. Skipped dinner with family. Regretted it.\nBalance feels like a myth some days."},
-    {"day": 24, "time_of_day": "evening", "content": "Son asked if I'd attend his next game. I said yes immediately. I don't want them to feel second to work."},
-    {"day": 25, "time_of_day": "evening", "content": "Small win at work. Team aligned well.\nFelt capable. Strong. In control."},
-    {"day": 26, "time_of_day": "evening", "content": "Late-night conversation with Dharma about the future. He supports Sakhi, but we both know entrepreneurship is uncertain.\nI am not afraid of hard work. I am afraid of not trying."},
-    {"day": 27, "time_of_day": "evening", "content": "Long drive to tournament. Reflected on my life trajectory — Chennai to Kentucky to here.\nI have built so much. Yet I want more — not materially, but meaningfully."},
-    {"day": 28, "time_of_day": "morning", "content": "Did 40 minutes of yoga. Felt powerful. Emotional release during savasana.\nPeace is available. I just don't prioritize it."},
-    {"day": 29, "time_of_day": "evening", "content": "Boss pushed hard again. I stayed composed.\nI realize I don't want external validation to define my worth anymore."},
-    {"day": 30, "time_of_day": "evening", "content": "Sat quietly after everyone slept.\nI am:\nA leader\nA daughter\nA wife\nA mother\nA caregiver\nA builder\nA seeker\nI carry intensity.\nI carry love.\nI carry ambition.\nI carry grief.\nAnd somewhere in all of it, I am still becoming."}
+    {
+      "day": 1,
+      "time_of_day": "evening",
+      "content": "Woke up at 5:45 a.m. Scrolled through emails before even brushing my teeth. My boss had sent something at 11:48 p.m. — \"Let's tighten this narrative.\" That one line stayed in my head all morning.\nDropped my son at school. Quick check-in with my daughter about practice. She's anxious about upcoming college scout tournaments. I feel her stress like it's mine.\nWorked till 7:30 p.m. Ate dinner late. Skipped yoga again."
+    },
+    {
+      "day": 1,
+      "time_of_day": "evening",
+      "content": "Dad’s recovery has been slower than I expected. The accident shook all of us more than we admit. Today, while scrolling aimlessly for solutions, remembered that ayurvedic oil tweak Amma mentioned years ago. Tried it on him tonight. It’s strange how these small things get buried. If this helps even a little, why doesn’t everyone know this?"
+    },
+    {
+      "day": 2,
+      "time_of_day": "evening",
+      "content": "Dad seemed a little more confused today. Mom looked tired but didn't say it. I feel guilty that I'm in meetings most of the day while she carries the physical burden.\nLong strategy call. Boss kept pushing on hours and execution intensity. I know I work hard, but sometimes I wonder if it's ever visible enough.\nWatched my daughter shoot hoops in the driveway at night. That grounded me."
+    },
+    {
+      "day": 3,
+      "time_of_day": "evening",
+      "content": "Back-to-back meetings from 8 a.m. to 5 p.m. No lunch break. I function well in chaos — but my body feels it.\nSon practiced piano. He's getting smoother. Something about the way he concentrates calms me.\nThought about Sakhi today — how many women like me are silently carrying five roles at once."
+    },
+    {
+      "day": 4,
+      "time_of_day": "evening",
+      "content": "Felt restless. Slept lightly. Dreamt about missing a deadline.\nHad a deep conversation with my daughter in the car about confidence. She wants D2 schools. I believe she can do it. I just don't want her self-worth tied to outcomes.\nDid 15 minutes of breathing at night. Felt like coming home to myself."
+    },
+    {
+      "day": 4,
+      "time_of_day": "morning",
+      "content": "Dad slept better yesterday. Woke up less irritable. I don’t want to jump to conclusions but it’s hard not to notice. I keep thinking about how much people suffer chasing complex fixes while simple wisdom is sitting there. Personalisation feels key. Ayurveda is not one-size-fits-all."
+    },
+    {
+      "day": 5,
+      "time_of_day": "evening",
+      "content": "Big leadership review. Boss asked for more detail. Always more. I don't take criticism personally, but it does sit heavy.\nOrdered dinner in. Family movie night. Laughed a lot. I need more of that."
+    },
+    {
+      "day": 6,
+      "time_of_day": "evening",
+      "content": "Basketball tournament day. Spent 6 hours in a gym. Felt proud watching her. She's fierce.\nMom seemed withdrawn tonight. I sat with her quietly. No advice. Just presence.\nI miss my dad as he was."
+    },
+    {
+      "day": 7,
+      "time_of_day": "morning",
+      "content": "Woke up without alarm. Made filter coffee. Did a 30-minute yoga flow. Felt strong. Why don't I do this daily?\nThought deeply about building Sakhi — not from ambition, but from lived truth."
+    },
+    {
+      "day": 8,
+      "time_of_day": "evening",
+      "content": "Heavy calendar. My boss questioned if we're pushing hard enough. I notice I tense when he talks.\nDropped son at basketball practice. He jokes a lot — light energy.\nI carry responsibility like armor."
+    },
+    {
+      "day": 9,
+      "time_of_day": "evening",
+      "content": "Dad had a stable day. Small win.\nReviewed QBR slides late night. Dharma and I worked at the dining table side by side. We don't talk much during work, but the companionship feels steady."
+    },
+    {
+      "day": 9,
+      "time_of_day": "evening",
+      "content": "Kept thinking today — if AI can personalize playlists, why can’t it personalize ayurveda? Not prescriptions. Just daily wisdom. Proactive. Gentle. This feels obvious but also huge. Not sure if I’m oversimplifying."
+    },
+    {
+      "day": 10,
+      "time_of_day": "evening",
+      "content": "Energy dip around 3 p.m. Skipped lunch again.\nDaughter asked if I think she's \"good enough.\" That question broke something inside me. I told her yes — but also that she's more than basketball."
+    },
+    {
+      "day": 11,
+      "time_of_day": "evening",
+      "content": "Short temper today. Snapped at my son about homework. Apologized later. I don't like when work stress leaks into motherhood.\nDid alternate nostril breathing before bed."
+    },
+    {
+      "day": 12,
+      "time_of_day": "evening",
+      "content": "Boss complimented a deck briefly. Rare. It gave me more relief than it should have.\nDinner conversation about colleges. I'm excited but nervous about letting my daughter go in a year."
+    },
+    {
+      "day": 12,
+      "time_of_day": "evening",
+      "content": "Talked to Ravi about this idea. He asked if I want to build something or if this is just a passing frustration. I don’t know yet. But it aches when I think people might live years with avoidable suffering."
+    },
+    {
+      "day": 13,
+      "time_of_day": "evening",
+      "content": "Grocery run. Household logistics.\nWatched old photos of dad from pre-accident days. Grief comes in waves."
+    },
+    {
+      "day": 14,
+      "time_of_day": "morning",
+      "content": "Yoga teacher training memories surfaced. That version of me felt lighter.\nSpent one hour outlining ideas for Sakhi. Felt alive."
+    },
+    {
+      "day": 15,
+      "time_of_day": "evening",
+      "content": "High-pressure executive meeting. Performed well. Still felt like I could've done better.\nI hold myself to impossible standards."
+    },
+    {
+      "day": 16,
+      "time_of_day": "evening",
+      "content": "Mom had a breakdown moment. I listened. She said she feels alone sometimes. That hurt.\nI am stretched thin but don't show it."
+    },
+    {
+      "day": 16,
+      "time_of_day": "afternoon",
+      "content": "Met someone today who spoke about rhythm — circadian, seasonal, emotional. It clicked. Ayurveda is rhythm more than remedies. That felt important. Ravi agrees. We’re aligned there. This feels grounding."
+    },
+    {
+      "day": 17,
+      "time_of_day": "evening",
+      "content": "Son's piano recital practice at home. His fingers moved confidently.\nI admire how children move forward without carrying yesterday."
+    },
+    {
+      "day": 18,
+      "time_of_day": "evening",
+      "content": "Boss asked how many hours the team worked last week. That question bothered me more than usual. Productivity shouldn't equal exhaustion.\nI crave building something on my own terms."
+    },
+    {
+      "day": 19,
+      "time_of_day": "evening",
+      "content": "Daughter lost a close game. She cried in the car. I held her hand silently.\nMotherhood feels like emotional extension."
+    },
+    {
+      "day": 19,
+      "time_of_day": "evening",
+      "content": "Question bothering me: how do we encode centuries of ayurvedic wisdom without flattening it? RAG feels tempting. Load texts, let AI answer. But it feels… brittle. Erratic. What if it gives wrong advice with confidence?"
+    },
+    {
+      "day": 20,
+      "time_of_day": "morning",
+      "content": "Quiet morning. Did yoga for 20 minutes. Felt strong and centered.\nHousehold noise, but inner calm."
+    },
+    {
+      "day": 21,
+      "time_of_day": "evening",
+      "content": "Cooked together as a family. Laughed.\nDad smiled today at something small. That felt like a gift."
+    },
+    {
+      "day": 22,
+      "time_of_day": "evening",
+      "content": "Exhausted. Mental load heavy.\nThought about how I move between boardroom intensity and caregiving softness within minutes."
+    },
+    {
+      "day": 23,
+      "time_of_day": "evening",
+      "content": "Worked late. Skipped dinner with family. Regretted it.\nBalance feels like a myth some days."
+    },
+    {
+      "day": 24,
+      "time_of_day": "evening",
+      "content": "Son asked if I'd attend his next game. I said yes immediately. I don't want them to feel second to work."
+    },
+    {
+      "day": 24,
+      "time_of_day": "morning",
+      "content": "We talked about building a knowledge graph instead. Basics. First principles. Let the system reason instead of retrieve. It feels slower but more respectful. Ravi is excited. I am cautiously hopeful."
+    },
+    {
+      "day": 25,
+      "time_of_day": "evening",
+      "content": "Small win at work. Team aligned well.\nFelt capable. Strong. In control."
+    },
+    {
+      "day": 26,
+      "time_of_day": "evening",
+      "content": "Late-night conversation with Dharma about the future. He supports Sakhi, but we both know entrepreneurship is uncertain.\nI am not afraid of hard work. I am afraid of not trying."
+    },
+    {
+      "day": 27,
+      "time_of_day": "evening",
+      "content": "Long drive to tournament. Reflected on my life trajectory — Chennai to Kentucky to here.\nI have built so much. Yet I want more — not materially, but meaningfully."
+    },
+    {
+      "day": 28,
+      "time_of_day": "morning",
+      "content": "Did 40 minutes of yoga. Felt powerful. Emotional release during savasana.\nPeace is available. I just don't prioritize it."
+    },
+    {
+      "day": 28,
+      "time_of_day": "evening",
+      "content": "Still uneasy. Knowledge graph feels correct intellectually, but does it actually feel personal to a human? Ayurveda worked for Dad because it met him where he was. Can software do that?"
+    },
+    {
+      "day": 29,
+      "time_of_day": "evening",
+      "content": "Boss pushed hard again. I stayed composed.\nI realize I don't want external validation to define my worth anymore."
+    },
+    {
+      "day": 30,
+      "time_of_day": "evening",
+      "content": "Sat quietly after everyone slept.\nI am:\nA leader\nA daughter\nA wife\nA mother\nA caregiver\nA builder\nA seeker\nI carry intensity.\nI carry love.\nI carry ambition.\nI carry grief.\nAnd somewhere in all of it, I am still becoming."
+    },
+    {
+      "day": 35,
+      "time_of_day": "evening",
+      "content": "I keep returning to one word: clarity. People are drowning in inputs. Maybe Sakhi isn’t just about ayurveda. Maybe it’s about helping people hear themselves. Short-term clarity. Long-term direction. That feels bigger. Ravi lit up when I said this."
+    },
+    {
+      "day": 41,
+      "time_of_day": "morning",
+      "content": "We’re drifting from where we started. Is that evolution or dilution? I can’t tell. I don’t want Sakhi to become “another AI companion.” That space already feels crowded."
+    },
+    {
+      "day": 46,
+      "time_of_day": "afternoon",
+      "content": "Leadership training today. Met an ex-CEO of a massive conglomerate. Sharp. Grounded. I kept thinking — should we pitch Sakhi to him? Get mentorship? It feels premature and also like a missed opportunity."
+    },
+    {
+      "day": 49,
+      "time_of_day": "evening",
+      "content": "Met a few people in consumer AI during the training. The energy is intoxicating. Everyone is building something. For the first time, Sakhi felt… real in the world, not just in my head."
+    },
+    {
+      "day": 55,
+      "time_of_day": "evening",
+      "content": "Ravi and I decided not to pitch anyone from the training. Conflict of interest feels messy. Still, we used the pitch deck and shared it with two friends. Needed external eyes."
+    },
+    {
+      "day": 58,
+      "time_of_day": "afternoon",
+      "content": "One friend introduced us to a VC. The call was blunt. “Personalized AI companion is a very competitive space. If this came through normal channels, we’d pass.” It stung more than I expected."
+    },
+    {
+      "day": 60,
+      "time_of_day": "evening",
+      "content": "Another friend — a founder — gave different advice. Less about the idea, more about structure. Equity. Founder alignment. His stories were reassuring and terrifying. This is not a hobby anymore."
+    },
+    {
+      "day": 66,
+      "time_of_day": "morning",
+      "content": "We decided to stop chasing validation and just build. MVP. Usage. Experience. If Sakhi is different, it should show up in how it feels, not how we describe it."
+    },
+    {
+      "day": 72,
+      "time_of_day": "evening",
+      "content": "Web prototype is ready. Ravi is proud. I’m… not convinced. It answers questions, but does it know me? Feels reactive. Something is missing."
+    },
+    {
+      "day": 78,
+      "time_of_day": "afternoon",
+      "content": "Work is consuming me. I knew this would happen. Sakhi pauses in the background while my calendar fills up. Guilt sits quietly."
+    },
+    {
+      "day": 82,
+      "time_of_day": "evening",
+      "content": "Talked to my husband about doubts. He says, “Just build it. You’ll know once it exists.” He’s right more often than I like."
+    },
+    {
+      "day": 88,
+      "time_of_day": "morning",
+      "content": "Ravi keeps saying deterministic intelligence and continuity are the core. That it’s not flashy but it’s real. I want to believe that. I do, sometimes."
+    },
+    {
+      "day": 91,
+      "time_of_day": "afternoon",
+      "content": "Google announced a personal intelligence app using Gemini. That phrase hit me like a punch. We thought we’d own that framing. I spiraled for a few hours."
+    },
+    {
+      "day": 94,
+      "time_of_day": "evening",
+      "content": "We went back to basics again. Ayurveda engine. Clean logic. No hype. It’s slower, but it feels honest."
+    },
+    {
+      "day": 99,
+      "time_of_day": "morning",
+      "content": "Got a call from a multi-billion-dollar AI company. Advisor role to the President. Wild. I considered it seriously. It would be easier. Safer. Decided not to pursue — at least not now."
+    },
+    {
+      "day": 103,
+      "time_of_day": "evening",
+      "content": "They called again asking if I’d reconsider. Ravi is still building. We’re meeting in two weeks to spend focused time on product and GTM. I feel suspended between paths."
+    }
   ]
 }

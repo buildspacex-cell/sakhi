@@ -52,15 +52,63 @@ echo "duplicate_include_micro_momentum=$(rg -n 'app.include_router\(micro_moment
 echo
 
 echo "[Test Harness]"
-if [ -f sakhi/tests/v2/test_smoke.py ]; then
-  echo "quick_test_target=present"
+quick_test_files="$(
+  awk '
+    BEGIN { in_target=0 }
+    /^quick-test:/ { in_target=1; next }
+    in_target && /^[^ \t].*:/ { in_target=0 }
+    in_target { print }
+  ' Makefile | rg -o 'sakhi/tests[^ \\]+' || true
+)"
+if [ -z "$quick_test_files" ]; then
+  echo "quick_test_target=unknown (no explicit test files found in Makefile quick-test target)"
 else
-  echo "quick_test_target=missing (Makefile quick-test points to removed path)"
+  missing_quick_targets=0
+  total_quick_targets=0
+  while IFS= read -r test_path; do
+    [ -z "$test_path" ] && continue
+    total_quick_targets=$((total_quick_targets + 1))
+    if [ ! -f "$test_path" ]; then
+      missing_quick_targets=$((missing_quick_targets + 1))
+    fi
+  done <<< "$quick_test_files"
+  if [ "$missing_quick_targets" -eq 0 ]; then
+    echo "quick_test_target=present (${total_quick_targets} files)"
+  else
+    echo "quick_test_target=missing (${missing_quick_targets}/${total_quick_targets} files not found)"
+  fi
 fi
 echo "sakhi_tests_prefix=$(count_cmd 'find sakhi/tests -name "test_*.py"')"
 echo "sakhi_tests_name_contains=$(count_cmd 'find sakhi/tests -name "*test*.py"')"
 echo "integration_tests=$(count_cmd 'find sakhi/tests/integration -name "test_*.py"')"
 echo "unit_tests=$(count_cmd 'find sakhi/tests/unit -name "test_*.py"')"
+echo
+
+echo "[Observability]"
+if rg -q 'PrometheusMiddleware' sakhi/apps/api/main.py && rg -q 'app.add_route\("/metrics", handle_metrics\)' sakhi/apps/api/main.py; then
+  echo "metrics_endpoint=present"
+else
+  echo "metrics_endpoint=missing"
+fi
+if rg -q 'async def _build_health_payload' sakhi/apps/api/main.py && rg -q '@app.get\("/health"\)' sakhi/apps/api/main.py; then
+  echo "health_readiness=present"
+else
+  echo "health_readiness=missing"
+fi
+if rg -q 'INSERT INTO request_logs' sakhi/apps/api/middleware/telemetry.py; then
+  echo "request_telemetry=present"
+else
+  echo "request_telemetry=missing"
+fi
+if [ -f sakhi/apps/api/core/monitoring.py ] \
+  && rg -q 'setup_monitoring' sakhi/apps/api/main.py \
+  && rg -q 'report_exception_to_sink' sakhi/apps/api/main.py \
+  && rg -q 'setup_monitoring' sakhi/apps/worker/main.py \
+  && rg -q 'report_exception_sync' sakhi/apps/worker/main.py; then
+  echo "external_alerting_sink=present"
+else
+  echo "external_alerting_sink=missing"
+fi
 echo
 
 echo "[Simulation Data Health]"

@@ -34,6 +34,7 @@ from sakhi.apps.api.services.turn.deterministic_context_loader import (
 )
 from sakhi.apps.api.services.turn.reply_service import build_turn_reply
 from sakhi.apps.api.services.turn.async_triggers import enqueue_turn_jobs
+from sakhi.apps.api.services.continuity.chat import build_continuity_pack
 from sakhi.apps.api.services.conversation.topic_manager import extract_topics, update_conversation_topics
 from sakhi.apps.api.core.dialog_state import update_dialog_state
 from sakhi.apps.api.services.memory.ingest_reasoning import ingest_reasoning_to_memory
@@ -1674,6 +1675,16 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "health_trends": health_trends,
     }
 
+    try:
+        continuity_pack = await build_continuity_pack(
+            user_id,
+            body.text,
+        )
+        if continuity_pack:
+            metadata_payload["continuity_pack"] = continuity_pack
+    except Exception as continuity_exc:
+        logger.warning("[turn_v2] Continuity pack build failed (non-fatal): %s", continuity_exc)
+
     # ── GOVERNANCE GATE ──────────────────────────────────────────────────
     # Evaluate constraints, drift, contradictions via kala GovernanceGate.
     # Non-fatal: if governance fails the turn proceeds normally.
@@ -1831,6 +1842,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             "emotion": emotion,
             "intents_detected": stored_intents,
             "friction_state": friction_state_computed,
+            "continuity_pack": metadata_payload.get("continuity_pack"),
             "internal_state": internal_state,
             "tone_state": tone_state,
             "empathy_state": empathy_state,

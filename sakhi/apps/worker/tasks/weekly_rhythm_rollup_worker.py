@@ -13,6 +13,9 @@ from sakhi.apps.api.core.db import q, exec as dbexec
 LOGGER = logging.getLogger(__name__)
 
 RHYTHM_ROLLUP_WINDOW_DAYS = int(os.getenv("RHYTHM_ROLLUP_WINDOW_DAYS", "7") or "7")
+ENABLE_WEEKLY_RHYTHM_ROLLUP = str(
+    os.getenv("SAKHI_ENABLE_WEEKLY_RHYTHM_ROLLUP", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
 TIME_BUCKETS = {
     "early_morning": (5, 8),
     "morning": (8, 12),
@@ -177,6 +180,9 @@ async def _table_exists(table_name: str) -> bool:
 
 
 async def run_weekly_rhythm_rollup(person_id: str | None = None) -> Dict[str, Any]:
+    if not ENABLE_WEEKLY_RHYTHM_ROLLUP:
+        return {"processed": 0, "updated": 0, "skipped": "disabled_by_policy"}
+
     now = datetime.now(timezone.utc)
     window_start = (now - timedelta(days=RHYTHM_ROLLUP_WINDOW_DAYS)).date()
     week_start = window_start

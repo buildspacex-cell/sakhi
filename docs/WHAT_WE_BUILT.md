@@ -1,14 +1,14 @@
 # Sakhi — What We Built
 
-> A complete inventory of the Sakhi system as of February 2026.
+> A complete inventory of the Sakhi system as of March 2026.
 >
-> ~200K lines of code. 179 database tables. 30 engines. 547 kala tests. Zero shortcuts.
+> ~200K lines of code. 179 database tables. 34 engines. 552 kala tests. Zero shortcuts.
 
 ---
 
 ## One Paragraph
 
-Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 75 API routes and 113 background workers, a Next.js web app with 73 pages, a React Native mobile app with 16 screens, and a pure-computation governance kernel with 547 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
+Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 80 API route modules and 114 worker modules, a Next.js web app with 76 pages, a React Native mobile app with 30 screens, and a pure-computation governance kernel with 552 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, inject policy-gated continuity context when available, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
 
 ---
 
@@ -16,13 +16,13 @@ Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversat
 
 | What | Count |
 |---|---|
-| Python backend (sakhi/) | ~146K lines across 75 routes, 50 services, 64 worker tasks |
-| Engine modules (sakhi/apps/engine/) | 30 computational engines |
-| Governance kernel (kala/) | ~10.7K lines, 46 source files, 547 tests |
-| Web app (apps/web/) | ~42K lines TypeScript, 73 pages, 101 API proxy routes |
-| Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 16 screens |
+| Python backend (sakhi/) | ~146K lines across 80 route modules, 232 service modules, 86 worker task modules |
+| Engine modules (sakhi/apps/engine/) | 34 computational engines |
+| Governance kernel (kala/) | ~11K lines, 49 source files, 552 tests |
+| Web app (apps/web/) | ~42K lines TypeScript, 76 pages, 117 API proxy routes |
+| Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 30 screens |
 | Database tables | 179 |
-| Background workers | 64 task files + 13 top-level workers |
+| Background workers | 86 task files + 114 worker modules |
 | Context modules | 13 (11 primary + 2 ritual caches) |
 | LLM call sites | 80+ across routes, services, workers |
 | Vector dimensions | 1536 (OpenAI text-embedding-3-small) |
@@ -65,6 +65,7 @@ User message arrives (POST /v2/turn)
   ├─ 1. CONTEXT LOADING (~150-300ms)
   │     Load from memory (STM, episodic, long-term)
   │     Load persona, rhythm state, active tasks
+  │     (rhythm_planner_alignment is deferred by default unless explicitly enabled)
   │     Load friction state (chaos/intensity/stagnation/balanced)
   │
   ├─ 2. CONTEXT ROUTING
@@ -98,6 +99,20 @@ User message arrives (POST /v2/turn)
 - Goal evolution → adapt objectives
 - Memory synthesis → weekly/monthly consolidation
 - Meta-reflection → weekly self-assessment
+
+**Continuity surface** (policy-gated):
+- Continuity policy/exclusions (`/continuity/policy`)
+- Topic + arc retrieval (`/continuity/topics`, `/continuity/arc`)
+- Turn-level hidden continuity pack injection for prompt coherence (`turn_v2` metadata), including compact thread stats, sampled phase path, anchor moments, deterministic qualitative arc summary, and a chronological decision ledger (including acknowledged Sakhi suggestions) for stronger longitudinal grounding
+- Deep reflection async flow (`/continuity/reflection/run|status|result`) with compact LLM synthesis packet + deterministic fallback (`chat_response_source`, `llm_reflection` debug payload) for direct chat rendering, including surface-policy carry-through (`detail_allowed`/`mirror_allowed`) to keep blocked-detail reflections mirror-only, language-first prompt framing (`history`, `person context`, `current query`) instead of raw packet JSON dumps, explicit run modes (`deep_answer` with active query vs `topic_reflection` longitudinal check-in), and deep-answer quality gating (long-form contract + one-pass regen if contract checks fail)
+- Simulation Ask-Sakhi debug inspector exposes `turn_debug` (continuity pack + prompt payload) and includes deep reflection run/status/result controls with unavailable-state messaging, cache-busted polling, and result probing so completed reflections surface immediately in `apps/web/app/lab/simulation/client.tsx`
+
+**Production hardening controls**:
+- Health probes now include liveness and readiness contracts: `GET /health/live` and `GET /health`/`GET /health/ready` (DB required, Redis optional), with readiness returning `503` on DB failure.
+- Internal/non-user routes are blocked by default in production runtime (`/lab`, `/dev`, `/demo`, `/admin`) unless explicitly re-enabled via `SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD=1`.
+- Rhythm rollup and planner rhythm alignment are both deferred by default (`SAKHI_ENABLE_WEEKLY_RHYTHM_ROLLUP=0`, `SAKHI_ENABLE_RHYTHM_PLANNER_ALIGNMENT=0`) so missing rhythm tables are kept out of default turn/scheduler paths.
+- External incident alerting is wired for production failures via `sakhi/apps/api/core/monitoring.py` (optional Sentry DSN and/or webhook sink), including API unhandled exception capture and worker job/crash reporting with dedupe guards.
+- Build/CI now fail fast on missing config using profile-based env contract validation (`make check-env`, `make verify`, CI `check_env.py --profile ci`).
 
 ---
 
@@ -136,7 +151,7 @@ Memory recall uses **hybrid retrieval**: semantic similarity (vector search) + k
 
 ### Governance Kernel (kala)
 
-Pure computation. No I/O, no database, no LLM. 547 tests.
+Pure computation. No I/O, no database, no LLM. 552 tests.
 
 - **Constraint evaluation** — Data-driven rules (field/operator/value). 11 operators. Priority-based (HARD → block, SOFT → confirm).
 - **Drift gating** — Drift percentage triggers governance responses. Above threshold → block proactive suggestions.
@@ -151,7 +166,7 @@ See [docs/kala/](kala/) for complete kala documentation.
 
 ## Backend Inventory
 
-### API Routes (75 files)
+### API Routes (80 files)
 
 **Core conversation:**
 - `turn_v2.py` — Main conversation turn orchestrator
@@ -228,6 +243,7 @@ Standalone computational engines at `sakhi/apps/engine/`, each producing determi
 | `patterns/` | Pattern detection and crystallization |
 | `soul/` | Soul values computation |
 | `governance/` | Kala governance bridge (constraints, drift gating, event ledger) |
+| `continuity/` | Continuity policy, topic compilation, arc surfacing, deep reflection jobs |
 | `demo/` | Demo seeding, simulation harness, governance seeder |
 | `focus/` | Focus state management |
 | `missions/` | Mission/project tracking |
@@ -237,7 +253,7 @@ Standalone computational engines at `sakhi/apps/engine/`, each producing determi
 | `narratives/` | Narrative generation |
 | `body/`, `environment/` | Physical and environmental context |
 
-### Workers (64 task files)
+### Workers (86 task files)
 
 **Per-turn (triggered after every conversation):**
 - Memory update, episodic consolidation, preference learning, intent extraction
@@ -260,7 +276,7 @@ Standalone computational engines at `sakhi/apps/engine/`, each producing determi
 
 ## Frontend Inventory
 
-### Web App (Next.js 14, 73 pages)
+### Web App (Next.js 14, 76 pages)
 
 **Tech:** Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Framer Motion, Supabase Auth, SWR
 
@@ -287,9 +303,9 @@ Standalone computational engines at `sakhi/apps/engine/`, each producing determi
 - `/lab/simulation` — Full-brain simulation harness
 - 15+ detail pages for debugging memory, persona, rhythm, patterns, etc.
 
-**101 API proxy routes** forwarding to the Python backend.
+**117 API proxy routes** forwarding to the Python backend.
 
-### Mobile App (React Native / Expo, 16 screens)
+### Mobile App (React Native / Expo, 30 screens)
 
 **Tech:** Expo 54, React Native 0.81, React 19, TypeScript, NativeWind (Tailwind), Supabase Auth, React Query, Apple HealthKit integration
 
@@ -383,7 +399,7 @@ All person-scoped via `person_id UUID`. Vector columns use `vector(1536)`. JSONB
 
 2. **Temporal intelligence.** Every data structure has a temporal dimension. Memory decays. Patterns crystallize and fade. State drifts and recovers. Moving averages smooth noise. The system gets smarter over time, not just bigger.
 
-3. **Governance kernel.** kala provides deterministic governance over probabilistic LLM inference. Constraints, drift gating, contradiction detection, objective versioning — all pure computation, all auditable, all replayable. 547 tests, zero external dependencies.
+3. **Governance kernel.** kala provides deterministic governance over probabilistic LLM inference. Constraints, drift gating, contradiction detection, objective versioning — all pure computation, all auditable, all replayable. 552 tests, zero external dependencies.
 
 4. **Friction-first UX.** The person never sees doshas. They experience friction states (chaos, intensity, stagnation, balanced) that feel natural. The Ayurvedic engine runs underneath.
 
@@ -393,4 +409,4 @@ All person-scoped via `person_id UUID`. Vector columns use `vector(1536)`. JSONB
 
 ---
 
-*Last updated: 2026-02-26*
+*Last updated: 2026-03-05*

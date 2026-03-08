@@ -60,6 +60,7 @@ from sakhi.apps.worker.simulation_worker_registry import (
     resolve_forecast_runs_per_day,
     weekly_import_tuples,
 )
+from sakhi.apps.api.services.demo.simulation_continuity import enrich_simulation_payload
 
 LOGGER = logging.getLogger(__name__)
 
@@ -147,6 +148,13 @@ async def create_user(
         "INSERT INTO persons (id, created_at) VALUES ($1, NOW()) ON CONFLICT (id) DO NOTHING",
         user_id,
     )
+    # 1.5 users (intents table FK depends on this)
+    await db_exec(
+        """INSERT INTO users (id, email, full_name, created_at, updated_at)
+           VALUES ($1, $2, $3, NOW(), NOW())
+           ON CONFLICT (id) DO NOTHING""",
+        user_id, email, persona["name"],
+    )
     # 2. auth_users
     await db_exec(
         "INSERT INTO auth_users (id, email, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING",
@@ -210,6 +218,7 @@ async def cleanup_user(db_exec, user_id: str) -> None:
         ("personal_model", "person_id"),
         ("profiles", "user_id"),
         ("auth_users", "id"),
+        ("users", "id"),
         ("persons", "id"),
     ]
 
@@ -712,11 +721,22 @@ def _safe_json(obj):
         return str(obj)
 
 
-def _get_entry_timestamp(start: datetime, day: int, time_of_day: str) -> datetime:
+def _get_entry_timestamp(
+    start: datetime,
+    day: int,
+    time_of_day: str,
+    occurrence_index: int = 0,
+) -> datetime:
     """Compute simulated timestamp for a journal entry."""
     base = start + timedelta(days=day - 1)
     hours = {"morning": 8, "afternoon": 14, "evening": 21}
-    return base.replace(hour=hours.get(time_of_day, 21), minute=0, second=0, microsecond=0)
+    minute = max(0, occurrence_index) * 5
+    return base.replace(
+        hour=hours.get(time_of_day, 21),
+        minute=minute,
+        second=0,
+        microsecond=0,
+    )
 
 
 # ── Main Orchestrator ──
@@ -791,9 +811,12 @@ async def run_persona(
             day_journals = journals_by_day.get(day, [])
             day_reference_ts = _get_entry_timestamp(sim_start, day, "evening")
 
-            for j in day_journals:
+            for occurrence_index, j in enumerate(day_journals):
                 timestamp = _get_entry_timestamp(
-                    sim_start, day, j.get("time_of_day", "evening"),
+                    sim_start,
+                    day,
+                    j.get("time_of_day", "evening"),
+                    occurrence_index=occurrence_index,
                 )
                 try:
                     result = await runner.process_journal(
@@ -967,6 +990,7 @@ async def run_persona(
         "real_pipeline": True,
         "production_parity": True,
     }
+    enrich_simulation_payload(export_data, persona_id=persona_id)
 
     with open(output_path, "w") as f:
         json.dump(export_data, f, indent=2, default=str, ensure_ascii=False)

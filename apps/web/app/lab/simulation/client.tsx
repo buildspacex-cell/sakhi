@@ -40,6 +40,7 @@ const PolarAngleAxis = _PolarAngleAxis as any;
 const PolarRadiusAxis = _PolarRadiusAxis as any;
 import type {
   SimulationData,
+  SimulationAddJournalResult,
   StateSnapshot,
   ArcPhase,
   PhaseBoundary,
@@ -49,7 +50,15 @@ import type {
   ThemeSnapshot,
   CrystallizedPattern,
   ReplayFrictionState,
+  SimulationContinuityData,
+  CompiledContinuityTopic,
+  CompiledContinuityArc,
+  CompiledContinuityEntryTag,
+  CompiledContinuityEventRef,
+  TurnDebugData,
+  ContinuityDeepReflectionResponse,
 } from "./types";
+import { makeAnchorLine, makeRecap, makeMirrorTitle } from "./continuityMirror";
 import ThreeActDemo from "./governance/ThreeActDemo";
 
 // ============================================================================
@@ -81,6 +90,31 @@ const palette = {
   nodes: "#6ab573",
   edges: "#e6923a",
 };
+
+type DeepReflectionRunMode = "deep_answer" | "topic_reflection";
+
+type ContinuityEventRef = CompiledContinuityEventRef;
+type PositionedContinuityEvent = ContinuityEventRef & {
+  index: number;
+  x: number;
+  y: number;
+  highlighted: boolean;
+};
+
+async function resolveSimulationUserId(personaId: string): Promise<string> {
+  const res = await fetch(`/simulation/${personaId}.json?ts=${Date.now()}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Unable to load simulation user for ${personaId}`);
+  }
+  const payload = (await res.json()) as { user_id?: string };
+  const userId = String(payload.user_id || "").trim();
+  if (!userId) {
+    throw new Error(`Simulation user_id missing for ${personaId}`);
+  }
+  return userId;
+}
 
 // ============================================================================
 // Main Client Component
@@ -120,12 +154,24 @@ export default function SimulationDemoClient() {
     friction_state?: ReplayFrictionState;
     day: number;
   } | null>(null);
+  const [askLastDebug, setAskLastDebug] = useState<TurnDebugData | null>(null);
+  const [askReflectionLoading, setAskReflectionLoading] = useState(false);
+  const [askReflectionStatus, setAskReflectionStatus] = useState<string | null>(null);
+  const [askReflectionError, setAskReflectionError] = useState<string | null>(null);
+  const [askReflectionMode, setAskReflectionMode] = useState<DeepReflectionRunMode | null>(null);
+  const [askReflectionResult, setAskReflectionResult] =
+    useState<ContinuityDeepReflectionResponse | null>(null);
 
   const handleAskSakhi = useCallback(async () => {
     const content = askText.trim();
     if (!content || askLoading) return;
     setAskLoading(true);
     setAskError(null);
+    setAskLastDebug(null);
+    setAskReflectionError(null);
+    setAskReflectionResult(null);
+    setAskReflectionStatus(null);
+    setAskReflectionMode(null);
     try {
       const res = await fetch("/api/demo/simulation/add-journal", {
         method: "POST",
@@ -136,7 +182,7 @@ export default function SimulationDemoClient() {
         const err = await res.json().catch(() => ({}));
         throw new Error((err.detail ?? err.error) || `Request failed (${res.status})`);
       }
-      const result = await res.json();
+      const result: SimulationAddJournalResult = await res.json();
       const newEntry: JournalEntry = result.entry;
       // Append to local data state so replay includes new entry immediately
       setData((prev) =>
@@ -149,6 +195,7 @@ export default function SimulationDemoClient() {
             }
           : prev,
       );
+      setAskLastDebug(result.turn_debug ?? null);
       setAskLastEntry({
         content,
         reply: newEntry.reply ?? "",
@@ -165,6 +212,140 @@ export default function SimulationDemoClient() {
     }
   }, [askText, askTimeOfDay, askLoading, personaId]);
 
+  const handleRunAskDeepReflection = useCallback(async (mode: DeepReflectionRunMode) => {
+    const topicKey = String(askLastDebug?.continuity_pack?.topic_key || "").trim();
+    if (!topicKey || askReflectionLoading) return;
+    const queryText = mode === "deep_answer" ? String(askLastEntry?.content || "").trim() : "";
+    if (mode === "deep_answer" && !queryText) {
+      setAskReflectionError("Deep Answer needs an active query from the latest user message.");
+      return;
+    }
+
+    setAskReflectionLoading(true);
+    setAskReflectionError(null);
+    setAskReflectionResult(null);
+    setAskReflectionStatus("enabling_policy");
+    setAskReflectionMode(mode);
+
+    try {
+      const personId =
+        String(data?.user_id || "").trim() || (await resolveSimulationUserId(personaId));
+
+      const policyRes = await fetch("/api/continuity/policy/enable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ person_id: personId }),
+      });
+      if (!policyRes.ok) {
+        const policyErr = await policyRes.json().catch(() => ({}));
+        throw new Error(
+          (policyErr.detail ?? policyErr.error) || `Policy enable failed (${policyRes.status})`,
+        );
+      }
+
+      setAskReflectionStatus("queued");
+      const runRes = await fetch("/api/continuity/reflection/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: personId,
+          topic_key: topicKey,
+          window: "3650d",
+          mode,
+          user_query: mode === "deep_answer" ? queryText : undefined,
+        }),
+      });
+      if (!runRes.ok) {
+        const runErr = await runRes.json().catch(() => ({}));
+        throw new Error((runErr.detail ?? runErr.error) || `Run failed (${runRes.status})`);
+      }
+      const runPayload = (await runRes.json()) as ContinuityDeepReflectionResponse;
+      const reflectionId = String(runPayload.reflection_id || "").trim();
+      if (!reflectionId) {
+        throw new Error("Missing reflection_id in deep reflection response");
+      }
+
+      const fetchReflectionResult = async () => {
+        const resultNonce = Date.now();
+        const resultRes = await fetch(
+          `/api/continuity/reflection/result?id=${encodeURIComponent(reflectionId)}&t=${resultNonce}`,
+          { cache: "no-store" },
+        );
+        if (!resultRes.ok) {
+          const resultErr = await resultRes.json().catch(() => ({}));
+          throw new Error(
+            (resultErr.detail ?? resultErr.error) || `Result failed (${resultRes.status})`,
+          );
+        }
+        return (await resultRes.json()) as ContinuityDeepReflectionResponse;
+      };
+
+      let done = false;
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const pollNonce = Date.now();
+        const statusRes = await fetch(
+          `/api/continuity/reflection/status?id=${encodeURIComponent(reflectionId)}&t=${pollNonce}`,
+          { cache: "no-store" },
+        );
+        if (!statusRes.ok) {
+          const statusErr = await statusRes.json().catch(() => ({}));
+          throw new Error(
+            (statusErr.detail ?? statusErr.error) || `Status failed (${statusRes.status})`,
+          );
+        }
+
+        const statusPayload = (await statusRes.json()) as ContinuityDeepReflectionResponse;
+        const status = String(statusPayload.status || "queued");
+        setAskReflectionStatus(status);
+
+        if (status === "done") {
+          const resultPayload = await fetchReflectionResult();
+          setAskReflectionResult(resultPayload);
+          done = true;
+          break;
+        }
+
+        if (status === "failed") {
+          throw new Error(String(statusPayload.error || "Deep reflection failed"));
+        }
+
+        if (attempt % 3 === 0) {
+          const probePayload = await fetchReflectionResult();
+          const probeStatus = String(probePayload.status || "queued");
+          if (probeStatus === "done" && probePayload.result) {
+            setAskReflectionStatus("done");
+            setAskReflectionResult(probePayload);
+            done = true;
+            break;
+          }
+          if (probeStatus === "failed") {
+            throw new Error(String(probePayload.error || "Deep reflection failed"));
+          }
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
+      if (!done) {
+        const finalProbe = await fetchReflectionResult();
+        const finalStatus = String(finalProbe.status || "queued");
+        if (finalStatus === "done" && finalProbe.result) {
+          setAskReflectionStatus("done");
+          setAskReflectionResult(finalProbe);
+          done = true;
+        }
+      }
+
+      if (!done) {
+        throw new Error("Deep reflection timed out after 120 seconds");
+      }
+    } catch (e) {
+      setAskReflectionError(e instanceof Error ? e.message : "Deep reflection failed");
+    } finally {
+      setAskReflectionLoading(false);
+    }
+  }, [askLastDebug?.continuity_pack?.topic_key, askLastEntry?.content, askReflectionLoading, data?.user_id, personaId]);
+
   const reloadSimulationData = useCallback(
     async (targetPersonaId: string): Promise<SimulationData> => {
       const res = await fetch(`/simulation/${targetPersonaId}.json?ts=${Date.now()}`, {
@@ -178,6 +359,14 @@ export default function SimulationDemoClient() {
     },
     [],
   );
+
+  useEffect(() => {
+    setAskReflectionLoading(false);
+    setAskReflectionStatus(null);
+    setAskReflectionError(null);
+    setAskReflectionResult(null);
+    setAskReflectionMode(null);
+  }, [personaId]);
 
   // Load data — only when understanding section is visible
   useEffect(() => {
@@ -471,9 +660,12 @@ export default function SimulationDemoClient() {
         primary_contributor: snap.friction_state.drift?.primary_contributor || "",
       };
     }
-    const entry = data.entries.find((e) => e.day === replayCurrentDay);
+    const entry =
+      replayEntryIndex >= 0 && replayEntryIndex < data.entries.length
+        ? data.entries[replayEntryIndex]
+        : data.entries.find((e) => e.day === replayCurrentDay);
     return entry?.friction_state || null;
-  }, [data, replayCurrentDay]);
+  }, [data, replayCurrentDay, replayEntryIndex]);
 
   // Sync currentDay from replay so understanding sections below update
   useEffect(() => {
@@ -501,9 +693,12 @@ export default function SimulationDemoClient() {
   // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const target = e.target;
       if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLSelectElement
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
       )
         return;
       if (e.key === " ") {
@@ -675,6 +870,12 @@ export default function SimulationDemoClient() {
             setLoading(false);
           }
         }}
+      />
+
+      <ContinuityArcSection
+        personaName={data.persona.name}
+        entries={data.entries}
+        continuity={data.continuity}
       />
 
       {/* 3.5 Current Friction State - shows REAL computed state from simulation */}
@@ -908,9 +1109,16 @@ export default function SimulationDemoClient() {
         text={askText}
         timeOfDay={askTimeOfDay}
         lastEntry={askLastEntry}
+        debug={askLastDebug}
+        deepReflectionLoading={askReflectionLoading}
+        deepReflectionMode={askReflectionMode}
+        deepReflectionStatus={askReflectionStatus}
+        deepReflectionError={askReflectionError}
+        deepReflectionResult={askReflectionResult}
         onTextChange={setAskText}
         onTimeOfDayChange={setAskTimeOfDay}
         onSubmit={handleAskSakhi}
+        onRunDeepReflection={handleRunAskDeepReflection}
       />
     </div>
   );
@@ -1469,6 +1677,977 @@ function AddJournalToProfile({
           {success}
         </div>
       )}
+    </div>
+  );
+}
+
+type RelationType = "revisits" | "reinforces" | "pivots" | "reverses" | "resolves";
+
+function formatContinuityTimestamp(timestamp: string): string {
+  const value = new Date(timestamp);
+  if (Number.isNaN(value.getTime())) return timestamp;
+  return value.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function formatFacetLabel(facet: string): string {
+  return facet.replace(/_/g, " ");
+}
+
+function formatDecisionStateLabel(value: string): string {
+  return value.replace(/_/g, " ");
+}
+
+function simulationEntryKey(entry: { day: number; timestamp: string }): string {
+  return `${entry.day}|${entry.timestamp}`;
+}
+
+function ContinuityArcSection({
+  personaName,
+  entries,
+  continuity,
+}: {
+  personaName: string;
+  entries: JournalEntry[];
+  continuity?: SimulationContinuityData;
+}) {
+  const topics = continuity?.topics ?? [];
+  const [selectedAnchor, setSelectedAnchor] = useState<string>(topics[0]?.anchor ?? "");
+  const [showIncludedMoments, setShowIncludedMoments] = useState(false);
+  const continuityVersionKey = continuity?.compiled_at ?? continuity?.generated_at;
+
+  useEffect(() => {
+    setSelectedAnchor(topics[0]?.anchor ?? "");
+    setShowIncludedMoments(false);
+  }, [personaName, continuityVersionKey, topics]);
+
+  const selectedTopic = useMemo<CompiledContinuityTopic | null>(() => {
+    if (!topics.length) return null;
+    return topics.find((topic) => topic.anchor === selectedAnchor) ?? topics[0] ?? null;
+  }, [selectedAnchor, topics]);
+
+  const entryByKey = useMemo(() => {
+    const index = new Map<string, JournalEntry>();
+    for (const entry of entries) {
+      index.set(simulationEntryKey(entry), entry);
+    }
+    return index;
+  }, [entries]);
+
+  const revealArcDetail = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      document.getElementById("arc-detail")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
+
+  if (!selectedTopic) {
+    return (
+      <div style={{ ...styles.card, marginBottom: 24, borderLeft: `4px solid ${palette.accent}` }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+          Continuity Arc
+        </div>
+        <div style={{ fontSize: 12, color: palette.muted }}>
+          No compiled continuity topics are available for this simulation yet. Add or regenerate the
+          simulation profile to compile continuity from the journal history.
+        </div>
+      </div>
+    );
+  }
+
+  const surface = selectedTopic.surface ?? {
+    mirror_allowed: true,
+    detail_allowed: true,
+    classification_score: selectedTopic.confidence,
+    coherence_score: 1,
+    blocked_reason: null as string | null,
+  };
+
+  return (
+    <div style={{ ...styles.card, marginBottom: 24, borderLeft: `4px solid ${palette.accent}` }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
+        Continuity Arc
+      </div>
+      <div style={{ fontSize: 12, color: palette.muted, marginBottom: 12 }}>
+        Topics are compiled directly from the simulation journals. Selecting a topic loads the
+        precomputed continuity arc with no live tagging or preset overrides.
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+          marginBottom: 12,
+        }}
+      >
+        <select
+          value={selectedTopic.anchor}
+          onChange={(e) => setSelectedAnchor(e.target.value)}
+          style={{
+            border: `1px solid ${palette.border}`,
+            borderRadius: 8,
+            padding: "8px 10px",
+            fontSize: 12,
+            color: palette.text,
+            background: palette.card,
+          }}
+        >
+          {topics.map((topic) => (
+            <option key={topic.anchor} value={topic.anchor}>
+              {topic.label}
+            </option>
+          ))}
+        </select>
+
+        <span style={{ fontSize: 11, color: palette.muted }}>
+          Auto-compiled confidence {Math.round(selectedTopic.confidence * 100)}%
+        </span>
+        <span style={{ fontSize: 11, color: palette.muted }}>
+          Classification {Math.round(surface.classification_score * 100)}% · Coherence{" "}
+          {Math.round(surface.coherence_score * 100)}%
+        </span>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          marginBottom: 14,
+        }}
+      >
+        <MetricChip label="Topic" value={selectedTopic.label} />
+        <MetricChip label="Span" value={`${selectedTopic.arc.span_days.toFixed(1)} Days`} />
+        <MetricChip label="Entries" value={String(selectedTopic.arc.element_count)} />
+        <MetricChip label="Direction" value={selectedTopic.arc.features?.direction ?? "flat"} />
+        <MetricChip label="Phases" value={String(selectedTopic.arc.phase_count)} />
+      </div>
+
+      <div
+        style={{
+          fontSize: 11,
+          color: palette.muted,
+          lineHeight: 1.5,
+          marginTop: -4,
+          marginBottom: 12,
+        }}
+      >
+        Direction reflects pattern consistency over time, not progress or success.
+      </div>
+
+      <div
+        style={{
+          fontSize: 12,
+          color: palette.text,
+          lineHeight: 1.6,
+          marginBottom: 12,
+        }}
+      >
+        Arc membership is inferred from the journal text and compiled into the simulation artifact.
+        Sakhi can now show this topic as one unfolding storyline instead of isolated moments.
+      </div>
+
+      {!surface.mirror_allowed ? (
+        <div
+          style={{
+            marginTop: 14,
+            border: `1px solid ${palette.border}`,
+            borderRadius: 14,
+            background: palette.cardAlt,
+            padding: 14,
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700, color: palette.text, marginBottom: 6 }}>
+            Not enough continuity signal yet
+          </div>
+          <div style={{ fontSize: 12, color: palette.muted, lineHeight: 1.6 }}>
+            This topic stays hidden until both classification confidence and arc coherence clear the
+            surfacing threshold. Current status: {Math.round(surface.classification_score * 100)}%
+            {" "}classification, {Math.round(surface.coherence_score * 100)}% coherence.
+          </div>
+        </div>
+      ) : (
+        <ContinuityMirrorCard
+          topicLabel={selectedTopic.label}
+          arc={selectedTopic.arc}
+          onRevealDetail={revealArcDetail}
+        />
+      )}
+
+      <div id="arc-detail" style={{ marginTop: 14 }}>
+        <ContinuitySpineDiagram arc={selectedTopic.arc} entryTags={selectedTopic.entry_tags} />
+
+        <div
+          style={{
+            border: `1px solid ${palette.border}`,
+            borderRadius: 14,
+            padding: 16,
+            background: palette.card,
+            marginTop: 14,
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700, color: palette.text, marginBottom: 10 }}>
+            Phase Structure
+          </div>
+          <div style={{ display: "grid", gap: 10 }}>
+            {selectedTopic.arc.phases.map((phase) => (
+              <div
+                key={`${selectedTopic.arc.id}-phase-${phase.index}`}
+                style={{
+                  border: `1px solid ${palette.border}`,
+                  borderRadius: 10,
+                  background: palette.cardAlt,
+                  padding: 12,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    marginBottom: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 700, color: palette.accent }}>
+                    Phase {phase.index + 1}
+                  </span>
+                  <span style={{ fontSize: 11, color: palette.muted }}>
+                    Days {phase.start_day}-{phase.end_day}
+                  </span>
+                  <span style={{ fontSize: 11, color: palette.muted }}>
+                    {phase.element_count} moments
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: palette.text, lineHeight: 1.55 }}>
+                  This slice covers {formatContinuityTimestamp(phase.start_ts)} to{" "}
+                  {formatContinuityTimestamp(phase.end_ts)} with {phase.element_count} compiled
+                  moments.
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div
+          style={{
+            border: `1px solid ${palette.border}`,
+            borderRadius: 14,
+            padding: 16,
+            background: palette.card,
+            marginTop: 14,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setShowIncludedMoments((value) => !value)}
+            aria-label={showIncludedMoments ? "Hide included moments" : "Show included moments"}
+            style={{
+              padding: 0,
+              border: "none",
+              background: "transparent",
+              color: palette.text,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {showIncludedMoments ? "Hide Included Moments" : "Show Included Moments"}
+          </button>
+
+          {showIncludedMoments && (
+            <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+              {selectedTopic.arc.event_refs.map((event, index) => {
+                const compiledTag = selectedTopic.entry_tags[
+                  simulationEntryKey({ day: event.day, timestamp: event.ts })
+                ];
+                const fullEntry = entryByKey.get(
+                  simulationEntryKey({ day: event.day, timestamp: event.ts }),
+                );
+                return (
+                  <div
+                    key={`${selectedTopic.arc.id}-event-${index}`}
+                    style={{
+                      border: `1px solid ${palette.border}`,
+                      borderRadius: 10,
+                      background: palette.cardAlt,
+                      padding: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span style={{ fontSize: 11, fontWeight: 700, color: palette.accent }}>
+                        Day {event.day}
+                      </span>
+                      <span style={{ fontSize: 11, color: palette.muted }}>
+                        {formatContinuityTimestamp(event.ts)}
+                      </span>
+                      <span style={{ fontSize: 10, color: palette.muted, textTransform: "capitalize" }}>
+                        {event.time_of_day}
+                      </span>
+                      {compiledTag && (
+                        <span style={{ fontSize: 10, color: palette.muted }}>
+                          {Math.round(compiledTag.confidence * 100)}% confidence
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                      {event.facet && (
+                        <span
+                          style={{
+                            padding: "3px 7px",
+                            borderRadius: 999,
+                            background: palette.accentLight,
+                            color: palette.accent,
+                            fontSize: 10,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {formatFacetLabel(event.facet)}
+                        </span>
+                      )}
+                      {event.decision_state && (
+                        <span
+                          style={{
+                            padding: "3px 7px",
+                            borderRadius: 999,
+                            background: "#eef3f8",
+                            color: palette.stagnation,
+                            fontSize: 10,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {formatDecisionStateLabel(event.decision_state)}
+                        </span>
+                      )}
+                      {event.stance && (
+                        <span
+                          style={{
+                            padding: "3px 7px",
+                            borderRadius: 999,
+                            background:
+                              event.stance === "toward"
+                                ? "#f7efe7"
+                                : event.stance === "away"
+                                  ? "#eef5fb"
+                                  : "#f3f1ee",
+                            color:
+                              event.stance === "toward"
+                                ? palette.accent
+                                : event.stance === "away"
+                                  ? palette.stagnation
+                                  : palette.muted,
+                            fontSize: 10,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {formatDecisionStateLabel(event.stance)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ fontSize: 12, color: palette.text, lineHeight: 1.6 }}>
+                      {fullEntry?.content || event.excerpt}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function deriveContinuityRelation(
+  previous: ContinuityEventRef,
+  next: ContinuityEventRef,
+): RelationType {
+  if (next.decision_state === "resolved") return "resolves";
+  if (next.decision_state === "reversed") return "reverses";
+  if (previous.stance && next.stance && previous.stance !== next.stance) return "pivots";
+  if (previous.stance && next.stance && previous.stance === next.stance) return "reinforces";
+  return "revisits";
+}
+
+function ContinuityMirrorCard({
+  topicLabel,
+  arc,
+  onRevealDetail,
+}: {
+  topicLabel: string;
+  arc: CompiledContinuityArc;
+  onRevealDetail: () => void;
+}) {
+  const [showRecap, setShowRecap] = useState(false);
+  const width = 860;
+  const height = 142;
+  const paddingX = 36;
+  const baselineY = 62;
+  const usableWidth = width - paddingX * 2;
+  const phasePalette = ["#ebe0d6", "#e5ebf2", "#e2e9dc"];
+  const recap = useMemo(() => makeRecap(arc), [arc]);
+
+  const phaseRects = useMemo(() => {
+    if (!arc.phases.length) {
+      return [{ index: 0, x: paddingX, width: usableWidth, fill: phasePalette[0] }];
+    }
+
+    const startMs = new Date(arc.start_ts).getTime();
+    const endMs = new Date(arc.end_ts).getTime();
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+      return arc.phases.map((phase, index) => {
+        const x = paddingX + (index / arc.phases.length) * usableWidth;
+        const widthPx =
+          index === arc.phases.length - 1
+            ? width - paddingX - x
+            : Math.max(56, usableWidth / arc.phases.length);
+
+        return {
+          index,
+          x,
+          width: widthPx,
+          fill: phasePalette[index % phasePalette.length],
+        };
+      });
+    }
+
+    const totalSpan = Math.max(endMs - startMs, 1);
+
+    return arc.phases.map((phase, index) => {
+      const phaseStartMs = new Date(phase.start_ts).getTime();
+      const phaseEndMs = new Date(phase.end_ts).getTime();
+      const x = paddingX + Math.max(0, ((phaseStartMs - startMs) / totalSpan) * usableWidth);
+      const endX = paddingX + Math.min(1, (phaseEndMs - startMs) / totalSpan) * usableWidth;
+      const widthPx =
+        index === arc.phases.length - 1
+          ? width - paddingX - x
+          : Math.max(56, endX - x);
+
+      return {
+        index,
+        x,
+        width: widthPx,
+        fill: phasePalette[index % phasePalette.length],
+      };
+    });
+  }, [arc.end_ts, arc.phases, arc.start_ts, usableWidth, width]);
+
+  const boundaryDots = phaseRects.slice(0, -1).map((phase) => phase.x + phase.width);
+
+  return (
+    <div
+      style={{
+        border: `1px solid ${palette.border}`,
+        borderRadius: 16,
+        background: palette.card,
+        padding: 18,
+        marginTop: 14,
+      }}
+    >
+      <div style={{ fontSize: 17, fontWeight: 700, color: palette.text, marginBottom: 6 }}>
+        {makeMirrorTitle(topicLabel, arc)}
+      </div>
+      <div style={{ fontSize: 12, color: palette.muted, lineHeight: 1.55, marginBottom: 12 }}>
+        {makeAnchorLine(arc)}
+      </div>
+
+      <div
+        style={{
+          borderRadius: 18,
+          background: "#f6f1ec",
+          padding: "12px 14px 10px",
+          overflowX: "auto",
+        }}
+      >
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ width: "100%", minWidth: 620 }}
+          role="img"
+          aria-label={`${topicLabel} continuity mirror`}
+        >
+          <rect x={0} y={0} width={width} height={height} rx={18} fill="#f3ece5" />
+
+          {phaseRects.map((phase) => (
+            <rect
+              key={`${arc.id}-mirror-phase-${phase.index}`}
+              x={phase.x}
+              y={34}
+              width={phase.width}
+              height={56}
+              rx={14}
+              fill={phase.fill}
+              opacity={0.96}
+            />
+          ))}
+
+          <path
+            d={`M ${paddingX} ${baselineY} C ${width * 0.28} ${baselineY - 2}, ${width * 0.72} ${baselineY + 2}, ${width - paddingX} ${baselineY}`}
+            fill="none"
+            stroke={palette.text}
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+
+          {boundaryDots.map((x, index) => (
+            <circle
+              key={`${arc.id}-mirror-boundary-${index}`}
+              cx={x}
+              cy={baselineY}
+              r={5}
+              fill={palette.card}
+              stroke={palette.accent}
+              strokeWidth={2}
+            />
+          ))}
+        </svg>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 8,
+            marginTop: 6,
+            fontSize: 11,
+            color: palette.muted,
+          }}
+        >
+          <span>{formatContinuityTimestamp(arc.start_ts)}</span>
+          <span>{formatContinuityTimestamp(arc.end_ts)}</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowRecap((value) => !value)}
+        aria-label={showRecap ? "Hide quick continuity recap" : "Show quick continuity recap"}
+        style={{
+          marginTop: 12,
+          padding: 0,
+          border: "none",
+          background: "transparent",
+          color: palette.text,
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        {showRecap ? "Hide quick recap" : "Quick recap"}
+      </button>
+
+      {showRecap && (
+        <div
+          style={{
+            marginTop: 10,
+            border: `1px solid ${palette.border}`,
+            borderRadius: 12,
+            background: palette.cardAlt,
+            padding: "12px 14px",
+          }}
+        >
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: palette.accent }}>Start</span>
+              <span style={{ fontSize: 12, color: palette.text, lineHeight: 1.5 }}>{recap.start}</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: palette.accent }}>Pivots</span>
+              <span style={{ fontSize: 12, color: palette.text, lineHeight: 1.5 }}>{recap.pivots}</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: palette.accent }}>Current</span>
+              <span style={{ fontSize: 12, color: palette.text, lineHeight: 1.5 }}>{recap.current}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={onRevealDetail}
+        aria-label="See how this continuity arc was inferred"
+        style={{
+          marginTop: 12,
+          padding: 0,
+          border: "none",
+          background: "transparent",
+          color: palette.accent,
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        See how this was inferred
+      </button>
+    </div>
+  );
+}
+
+function ContinuitySpineDiagram({
+  arc,
+  entryTags,
+}: {
+  arc: CompiledContinuityArc;
+  entryTags: Record<string, CompiledContinuityEntryTag>;
+}) {
+  const width = 960;
+  const height = 420;
+  const paddingX = 70;
+  const baselineY = 240;
+  const usableWidth = width - paddingX * 2;
+  const totalSegments = Math.max(arc.event_refs.length - 1, 1);
+
+  const resolveDisplayFacet = useCallback(
+    (event: ContinuityEventRef): { facet: string | null; provisional: boolean } => {
+      if (event.facet) {
+        return { facet: event.facet, provisional: false };
+      }
+      const compiledTag = entryTags[simulationEntryKey({ day: event.day, timestamp: event.ts })];
+      if (compiledTag?.facet_state !== "UNCERTAIN") {
+        return { facet: null, provisional: false };
+      }
+      const trace = compiledTag.trace;
+      const facetWinner = trace?.facet?.winner;
+      const fallbackFacet =
+        facetWinner && typeof facetWinner.key === "string" ? String(facetWinner.key).trim() : "";
+      if (!fallbackFacet) {
+        return { facet: null, provisional: false };
+      }
+      return { facet: fallbackFacet, provisional: true };
+    },
+    [entryTags],
+  );
+
+  const positionedEvents = arc.event_refs.map((event, index) => ({
+    ...event,
+    index,
+    x: paddingX + (index / totalSegments) * usableWidth,
+    y: baselineY,
+    ...resolveDisplayFacet(event),
+    highlighted: Boolean(resolveDisplayFacet(event).facet),
+  }));
+
+  const phasePalette = ["#ece2d8", "#e8edf3", "#e4eadf"];
+  const phaseRects = arc.phases.map((phase, index) => {
+    const firstIndex = Math.max(
+      0,
+      positionedEvents.findIndex((event) => event.ts === phase.start_ts),
+    );
+    const lastIndex = Math.max(
+      firstIndex,
+      positionedEvents.findIndex((event) => event.ts === phase.end_ts),
+    );
+    const fallbackFirst = Math.floor((index * arc.event_refs.length) / Math.max(arc.phase_count, 1));
+    const fallbackLast = Math.max(
+      fallbackFirst,
+      Math.ceil(((index + 1) * arc.event_refs.length) / Math.max(arc.phase_count, 1)) - 1,
+    );
+    const startEvent = positionedEvents[firstIndex >= 0 ? firstIndex : fallbackFirst];
+    const endEvent =
+      positionedEvents[lastIndex >= 0 ? lastIndex : fallbackLast] ??
+      positionedEvents[positionedEvents.length - 1];
+    const x = (startEvent?.x ?? paddingX) - 28;
+    const bandWidth = Math.max((endEvent?.x ?? x) - x + 56, 92);
+    return {
+      index,
+      x,
+      width: bandWidth,
+      fill: phasePalette[index % phasePalette.length],
+      start: phase.start_ts,
+      end: phase.end_ts,
+    };
+  });
+
+  const repeatedFacets = Array.from(
+    positionedEvents.reduce((groups, event) => {
+      if (!event.facet) return groups;
+      const items = groups.get(event.facet) ?? [];
+      items.push(event);
+      groups.set(event.facet, items);
+      return groups;
+    }, new Map<string, typeof positionedEvents>()),
+  )
+    .filter(([, events]) => events.length >= 2)
+    .map(([facet, events]) => ({
+      facet,
+      events,
+      provisional: events.filter((event) => !event.provisional).length < 2,
+    }))
+    .slice(0, 4);
+
+  const strandOffsets = [-72, -118, -164, 62];
+  const relationStroke = (relation: RelationType) => {
+    switch (relation) {
+      case "reinforces":
+        return { color: palette.accent, dash: "", width: 3 };
+      case "reverses":
+        return { color: palette.chaos, dash: "6 5", width: 3 };
+      case "pivots":
+        return { color: palette.stagnation, dash: "5 5", width: 2.5 };
+      case "resolves":
+        return { color: palette.balanced, dash: "", width: 3 };
+      default:
+        return { color: palette.muted, dash: "3 6", width: 2 };
+    }
+  };
+
+  const renderNode = (event: PositionedContinuityEvent) => {
+    const fill =
+      event.stance === "toward"
+        ? palette.accent
+        : event.stance === "away"
+          ? palette.stagnation
+          : palette.card;
+    const stroke =
+      event.stance === "toward"
+        ? palette.accent
+        : event.stance === "away"
+          ? palette.stagnation
+          : palette.muted;
+
+    if (event.decision_state === "reversed") {
+      const points = `${event.x},${event.y - 12} ${event.x + 12},${event.y} ${event.x},${event.y + 12} ${event.x - 12},${event.y}`;
+      return <polygon points={points} fill={fill} stroke={stroke} strokeWidth={4} />;
+    }
+    if (event.decision_state === "deferred") {
+      return (
+        <rect
+          x={event.x - 11}
+          y={event.y - 11}
+          width={22}
+          height={22}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={4}
+          rx={4}
+        />
+      );
+    }
+    if (event.decision_state === "resolved") {
+      return (
+        <rect
+          x={event.x - 12}
+          y={event.y - 10}
+          width={24}
+          height={20}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={4}
+          rx={10}
+        />
+      );
+    }
+    if (event.decision_state === "committed") {
+      return <circle cx={event.x} cy={event.y} r={12} fill={fill} stroke={stroke} strokeWidth={4} />;
+    }
+    if (event.decision_state === "leaning_yes" || event.decision_state === "leaning_no") {
+      return (
+        <>
+          <circle cx={event.x} cy={event.y} r={12} fill={palette.card} stroke={stroke} strokeWidth={4} />
+          <path
+            d={`M ${event.x - 8} ${event.y} L ${event.x + 8} ${event.y}`}
+            stroke={stroke}
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+        </>
+      );
+    }
+    return <circle cx={event.x} cy={event.y} r={12} fill={palette.card} stroke={stroke} strokeWidth={4} />;
+  };
+
+  return (
+    <div
+      style={{
+        border: `1px solid ${palette.border}`,
+        borderRadius: 16,
+        background: palette.card,
+        padding: 18,
+      }}
+    >
+      <div style={{ fontSize: 18, fontWeight: 700, color: palette.text, marginBottom: 6 }}>
+        Continuity Spine
+      </div>
+      <div style={{ fontSize: 12, color: palette.muted, marginBottom: 12, lineHeight: 1.55 }}>
+        The main line is the continuous story. Repeated inferred themes appear as side strands, and
+        the shaded bands keep the compiled phase structure visible.
+      </div>
+
+      <div
+        style={{
+          borderRadius: 18,
+          background: "#f6f1ec",
+          padding: 12,
+          overflowX: "auto",
+        }}
+      >
+        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", minWidth: 760 }}>
+          <rect x={0} y={0} width={width} height={height} rx={20} fill="#f3ece5" />
+
+          {phaseRects.map((phase) => (
+            <g key={`${arc.id}-phase-band-${phase.index}`}>
+              <rect
+                x={phase.x}
+                y={42}
+                width={phase.width}
+                height={282}
+                rx={18}
+                fill={phase.fill}
+                opacity={0.92}
+              />
+              <text
+                x={phase.x + phase.width / 2}
+                y={72}
+                textAnchor="middle"
+                style={{ fill: palette.muted, fontSize: 12, fontWeight: 600 }}
+              >
+                {`Phase ${phase.index + 1}`}
+              </text>
+            </g>
+          ))}
+
+          <path
+            d={`M ${paddingX} ${baselineY} L ${width - paddingX} ${baselineY}`}
+            stroke={palette.text}
+            strokeWidth={5}
+            strokeLinecap="round"
+          />
+
+          {repeatedFacets.map(({ facet, events: facetEvents, provisional }, facetIndex) => {
+            const offset = strandOffsets[facetIndex % strandOffsets.length];
+            const strandY = baselineY + offset;
+
+            return (
+              <g key={`${arc.id}-facet-${facet}`}>
+                {facetEvents.map((event, index) => {
+                  const current = event;
+                  const next = index < facetEvents.length - 1 ? facetEvents[index + 1] : null;
+                  const relation =
+                    index < facetEvents.length - 1
+                      ? deriveContinuityRelation(event, facetEvents[index + 1])
+                      : null;
+                  const stroke = provisional
+                    ? { color: palette.muted, dash: "5 6", width: 2.5 }
+                    : relation
+                      ? relationStroke(relation)
+                      : null;
+                  return (
+                    <React.Fragment key={`${arc.id}-facet-link-${facet}-${event.day}`}>
+                      <line
+                        x1={current.x}
+                        y1={baselineY}
+                        x2={current.x}
+                        y2={strandY}
+                        stroke={palette.border}
+                        strokeWidth={2}
+                      />
+                      {next && stroke && (
+                        <path
+                          d={`M ${current.x} ${strandY} Q ${(current.x + next.x) / 2} ${strandY - 16} ${next.x} ${strandY}`}
+                          fill="none"
+                          stroke={stroke.color}
+                          strokeWidth={stroke.width}
+                          strokeDasharray={stroke.dash}
+                          strokeLinecap="round"
+                          opacity={provisional ? 0.9 : 1}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+
+                {facetEvents.map((event) => {
+                  return (
+                    <circle
+                      key={`${arc.id}-facet-node-${facet}-${event.day}`}
+                      cx={event.x}
+                      cy={strandY}
+                      r={5}
+                      fill={palette.card}
+                      stroke={provisional ? palette.muted : palette.accent}
+                      strokeWidth={2}
+                      opacity={provisional ? 0.92 : 1}
+                    />
+                  );
+                })}
+
+                <text
+                  x={facetEvents[0]?.x ?? paddingX}
+                  y={strandY - 14}
+                  textAnchor="middle"
+                  style={{
+                    fill: palette.muted,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    opacity: provisional ? 0.82 : 1,
+                  }}
+                >
+                  {formatFacetLabel(facet)}
+                </text>
+              </g>
+            );
+          })}
+
+          {positionedEvents.map((event) => (
+            <g key={`${arc.id}-node-${event.day}`}>
+              {renderNode(event)}
+              <text
+                x={event.x}
+                y={event.y - 22}
+                textAnchor="middle"
+                style={{ fill: palette.text, fontSize: 11, fontWeight: 700 }}
+              >
+                {`D${event.day}`}
+              </text>
+            </g>
+          ))}
+
+          <text x={paddingX} y={374} textAnchor="start" style={{ fill: palette.muted, fontSize: 11 }}>
+            {formatContinuityTimestamp(arc.start_ts)}
+          </text>
+          <text
+            x={width - paddingX}
+            y={374}
+            textAnchor="end"
+            style={{ fill: palette.muted, fontSize: 11 }}
+          >
+            {formatContinuityTimestamp(arc.end_ts)}
+          </text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function MetricChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        gap: 6,
+        alignItems: "center",
+        borderRadius: 999,
+        background: palette.card,
+        border: `1px solid ${palette.border}`,
+        padding: "6px 10px",
+      }}
+    >
+      <span style={{ fontSize: 10, color: palette.muted, textTransform: "uppercase" }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: palette.text, textTransform: "capitalize" }}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -3719,9 +4898,16 @@ function AskSakhiSection({
   text,
   timeOfDay,
   lastEntry,
+  debug,
+  deepReflectionLoading,
+  deepReflectionMode,
+  deepReflectionStatus,
+  deepReflectionError,
+  deepReflectionResult,
   onTextChange,
   onTimeOfDayChange,
   onSubmit,
+  onRunDeepReflection,
 }: {
   personaId: string;
   loading: boolean;
@@ -3734,11 +4920,74 @@ function AskSakhiSection({
     friction_state?: ReplayFrictionState;
     day: number;
   } | null;
+  debug: TurnDebugData | null;
+  deepReflectionLoading: boolean;
+  deepReflectionMode: DeepReflectionRunMode | null;
+  deepReflectionStatus: string | null;
+  deepReflectionError: string | null;
+  deepReflectionResult: ContinuityDeepReflectionResponse | null;
   onTextChange: (v: string) => void;
   onTimeOfDayChange: (v: "morning" | "afternoon" | "evening") => void;
   onSubmit: () => void;
+  onRunDeepReflection: (mode: DeepReflectionRunMode) => void;
 }) {
   const personaName = PERSONA_NAMES[personaId] ?? personaId;
+  const continuityPack = debug?.continuity_pack || null;
+  const continuityEvidence = continuityPack?.evidence || [];
+  const arcCompact = continuityPack?.arc_compact || null;
+  const engineDebug = debug?.conversation_engine_debug || null;
+  const promptText = engineDebug?.base_prompt || engineDebug?.prompt || "";
+  const reflectionBody = deepReflectionResult?.result || null;
+  const reflectionLlmMeta =
+    reflectionBody && reflectionBody.llm_reflection && typeof reflectionBody.llm_reflection === "object"
+      ? reflectionBody.llm_reflection
+      : null;
+  const reflectionMode =
+    String(reflectionBody?.reflection_mode || deepReflectionMode || "topic_reflection").trim() ||
+    "topic_reflection";
+  const reflectionModeLabel = reflectionMode === "deep_answer" ? "Deep Answer" : "Topic Reflection";
+  const reflectionQueryContext =
+    reflectionBody && reflectionBody.query_context && typeof reflectionBody.query_context === "object"
+      ? reflectionBody.query_context
+      : null;
+  const reflectionActiveQuery = String(reflectionQueryContext?.active_query || "").trim();
+  const reflectionQuerySource = String(reflectionQueryContext?.active_query_source || "").trim();
+  const reflectionChatSource = String(reflectionBody?.chat_response_source || "deterministic").trim();
+  const reflectionChatResponseFromPayload =
+    reflectionBody && typeof reflectionBody.chat_response === "string"
+      ? String(reflectionBody.chat_response).trim()
+      : "";
+  const reflectionOpenQuestion =
+    reflectionBody && Array.isArray(reflectionBody.open_questions)
+      ? String(reflectionBody.open_questions[0] || "").trim()
+      : "";
+  const reflectionPivot =
+    reflectionBody && Array.isArray(reflectionBody.key_pivots)
+      ? String(reflectionBody.key_pivots[0] || "").trim()
+      : "";
+  const reflectionRecurring =
+    reflectionBody && Array.isArray(reflectionBody.recurring_tensions)
+      ? String(reflectionBody.recurring_tensions[0] || "").trim()
+      : "";
+  const reflectionChatResponse =
+    reflectionChatResponseFromPayload ||
+    [
+      reflectionBody?.origin_story ? `I can see where this started: ${reflectionBody.origin_story}` : "",
+      reflectionPivot ? `A key pivot was: ${reflectionPivot}` : "",
+      reflectionBody?.current_stage ? `Right now this thread feels like: ${reflectionBody.current_stage}` : "",
+      reflectionOpenQuestion ? `One question to hold: ${reflectionOpenQuestion}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  const deepReflectionTopicKey = String(continuityPack?.topic_key || "").trim();
+  const canRunDeepReflection = deepReflectionTopicKey.length > 0;
+  const canRunDeepAnswer = canRunDeepReflection && Boolean(String(lastEntry?.content || "").trim());
+  const deepReflectionDisabledReason = canRunDeepReflection
+    ? ""
+    : "No continuity topic was selected for this turn yet. Send a follow-up tied to a recurring thread (sakhi, family, career) and try again.";
+  const deepAnswerDisabledReason = canRunDeepAnswer
+    ? ""
+    : "Deep Answer needs the latest user query in this turn.";
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -3953,6 +5202,330 @@ function AskSakhiSection({
                 {lastEntry.reply}
               </div>
             </div>
+          )}
+
+          {(continuityPack || promptText || debug) && (
+            <details
+              style={{
+                marginTop: 16,
+                border: `1px solid ${palette.border}`,
+                borderRadius: 10,
+                background: palette.card,
+                padding: "10px 12px",
+              }}
+            >
+              <summary
+                style={{
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: palette.accent,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.4,
+                }}
+              >
+                Turn Debug (LLM Input)
+              </summary>
+
+              <div style={{ marginTop: 12, fontSize: 12, color: palette.text }}>
+                {continuityPack && (
+                  <>
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>Continuity Topic:</strong>{" "}
+                      {continuityPack.topic_label || continuityPack.topic_key || "unknown"}
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>Evidence Count:</strong> {continuityEvidence.length}
+                    </div>
+                    {arcCompact && (
+                      <div style={{ marginBottom: 8, lineHeight: 1.6 }}>
+                        <div>
+                          <strong>Start:</strong> {arcCompact.start_signal || "n/a"}
+                        </div>
+                        <div>
+                          <strong>Pivots:</strong> {arcCompact.pivots_signal || "n/a"}
+                        </div>
+                        <div>
+                          <strong>Current:</strong> {arcCompact.current_signal || "n/a"}
+                        </div>
+                      </div>
+                    )}
+                    {continuityEvidence.length > 0 && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 4 }}>Evidence passed:</div>
+                        <div
+                          style={{
+                            maxHeight: 160,
+                            overflowY: "auto",
+                            border: `1px solid ${palette.border}`,
+                            borderRadius: 8,
+                            padding: "8px 10px",
+                            background: palette.bg,
+                          }}
+                        >
+                          {continuityEvidence.map((item, idx) => (
+                            <div key={`${item.source_ref || "ref"}-${idx}`} style={{ marginBottom: 8 }}>
+                              <div style={{ color: palette.muted, fontSize: 11 }}>
+                                {item.ts ? item.ts.slice(0, 19) : "no-ts"} · {item.source_ref || "unknown-source"}
+                              </div>
+                              <div style={{ lineHeight: 1.45 }}>{item.snippet || "(empty snippet)"}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        border: `1px solid ${palette.border}`,
+                        borderRadius: 8,
+                        padding: "10px 12px",
+                        background: palette.cardAlt,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>
+                          Deep Reflection Test
+                          <div style={{ fontSize: 11, fontWeight: 400, color: palette.muted }}>
+                            Deep Answer = current query + full history, Topic Reflection = whole-story arc without a required query.
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => onRunDeepReflection("deep_answer")}
+                            disabled={deepReflectionLoading || !canRunDeepAnswer}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "none",
+                              background:
+                                deepReflectionLoading || !canRunDeepAnswer
+                                  ? palette.muted
+                                  : palette.accent,
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor:
+                                deepReflectionLoading || !canRunDeepAnswer
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity: deepReflectionLoading || !canRunDeepAnswer ? 0.8 : 1,
+                            }}
+                          >
+                            {deepReflectionLoading && deepReflectionMode === "deep_answer"
+                              ? "Running..."
+                              : "Run Deep Answer"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onRunDeepReflection("topic_reflection")}
+                            disabled={deepReflectionLoading || !canRunDeepReflection}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "none",
+                              background:
+                                deepReflectionLoading || !canRunDeepReflection
+                                  ? palette.muted
+                                  : palette.accent,
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor:
+                                deepReflectionLoading || !canRunDeepReflection
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity: deepReflectionLoading || !canRunDeepReflection ? 0.8 : 1,
+                            }}
+                          >
+                            {deepReflectionLoading && deepReflectionMode === "topic_reflection"
+                              ? "Running..."
+                              : "Run Topic Reflection"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {!canRunDeepReflection && (
+                        <div style={{ fontSize: 11, color: palette.muted, marginTop: 8 }}>
+                          {deepReflectionDisabledReason}
+                        </div>
+                      )}
+                      {!deepReflectionLoading && canRunDeepReflection && !canRunDeepAnswer && (
+                        <div style={{ fontSize: 11, color: palette.muted, marginTop: 8 }}>
+                          {deepAnswerDisabledReason}
+                        </div>
+                      )}
+
+                      {deepReflectionStatus && (
+                        <div style={{ fontSize: 11, color: palette.muted, marginTop: 8 }}>
+                          Status{deepReflectionMode ? ` (${deepReflectionMode === "deep_answer" ? "deep_answer" : "topic_reflection"})` : ""}: {deepReflectionStatus}
+                        </div>
+                      )}
+
+                      {deepReflectionError && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: palette.chaos,
+                            marginTop: 8,
+                          }}
+                        >
+                          {deepReflectionError}
+                        </div>
+                      )}
+
+                      {reflectionBody && (
+                        <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.6 }}>
+                          {reflectionChatResponse && (
+                            <div
+                              style={{
+                                border: `1px solid ${palette.border}`,
+                                borderRadius: 8,
+                                background: palette.card,
+                                padding: "10px 12px",
+                                marginBottom: 8,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: palette.accent,
+                                  textTransform: "uppercase",
+                                  letterSpacing: 0.4,
+                                  marginBottom: 6,
+                                }}
+                              >
+                                Sakhi ({reflectionModeLabel})
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  color: palette.muted,
+                                  marginBottom: 6,
+                                  textTransform: "uppercase",
+                                  letterSpacing: 0.35,
+                                }}
+                              >
+                                Source: {reflectionChatSource}
+                                {reflectionLlmMeta?.model ? ` · ${String(reflectionLlmMeta.model)}` : ""}
+                              </div>
+                              {reflectionActiveQuery && (
+                                <div style={{ fontSize: 11, color: palette.muted, marginBottom: 6 }}>
+                                  Query ({reflectionQuerySource || "unknown"}): {reflectionActiveQuery}
+                                </div>
+                              )}
+                              <div style={{ fontSize: 12, color: palette.text, lineHeight: 1.6 }}>
+                                {reflectionChatResponse}
+                              </div>
+                            </div>
+                          )}
+                          {reflectionLlmMeta?.error && (
+                            <div style={{ color: palette.chaos, fontSize: 11, marginBottom: 6 }}>
+                              LLM synthesis error: {String(reflectionLlmMeta.error)}
+                            </div>
+                          )}
+                          {reflectionBody.origin_story && (
+                            <div>
+                              <strong>Origin:</strong> {reflectionBody.origin_story}
+                            </div>
+                          )}
+                          {reflectionPivot && (
+                            <div>
+                              <strong>Pivot:</strong> {reflectionPivot}
+                            </div>
+                          )}
+                          {reflectionBody.current_stage && (
+                            <div>
+                              <strong>Current:</strong> {reflectionBody.current_stage}
+                            </div>
+                          )}
+                          {reflectionRecurring && (
+                            <div>
+                              <strong>Recurring:</strong> {reflectionRecurring}
+                            </div>
+                          )}
+
+                          <details style={{ marginTop: 8 }}>
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: palette.text,
+                              }}
+                            >
+                              Deep reflection raw payload
+                            </summary>
+                            <pre
+                              style={{
+                                marginTop: 8,
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                                maxHeight: 220,
+                                overflowY: "auto",
+                                border: `1px solid ${palette.border}`,
+                                borderRadius: 8,
+                                padding: "8px 10px",
+                                background: palette.bg,
+                                color: palette.text,
+                                fontSize: 11,
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {JSON.stringify(reflectionBody, null, 2)}
+                            </pre>
+                          </details>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {promptText && (
+                  <details style={{ marginTop: 8 }}>
+                    <summary
+                      style={{
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: palette.text,
+                      }}
+                    >
+                      Prompt sent to LLM
+                    </summary>
+                    <pre
+                      style={{
+                        marginTop: 8,
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        maxHeight: 320,
+                        overflowY: "auto",
+                        border: `1px solid ${palette.border}`,
+                        borderRadius: 8,
+                        padding: "10px 12px",
+                        background: palette.bg,
+                        color: palette.text,
+                        fontSize: 11,
+                        lineHeight: 1.55,
+                      }}
+                    >
+                      {promptText}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            </details>
           )}
         </div>
       )}

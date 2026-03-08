@@ -151,6 +151,11 @@ class TestBasePromptStructure:
         result = build_prompt("Hello", _base_context(), _base_tone())
         assert "anxious" in result
 
+    def test_prompt_uses_updated_response_contract(self):
+        result = build_prompt("Need help prioritizing work this week.", _base_context(), _base_tone())
+        assert "Keep it focused. 60-120 words usually. Lead with practical help." in result
+        assert "Max 1 question. Make it feel natural." in result
+
     def test_all_sections_coexist(self):
         """All context sections should appear together without conflict."""
         metadata = {
@@ -168,6 +173,92 @@ class TestBasePromptStructure:
         assert "Vata elevated" in result
         assert "User message:" in result
         assert "Why is everything piling up?" in result
+
+
+class TestContinuityContextSection:
+    """Tests for hidden continuity context injection."""
+
+    def test_continuity_pack_adds_hidden_context_without_exposing_instruction(self):
+        metadata = {
+            "continuity_pack": {
+                "topic_key": "sakhi",
+                "topic_label": "Sakhi",
+                "arc_compact": {
+                    "start_signal": "started around ayurveda engine",
+                    "pivots_signal": "2 pivots reorganized the thread",
+                    "current_signal": "currently centered on product shape",
+                    "disclaimer": "Direction is consistency over time, not success.",
+                },
+                "history_compact": {
+                    "span_days": 98.4,
+                    "element_count": 30,
+                    "phase_count": 3,
+                    "qualitative_mode": "detailed",
+                    "qualitative_arc_summary": (
+                        "It started around ayurveda engine, moved through two pivots, "
+                        "and is now centered on deterministic core."
+                    ),
+                    "phase_path": [
+                        "2025-11-26->2026-01-08: ayurveda engine (10 moments)",
+                        "2026-01-11->2026-03-02: validation (10 moments)",
+                        "2026-03-03->2026-03-05: deterministic core (10 moments)",
+                    ],
+                    "anchor_points": [
+                        {"ts": "2025-11-26T08:00:00+00:00", "snippet": "Started with ayurveda intent."},
+                        {"ts": "2026-01-19T08:00:00+00:00", "snippet": "Moved from validation to building."},
+                        {"ts": "2026-03-05T08:00:00+00:00", "snippet": "Centered on deterministic core."},
+                    ],
+                    "decision_ledger": [
+                        {
+                            "ts": "2026-01-19T08:00:00+00:00",
+                            "status": "resolved",
+                            "source": "user_journal",
+                            "decision": "resolved direction",
+                        },
+                        {
+                            "ts": "2026-03-01T08:00:00+00:00",
+                            "status": "accepted",
+                            "source": "accepted_sakhi_suggestion",
+                            "decision": "Sakhi suggestion acknowledged: Keep the narrative focused.",
+                        },
+                    ],
+                },
+                "evidence": [
+                    {
+                        "ts": "2026-01-01T08:00:00+00:00",
+                        "snippet": "Ayurveda still feels central.",
+                    },
+                    {
+                        "ts": "2026-02-01T08:00:00+00:00",
+                        "snippet": "The prototype still feels reactive.",
+                    },
+                ],
+            }
+        }
+
+        result = build_prompt("Does this still make sense?", _base_context(), _base_tone(), metadata=metadata)
+
+        assert "LONGITUDINAL CONTINUITY" in result
+        assert "History on this topic:" in result
+        assert "Topic: Sakhi" in result
+        assert "Where it began: started around ayurveda engine" in result
+        assert "Decision ledger:" in result
+        assert "accepted_sakhi_suggestion" in result
+        assert "What we know about this person on this topic:" in result
+        assert "Qualitative summary (detailed):" in result
+        assert "moved through two pivots" in result
+        assert "Current query now:" in result
+        assert "Does this still make sense?" in result
+        assert "Story flow:" in result
+        assert "First: ayurveda engine" in result
+        assert "Then: validation" in result
+        assert "Now: deterministic core" in result
+        assert "2025-11-26->2026-01-08" not in result
+        assert "Anchor moments:" in result
+        assert "Early signal: Started with ayurveda intent." in result
+        assert "Recent signal: Centered on deterministic core." in result
+        assert "Prioritize answering the current query directly." in result
+        assert "Do NOT quote, summarize, or mention specific past entries" in result
 
 
 # =============================================================================

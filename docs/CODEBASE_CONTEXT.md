@@ -1,6 +1,6 @@
 # Codebase Context (Working Baseline)
 
-> Last audited: 2026-02-26  
+> Last audited: 2026-03-08  
 > Source of truth refresh command: `./scripts/context-audit.sh`
 
 ## Purpose
@@ -25,31 +25,31 @@ Use this first before substantial code edits.
    - `docs/TEST_STATUS.md`
    - `CHANGELOG.md` (`[Unreleased]`)
 
-## Current Snapshot (2026-02-26)
+## Current Snapshot (2026-03-08)
 
 ### Repository Shape
 
 | Metric | Value |
 |---|---:|
-| Tracked files | 1321 |
-| Python files | 815 |
-| TypeScript files (`.ts`, `.tsx`) | 357 |
-| API route modules (`sakhi/apps/api/routes`, excluding `__init__`/`.bak`) | 79 |
-| API service modules (`sakhi/apps/api/services`, excluding `__init__`) | 221 |
-| Worker modules (`sakhi/apps/worker`, excluding `__init__`) | 113 |
+| Tracked files | 1376 |
+| Python files | 849 |
+| TypeScript files (`.ts`, `.tsx`) | 370 |
+| API route modules (`sakhi/apps/api/routes`, excluding `__init__`/`.bak`) | 80 |
+| API service modules (`sakhi/apps/api/services`, excluding `__init__`) | 232 |
+| Worker modules (`sakhi/apps/worker`, excluding `__init__`) | 114 |
 | Worker task modules (`sakhi/apps/worker/tasks`, excluding `__init__`, `_stubs.py`) | 86 |
 | Engine modules (`sakhi/apps/engine`, excluding `__init__`) | 34 |
 | Web pages (`apps/web/app/**/page.tsx`) | 76 |
-| Web API routes (`apps/web/app/api/**/route.ts`) | 108 |
+| Web API routes (`apps/web/app/api/**/route.ts`) | 117 |
 | Mobile screens (`apps/mobile/app/**/*.tsx`) | 30 |
-| Kala source modules | 46 |
-| Kala test functions | 547 |
+| Kala source modules | 49 |
+| Kala test functions | 552 |
 
 ### API Wiring Reality Check
 
 | Signal | Value |
 |---|---:|
-| `include_router(...)` calls in `sakhi/apps/api/main.py` | 96 |
+| `include_router(...)` calls in `sakhi/apps/api/main.py` | 97 |
 | Duplicate `focus_path_router` imports | 2 |
 | Duplicate `micro_momentum_router` imports | 2 |
 | Duplicate `app.include_router(person_router.router)` | 2 |
@@ -88,46 +88,43 @@ Use this first before substantial code edits.
 
 ## Simulation Data Health (Verified)
 
-### What Works
+Source: `./scripts/context-audit.sh` on 2026-03-08.
 
-- For `vidhya`, `diya`, `bigd`, `anxious_achiever`:
-  - Coherence/alignment/identity momentum states are present in snapshots.
-  - Replay and append-journal pipeline are functional.
+| File | Days | Entries | Coherence | Alignment | Identity | Themes | Patterns | Worker failures |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `vidhya.json` | 114 | 65 | 115 | 115 | 115 | 101 | 0 | none |
+| `diya.json` | 30 | 30 | 31 | 31 | 31 | 25 | 18 | none |
+| `bigd.json` | 30 | 30 | 31 | 31 | 31 | 25 | 18 | none |
+| `anxious_achiever.json` | 1 | 2 | 2 | 2 | 2 | 1 | 0 | `weekly.weekly_rhythm_rollup: relation "rhythm_daily_curve" does not exist` |
+| `hormonal_harmony.json` | 30 | 56 | 0 | 0 | 0 | 0 | 0 | none |
+| `stuck_creative.json` | 70 | 122 | 0 | 0 | 0 | 0 | 0 | none |
 
-### What Is Empty / Broken
+Current read:
+- Primary investor personas (`vidhya`, `diya`, `bigd`) have healthy deep-state snapshots.
+- `anxious_achiever` still shows a deferred rhythm rollup schema gap from legacy snapshot runs.
+- `hormonal_harmony` and `stuck_creative` remain legacy/low-fidelity for deep-state outputs.
 
-1. Theme evolution mostly empty:
-   - `themes` is `0` snapshots across all primary demo personas.
-   - `simulation_profile_updater` runs `run_theme_inference_incremental` only.
-   - Incremental mode depends on crystallized `theme` patterns; no full theme generation fallback in updater.
+## Test Reality (2026-03-08 Context Audit)
 
-2. Ayurvedic pipeline worker failing in simulation runs:
-   - Error observed in worker results: `No module named 'core'`
-   - File: `sakhi/apps/worker/tasks/ayurvedic_pipeline.py`
-   - Cause: imports from `core.workers.*` (legacy path not present in this repo layout).
+### Harness Signals
 
-3. Crystallization can fail in simulation:
-   - Observed error: `'str' object does not support item assignment`
-   - Likely site: `sakhi/apps/api/services/crystallization/engine.py` where `trajectory_data`
-     is mutated without robust JSON coercion from DB row values.
+- `make quick-test` now resolves correctly:
+  - Context audit validates the Makefile target by checking all referenced test files exist.
+  - Current signal: `quick_test_target=present (5 files)`.
 
-4. Two public simulation files are older/incompatible with current deep-state sections:
-   - `stuck_creative.json`, `hormonal_harmony.json` have zero snapshots with `brain_states`.
+### Audit Counts
 
-## Test Reality (Verified Today)
+- `sakhi/tests` path-prefix count: `61`
+- `test_*.py` pattern count under `sakhi/tests`: `64`
+- Integration test files: `9`
+- Unit test files: `49`
 
-### Passing
+## Observability Signals (2026-03-08 Context Audit)
 
-- `poetry run pytest sakhi/tests/unit/services/test_simulation_profile_updater.py -v --tb=short`
-- `poetry run pytest sakhi/tests/unit/workers/test_pattern_workers.py -q`
-- `poetry run pytest sakhi/tests/unit/workers/test_state_workers.py -q`
-- `poetry run pytest kala/tests -q`
-
-### Broken Harness Target
-
-- `make quick-test` currently fails:
-  - Target points to missing file: `sakhi/tests/v2/test_smoke.py`
-  - Impact: `make verify` and `make ready-to-commit` inherit this failure.
+- `metrics_endpoint=present`
+- `health_readiness=present`
+- `request_telemetry=present`
+- `external_alerting_sink=present`
 
 ## Quality Gates For Future Changes
 
@@ -164,7 +161,8 @@ Run:
 
 ```bash
 ./scripts/context-audit.sh
+make check-env
 make ready-to-commit
 ```
 
-If `make ready-to-commit` fails because of the stale quick-test path, fix the target first or run equivalent explicit checks.
+If `make ready-to-commit` fails, use `./scripts/context-audit.sh` output to identify whether the failure is in the quick-test files themselves or another verification stage.

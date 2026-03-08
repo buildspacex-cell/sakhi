@@ -1,7 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getDevAuthBypassPersonId,
+  isDevAuthBypassEnabled,
+} from "@/lib/devAuthBypass";
 
 export const dynamic = "force-dynamic";
+
+const DEV_BYPASS_EMAIL = "localhost-bypass@sakhi.local";
+const DEV_BYPASS_NAME = "Localhost Tester";
+
+interface AuthMePayload {
+  person_id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  onboarding_completed: boolean;
+}
+
+function withDevBypassCookie(
+  request: NextRequest,
+  payload: AuthMePayload
+): NextResponse {
+  const response = NextResponse.json(payload);
+  response.cookies.set("sakhi_person_id", payload.person_id, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: request.nextUrl.protocol === "https:",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  return response;
+}
+
+async function getDevBypassResponse(
+  request: NextRequest
+): Promise<NextResponse | null> {
+  if (!isDevAuthBypassEnabled(request)) {
+    return null;
+  }
+
+  const personId = getDevAuthBypassPersonId();
+  if (!personId) {
+    return null;
+  }
+
+  try {
+    const serviceSupabase = await createClient({ useServiceRole: true });
+    const { data: authUser, error } = await serviceSupabase
+      .from("auth_users")
+      .select("id, email, full_name, avatar_url, onboarding_completed_at")
+      .eq("id", personId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Dev auth bypass lookup failed:", error);
+    }
+
+    if (authUser) {
+      return withDevBypassCookie(request, {
+        person_id: authUser.id,
+        email: authUser.email,
+        full_name: authUser.full_name,
+        avatar_url: authUser.avatar_url,
+        onboarding_completed: !!authUser.onboarding_completed_at,
+      });
+    }
+  } catch (error) {
+    console.error("Dev auth bypass service role lookup error:", error);
+  }
+
+  return withDevBypassCookie(request, {
+    person_id: personId,
+    email: DEV_BYPASS_EMAIL,
+    full_name: DEV_BYPASS_NAME,
+    avatar_url: null,
+    onboarding_completed: true,
+  });
+}
 
 /**
  * GET /api/auth/me
@@ -11,6 +87,11 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   try {
+    const bypassResponse = await getDevBypassResponse(request);
+    if (bypassResponse) {
+      return bypassResponse;
+    }
+
     const supabase = await createClient();
 
     // Get the authenticated Supabase user

@@ -1,6 +1,7 @@
 POETRY ?= poetry
 
 .PHONY: bootstrap dev worker test format lint lint-changed db-migrate db-seed seed check-env decay-themes \
+        check-env-prod-api check-env-prod-web check-env-ci \
         quick-test watch-test typecheck new-route new-service status pre-commit-install \
         docs-api docs-schema verify build-check integration-test pre-commit-run \
         test-coverage test-workers test-routes test-unit test-status pre-deploy ready-to-commit \
@@ -183,6 +184,7 @@ ready-to-commit: verify
 	@echo "✓ Linting passed"
 	@echo "✓ Type checking passed"
 	@echo "✓ Quick tests passed"
+	@echo "✓ Environment contract passed"
 	@echo "✓ API imports OK (Railway)"
 	@echo "✓ Web build passed (Vercel)"
 	@echo ""
@@ -203,7 +205,16 @@ seed:
 	$(POETRY) run python sakhi/infra/scripts/seed_local.py
 
 check-env:
-	$(POETRY) run python sakhi/infra/scripts/check_env.py
+	$(POETRY) run python sakhi/infra/scripts/check_env.py --profile local
+
+check-env-prod-api:
+	$(POETRY) run python sakhi/infra/scripts/check_env.py --profile prod_api --strict-monitoring --no-dotenv
+
+check-env-prod-web:
+	$(POETRY) run python sakhi/infra/scripts/check_env.py --profile prod_web --no-dotenv
+
+check-env-ci:
+	$(POETRY) run python sakhi/infra/scripts/check_env.py --profile ci --no-dotenv
 
 decay-themes:
 	$(POETRY) run python -c "import asyncio; from sakhi.apps.api.services.consolidate import decay_themes; asyncio.run(decay_themes())"
@@ -240,7 +251,7 @@ changelog:
 # Build Verification
 # ─────────────────────────────────────────────────────────────────────────────
 
-verify: lint-changed typecheck quick-test
+verify: lint-changed typecheck quick-test check-env
 	@echo ""
 	@echo "✓ All quick checks passed!"
 

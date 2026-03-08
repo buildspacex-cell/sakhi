@@ -15,6 +15,7 @@ from rq import Queue, Worker
 from dotenv import load_dotenv
 
 from sakhi.apps.api.core.llm import set_router as set_llm_router
+from sakhi.apps.api.core.monitoring import report_exception_sync, setup_monitoring
 from sakhi.apps.worker.jobs import _get_router
 
 load_dotenv(".env.worker")
@@ -59,22 +60,49 @@ def _build_queues(connection: Redis) -> List[Queue]:
     return queues
 
 
+def _worker_exception_handler(job, exc_type, exc_value, tb) -> bool:
+    """Report job failures to external monitoring sinks."""
+
+    del exc_type, tb
+    error = exc_value if isinstance(exc_value, BaseException) else RuntimeError(str(exc_value))
+    report_exception_sync(
+        error,
+        where=f"worker:job:{job.origin}:{job.func_name}",
+        severity="error",
+        dedupe_key=f"worker-job:{job.id}:{error.__class__.__name__}",
+        extra={"job_id": job.id, "queue": job.origin, "func_name": job.func_name},
+    )
+    return False
+
+
 def run() -> None:
-    conn = get_redis()
-    queues = _build_queues(conn)
-    if not queues:
-        raise RuntimeError("No queues registered; check configuration.")
-
+    setup_monitoring(service="sakhi-worker", environment=os.getenv("SAKHI_ENVIRONMENT") or os.getenv("ENV"))
     try:
-        router = _get_router()
-        set_llm_router(router)
-        LOGGER.info("LLM router initialised for worker context.")
-    except Exception as exc:  # pragma: no cover - defensive log
-        LOGGER.warning("Failed to initialise LLM router: %s", exc)
+        conn = get_redis()
+        queues = _build_queues(conn)
+        if not queues:
+            raise RuntimeError("No queues registered; check configuration.")
 
-    worker = Worker(queues, connection=conn)
-    LOGGER.info("Worker started; listening on %s queues.", len(queues))
-    worker.work(with_scheduler=False)
+        try:
+            router = _get_router()
+            set_llm_router(router)
+            LOGGER.info("LLM router initialised for worker context.")
+        except Exception as exc:  # pragma: no cover - defensive log
+            LOGGER.warning("Failed to initialise LLM router: %s", exc)
+
+        worker = Worker(queues, connection=conn, exception_handlers=[_worker_exception_handler])
+        LOGGER.info("Worker started; listening on %s queues.", len(queues))
+        worker.work(with_scheduler=False)
+    except Exception as exc:
+        report_exception_sync(
+            exc,
+            where="worker:main",
+            severity="critical",
+            dedupe_key=f"worker-main:{exc.__class__.__name__}:{str(exc)[:120]}",
+            extra={"phase": "worker_boot_or_run_loop"},
+        )
+        LOGGER.exception("Worker crashed")
+        raise
 
 
 if __name__ == "__main__":

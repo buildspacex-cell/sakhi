@@ -1,6 +1,6 @@
 # Pending Items
 
-Last updated: 2026-02-28
+Last updated: 2026-03-07
 
 This document captures intentionally deferred work found during simulation hardening.
 These items are real gaps, but they are not current investor-demo blockers.
@@ -13,13 +13,16 @@ These items are real gaps, but they are not current investor-demo blockers.
 - `rhythm_state` is missing in the live database.
 - `rhythm_events` is missing in the live database.
 - `rhythm_weekly_rollups` exists, but `weekly_rhythm_rollup` currently skips because `rhythm_daily_curve` is absent.
+- As of 2026-03-07, turn-time `rhythm_planner_alignment` loading is removed from the default path and gated behind `SAKHI_ENABLE_RHYTHM_PLANNER_ALIGNMENT=1`.
+- As of 2026-03-07, weekly rhythm rollups are disabled by default (`SAKHI_ENABLE_WEEKLY_RHYTHM_ROLLUP=0`) to keep missing rhythm tables out of default production/simulation paths.
 
 ### Current Impact
 
 - `weekly_rhythm_rollup` does not produce weekly rollups.
 - `weekly_signals` still runs, but without rhythm rollup input.
 - `/rhythm/{person_id}/state` and `/rhythm/{person_id}/curve` are not backed by live data.
-- Planner-side rhythm helpers that read `rhythm_daily_curve` are operating against a missing subsystem.
+- Planner-side rhythm helpers that read `rhythm_daily_curve` remain deferred and are no longer part of the default turn path.
+- Scheduled weekly rollup enqueue is skipped unless explicitly enabled.
 
 ### Why This Is Deferred
 

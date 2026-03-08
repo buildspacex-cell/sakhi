@@ -39,6 +39,10 @@ Set `SAKHI_LOG_COLOR=0` to disable ANSI colors. Key events (classifier/chat resp
 
 ## Local Development (Production Parity)
 - Create `.env.local` from `.env.local.example` (values only; no feature flags). Removing it should make the API fail loudly at startup.
+- Runtime env policy:
+  - Local dev API loads `.env.local` first, then falls back to `.env`.
+  - Production uses platform env vars (Railway for API/worker, Vercel for web).
+  - `.env.example` / `.env.local.example` are templates only and are never loaded at runtime.
 - Build and run the API with the same Dockerfile Railway uses:
   ```bash
   docker build -t sakhi-api .

@@ -83,6 +83,7 @@ from sakhi.apps.api.routes.emotion_soul_rhythm import router as esr_router
 from sakhi.apps.api.routes.identity_momentum import router as identity_momentum_router
 from sakhi.apps.api.routes.decision_graph import router as decision_graph_router
 from sakhi.apps.api.routes.identity_timeline import router as identity_timeline_router
+from sakhi.apps.api.routes.continuity import router as continuity_router
 from sakhi.apps.api.routes.llm import router as llm_router
 # from sakhi.apps.api.routes.consolidator import router as consolidator_router  # Disabled: broken import
 from sakhi.apps.api.routes.insights import router as insights_router
@@ -166,6 +167,8 @@ from sakhi.apps.api.routes.email import router as email_router
 from sakhi.apps.api.routers import person as person_router
 from sakhi.apps.api.routers import person_edit as person_edit_router
 from sakhi.apps.api.core.llm import set_router as set_llm_router
+from sakhi.apps.api.core.monitoring import report_exception as report_exception_to_sink
+from sakhi.apps.api.core.monitoring import setup_monitoring
 from sakhi.apps.api.core.utils import EnhancedJSONEncoder
 from sakhi.apps.api.middleware import ReplyPacingMiddleware, TelemetryMiddleware
 from sakhi.apps.worker.jobs import enqueue_embedding_and_salience
@@ -208,6 +211,15 @@ import os
 
 ALLOW_WEB = os.getenv("SAKHI_ALLOW_WEB_SEARCH", "false").lower() == "true"
 PILOT_AUTH = os.getenv("PILOT_AUTH", "0") == "1"
+ENABLE_INTERNAL_ROUTES_IN_PROD = os.getenv("SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD", "0") == "1"
+INTERNAL_PROD_BLOCKED_PREFIXES = ("/lab", "/dev", "/demo", "/admin")
+
+
+def _is_prod_runtime() -> bool:
+    node_env = str(os.getenv("NODE_ENV", "")).strip().lower()
+    app_env = str(os.getenv("ENV", "")).strip().lower()
+    vercel_env = str(os.getenv("VERCEL_ENV", "")).strip().lower()
+    return node_env == "production" or app_env == "production" or vercel_env == "production"
 
 if PILOT_AUTH:
     from sakhi.apps.api.middleware.auth_pilot import PilotAuthAndRateLimit
@@ -217,16 +229,113 @@ app.add_middleware(TelemetryMiddleware)
 app.add_middleware(ReplyPacingMiddleware)
 
 
+async def _check_db_health() -> dict[str, Any]:
+    try:
+        pool = await get_async_pool()
+        async with pool.acquire() as connection:
+            await connection.fetchval("SELECT 1")
+        return {"status": "ok"}
+    except Exception as exc:
+        return {"status": "error", "error": str(exc)[:180]}
+
+
+async def _check_redis_health() -> dict[str, Any]:
+    redis_url = str(os.getenv("REDIS_URL", "")).strip()
+    if not redis_url:
+        return {"status": "skipped", "reason": "REDIS_URL_not_set"}
+    client = None
+    try:
+        client = Redis.from_url(redis_url, socket_connect_timeout=1, socket_timeout=1)
+        pong = await asyncio.to_thread(client.ping)
+        return {"status": "ok" if pong else "error"}
+    except Exception as exc:
+        return {"status": "error", "error": str(exc)[:180]}
+    finally:
+        if client is not None:
+            try:
+                await asyncio.to_thread(client.close)
+            except Exception:
+                pass
+
+
+async def _build_health_payload() -> tuple[int, dict[str, Any]]:
+    db = await _check_db_health()
+    redis = await _check_redis_health()
+    healthy = db.get("status") == "ok"
+    payload = {
+        "status": "ok" if healthy else "degraded",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "dependencies": {
+            "database": db,
+            "redis": redis,
+        },
+        "guardrails": {
+            "demo_mode_blocked_in_prod": True,
+            "internal_routes_blocked_in_prod": not ENABLE_INTERNAL_ROUTES_IN_PROD,
+        },
+    }
+    return (status.HTTP_200_OK if healthy else status.HTTP_503_SERVICE_UNAVAILABLE), payload
+
+
 @app.get("/health")
-def health():
-  return {"status": "ok"}
+async def health():
+    status_code, payload = await _build_health_payload()
+    return JSONResponse(payload, status_code=status_code)
+
+
+@app.get("/health/live")
+def health_live():
+    return {"status": "ok"}
 
 
 @app.middleware("http")
 async def reject_demo_in_prod(request: Request, call_next):
-    if os.getenv("NODE_ENV") == "production" and os.getenv("DEMO_MODE", "false").lower() == "true":
+    if _is_prod_runtime() and os.getenv("DEMO_MODE", "false").lower() == "true":
         return JSONResponse({"error": "Demo mode disabled in prod"}, status_code=status.HTTP_403_FORBIDDEN)
     return await call_next(request)
+
+
+@app.middleware("http")
+async def block_internal_routes_in_prod(request: Request, call_next):
+    if _is_prod_runtime() and not ENABLE_INTERNAL_ROUTES_IN_PROD:
+        path = request.url.path
+        for prefix in INTERNAL_PROD_BLOCKED_PREFIXES:
+            if path == prefix or path.startswith(f"{prefix}/"):
+                return JSONResponse(
+                    {"error": "internal route disabled in production"},
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+    return await call_next(request)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    user_id = getattr(request.state, "user_id", None)
+    where = f"api:{request.method} {request.url.path}"
+    dedupe_key = f"{where}:{exc.__class__.__name__}:{str(exc)[:96]}"
+    await report_exception_to_sink(
+        exc,
+        where=where,
+        severity="critical",
+        dedupe_key=dedupe_key,
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "query_params": dict(request.query_params),
+            "user_id": user_id,
+        },
+    )
+    LOGGER.exception(
+        "Unhandled API exception",
+        extra={"event": "api_unhandled_exception", "request_id": request_id, "path": request.url.path},
+    )
+    return JSONResponse(
+        {"error": "internal_server_error", "request_id": request_id},
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
 
 DEFAULT_USER_EMAIL = "anon@sakhi.local"
 DEFAULT_USER_NAME = "Sakhi Companion"
@@ -421,11 +530,20 @@ async def _ensure_default_user_id() -> uuid.UUID:
     if _USER_ID_CACHE:
         return uuid.UUID(_USER_ID_CACHE)
 
+    configured_default = (DEFAULT_USER_ID or "").strip()
+    if configured_default:
+        try:
+            configured_uuid = uuid.UUID(configured_default)
+            await _ensure_user_record(configured_uuid, email_hint=DEFAULT_USER_EMAIL)
+            _USER_ID_CACHE = str(configured_uuid)
+            return configured_uuid
+        except ValueError:
+            LOGGER.warning("DEFAULT_USER_ID is not a valid UUID; falling back to email lookup")
+
     async with _USER_LOCK:
         if _USER_ID_CACHE:
             return uuid.UUID(_USER_ID_CACHE)
 
-        await _ensure_user_record(user_uuid)
         pool = await get_async_pool()
         async with pool.acquire() as connection:
             row = await connection.fetchrow(
@@ -599,11 +717,12 @@ async def record_body_signal(payload: BodySignalRequest, request: Request) -> Bo
     )
 
 
-@core_router.get("/health", tags=["system"])
-async def health_check() -> dict[str, str]:
-    """Return a simple health payload."""
+@core_router.get("/health/ready", tags=["system"])
+async def health_check() -> JSONResponse:
+    """Return readiness payload with dependency checks."""
 
-    return {"status": "ok"}
+    status_code, payload = await _build_health_payload()
+    return JSONResponse(payload, status_code=status_code)
 
 
 @app.get("/presence/preview")
@@ -1082,7 +1201,8 @@ async def retrieval_search(payload: RetrievalRequest, request: Request) -> Retri
         query_embedding = None
 
     try:
-        recall_results = await recall(user_id or str(await _ensure_default_user_id()), query, embedding=query_embedding)
+        user_uuid = await _resolve_user_id(payload.user_id)
+        recall_results = await recall(str(user_uuid), query, embedding=query_embedding)
     except Exception:
         retriever: HybridRetriever | None = getattr(request.app.state, "retriever", None)
         fallback_results = await search_journals(retriever, query, embedding=query_embedding)
@@ -1315,6 +1435,7 @@ class _StubProvider(BaseProvider):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
+    app.state.monitoring = setup_monitoring(service="sakhi-api", environment=settings.environment)
 
     # Configure the LLM router with a default stub handler.
     default_provider = (settings.llm_router or "stub").lower()
@@ -1445,6 +1566,7 @@ app.include_router(esr_router)
 app.include_router(identity_momentum_router)
 app.include_router(decision_graph_router)
 app.include_router(identity_timeline_router)
+app.include_router(continuity_router)
 app.include_router(awareness_router.router)
 app.include_router(intel_router.router)
 app.include_router(recall_router.router)
