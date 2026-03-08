@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from sakhi.apps.api.services.continuity import (
@@ -20,6 +20,7 @@ from sakhi.apps.api.services.continuity.reflection import (
     get_deep_reflection_result,
     get_deep_reflection_status,
 )
+from sakhi.apps.api.utils.person_resolver import resolve_person
 
 router = APIRouter(prefix="/continuity", tags=["continuity"])
 
@@ -63,12 +64,14 @@ class ContinuityReflectionRunRequest(BaseModel):
 
 @router.get("/policy")
 async def get_continuity_policy_route(
+    request: Request,
     person_id: str,
     scope: str = CONTINUITY_SCOPE,
 ):
-    policy = await get_continuity_policy(person_id, scope)
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
+    policy = await get_continuity_policy(resolved_person_id, scope)
     return {
-        "person_id": person_id,
+        "person_id": resolved_person_id,
         "scope": scope,
         "enabled": bool(policy.get("enabled")),
         "exclusions": policy.get("exclusions") or [],
@@ -76,9 +79,10 @@ async def get_continuity_policy_route(
 
 
 @router.put("/policy")
-async def put_continuity_policy(body: ContinuityPolicyRequest):
+async def put_continuity_policy(request: Request, body: ContinuityPolicyRequest):
+    resolved_person_id, _, _ = await resolve_person(request, body.person_id)
     return await upsert_continuity_policy(
-        body.person_id,
+        resolved_person_id,
         scope=body.scope,
         enabled=body.enabled,
         exclusions=body.exclusions,
@@ -86,23 +90,26 @@ async def put_continuity_policy(body: ContinuityPolicyRequest):
 
 
 @router.post("/policy/enable")
-async def post_continuity_policy_enable(body: ContinuityPolicyEnableRequest):
-    return await enable_continuity_policy(body.person_id, scope=body.scope)
+async def post_continuity_policy_enable(request: Request, body: ContinuityPolicyEnableRequest):
+    resolved_person_id, _, _ = await resolve_person(request, body.person_id)
+    return await enable_continuity_policy(resolved_person_id, scope=body.scope)
 
 
 @router.post("/policy/exclude")
-async def post_continuity_policy_exclude(body: ContinuityPolicyExcludeRequest):
+async def post_continuity_policy_exclude(request: Request, body: ContinuityPolicyExcludeRequest):
+    resolved_person_id, _, _ = await resolve_person(request, body.person_id)
     return await exclude_continuity_ref(
-        body.person_id,
+        resolved_person_id,
         body.source_ref,
         scope=body.scope,
     )
 
 
 @router.post("/label")
-async def post_continuity_label(body: ContinuityLabelRequest):
+async def post_continuity_label(request: Request, body: ContinuityLabelRequest):
+    resolved_person_id, _, _ = await resolve_person(request, body.person_id)
     return await upsert_continuity_label(
-        body.person_id,
+        resolved_person_id,
         source_id=body.source_id,
         source_type=body.source_type,
         anchor=body.anchor,
@@ -115,13 +122,15 @@ async def post_continuity_label(body: ContinuityLabelRequest):
 
 @router.get("/topics")
 async def get_continuity_topics_route(
+    request: Request,
     person_id: str,
     window: str = "120d",
     debug: int = 0,
 ):
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
     try:
         return await get_continuity_topics(
-            person_id,
+            resolved_person_id,
             window=window,
             debug=bool(debug),
         )
@@ -133,6 +142,7 @@ async def get_continuity_topics_route(
 
 @router.get("/arc")
 async def get_continuity_arc_route(
+    request: Request,
     person_id: str,
     anchor: str,
     window: str = "90d",
@@ -140,9 +150,10 @@ async def get_continuity_arc_route(
     min_len: int = 3,
     debug: int = 0,
 ):
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
     try:
         return await get_continuity_arc(
-            person_id,
+            resolved_person_id,
             anchor,
             window=window,
             max_gap_days=max_gap_days,
@@ -158,11 +169,12 @@ async def get_continuity_arc_route(
 
 
 @router.post("/reflection/run")
-async def post_continuity_reflection_run(body: ContinuityReflectionRunRequest):
+async def post_continuity_reflection_run(request: Request, body: ContinuityReflectionRunRequest):
+    resolved_person_id, _, _ = await resolve_person(request, body.person_id)
     try:
         user_query = str(body.user_query or "").strip() or None
         return await create_deep_reflection_job(
-            body.person_id,
+            resolved_person_id,
             body.topic_key,
             window=body.window,
             mode=body.mode,
@@ -177,9 +189,14 @@ async def post_continuity_reflection_run(body: ContinuityReflectionRunRequest):
 
 
 @router.get("/reflection/status")
-async def get_continuity_reflection_status_route(id: str):
+async def get_continuity_reflection_status_route(
+    request: Request,
+    id: str,
+    person_id: str | None = Query(default=None),
+):
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
     try:
-        return await get_deep_reflection_status(id)
+        return await get_deep_reflection_status(id, resolved_person_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -187,9 +204,14 @@ async def get_continuity_reflection_status_route(id: str):
 
 
 @router.get("/reflection/result")
-async def get_continuity_reflection_result_route(id: str):
+async def get_continuity_reflection_result_route(
+    request: Request,
+    id: str,
+    person_id: str | None = Query(default=None),
+):
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
     try:
-        return await get_deep_reflection_result(id)
+        return await get_deep_reflection_result(id, resolved_person_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

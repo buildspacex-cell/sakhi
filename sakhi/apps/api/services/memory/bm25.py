@@ -28,10 +28,10 @@ async def bm25_search_journals(
     limit: int = 30,
 ) -> List[Tuple[str, float]]:
     """
-    BM25 keyword search on journal entries using PostgreSQL ts_rank.
+    Keyword search on journal entries with encrypted-only compatibility.
 
-    Uses ts_rank_cd for cover density ranking which gives better results
-    for proximity-based queries.
+    In encrypted_only mode journal plaintext columns may be null in DB,
+    so we score recent decrypted rows in application memory.
 
     Returns:
         List of (entry_id, normalized_score) tuples
@@ -40,38 +40,48 @@ async def bm25_search_journals(
         return []
 
     try:
+        query_tokens = [token for token in query.lower().split() if len(token) > 1]
+        if not query_tokens:
+            return []
+
         rows = await dbfetch(
             """
-            SELECT
-                id,
-                ts_rank_cd(
-                    to_tsvector('english', COALESCE(content, '')),
-                    plainto_tsquery('english', $2),
-                    32  -- normalization: divide rank by document length
-                ) as rank
+            SELECT id, user_id, content, raw_encrypted, created_at
             FROM journal_entries
             WHERE user_id = $1
-              AND to_tsvector('english', COALESCE(content, '')) @@ plainto_tsquery('english', $2)
-            ORDER BY rank DESC
-            LIMIT $3
+            ORDER BY created_at DESC
+            LIMIT 400
             """,
             person_id,
-            query,
-            limit,
         )
 
         if not rows:
             return []
 
-        # Normalize scores to 0-1 range
-        max_score = max(r["rank"] for r in rows) if rows else 1.0
+        scored: List[Tuple[str, float]] = []
+        for idx, row in enumerate(rows):
+            text = str(row.get("content") or "").lower()
+            if not text:
+                continue
+            token_hits = sum(text.count(token) for token in query_tokens)
+            if token_hits <= 0:
+                continue
+            phrase_bonus = 3 if query.lower() in text else 0
+            # Favour fresher rows while preserving lexical signal.
+            recency_bonus = max(0, 40 - idx) / 40.0
+            rank = float(token_hits + phrase_bonus) + recency_bonus
+            scored.append((str(row["id"]), rank))
+
+        if not scored:
+            return []
+
+        max_score = max(score for _, score in scored) if scored else 1.0
         if max_score == 0:
             max_score = 1.0
 
-        return [
-            (str(r["id"]), float(r["rank"]) / max_score)
-            for r in rows
-        ]
+        normalized = [(entry_id, score / max_score) for entry_id, score in scored]
+        normalized.sort(key=lambda item: item[1], reverse=True)
+        return normalized[:limit]
 
     except Exception as e:
         LOGGER.warning("[BM25] Journal search failed: %s", e)

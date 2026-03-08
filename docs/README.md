@@ -61,6 +61,7 @@ make worker
 | [Testing](guides/testing.md) | How to test the system |
 | [Test Status](TEST_STATUS.md) | Test coverage tracking (workers, routes) |
 | [Deployment Checklist](guides/TODO_DEPLOY.md) | Pre-deploy checklist and env vars |
+| [MVP Privacy & Trust Hardening](guides/privacy-trust-mvp.md) | Known-user beta privacy/security controls and verification checklist |
 
 ### Vision & Philosophy
 

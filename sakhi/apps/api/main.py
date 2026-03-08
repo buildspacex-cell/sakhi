@@ -167,7 +167,13 @@ from sakhi.apps.api.routes.email import router as email_router
 from sakhi.apps.api.routers import person as person_router
 from sakhi.apps.api.routers import person_edit as person_edit_router
 from sakhi.apps.api.core.llm import set_router as set_llm_router
+from sakhi.apps.api.core.operator_access import is_operator_protected_path
+from sakhi.apps.api.core.operator_access import validate_operator_access
+from sakhi.apps.api.core.operator_access import HEADER_OPERATOR_ID
+from sakhi.apps.api.core.operator_access import HEADER_APPROVAL_REF
 from sakhi.apps.api.core.monitoring import report_exception as report_exception_to_sink
+from sakhi.apps.api.core.monitoring import report_breakglass_event as report_breakglass_to_sink
+from sakhi.apps.api.core.monitoring import report_message as report_message_to_sink
 from sakhi.apps.api.core.monitoring import setup_monitoring
 from sakhi.apps.api.core.utils import EnhancedJSONEncoder
 from sakhi.apps.api.middleware import ReplyPacingMiddleware, TelemetryMiddleware
@@ -200,7 +206,11 @@ from sakhi.libs.retrieval.recall import recall
 from sakhi.libs.rhythm.beat_calc import calc_daily_beats
 from sakhi.libs.schemas import get_settings
 from sakhi.libs.schemas.db import execute, get_async_pool
-from sakhi.libs.security import encrypt_field, run_idempotent
+from sakhi.libs.security import (
+    build_journal_storage_payload,
+    encrypt_field,
+    run_idempotent,
+)
 from sakhi.libs.memory import capture_salient_memory, fetch_recent_memories
 
 JSONResponse.render = lambda self, content: json.dumps(
@@ -212,7 +222,16 @@ import os
 ALLOW_WEB = os.getenv("SAKHI_ALLOW_WEB_SEARCH", "false").lower() == "true"
 PILOT_AUTH = os.getenv("PILOT_AUTH", "0") == "1"
 ENABLE_INTERNAL_ROUTES_IN_PROD = os.getenv("SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD", "0") == "1"
-INTERNAL_PROD_BLOCKED_PREFIXES = ("/lab", "/dev", "/demo", "/admin")
+INTERNAL_PROD_BLOCKED_PREFIXES = (
+    "/lab",
+    "/dev",
+    "/demo",
+    "/admin",
+    "/debug",
+    "/memory/dev",
+    "/system/audit",
+)
+OPERATOR_ACCESS_TOKEN = (os.getenv("SAKHI_OPERATOR_ACCESS_TOKEN") or "").strip()
 
 
 def _is_prod_runtime() -> bool:
@@ -308,12 +327,62 @@ async def block_internal_routes_in_prod(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def enforce_operator_breakglass_in_prod(request: Request, call_next):
+    path = request.url.path
+    if not (
+        _is_prod_runtime()
+        and ENABLE_INTERNAL_ROUTES_IN_PROD
+        and is_operator_protected_path(path)
+    ):
+        return await call_next(request)
+
+    decision = validate_operator_access(request.headers, expected_token=OPERATOR_ACCESS_TOKEN)
+    where = f"api:{request.method} {path}"
+    if not decision.ok:
+        operator_id = request.headers.get(HEADER_OPERATOR_ID, "")[:80]
+        approval_ref = request.headers.get(HEADER_APPROVAL_REF, "")[:120]
+        await report_breakglass_to_sink(
+            granted=False,
+            where=where,
+            operator_id=operator_id,
+            approval_ref=approval_ref,
+            reason=decision.code,
+            extra={
+                "path": path,
+                "method": request.method,
+            },
+        )
+        status_code = (
+            status.HTTP_503_SERVICE_UNAVAILABLE
+            if decision.code == "operator_token_not_configured"
+            else status.HTTP_403_FORBIDDEN
+        )
+        return JSONResponse(
+            {"error": "operator access denied", "detail": decision.code},
+            status_code=status_code,
+        )
+
+    request.state.operator_access = {
+        "operator_id": decision.operator_id,
+        "approval_ref": decision.approval_ref,
+    }
+    await report_breakglass_to_sink(
+        granted=True,
+        where=where,
+        operator_id=decision.operator_id,
+        approval_ref=decision.approval_ref,
+        extra={"path": path, "method": request.method},
+    )
+    return await call_next(request)
+
+
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
     user_id = getattr(request.state, "user_id", None)
     where = f"api:{request.method} {request.url.path}"
-    dedupe_key = f"{where}:{exc.__class__.__name__}:{str(exc)[:96]}"
+    dedupe_key = f"{where}:{exc.__class__.__name__}"
     await report_exception_to_sink(
         exc,
         where=where,
@@ -982,6 +1051,7 @@ async def journal_v2(
     source_channel = request.headers.get("x-client-channel", "journal-api-v2")
 
     pool = await get_async_pool()
+    storage = build_journal_storage_payload(user_id_value, cleaned)
     async with pool.acquire() as connection:
         facets_dict = dict(facets_hint)
         facets_v2_dict = dict(facets_v2_payload)
@@ -1005,24 +1075,28 @@ async def journal_v2(
             )
             row = await connection.fetchrow(
                 """
-                INSERT INTO public.journal_entries (user_id, content)
-                VALUES ($1::uuid, $2::text)
+                INSERT INTO public.journal_entries (user_id, content, raw, raw_encrypted)
+                VALUES ($1::uuid, $2::text, $3::text, $4::bytea)
                 RETURNING id
                 """,
                 user_uuid,
-                cleaned,
+                storage.content,
+                storage.raw,
+                storage.raw_encrypted,
             )
         except asyncpg.PostgresError as error:
             print("PG ERROR:", error.__class__.__name__, str(error))
             try:
                 row = await connection.fetchrow(
                     """
-                    INSERT INTO public.journal_entries (user_id, content)
-                    VALUES ($1::uuid, $2::text)
+                    INSERT INTO public.journal_entries (user_id, content, raw, raw_encrypted)
+                    VALUES ($1::uuid, $2::text, $3::text, $4::bytea)
                     RETURNING id
                     """,
                     user_uuid,
-                    cleaned,
+                    storage.content,
+                    storage.raw,
+                    storage.raw_encrypted,
                 )
             except asyncpg.PostgresError as exc:
                 print("PG ERROR:", exc.__class__.__name__, str(exc))

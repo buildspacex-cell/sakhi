@@ -6,6 +6,7 @@ from typing import Iterable, List
 
 from sakhi.apps.api.core.db import q
 from sakhi.apps.api.services.observe.models import IngestedEntry
+from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
 BUILD32_DB_EXTENSIONS = os.getenv("SAKHI_BUILD32_DB_EXTENSIONS", "0") == "1"
 
@@ -36,21 +37,24 @@ async def ingest_entry(
     safe_tags = list(tags or [])
     safe_user_tags = list(user_tags or safe_tags)
     safe_context = client_context or {}
+    storage = build_journal_storage_payload(person_id, text)
 
     if BUILD32_DB_EXTENSIONS:
         row = await q(
             """
             INSERT INTO journal_entries (
-                user_id, content, layer, tags, mood,
+                user_id, content, raw, raw_encrypted, layer, tags, mood,
                 input_type, client_context, language, timezone, user_tags,
                 ts, created_at, updated_at,
                 processing_state, processing_attempts, ack_text
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $12, 'queued', 0, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $14, $14, 'queued', 0, $15)
             RETURNING id
             """,
             person_id,
-            text,
+            storage.content,
+            storage.raw,
+            storage.raw_encrypted,
             layer or "journal",
             safe_tags,
             mood,
@@ -68,15 +72,17 @@ async def ingest_entry(
         row = await q(
             """
             INSERT INTO journal_entries (
-                user_id, content, layer, tags, mood,
+                user_id, content, raw, raw_encrypted, layer, tags, mood,
                 input_type, client_context, language, timezone, user_tags,
                 ts, created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $13)
             RETURNING id
             """,
             person_id,
-            text,
+            storage.content,
+            storage.raw,
+            storage.raw_encrypted,
             layer or "journal",
             safe_tags,
             mood,

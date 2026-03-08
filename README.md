@@ -38,11 +38,11 @@ Set `SAKHI_LOG_COLOR=0` to disable ANSI colors. Key events (classifier/chat resp
 - Defaults: reflections enqueue every 24h and presence every 6h. Override with `SCHED_REFLECTION_INTERVAL_SEC` / `SCHED_PRESENCE_INTERVAL_SEC`, or disable presence with `ENABLE_PRESENCE_JOBS=0`.
 
 ## Local Development (Production Parity)
-- Create `.env.local` from `.env.local.example` (values only; no feature flags). Removing it should make the API fail loudly at startup.
+- Maintain `.env.local` with local runtime values (no feature flags). Removing it should make the API fail loudly at startup.
 - Runtime env policy:
   - Local dev API loads `.env.local` first, then falls back to `.env`.
   - Production uses platform env vars (Railway for API/worker, Vercel for web).
-  - `.env.example` / `.env.local.example` are templates only and are never loaded at runtime.
+  - No template env files are maintained in-repo.
 - Build and run the API with the same Dockerfile Railway uses:
   ```bash
   docker build -t sakhi-api .

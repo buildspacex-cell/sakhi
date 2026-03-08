@@ -59,7 +59,7 @@ def _diversity_filter(scored_items: List[Tuple[float, Dict[str, Any]]], top_k: i
 async def _fetch_sources(person_id: str) -> List[Dict[str, Any]]:
     journals = await q(
         """
-        SELECT je.id, je.content, je.ts,
+        SELECT je.id, je.user_id, je.content, je.raw_encrypted, je.ts,
                emb.embedding_vec AS vec
         FROM journal_entries je
         JOIN journal_embeddings emb ON je.id = emb.entry_id
@@ -249,7 +249,7 @@ async def _fetch_sources(person_id: str) -> List[Dict[str, Any]]:
     try:
         journal_media = await q(
             """
-            SELECT je.id, je.content, je.ts,
+            SELECT je.id, je.user_id, je.content, je.raw_encrypted, je.ts,
                    m.description as media_description,
                    m.extracted_text,
                    m.analysis,

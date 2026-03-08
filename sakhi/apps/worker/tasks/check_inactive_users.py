@@ -45,7 +45,7 @@ async def _check_inactive_users_async() -> None:
 
 
 def send_message(person_id: Any, text: str) -> None:
-    LOGGER.info("inactive_user.nudge person_id=%s text=%s", person_id, text)
+    LOGGER.info("inactive_user.nudge person_id=%s text_len=%s", person_id, len(text or ""))
 
 
 __all__ = ["check_inactive_users"]

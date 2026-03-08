@@ -50,7 +50,7 @@ def _iso(value: dt.datetime | None) -> str | None:
 async def _load_journals(person_id: str, window_days: int) -> List[Dict[str, Any]]:
     rows = await q(
         """
-        SELECT id, content, created_at
+        SELECT id, user_id, content, raw_encrypted, created_at
         FROM journal_entries
         WHERE user_id = $1
           AND created_at >= NOW() - ($2::int || ' days')::interval

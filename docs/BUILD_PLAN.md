@@ -222,6 +222,8 @@ python -m sakhi.tests.longitudinal.export_real_simulation --persona hormonal_har
 
 > **Why**: The simulation page shows investors everything Sakhi understands (friction state, reasoning, recommendations). But actual users chatting with Sakhi see none of this — the chat is a black box. We need to close this gap so users experience the same "aha moment" investors see.
 
+UI parity update (2026-03-08): the top "Add Journal To This Profile" composer now mirrors the same interaction flow as "Continue the Conversation" (segmented time selector, shortcut submit, and aligned action row copy/controls).
+
 **Gap Analysis**:
 
 ```
@@ -1032,7 +1034,7 @@ From the Feb 2026 turn-v2 conversation audit. Items already fixed are in E.4; th
 |--------|------|-------------|-------|---------------|
 | ⬜ | Docker Compose | Easy self-host setup | `docker-compose.yml` | `docker-compose up` works |
 | ⬜ | Self-Host Guide | Step-by-step documentation | `docs/SELF_HOSTING.md` | Complete instructions |
-| ⬜ | Environment Config | All configurable via env | `.env.example` | Clear env documentation |
+| ⬜ | Environment Config | All configurable via env | `.env.local` / `.env` | Clear env documentation |
 | ⬜ | Data Migration | Move data between instances | `scripts/migrate.py` | Export → import flow |
 
 **Test**: Follow self-hosting guide → Sakhi running on own server.
@@ -1545,6 +1547,7 @@ Phase J.4 → User custom skills + marketplace (long-term)
 | ✅ | Error Monitoring | External on-call sink wiring (Sentry optional + webhook relay) with API unhandled-exception capture, worker job-failure hooks, crash reporting, and dedupe window controls | `sakhi/apps/api/core/monitoring.py`, `sakhi/apps/api/main.py`, `sakhi/apps/worker/main.py` | Unhandled API/worker exceptions emit external alerts when monitoring env vars are configured |
 | ✅ | Performance Metrics | Prometheus metrics endpoint + request telemetry persistence | `sakhi/apps/api/main.py`, `sakhi/apps/api/middleware/telemetry.py` | `/metrics` scrapes and request logs record duration/path/status |
 | ✅ | Env Contract Gates | Profile-based env validation (`local`, `prod_api`, `prod_web`, `ci`) wired into `make verify` and CI smoke checks | `sakhi/infra/scripts/check_env.py`, `Makefile`, `.github/workflows/ci.yml` | Build workflow fails fast on missing required config |
+| ⏳ | Known-user trust hardening | Break-glass access controls, log redaction, retention/deletion policy, and beta trust copy for users who know the team. Step 1 complete: per-user encrypted journal writes (`raw_encrypted`) with rollout flags. | `docs/guides/privacy-trust-mvp.md`, `docs/guides/TODO_DEPLOY.md`, `sakhi/libs/security/journal_crypto.py` | Trust gate checklist completed before each beta cohort |
 | ⬜ | Windows Agent | Electron agent for Windows | `desktop-agent/` | Works on Windows |
 
 ---

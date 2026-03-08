@@ -29,7 +29,7 @@ async def send_rhythm_nudge(person_id: str) -> None:
 
 
 def send_message(person_id: str, text: str) -> None:
-    LOGGER.info("rhythm_nudge message person_id=%s text=%s", person_id, text)
+    LOGGER.info("rhythm_nudge message person_id=%s text_len=%s", person_id, len(text or ""))
 
 
 __all__ = ["send_rhythm_nudge"]

@@ -55,7 +55,7 @@ async def test_get_deep_reflection_status_returns_row(monkeypatch: pytest.Monkey
         ),
     )
 
-    payload = await reflection.get_deep_reflection_status("r-1")
+    payload = await reflection.get_deep_reflection_status("r-1", "person-1")
 
     assert payload["reflection_id"] == "r-1"
     assert payload["status"] == "running"
@@ -81,7 +81,7 @@ async def test_get_deep_reflection_result_returns_done_payload_and_logs(monkeypa
     )
     monkeypatch.setattr(reflection, "log_turn_event", mock_log)
 
-    payload = await reflection.get_deep_reflection_result("r-1")
+    payload = await reflection.get_deep_reflection_result("r-1", "person-1")
 
     assert payload["status"] == "done"
     assert payload["result"]["origin_story"] == "Started around autonomy."

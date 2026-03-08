@@ -18,7 +18,9 @@ async def _fetch_entries(person_id: str, days: int) -> List[Dict[str, Any]]:
         """
         SELECT
             id,
+            user_id,
             content,
+            raw_encrypted,
             facets_v2,
             COALESCE(facets_v2->>'theme', 'general') AS theme,
             created_at

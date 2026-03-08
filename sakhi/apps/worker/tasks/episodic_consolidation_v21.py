@@ -62,7 +62,7 @@ def _parse_ts(ts_val: Any) -> datetime | None:
 async def _fetch_journals(user_id: str, start: datetime, end: datetime) -> list[dict]:
     rows = await dbfetch(
         """
-        SELECT id, content, ts
+        SELECT id, user_id, content, raw_encrypted, ts
         FROM journal_entries
         WHERE user_id = $1
           AND ts >= $2

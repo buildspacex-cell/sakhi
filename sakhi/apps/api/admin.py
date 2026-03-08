@@ -7,11 +7,16 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
 
+from sakhi.apps.api.core.monitoring import report_data_access_event
+from sakhi.apps.api.services.memory.session_vectors import upsert_session_vector
+from sakhi.apps.api.services.memory.sessions import (
+    get_summary,
+    load_recent_turns,
+    set_summary,
+)
+from sakhi.apps.api.services.memory.summarize import roll_summary
 from sakhi.libs.flags.flags import set_flag
 from sakhi.libs.schemas.db import get_async_pool
-from sakhi.apps.api.services.memory.sessions import load_recent_turns, get_summary, set_summary
-from sakhi.apps.api.services.memory.summarize import roll_summary
-from sakhi.apps.api.services.memory.session_vectors import upsert_session_vector
 
 SUMMARY_CONTEXT_LIMIT = 20
 
@@ -112,6 +117,12 @@ async def export(user_id: str) -> Dict[str, Any]:
             records = await connection.fetch(sql, user_id)
             datasets[key] = [dict(record) for record in records]
 
+    await report_data_access_event(
+        action="export",
+        where="api:GET /admin/export",
+        subject_id=user_id,
+        extra={"route": "/admin/export"},
+    )
     return datasets
 
 

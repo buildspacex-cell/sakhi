@@ -463,7 +463,7 @@ async def run_weekly_signals_worker(person_id: Optional[str] = None, target_week
         )
         journal_rows = await q(
             """
-            SELECT content
+            SELECT user_id, content, raw_encrypted
             FROM journal_entries
             WHERE user_id = $1
               AND created_at >= $2

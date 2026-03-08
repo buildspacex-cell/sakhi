@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
-from sakhi.apps.api.core.db import q, exec as dbexec
-from sakhi.apps.api.utils.person_resolver import resolve_person
+from sakhi.apps.api.core.db import q
 from sakhi.apps.api.services.memory.sessions import (
     ensure_session,
-    load_recent_turns,
     get_session_info,
+    load_recent_turns,
 )
+from sakhi.apps.api.utils.person_resolver import resolve_person
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ async def get_conversation_history(
 
     Returns the most recent turns from the user's active session.
     """
-    user_id, person_label, person_key = resolve_person(request, user)
+    user_id, person_label, person_key = await resolve_person(request, user)
     logger.info(
         "[conversation_history] Loading history for user=%s label=%s slug=%s limit=%s",
         user_id, person_label, session_slug, limit,
@@ -49,7 +49,7 @@ async def get_conversation_history(
 
         # Format for frontend
         # Map 'assistant' to 'sakhi' for frontend display
-        messages: List[Dict[str, Any]] = []
+        messages: list[dict[str, Any]] = []
         for turn in turns:
             role = turn.get("role")
             # Map 'assistant' to 'sakhi' for frontend consistency
@@ -92,7 +92,7 @@ async def list_sessions(
     """
     List conversation sessions for the user.
     """
-    user_id, person_label, _ = resolve_person(request, user)
+    user_id, person_label, _ = await resolve_person(request, user)
 
     try:
         sessions = await q(

@@ -29,6 +29,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
+from sakhi.apps.api.core.monitoring import report_data_access_event
 from sakhi.apps.api.services.email.adapters.gmail import GmailAdapter
 from sakhi.apps.api.services.email.contact_preferences import (
     delete_preference,
@@ -784,6 +785,12 @@ async def disconnect(
     success = await disconnect_email(person_id)
 
     if success:
+        await report_data_access_event(
+            action="delete",
+            where="api:POST /email/disconnect",
+            subject_id=person_id,
+            extra={"scope": "email_disconnect"},
+        )
         LOGGER.info("[Email API] Email disconnected for %s", person_id)
         return {"status": "disconnected"}
     else:

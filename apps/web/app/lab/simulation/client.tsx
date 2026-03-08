@@ -267,8 +267,13 @@ export default function SimulationDemoClient() {
 
       const fetchReflectionResult = async () => {
         const resultNonce = Date.now();
+        const params = new URLSearchParams({
+          id: reflectionId,
+          person_id: personId,
+          t: String(resultNonce),
+        });
         const resultRes = await fetch(
-          `/api/continuity/reflection/result?id=${encodeURIComponent(reflectionId)}&t=${resultNonce}`,
+          `/api/continuity/reflection/result?${params.toString()}`,
           { cache: "no-store" },
         );
         if (!resultRes.ok) {
@@ -283,8 +288,13 @@ export default function SimulationDemoClient() {
       let done = false;
       for (let attempt = 0; attempt < 60; attempt += 1) {
         const pollNonce = Date.now();
+        const statusParams = new URLSearchParams({
+          id: reflectionId,
+          person_id: personId,
+          t: String(pollNonce),
+        });
         const statusRes = await fetch(
-          `/api/continuity/reflection/status?id=${encodeURIComponent(reflectionId)}&t=${pollNonce}`,
+          `/api/continuity/reflection/status?${statusParams.toString()}`,
           { cache: "no-store" },
         );
         if (!statusRes.ok) {
@@ -1585,6 +1595,13 @@ function AddJournalToProfile({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submit();
+    }
+  };
+
   return (
     <div style={{ ...styles.card, marginBottom: 24, borderLeft: `4px solid ${palette.vata}` }}>
       <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 4 }}>
@@ -1597,54 +1614,77 @@ function AddJournalToProfile({
       <textarea
         value={journalText}
         onChange={(e) => setJournalText(e.target.value)}
-        placeholder={`Add a new journal entry for ${personaName}...`}
-        rows={4}
+        onKeyDown={handleKeyDown}
+        placeholder={`What's on ${personaName}'s mind today? (Cmd+Enter to send)`}
+        rows={5}
         style={{
           width: "100%",
           border: `1px solid ${palette.border}`,
-          borderRadius: 8,
-          padding: "10px 12px",
-          fontSize: 13,
+          borderRadius: 10,
+          padding: "12px 14px",
+          fontSize: 14,
+          lineHeight: 1.6,
           color: palette.text,
           resize: "vertical",
-          background: palette.card,
-          marginBottom: 10,
+          background: palette.bg,
+          marginBottom: 12,
+          boxSizing: "border-box" as const,
+          fontFamily: "inherit",
+          minHeight: 180,
+          outline: "none",
         }}
       />
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <select
-          value={timeOfDay}
-          onChange={(e) => setTimeOfDay(e.target.value as "morning" | "afternoon" | "evening")}
-          style={{
-            border: `1px solid ${palette.border}`,
-            borderRadius: 8,
-            padding: "8px 10px",
-            fontSize: 12,
-            color: palette.text,
-            background: palette.card,
-          }}
-        >
-          <option value="morning">Morning</option>
-          <option value="afternoon">Afternoon</option>
-          <option value="evening">Evening</option>
-        </select>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        {(["morning", "afternoon", "evening"] as const).map((tod) => (
+          <button
+            key={tod}
+            onClick={() => setTimeOfDay(tod)}
+            style={{
+              flex: 1,
+              padding: "6px 0",
+              borderRadius: 8,
+              border: `1px solid ${timeOfDay === tod ? palette.accent : palette.border}`,
+              background: timeOfDay === tod ? palette.accentLight : "transparent",
+              color: timeOfDay === tod ? palette.accent : palette.muted,
+              fontSize: 13,
+              fontWeight: timeOfDay === tod ? 600 : 400,
+              cursor: "pointer",
+              textTransform: "capitalize" as const,
+            }}
+          >
+            {tod}
+          </button>
+        ))}
+      </div>
 
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <span style={{ fontSize: 12, color: palette.muted }}>
+          Processes through the real Sakhi pipeline
+        </span>
         <button
           onClick={submit}
           disabled={saving || journalText.trim().length === 0}
           style={{
-            padding: "8px 14px",
+            padding: "10px 24px",
             borderRadius: 8,
             border: "none",
-            background: saving ? palette.muted : palette.accent,
+            background: saving || journalText.trim().length === 0 ? palette.muted : palette.accent,
             color: "#fff",
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 600,
-            cursor: saving ? "not-allowed" : "pointer",
+            cursor: saving || journalText.trim().length === 0 ? "not-allowed" : "pointer",
+            opacity: saving ? 0.75 : 1,
           }}
         >
-          {saving ? "Processing..." : "Add Journal"}
+          {saving ? "Processing..." : "Send to Sakhi \u2192"}
         </button>
       </div>
 

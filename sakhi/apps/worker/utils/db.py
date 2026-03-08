@@ -42,7 +42,7 @@ def db_upsert(table: str, record: Dict[str, Any]) -> None:
     else:
         rows[index] = dict(record)
 
-    LOGGER.debug("db_upsert table=%s record=%s", table, record)
+    LOGGER.debug("db_upsert table=%s fields=%s", table, sorted(record.keys()))
 
 
 def db_insert(table: str, record: Dict[str, Any]) -> str:
@@ -51,7 +51,7 @@ def db_insert(table: str, record: Dict[str, Any]) -> str:
     """
     rows = _IN_MEMORY_TABLES.setdefault(table, [])
     rows.append(dict(record))
-    LOGGER.debug("db_insert table=%s record=%s", table, record)
+    LOGGER.debug("db_insert table=%s fields=%s", table, sorted(record.keys()))
     return str(record.get("id", len(rows)))
 
 
@@ -63,7 +63,12 @@ def db_update(table: str, filters: Dict[str, Any], updates: Dict[str, Any]) -> N
     for row in rows:
         if all(row.get(key) == value for key, value in filters.items()):
             row.update(updates)
-            LOGGER.debug("db_update table=%s filters=%s updates=%s", table, filters, updates)
+            LOGGER.debug(
+                "db_update table=%s filter_keys=%s update_keys=%s",
+                table,
+                sorted(filters.keys()),
+                sorted(updates.keys()),
+            )
 
 
 def db_find(table: str, filters: Dict[str, Any] | None = None, *, limit: int | None = None, order_by: str | None = None) -> List[Dict[str, Any]]:

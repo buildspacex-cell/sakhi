@@ -32,6 +32,7 @@ from sakhi.apps.worker.tasks._stubs import (
 from sakhi.libs.schemas.settings import get_settings
 from sakhi.apps.api.core.db import q, exec as dbexec
 from sakhi.apps.api.utils.person_resolver import resolve_person
+from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
 router = APIRouter(tags=["memory"])
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ logger = logging.getLogger(__name__)
 @router.get("/memory/recall")
 async def recall_api(request: Request, person_id: str = Query(..., alias="person_id"), q: str = Query(...), k: int = Query(5, ge=1, le=25)):
     # Resolve person shortcut (e.g., "a") to actual UUID
-    resolved_id, _, _ = resolve_person(request, person_id)
+    resolved_id, _, _ = await resolve_person(request, person_id)
     return await recall_advanced(resolved_id, q, k=k)
 
 
@@ -50,7 +51,7 @@ async def trigger_memory_synthesis(
     person_id: str,
     horizon: str = Query("weekly", description="weekly or monthly"),
 ):
-    resolved_id, person_label, person_key = resolve_person(request)
+    resolved_id, person_label, person_key = await resolve_person(request, person_id)
     logger.info(
         "ACTIVE_DEV_PERSON",
         extra={"person_id": resolved_id, "person_label": person_label, "person_key": person_key},
@@ -69,7 +70,7 @@ async def get_weekly_summaries(
     system_prompt: str | None = Query(None, description="Optional override for weekly reflection system prompt (legacy name)"),
     user_prompt: str | None = Query(None, description="Optional override for weekly reflection user prompt template (legacy name)"),
 ):
-    resolved_id, person_label, person_key = resolve_person(request)
+    resolved_id, person_label, person_key = await resolve_person(request, person_id)
     settings = get_settings()
     system_prompt_final = system_prompt_override or system_prompt
     user_prompt_final = user_prompt_override or user_prompt
@@ -155,7 +156,7 @@ async def get_weekly_summaries(
         weekly_signals = await _fetch_weekly_signals(resolved_id, target_week_start)
         journal_rows = await q(
             """
-            SELECT id, content, mood, tags, created_at
+            SELECT id, user_id, content, raw_encrypted, mood, tags, created_at
             FROM journal_entries
             WHERE user_id = $1 AND created_at >= $2 AND created_at < $3
             ORDER BY created_at DESC
@@ -223,7 +224,7 @@ async def run_weekly_flow_dev(request: Request):
     user = payload.get("user") or "a"
     week_start_param = payload.get("week_start")
     journals = payload.get("journals") or []
-    resolved_id, _, _ = resolve_person(request)
+    resolved_id, _, _ = await resolve_person(request)
     target_person = user or resolved_id
     target_week_start = None
     if week_start_param:
@@ -244,18 +245,23 @@ async def run_weekly_flow_dev(request: Request):
             continue
         lifecycle_ts = dt.datetime.utcnow()
         entry_id = uuid.uuid4()
+        storage = build_journal_storage_payload(str(target_person), content)
         await dbexec(
             """
             -- IMPORTANT:
             -- ts = when the experience happened (lived time)
             -- created_at / updated_at = database lifecycle only
-            INSERT INTO journal_entries (id, user_id, content, layer, ts, created_at, updated_at)
-            VALUES ($1, $2, $3, 'journal', $4, $5, $5)
+            INSERT INTO journal_entries (
+                id, user_id, content, raw, raw_encrypted, layer, ts, created_at, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, 'journal', $6, $7, $7)
             ON CONFLICT (id) DO NOTHING
             """,
             entry_id,
             target_person,
-            content,
+            storage.content,
+            storage.raw,
+            storage.raw_encrypted,
             experience_ts,
             lifecycle_ts,
         )
@@ -312,7 +318,7 @@ async def reset_weekly_flow_dev(request: Request):
     """
     payload = await request.json()
     user = payload.get("user") or "a"
-    resolved_id, _, _ = resolve_person(request)
+    resolved_id, _, _ = await resolve_person(request)
     target_person = user or resolved_id
 
     start_str = payload.get("start_date")
@@ -440,7 +446,7 @@ async def score_product_endpoint(
 
     Returns match score (0-1) with reasons and warnings.
     """
-    resolved_id, _, _ = resolve_person(request, person_id)
+    resolved_id, _, _ = await resolve_person(request, person_id)
     body = await request.json()
 
     match = await score_product(
@@ -478,7 +484,7 @@ async def score_products_batch_endpoint(
 
     Returns products with match_score added, sorted best first.
     """
-    resolved_id, _, _ = resolve_person(request, person_id)
+    resolved_id, _, _ = await resolve_person(request, person_id)
     body = await request.json()
 
     products = body.get("products", [])
@@ -502,7 +508,7 @@ async def get_preferences_endpoint(
 
     Returns full profile or category-specific summary.
     """
-    resolved_id, _, _ = resolve_person(request, person_id)
+    resolved_id, _, _ = await resolve_person(request, person_id)
 
     if category:
         summary = await get_preference_summary_for_category(resolved_id, category)

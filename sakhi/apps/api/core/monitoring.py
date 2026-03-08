@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
 import time
@@ -11,6 +12,11 @@ from datetime import datetime, timezone
 from typing import Any, Mapping
 
 import httpx
+
+from sakhi.libs.security.observability_redaction import (
+    redact_log_line,
+    redact_observability_value,
+)
 
 try:  # pragma: no cover - optional dependency
     import sentry_sdk as _sentry_sdk  # type: ignore
@@ -31,6 +37,17 @@ def _as_bool(value: str | None, *, default: bool = False) -> bool:
     return normalized in {"1", "true", "yes", "y", "on"}
 
 
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
+def _sanitize_extra(extra: Mapping[str, Any] | None) -> dict[str, Any]:
+    payload = redact_observability_value(dict(extra or {}), key_hint="extra")
+    if isinstance(payload, dict):
+        return payload
+    return {"value": payload}
+
+
 @dataclass(slots=True)
 class MonitoringRuntime:
     enabled: bool = False
@@ -42,7 +59,15 @@ class MonitoringRuntime:
     webhook_bearer_token: str | None = None
     webhook_timeout_sec: float = 4.0
     dedupe_window_sec: int = 180
+    auth_failure_threshold: int = 5
+    auth_failure_window_sec: int = 300
+    crash_loop_threshold: int = 5
+    crash_loop_window_sec: int = 300
+    data_access_spike_threshold: int = 8
+    data_access_window_sec: int = 600
     last_emitted_at: dict[str, float] = field(default_factory=dict)
+    burst_counters: dict[str, list[float]] = field(default_factory=dict)
+    burst_alerted_at: dict[str, float] = field(default_factory=dict)
 
 
 _RUNTIME = MonitoringRuntime()
@@ -63,6 +88,12 @@ def setup_monitoring(*, service: str, environment: str | None = None) -> Monitor
 
     timeout_raw = os.getenv("SAKHI_ALERT_WEBHOOK_TIMEOUT_SEC", "4")
     dedupe_raw = os.getenv("SAKHI_ALERT_DEDUPE_WINDOW_SEC", "180")
+    auth_threshold_raw = os.getenv("SAKHI_ALERT_AUTH_FAILURE_THRESHOLD", "5")
+    auth_window_raw = os.getenv("SAKHI_ALERT_AUTH_FAILURE_WINDOW_SEC", "300")
+    crash_threshold_raw = os.getenv("SAKHI_ALERT_CRASH_LOOP_THRESHOLD", "5")
+    crash_window_raw = os.getenv("SAKHI_ALERT_CRASH_LOOP_WINDOW_SEC", "300")
+    data_threshold_raw = os.getenv("SAKHI_ALERT_DATA_ACCESS_SPIKE_THRESHOLD", "8")
+    data_window_raw = os.getenv("SAKHI_ALERT_DATA_ACCESS_WINDOW_SEC", "600")
     try:
         webhook_timeout_sec = max(1.0, float(timeout_raw))
     except Exception:
@@ -71,6 +102,30 @@ def setup_monitoring(*, service: str, environment: str | None = None) -> Monitor
         dedupe_window_sec = max(30, int(dedupe_raw))
     except Exception:
         dedupe_window_sec = 180
+    try:
+        auth_failure_threshold = max(2, int(auth_threshold_raw))
+    except Exception:
+        auth_failure_threshold = 5
+    try:
+        auth_failure_window_sec = max(60, int(auth_window_raw))
+    except Exception:
+        auth_failure_window_sec = 300
+    try:
+        crash_loop_threshold = max(2, int(crash_threshold_raw))
+    except Exception:
+        crash_loop_threshold = 5
+    try:
+        crash_loop_window_sec = max(60, int(crash_window_raw))
+    except Exception:
+        crash_loop_window_sec = 300
+    try:
+        data_access_spike_threshold = max(2, int(data_threshold_raw))
+    except Exception:
+        data_access_spike_threshold = 8
+    try:
+        data_access_window_sec = max(60, int(data_window_raw))
+    except Exception:
+        data_access_window_sec = 600
 
     runtime = MonitoringRuntime(
         enabled=monitoring_enabled,
@@ -82,6 +137,12 @@ def setup_monitoring(*, service: str, environment: str | None = None) -> Monitor
         webhook_bearer_token=webhook_bearer_token,
         webhook_timeout_sec=webhook_timeout_sec,
         dedupe_window_sec=dedupe_window_sec,
+        auth_failure_threshold=auth_failure_threshold,
+        auth_failure_window_sec=auth_failure_window_sec,
+        crash_loop_threshold=crash_loop_threshold,
+        crash_loop_window_sec=crash_loop_window_sec,
+        data_access_spike_threshold=data_access_spike_threshold,
+        data_access_window_sec=data_access_window_sec,
     )
 
     if sentry_dsn:
@@ -116,6 +177,12 @@ def setup_monitoring(*, service: str, environment: str | None = None) -> Monitor
             "environment": runtime.environment,
             "webhook_enabled": bool(runtime.webhook_url),
             "sentry_enabled": runtime.sentry_enabled,
+            "auth_failure_threshold": runtime.auth_failure_threshold,
+            "auth_failure_window_sec": runtime.auth_failure_window_sec,
+            "crash_loop_threshold": runtime.crash_loop_threshold,
+            "crash_loop_window_sec": runtime.crash_loop_window_sec,
+            "data_access_spike_threshold": runtime.data_access_spike_threshold,
+            "data_access_window_sec": runtime.data_access_window_sec,
         },
     )
     return runtime
@@ -155,6 +222,39 @@ def _should_emit(dedupe_key: str | None) -> bool:
     return True
 
 
+def _track_burst(
+    *,
+    bucket: str,
+    threshold: int,
+    window_sec: int,
+) -> tuple[int, bool]:
+    runtime = get_monitoring_runtime()
+    now = time.monotonic()
+
+    points = runtime.burst_counters.get(bucket, [])
+    if points:
+        floor = now - window_sec
+        points = [point for point in points if point >= floor]
+    points.append(now)
+    runtime.burst_counters[bucket] = points
+
+    if len(runtime.burst_counters) > 2048:
+        cutoff = now - max(window_sec, runtime.dedupe_window_sec) * 2
+        for key, values in list(runtime.burst_counters.items()):
+            if not values or max(values) < cutoff:
+                runtime.burst_counters.pop(key, None)
+                runtime.burst_alerted_at.pop(key, None)
+
+    count = len(points)
+    last_alerted_at = runtime.burst_alerted_at.get(bucket)
+    threshold_hit = count >= threshold
+    already_alerted = last_alerted_at is not None and (now - last_alerted_at) < window_sec
+    triggered = threshold_hit and not already_alerted
+    if triggered:
+        runtime.burst_alerted_at[bucket] = now
+    return count, triggered
+
+
 def _build_payload(
     *,
     kind: str,
@@ -164,6 +264,7 @@ def _build_payload(
     extra: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     runtime = get_monitoring_runtime()
+    safe_extra = _sanitize_extra(extra)
     return {
         "source": "sakhi",
         "kind": kind,
@@ -172,9 +273,9 @@ def _build_payload(
         "release": runtime.release,
         "severity": severity,
         "where": where,
-        "message": message[:2000],
+        "message": redact_log_line(message)[:2000],
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "extra": dict(extra or {}),
+        "extra": safe_extra,
     }
 
 
@@ -206,19 +307,40 @@ async def report_exception(
         return False
 
     message = str(exc) or exc.__class__.__name__
-    dedupe = dedupe_key or f"{where}:{exc.__class__.__name__}:{message[:120]}"
+    crash_count, crash_triggered = _track_burst(
+        bucket=f"crash_loop:{where}:{exc.__class__.__name__}",
+        threshold=runtime.crash_loop_threshold,
+        window_sec=runtime.crash_loop_window_sec,
+    )
+    if crash_triggered:
+        await report_message(
+            message=f"crash_loop_detected where={where} exception_type={exc.__class__.__name__}",
+            where=where,
+            severity="critical",
+            dedupe_key=f"crash_loop_detected:{where}:{exc.__class__.__name__}",
+            extra={
+                "where": where,
+                "exception_type": exc.__class__.__name__,
+                "event_count": crash_count,
+                "window_sec": runtime.crash_loop_window_sec,
+            },
+        )
+
+    dedupe = dedupe_key or f"{where}:{exc.__class__.__name__}:{_digest(message)}"
     if not _should_emit(dedupe):
         return False
 
     event_extra = dict(extra or {})
     event_extra.setdefault("exception_type", exc.__class__.__name__)
     event_extra.setdefault("exception_message", message[:500])
+    safe_extra = _sanitize_extra(event_extra)
+    safe_message = redact_log_line(message)
     payload = _build_payload(
         kind="exception",
         severity=severity,
         where=where,
-        message=message,
-        extra=event_extra,
+        message=safe_message,
+        extra=safe_extra,
     )
 
     sent = False
@@ -229,7 +351,7 @@ async def report_exception(
                 scope.set_tag("environment", runtime.environment)
                 scope.set_tag("where", where)
                 scope.level = _severity_to_sentry_level(severity)
-                for key, value in event_extra.items():
+                for key, value in safe_extra.items():
                     scope.set_extra(str(key), value)
                 _sentry_sdk.capture_exception(exc)
             sent = True
@@ -246,6 +368,118 @@ async def report_exception(
     return sent
 
 
+async def report_auth_failure(
+    *,
+    where: str,
+    reason: str,
+    subject_id: str | None = None,
+    extra: Mapping[str, Any] | None = None,
+) -> bool:
+    """Emit alert only when auth failures cross burst threshold."""
+
+    runtime = get_monitoring_runtime()
+    if not runtime.enabled:
+        return False
+
+    count, triggered = _track_burst(
+        bucket=f"auth_failure:{where}:{reason}",
+        threshold=runtime.auth_failure_threshold,
+        window_sec=runtime.auth_failure_window_sec,
+    )
+    if not triggered:
+        return False
+
+    details = dict(extra or {})
+    details.update(
+        {
+            "reason": reason,
+            "event_count": count,
+            "window_sec": runtime.auth_failure_window_sec,
+            "subject_id": subject_id,
+        }
+    )
+    return await report_message(
+        message=f"repeated_auth_failures_detected reason={reason}",
+        where=where,
+        severity="critical",
+        dedupe_key=f"repeated_auth_failures:{where}:{reason}",
+        extra=details,
+    )
+
+
+async def report_breakglass_event(
+    *,
+    granted: bool,
+    where: str,
+    operator_id: str | None,
+    approval_ref: str | None,
+    reason: str | None = None,
+    extra: Mapping[str, Any] | None = None,
+) -> bool:
+    """Emit standardized break-glass allow/deny alert events."""
+
+    status_label = "granted" if granted else "denied"
+    details = dict(extra or {})
+    details.update(
+        {
+            "status": status_label,
+            "operator_id": operator_id,
+            "approval_ref": approval_ref,
+            "reason": reason,
+        }
+    )
+    return await report_message(
+        message=f"operator_access_{status_label}",
+        where=where,
+        severity="warning" if granted else "critical",
+        dedupe_key=f"operator_access:{status_label}:{where}:{operator_id}:{approval_ref}:{reason}",
+        extra=details,
+    )
+
+
+async def report_data_access_event(
+    *,
+    action: str,
+    where: str,
+    subject_id: str | None = None,
+    extra: Mapping[str, Any] | None = None,
+) -> bool:
+    """Emit alert when export/delete operations spike unexpectedly."""
+
+    runtime = get_monitoring_runtime()
+    if not runtime.enabled:
+        return False
+
+    normalized = (action or "").strip().lower()
+    if normalized not in {"export", "delete"}:
+        return False
+
+    count, triggered = _track_burst(
+        bucket=f"data_access:{normalized}:{where}",
+        threshold=runtime.data_access_spike_threshold,
+        window_sec=runtime.data_access_window_sec,
+    )
+    if not triggered:
+        return False
+
+    details = dict(extra or {})
+    details.update(
+        {
+            "action": normalized,
+            "event_count": count,
+            "window_sec": runtime.data_access_window_sec,
+            "subject_id": subject_id,
+        }
+    )
+    return await report_message(
+        message=f"data_access_spike_detected action={normalized}",
+        where=where,
+        severity="critical",
+        dedupe_key=f"data_access_spike:{normalized}:{where}",
+        extra=details,
+    )
+
+
 async def report_message(
     *,
     message: str,
@@ -260,16 +494,18 @@ async def report_message(
     if not runtime.enabled:
         return False
 
-    dedupe = dedupe_key or f"{where}:{severity}:{message[:160]}"
+    safe_message = redact_log_line(message)
+    dedupe = dedupe_key or f"{where}:{severity}:{_digest(safe_message)}"
     if not _should_emit(dedupe):
         return False
 
+    safe_extra = _sanitize_extra(extra)
     payload = _build_payload(
         kind="event",
         severity=severity,
         where=where,
-        message=message,
-        extra=extra,
+        message=safe_message,
+        extra=safe_extra,
     )
 
     sent = False
@@ -280,9 +516,9 @@ async def report_message(
                 scope.set_tag("environment", runtime.environment)
                 scope.set_tag("where", where)
                 scope.level = _severity_to_sentry_level(severity)
-                for key, value in dict(extra or {}).items():
+                for key, value in safe_extra.items():
                     scope.set_extra(str(key), value)
-                _sentry_sdk.capture_message(message[:300], level=_severity_to_sentry_level(severity))
+                _sentry_sdk.capture_message(safe_message[:300], level=_severity_to_sentry_level(severity))
             sent = True
         except Exception as sentry_exc:
             LOGGER.warning("Sentry message capture failed: %s", sentry_exc)

@@ -119,7 +119,7 @@ async def build_episodic_from_journals_v2(
     """
     journal_rows: Sequence[Dict[str, Any]] = await q(
         """
-        SELECT id, content, created_at
+        SELECT id, user_id, content, raw_encrypted, created_at
         FROM journal_entries
         WHERE user_id = $1
           AND created_at >= $2

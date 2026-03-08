@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timedelta, timezone
+from collections import defaultdict
 from typing import Any, Dict, List
 
 from sakhi.apps.api.core.db import get_db
@@ -28,20 +29,18 @@ async def run_meta_reflection_weekly() -> bool:
         rows: List[Dict[str, Any]] = await db.fetch(
             """
             SELECT p.person_id,
-                   json_agg(
-                       jsonb_build_object(
-                           'content', e.content,
-                           'layer', e.layer,
-                           'mood', e.mood,
-                           'ts', e.created_at
-                       )
-                       ORDER BY e.created_at
-                   ) AS entries
+                   e.id AS entry_id,
+                   e.user_id,
+                   e.content,
+                   e.raw_encrypted,
+                   e.layer,
+                   e.mood,
+                   e.created_at
             FROM personal_model p
             LEFT JOIN journal_entries e
               ON e.user_id = p.person_id
              AND e.created_at >= $1
-            GROUP BY p.person_id
+            ORDER BY p.person_id, e.created_at ASC
             """,
             since_ts,
         )
@@ -49,12 +48,28 @@ async def run_meta_reflection_weekly() -> bool:
         if not rows:
             return False
 
+        grouped_entries: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
         for row in rows:
-            person_id = row.get("person_id")
+            person_id = str(row.get("person_id") or "").strip()
             if not person_id:
                 continue
+            content = str(row.get("content") or "").strip()
+            if not content:
+                continue
+            grouped_entries[person_id].append(
+                {
+                    "content": content,
+                    "layer": row.get("layer"),
+                    "mood": row.get("mood"),
+                    "ts": (
+                        row.get("created_at").isoformat()
+                        if getattr(row.get("created_at"), "isoformat", None)
+                        else row.get("created_at")
+                    ),
+                }
+            )
 
-            entries = row.get("entries") or []
+        for person_id, entries in grouped_entries.items():
             if not entries:
                 continue
 

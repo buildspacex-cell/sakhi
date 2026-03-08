@@ -103,7 +103,7 @@ WORKER_JOB_MAP = {
 async def run_replay_for_user(user_id: str, worker_keys: List[str], *, session_id: str | None = None) -> List[Dict[str, Any]]:
     rows = await q(
         """
-        SELECT id, content, ts
+        SELECT id, user_id, content, raw_encrypted, ts
         FROM journal_entries
         WHERE person_id = $1 OR user_id = $1
         ORDER BY ts ASC
@@ -182,7 +182,7 @@ async def _run_worker_sync(worker_key: str, *, turn_id: str, person_id: str, pay
             if not text:
                 if entry_id:
                     row = await q(
-                        "SELECT content FROM journal_entries WHERE id = $1 AND user_id = $2",
+                        "SELECT user_id, content, raw_encrypted FROM journal_entries WHERE id = $1 AND user_id = $2",
                         entry_id,
                         person_id,
                         one=True,
@@ -191,7 +191,7 @@ async def _run_worker_sync(worker_key: str, *, turn_id: str, person_id: str, pay
                 else:
                     row = await q(
                         """
-                        SELECT id, content, created_at
+                        SELECT id, user_id, content, raw_encrypted, created_at
                         FROM journal_entries
                         WHERE user_id = $1
                         ORDER BY created_at DESC
@@ -688,7 +688,7 @@ async def lab_run_workers(body: RunWorkersBody):
     if not entry_id:
         journal_row = await q(
             """
-            SELECT id, content, ts
+            SELECT id, user_id, content, raw_encrypted, ts
             FROM journal_entries
             WHERE person_id = $1 OR user_id = $1
             ORDER BY created_at DESC
@@ -703,7 +703,7 @@ async def lab_run_workers(body: RunWorkersBody):
 
     if journal_row is None:
         journal_row = await q(
-            "SELECT id, content, ts FROM journal_entries WHERE id = $1",
+            "SELECT id, user_id, content, raw_encrypted, ts FROM journal_entries WHERE id = $1",
             entry_id,
             one=True,
         )
@@ -1009,7 +1009,7 @@ async def lab_memory_details(
         entry_row = None
         if entry_id:
             entry_row = await q(
-                "SELECT id, content, layer, created_at, updated_at FROM journal_entries WHERE id = $1",
+                "SELECT id, user_id, content, raw_encrypted, layer, created_at, updated_at FROM journal_entries WHERE id = $1",
                 entry_id,
                 one=True,
             )

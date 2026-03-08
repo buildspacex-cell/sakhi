@@ -11,9 +11,10 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping
 
+from sakhi.apps.api.core.event_logger import log_event
+from sakhi.apps.worker.tasks.memory_synthesis import run_consolidate_person_models
 from sakhi.libs.embeddings import embed_text, to_pgvector
 from sakhi.libs.ingest.emotion import detect_activation
-from sakhi.libs.retrieval import build_reflection_context
 from sakhi.libs.llm_router import (
     BaseProvider,
     LLMResponse,
@@ -21,11 +22,11 @@ from sakhi.libs.llm_router import (
     Task,
 )
 from sakhi.libs.llm_router.openai_provider import make_openai_provider_from_env
-from sakhi.libs.schemas import get_settings
 from sakhi.libs.logging_utils import colorize
+from sakhi.libs.retrieval import build_reflection_context
+from sakhi.libs.schemas import get_settings
 from sakhi.libs.schemas.db import get_async_pool
-from sakhi.apps.worker.tasks.memory_synthesis import run_consolidate_person_models
-from sakhi.apps.api.core.event_logger import log_event
+from sakhi.libs.security.journal_crypto import resolve_journal_text
 
 LOGGER = logging.getLogger(__name__)
 _ROUTER: LLMRouter | None = None
@@ -132,12 +133,14 @@ async def _fetch_entry(entry_id: str) -> tuple[str, datetime] | None:
     pool = await get_async_pool()
     async with pool.acquire() as connection:
         row = await connection.fetchrow(
-            "SELECT content, created_at FROM journal_entries WHERE id = $1",
+            "SELECT user_id, content, raw_encrypted, created_at FROM journal_entries WHERE id = $1",
             entry_id,
         )
         if row is None:
             return None
-        return row["content"] or "", row["created_at"]
+        row_data = dict(row)
+        text = resolve_journal_text(row_data, user_id=str(row_data.get("user_id") or ""))
+        return text, row["created_at"]
 
 
 async def _store_embedding(entry_id: str, embedding: List[float], model_name: str) -> None:
@@ -366,14 +369,15 @@ async def enrich_entry(entry_id: str) -> None:
     pool = await get_async_pool()
     async with pool.acquire() as connection:
         row = await connection.fetchrow(
-            "SELECT content, facets FROM journal_entries WHERE id = $1",
+            "SELECT user_id, content, raw_encrypted, facets FROM journal_entries WHERE id = $1",
             entry_id,
         )
     if row is None:
         LOGGER.warning("No journal entry found for enrichment id=%s", entry_id)
         return
 
-    text = (row.get("content") or "").strip()
+    row_data = dict(row)
+    text = resolve_journal_text(row_data, user_id=str(row_data.get("user_id") or "")).strip()
     hints = row.get("facets") or {}
     if isinstance(hints, (bytes, bytearray, memoryview)):
         try:
@@ -521,10 +525,14 @@ async def _salience_v2(entry_id: str) -> float:
     pool = await get_async_pool()
     async with pool.acquire() as connection:
         row = await connection.fetchrow(
-            "SELECT length(coalesce(content, '')) AS length FROM journal_entries WHERE id = $1",
+            "SELECT user_id, content, raw_encrypted FROM journal_entries WHERE id = $1",
             entry_id,
         )
-    length = int(row.get("length") or 0) if row else 0
+    if row is None:
+        return 0.0
+    row_data = dict(row)
+    text = resolve_journal_text(row_data, user_id=str(row_data.get("user_id") or ""))
+    length = len(text)
     return min(1.0, math.log1p(max(length, 0)) / 8.0)
 
 
@@ -673,7 +681,15 @@ def deliver_insight_to_presence_queue(row: Dict[str, Any]) -> None:
 
 def enqueue_to_presence(message: Dict[str, Any]) -> None:
     """Placeholder hook for routing insights to the presence queue."""
-    LOGGER.info("enqueue_to_presence message=%s", message)
+    person_id = message.get("person_id")
+    timing_hint = message.get("timing_hint")
+    text_len = len(str(message.get("text") or ""))
+    LOGGER.info(
+        "enqueue_to_presence person_id=%s timing_hint=%s text_len=%s",
+        person_id,
+        timing_hint,
+        text_len,
+    )
 
 
 def mark_as_delivered(row_id: Any) -> None:

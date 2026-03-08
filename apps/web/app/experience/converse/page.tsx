@@ -547,11 +547,16 @@ function ConverseContent() {
   }, []);
 
   const pollDeepReflection = useCallback(
-    async (reflectionId: string) => {
+    async (reflectionId: string, personId: string) => {
       const fetchResult = async () => {
         const nonce = Date.now();
+        const params = new URLSearchParams({
+          id: reflectionId,
+          person_id: personId,
+          t: String(nonce),
+        });
         const resultRes = await fetch(
-          `/api/continuity/reflection/result?id=${encodeURIComponent(reflectionId)}&t=${nonce}`,
+          `/api/continuity/reflection/result?${params.toString()}`,
           { cache: "no-store" },
         );
         if (!resultRes.ok) return null;
@@ -561,8 +566,13 @@ function ConverseContent() {
       for (let attempt = 0; attempt < 60; attempt += 1) {
         try {
           const statusNonce = Date.now();
+          const params = new URLSearchParams({
+            id: reflectionId,
+            person_id: personId,
+            t: String(statusNonce),
+          });
           const statusRes = await fetch(
-            `/api/continuity/reflection/status?id=${encodeURIComponent(reflectionId)}&t=${statusNonce}`,
+            `/api/continuity/reflection/status?${params.toString()}`,
             { cache: "no-store" },
           );
           if (!statusRes.ok) break;
@@ -678,7 +688,7 @@ function ConverseContent() {
       }
       const data = await res.json();
       setDeepReflectionStatus(String(data.status || "queued"));
-      void pollDeepReflection(String(data.reflection_id || ""));
+      void pollDeepReflection(String(data.reflection_id || ""), authUser.person_id);
     } catch (err) {
       console.error("Deep reflection run error:", err);
       setIsRunningDeepReflection(false);

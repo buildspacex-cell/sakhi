@@ -32,6 +32,7 @@ from sakhi.apps.api.services.observe.dispatcher import enqueue_observe_job
 from sakhi.apps.api.services.observe.ingest_service import ingest_entry
 from sakhi.apps.api.services.observe.models import ObserveJobPayload
 from sakhi.apps.api.core.person_utils import resolve_person_id
+from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,7 @@ def _should_web_search(text: str) -> bool:
 async def _persist_web_snippet(person_id: str, query: str, snippet: str, ts: dt.datetime) -> str | None:
     source = {"kind": "web_snippet", "query": query}
     lifecycle_ts = dt.datetime.utcnow()
+    storage = build_journal_storage_payload(person_id, snippet)
     try:
         source_json = json.dumps(source, ensure_ascii=False)
         row = await q(
@@ -139,12 +141,16 @@ async def _persist_web_snippet(person_id: str, query: str, snippet: str, ts: dt.
             -- IMPORTANT:
             -- ts = when the experience happened (lived time)
             -- created_at / updated_at = database lifecycle only
-            INSERT INTO journal_entries (user_id, content, layer, tags, source_ref, ts, created_at, updated_at)
-            VALUES ($1, $2, 'external', ARRAY['web'], $3::jsonb, $4, $5, $5)
+            INSERT INTO journal_entries (
+                user_id, content, raw, raw_encrypted, layer, tags, source_ref, ts, created_at, updated_at
+            )
+            VALUES ($1, $2, $3, $4, 'external', ARRAY['web'], $5::jsonb, $6, $7, $7)
             RETURNING id
             """,
             person_id,
-            snippet,
+            storage.content,
+            storage.raw,
+            storage.raw_encrypted,
             source_json,
             ts,
             lifecycle_ts,
@@ -176,6 +182,10 @@ async def observe(body: ObserveIn) -> Dict[str, Any]:
     token = trace_id_var.set(trace.trace_id)
 
     ts = body.ts or dt.datetime.utcnow()
+    lifecycle_ts = dt.datetime.utcnow()
+    safe_layer = body.layer or "journal"
+    if safe_layer not in ALLOWED_LAYERS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid layer")
     if not UNIFIED:
         triage = extract(body.text, ts)
     else:
@@ -236,23 +246,26 @@ async def observe(body: ObserveIn) -> Dict[str, Any]:
     source_ref = {"triage": triage, "mood": body.mood}
     source_ref_json = json.dumps(source_ref, ensure_ascii=False)
 
+    storage = build_journal_storage_payload(person_id, body.text)
     row = await q(
             """
             INSERT INTO journal_entries (
-                user_id, content, layer, tags, mood, mood_score, source_ref,
+                user_id, content, raw, raw_encrypted, layer, tags, mood, mood_score, source_ref,
                 ts, created_at, updated_at
             )
             -- IMPORTANT:
             -- ts = when the experience happened (lived time)
             -- created_at / updated_at = database lifecycle only
             -- Episodic memory and downstream reasoning depend on ts.
-            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $11)
             RETURNING id
             """,
             person_id,
-            body.text,
+            storage.content,
+            storage.raw,
+            storage.raw_encrypted,
             safe_layer,
-        body.tags,
+            body.tags,
             body.mood,
             mood_affect.get("score"),
             source_ref_json,

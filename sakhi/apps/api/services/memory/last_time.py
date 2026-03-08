@@ -190,20 +190,8 @@ async def _search_people(person_id: str, query: str) -> LastTimeResult:
             break
 
     if person_name:
-        # Search journal entries for mentions
-        row = await dbfetch(
-            """
-            SELECT id, content, created_at
-            FROM journal_entries
-            WHERE user_id = $1
-              AND LOWER(content) LIKE LOWER($2)
-            ORDER BY created_at DESC
-            LIMIT 1
-            """,
-            person_id,
-            f"%{person_name}%",
-            one=True,
-        )
+        journal_rows = await _load_recent_journal_rows(person_id)
+        row = _best_journal_match(journal_rows, person_name)
 
         if row:
             return LastTimeResult(
@@ -300,31 +288,30 @@ async def _search_journals(
     """Search journal entries as fallback."""
     keywords = _extract_keywords(query)
 
-    for keyword in keywords:
-        row = await dbfetch(
-            """
-            SELECT id, content, created_at,
-                ts_rank(to_tsvector('english', content), plainto_tsquery('english', $2)) as rank
-            FROM journal_entries
-            WHERE user_id = $1
-              AND to_tsvector('english', content) @@ plainto_tsquery('english', $2)
-            ORDER BY rank DESC, created_at DESC
-            LIMIT 1
-            """,
-            person_id,
-            keyword,
-            one=True,
-        )
+    journal_rows = await _load_recent_journal_rows(person_id)
+    best_row: Optional[Dict[str, Any]] = None
+    best_keyword: Optional[str] = None
+    best_score = -1
 
-        if row:
-            return LastTimeResult(
-                found=True,
-                when=row.get("created_at"),
-                what=f"mentioned {keyword}",
-                context=_extract_context(row.get("content", ""), keyword),
-                source="journal_entries",
-                details={"entry_id": str(row.get("id"))},
-            )
+    for keyword in keywords:
+        candidate = _best_journal_match(journal_rows, keyword)
+        if not candidate:
+            continue
+        score = int(candidate.get("_match_score") or 0)
+        if score > best_score:
+            best_score = score
+            best_row = candidate
+            best_keyword = keyword
+
+    if best_row and best_keyword:
+        return LastTimeResult(
+            found=True,
+            when=best_row.get("created_at"),
+            what=f"mentioned {best_keyword}",
+            context=_extract_context(best_row.get("content", ""), best_keyword),
+            source="journal_entries",
+            details={"entry_id": str(best_row.get("id"))},
+        )
 
     return LastTimeResult(found=False, what=query)
 
@@ -494,6 +481,49 @@ def _extract_keywords(query: str) -> List[str]:
         keywords.append(" ".join(keywords))
 
     return keywords
+
+
+async def _load_recent_journal_rows(person_id: str, *, limit: int = 400) -> List[Dict[str, Any]]:
+    rows = await dbfetch(
+        """
+        SELECT id, user_id, content, raw_encrypted, created_at
+        FROM journal_entries
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2
+        """,
+        person_id,
+        limit,
+    )
+    out: List[Dict[str, Any]] = []
+    for row in rows or []:
+        text = (row.get("content") or "").strip()
+        if not text:
+            continue
+        out.append(row)
+    return out
+
+
+def _best_journal_match(rows: List[Dict[str, Any]], keyword: str) -> Optional[Dict[str, Any]]:
+    token = (keyword or "").strip().lower()
+    if not token:
+        return None
+    best: Optional[Dict[str, Any]] = None
+    best_score = -1
+    for idx, row in enumerate(rows):
+        text = str(row.get("content") or "")
+        text_lower = text.lower()
+        if token not in text_lower:
+            continue
+        occurrences = text_lower.count(token)
+        score = (occurrences * 10) + max(0, 50 - idx)
+        if " " in token:
+            score += 15
+        if score > best_score:
+            best_score = score
+            best = dict(row)
+            best["_match_score"] = score
+    return best
 
 
 def _extract_context(content: str, keyword: str) -> str:

@@ -102,14 +102,16 @@ async def create_deep_reflection_job(
     }
 
 
-async def get_deep_reflection_status(reflection_id: str) -> dict[str, Any]:
+async def get_deep_reflection_status(reflection_id: str, person_id: str) -> dict[str, Any]:
     row = await dbfetch(
         """
         SELECT id, person_id, topic_key, status, error, created_at, updated_at
         FROM deep_reflections
         WHERE id = $1::uuid
+          AND person_id = $2::uuid
         """,
         reflection_id,
+        person_id,
         one=True,
     )
     if not row:
@@ -125,14 +127,16 @@ async def get_deep_reflection_status(reflection_id: str) -> dict[str, Any]:
     }
 
 
-async def get_deep_reflection_result(reflection_id: str) -> dict[str, Any]:
+async def get_deep_reflection_result(reflection_id: str, person_id: str) -> dict[str, Any]:
     row = await dbfetch(
         """
         SELECT id, person_id, topic_key, status, result_json, error
         FROM deep_reflections
         WHERE id = $1::uuid
+          AND person_id = $2::uuid
         """,
         reflection_id,
+        person_id,
         one=True,
     )
     if not row:

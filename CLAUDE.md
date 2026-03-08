@@ -252,7 +252,7 @@ async def my_function():
 ### Environment variables
 - Local runtime source of truth is `.env.local` (dev) with fallback to `.env`
 - Production source of truth is platform env settings (Railway/Vercel), not local files
-- `.env.example` and `.env.local.example` are templates only (not loaded at runtime)
+- No template env files are maintained; keep `.env.local`/`.env` updated directly
 - Access via `os.environ['VAR_NAME']` or `from dotenv import load_dotenv`
 - Production alerting supports optional external sinks via `SAKHI_MONITORING_ENABLED`, `SAKHI_SENTRY_DSN`, and `SAKHI_ALERT_WEBHOOK_URL`
 

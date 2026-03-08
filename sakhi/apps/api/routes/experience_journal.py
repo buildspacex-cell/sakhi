@@ -1,35 +1,46 @@
-import uuid
 import datetime as dt
-from typing import Any, Dict, Optional
+import logging
+import uuid
+from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException, Request
 
-from sakhi.apps.api.core.db import exec as dbexec, q
+from sakhi.apps.api.core.db import exec as dbexec
+from sakhi.apps.api.core.db import q
 from sakhi.apps.api.ingest.extractor import extract
-from sakhi.libs.embeddings import embed_normalized, to_pgvector
-from sakhi.apps.api.services.ingestion.unified_ingest import _hash_text, _normalize_text, _existing_vector
+from sakhi.apps.api.services.ingestion.unified_ingest import (
+    _existing_vector,
+    _hash_text,
+    _normalize_text,
+)
 from sakhi.apps.api.services.memory.stm_config import compute_expires_at
 from sakhi.apps.api.utils.person_resolver import resolve_person
-import logging
+from sakhi.libs.embeddings import embed_normalized, to_pgvector
+from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
 router = APIRouter(prefix="/experience", tags=["experience-journal"])
 logger = logging.getLogger(__name__)
 
 
 async def _insert_journal_entry(person_id: str, text: str, layer: str, ts: dt.datetime, entry_id: str) -> None:
+    storage = build_journal_storage_payload(person_id, text)
     # IMPORTANT:
     # ts = when the experience happened (lived time)
     # created_at / updated_at = database lifecycle only
     # Episodic memory and downstream reasoning depend on ts.
     await dbexec(
         """
-        INSERT INTO journal_entries (id, user_id, content, layer, ts, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        INSERT INTO journal_entries (
+            id, user_id, content, raw, raw_encrypted, layer, ts, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         ON CONFLICT (id) DO NOTHING
         """,
         entry_id,
         person_id,
-        text,
+        storage.content,
+        storage.raw,
+        storage.raw_encrypted,
         layer,
         ts,
     )
@@ -43,7 +54,7 @@ async def create_experience_journal(request: Request, payload: Dict[str, Any]) -
     layer = payload.get("layer") or "journal"
     ts = dt.datetime.utcnow()
     entry_id = payload.get("entry_id") or str(uuid.uuid4())
-    person_id, person_label, person_key = resolve_person(request)
+    person_id, person_label, person_key = await resolve_person(request)
     logger.info(
         "ACTIVE_DEV_PERSON",
         extra={"person_id": person_id, "person_label": person_label, "person_key": person_key},
@@ -53,7 +64,9 @@ async def create_experience_journal(request: Request, payload: Dict[str, Any]) -
     content_hash = _hash_text(normalized)
     triage = extract(text, ts)
     try:
-        from sakhi.apps.api.services.memory.memory_short_term import cleanup_expired_short_term
+        from sakhi.apps.api.services.memory.memory_short_term import (
+            cleanup_expired_short_term,
+        )
         await cleanup_expired_short_term()
     except Exception:
         pass

@@ -5,6 +5,7 @@ from typing import Any, Dict
 import logging
 
 from sakhi.apps.api.core.db import get_db
+from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,31 +28,37 @@ async def observe_entry(
     experience_ts = created_at or None
     lifecycle_ts = None
     try:
+        storage = build_journal_storage_payload(person_id, text)
         await db.execute(
             """
             -- IMPORTANT:
             -- ts = when the experience happened (lived time)
             -- created_at / updated_at = database lifecycle only
             -- Episodic memory and all downstream reasoning depend on ts.
-            INSERT INTO journal_entries (id, user_id, content, raw, source_ref, layer, ts, created_at, updated_at)
+            INSERT INTO journal_entries (
+                id, user_id, content, raw, raw_encrypted, source_ref, layer, ts, created_at, updated_at
+            )
             VALUES (
                 $1,
                 $2,
                 $3,
-                $3,
+                $4,
+                $5,
                 jsonb_build_object(
-                    'source', $4::text,
-                    'clarity', $5::text
+                    'source', $6::text,
+                    'clarity', $7::text
                 ),
                 'journal',
-                COALESCE($6, NOW()),
+                COALESCE($8, NOW()),
                 NOW(),
                 NOW()
             )
             """,
             entry_id,
             person_id,
-            text,
+            storage.content,
+            storage.raw,
+            storage.raw_encrypted,
             source,
             clarity_hint,
             experience_ts,

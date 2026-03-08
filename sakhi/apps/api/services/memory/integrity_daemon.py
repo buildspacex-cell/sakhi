@@ -150,7 +150,7 @@ async def run_memory_integrity(person_id: str, *, fix_missing_embeddings: bool =
         for row in missing_emb:
             jid = row["id"]
             row2 = await q_row(
-                "SELECT content FROM journal_entries WHERE id = $1",
+                "SELECT user_id, content, raw_encrypted FROM journal_entries WHERE id = $1",
                 jid,
             )
             text = (row2 or {}).get("content") or ""

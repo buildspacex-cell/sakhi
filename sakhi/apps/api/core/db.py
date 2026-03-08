@@ -7,6 +7,7 @@ from typing import Any, Sequence
 import json
 
 import asyncpg
+from sakhi.libs.security.journal_crypto import hydrate_journal_row
 
 POOL: asyncpg.Pool | None = None
 _POOL_LOOP_ID: int | None = None  # id() of the event loop that created POOL
@@ -33,6 +34,14 @@ def _normalize_arg(val: Any) -> Any:
     if isinstance(val, uuid.UUID):
         return str(val)
     return val
+
+
+def _normalize_record(record: Any) -> Any:
+    if isinstance(record, asyncpg.Record):
+        return hydrate_journal_row(dict(record))
+    if isinstance(record, dict):
+        return hydrate_journal_row(record)
+    return record
 
 
 async def get_pool() -> asyncpg.Pool:
@@ -119,8 +128,8 @@ async def q(sql: str, *args: Any, one: bool = False) -> Any:
         rows: Sequence[asyncpg.Record] = await connection.fetch(sql, *normalized_args)
     if one:
         record = rows[0] if rows else None
-        return dict(record) if isinstance(record, asyncpg.Record) else record
-    return [dict(record) if isinstance(record, asyncpg.Record) else record for record in rows]
+        return _normalize_record(record)
+    return [_normalize_record(record) for record in rows]
 
 
 async def exec(sql: str, *args: Any) -> str:
@@ -148,12 +157,12 @@ class DBSession:
     async def fetch(self, sql: str, *args: Any) -> list[dict[str, Any]]:
         normalized_args = tuple(_normalize_arg(arg) for arg in args)
         rows = await self._connection.fetch(sql, *normalized_args)
-        return [dict(row) for row in rows]
+        return [_normalize_record(row) for row in rows]
 
     async def fetchrow(self, sql: str, *args: Any) -> dict[str, Any] | None:
         normalized_args = tuple(_normalize_arg(arg) for arg in args)
         row = await self._connection.fetchrow(sql, *normalized_args)
-        return dict(row) if row else None
+        return _normalize_record(row) if row else None
 
     async def execute(self, sql: str, *args: Any) -> str:
         normalized_args = tuple(_normalize_arg(arg) for arg in args)

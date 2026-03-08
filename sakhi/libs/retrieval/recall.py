@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from math import exp
 from typing import Any, Dict, List, Sequence
 
+from sakhi.libs.security.journal_crypto import hydrate_journal_row
 from sakhi.libs.schemas.db import get_async_pool
 
 
@@ -31,6 +32,9 @@ async def recall(
             """
             WITH docs AS (
               SELECT je.id,
+                     je.user_id,
+                     je.content,
+                     je.raw_encrypted,
                      je.cleaned,
                      je.created_at,
                      COALESCE((je.facets_v2->>'sentiment')::float, 0) AS sent,
@@ -54,6 +58,9 @@ async def recall(
             ),
             base AS (
               SELECT d.id,
+                     d.user_id,
+                     d.content,
+                     d.raw_encrypted,
                      d.cleaned,
                      d.created_at,
                      COALESCE(f.fts_rank, 0) AS fts,
@@ -64,6 +71,9 @@ async def recall(
               LEFT JOIN vec v ON d.id = v.id
             )
             SELECT id,
+                   user_id,
+                   content,
+                   raw_encrypted,
                    LEFT(cleaned, 260) AS snippet,
                    created_at,
                    (0.5 * (fts + vec) + 0.3 * salience) AS score
@@ -79,7 +89,11 @@ async def recall(
 
     results: List[Dict[str, Any]] = []
     for row in rows:
-        payload = dict(row)
+        payload = hydrate_journal_row(dict(row))
+        snippet = str(payload.get("snippet") or "").strip()
+        if not snippet:
+            raw_text = str(payload.get("content") or "").strip()
+            payload["snippet"] = raw_text[:260]
         created_at = payload.get("created_at")
         if isinstance(created_at, datetime):
             payload["score"] = float(payload.get("score") or 0.0) * _recency_decay(created_at)

@@ -127,7 +127,7 @@ async def debug_person_snapshot(
 
     journal_rows = await q(
         """
-        SELECT id, content, layer, tags, mood, created_at
+        SELECT id, user_id, content, raw_encrypted, layer, tags, mood, created_at
         FROM journal_entries
         WHERE user_id = $1
         ORDER BY created_at DESC

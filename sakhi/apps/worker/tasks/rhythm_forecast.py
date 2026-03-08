@@ -77,7 +77,9 @@ async def run_rhythm_forecast(person_id: str) -> Dict[str, Any] | None:
             """
             SELECT
               id,
+              user_id,
               content,
+              raw_encrypted,
               created_at
             FROM journal_entries
             WHERE user_id = $1

@@ -165,7 +165,7 @@ Workers run in background. Faster responses, requires Redis.
 - Production:
   - Set env vars in Railway (API/worker) and Vercel (web).
   - Do not rely on `.env` files in production containers.
-- `.env.example` and `.env.local.example` are templates only.
+- No template env files are maintained; update `.env.local`/`.env` directly for local runtime.
 
 ### Next.js (`apps/web/.env.local`)
 

@@ -38,7 +38,7 @@ async def run_soul_engine(person_id: str) -> Dict[str, Any]:
 
     journal_rows = await q(
         """
-        SELECT created_at, content
+        SELECT created_at, user_id, content, raw_encrypted
         FROM journal_entries
         WHERE user_id = $1
         ORDER BY created_at DESC

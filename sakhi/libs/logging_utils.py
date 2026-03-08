@@ -10,6 +10,10 @@ from datetime import datetime, timezone
 from logging.config import dictConfig
 from typing import Any, Dict
 
+from sakhi.libs.security.observability_redaction import (
+    redact_log_line,
+    redact_observability_value,
+)
 
 COLOR_ENABLED = os.getenv("SAKHI_LOG_COLOR", "")
 if not COLOR_ENABLED:
@@ -41,16 +45,16 @@ class JsonFormatter(logging.Formatter):
             "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact_log_line(record.getMessage()),
         }
         for key, value in record.__dict__.items():
             if key in {"msg", "args", "levelname", "levelno", "pathname", "filename", "module",
                        "exc_info", "exc_text", "stack_info", "lineno", "funcName", "created",
                        "msecs", "relativeCreated", "thread", "threadName", "processName", "process"}:
                 continue
-            payload[key] = value
+            payload[key] = redact_observability_value(value, key_hint=key)
         if record.exc_info:
-            payload["exc_info"] = self.formatException(record.exc_info)
+            payload["exc_info"] = redact_log_line(self.formatException(record.exc_info))
         # Use default=str so UUID/Decimal/datetime-like extras don't break logging.
         return json.dumps(payload, ensure_ascii=False, default=str)
 
@@ -59,7 +63,7 @@ class ColorTextFormatter(logging.Formatter):
     """Formatter that colorizes log output for human-friendly console viewing."""
 
     def format(self, record: logging.LogRecord) -> str:
-        formatted = super().format(record)
+        formatted = redact_log_line(super().format(record))
         if record.levelno >= logging.ERROR:
             return colorize(formatted, "red")
         if record.levelno >= logging.WARNING:

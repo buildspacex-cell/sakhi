@@ -32,7 +32,7 @@ async def _run_pipeline(payload: Dict[str, Any]) -> None:
 
     row = await q(
         """
-        SELECT content, layer, tags, mood, created_at
+        SELECT user_id, content, raw_encrypted, layer, tags, mood, created_at
         FROM journal_entries
         WHERE id = $1
         """,

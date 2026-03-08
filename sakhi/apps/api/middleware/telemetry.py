@@ -9,6 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from sakhi.libs.schemas.db import get_async_pool
+from sakhi.libs.security.observability_redaction import redact_observability_value
 
 from .auth_pilot import _mask_pii
 
@@ -42,7 +43,9 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
             if raw_body:
                 initial_json = _to_json(raw_body)
                 scrubbed = json.dumps(initial_json)
-                scrubbed_body = _to_json(_mask_pii(scrubbed))
+                masked = _to_json(_mask_pii(scrubbed))
+                redacted = redact_observability_value(masked, key_hint="body")
+                scrubbed_body = redacted if isinstance(redacted, dict) else {"body": redacted}
         except Exception:  # pragma: no cover - optional defensive guard
             scrubbed_body = {}
 
@@ -51,7 +54,10 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
         try:
             pool = await get_async_pool()
             user_id = getattr(request.state, "user_id", None)
-            headers = {k: _mask_pii(v) for k, v in request.headers.items()}
+            headers = {
+                k: redact_observability_value(_mask_pii(v), key_hint=k)
+                for k, v in request.headers.items()
+            }
             duration_ms = int(response.headers.get("X-Response-Time-ms", "0") or 0)
             client_host = getattr(request.client, "host", None)
             async with pool.acquire() as connection:

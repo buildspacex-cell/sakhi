@@ -24,6 +24,7 @@ PROFILE_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "MODEL_TOOL",
         "MODEL_REFLECT",
         "MODEL_EMBED",
+        "SAKHI_JOURNAL_MASTER_KEY",
         "NEXT_PUBLIC_SUPABASE_URL",
         "NEXT_PUBLIC_SUPABASE_ANON_KEY",
         "NEXT_PUBLIC_API_BASE_URL",
@@ -37,6 +38,7 @@ PROFILE_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "SUPABASE_SERVICE_ROLE_KEY",
         "ENCRYPTION_KEY",
         "SAKHI_ENCRYPTION_KEY",
+        "SAKHI_JOURNAL_MASTER_KEY",
         "MODEL_CHAT",
         "MODEL_TOOL",
         "MODEL_REFLECT",
@@ -66,6 +68,8 @@ PLACEHOLDER_VALUES = {
     "OPENAI_API_KEY": {"sk-...", "your-openai-key"},
     "ENCRYPTION_KEY": {"replace-with-32-plus-char-secret", "your-strong-32-plus-char-secret"},
     "SAKHI_ENCRYPTION_KEY": {"your-fernet-key"},
+    "SAKHI_JOURNAL_MASTER_KEY": {"replace-with-journal-master-key"},
+    "SAKHI_OPERATOR_ACCESS_TOKEN": {"replace-with-breakglass-token"},
     "SUPABASE_URL": {"https://<project-ref>.supabase.co"},
     "SUPABASE_SERVICE_ROLE_KEY": {"your-service-role-key"},
     "NEXT_PUBLIC_SUPABASE_URL": {"https://<project-ref>.supabase.co"},
@@ -77,6 +81,16 @@ def _as_bool(value: str | None) -> bool:
     if value is None:
         return False
     return value.strip().lower() in TRUTHY_VALUES
+
+
+def _is_positive_int(value: str | None, *, minimum: int = 1) -> bool:
+    if value is None or not str(value).strip():
+        return True
+    try:
+        parsed = int(str(value).strip())
+    except Exception:
+        return False
+    return parsed >= minimum
 
 
 def _resolve_value(values: Mapping[str, str], name: str) -> str | None:
@@ -121,6 +135,9 @@ def validate_env(
         value = _resolve_value(values, name)
         if not value or _is_placeholder(name, value):
             missing.append(name)
+            continue
+        if name == "SAKHI_JOURNAL_MASTER_KEY" and len(value.strip()) < 32:
+            missing.append(name)
 
     monitoring_enabled = strict_monitoring or _as_bool(_resolve_value(values, "SAKHI_MONITORING_ENABLED"))
     if profile in {"local", "prod_api"} and monitoring_enabled:
@@ -128,6 +145,27 @@ def validate_env(
         has_sentry = bool(_resolve_value(values, "SAKHI_SENTRY_DSN"))
         if not has_webhook and not has_sentry:
             missing.append("SAKHI_ALERT_WEBHOOK_URL or SAKHI_SENTRY_DSN")
+        threshold_specs = (
+            ("SAKHI_ALERT_DEDUPE_WINDOW_SEC", 30),
+            ("SAKHI_ALERT_AUTH_FAILURE_THRESHOLD", 2),
+            ("SAKHI_ALERT_AUTH_FAILURE_WINDOW_SEC", 60),
+            ("SAKHI_ALERT_CRASH_LOOP_THRESHOLD", 2),
+            ("SAKHI_ALERT_CRASH_LOOP_WINDOW_SEC", 60),
+            ("SAKHI_ALERT_DATA_ACCESS_SPIKE_THRESHOLD", 2),
+            ("SAKHI_ALERT_DATA_ACCESS_WINDOW_SEC", 60),
+        )
+        for key, minimum in threshold_specs:
+            if not _is_positive_int(_resolve_value(values, key), minimum=minimum):
+                missing.append(key)
+
+    if profile == "prod_api" and _as_bool(_resolve_value(values, "SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD")):
+        operator_token = (_resolve_value(values, "SAKHI_OPERATOR_ACCESS_TOKEN") or "").strip()
+        if (
+            not operator_token
+            or _is_placeholder("SAKHI_OPERATOR_ACCESS_TOKEN", operator_token)
+            or len(operator_token) < 24
+        ):
+            missing.append("SAKHI_OPERATOR_ACCESS_TOKEN")
 
     return missing
 

@@ -23,6 +23,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from sakhi.apps.api.core.db import q, exec as dbexec
+from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
 router = APIRouter(prefix="/lab/diagnostics", tags=["diagnostics"])
 logger = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ async def _get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
 async def _get_recent_entries(user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Get recent journal entries."""
     rows = await q("""
-        SELECT id, content, layer, created_at
+        SELECT id, person_id, user_id, content, raw_encrypted, layer, created_at
         FROM journal_entries
         WHERE person_id = $1::uuid
         ORDER BY created_at DESC
@@ -259,11 +260,14 @@ async def test_turn(request: TurnTestRequest) -> Dict[str, Any]:
     # Create entry
     entry_id = str(uuid4())
     ts = dt.datetime.utcnow()
+    storage = build_journal_storage_payload(str(uid), request.text)
 
     await dbexec("""
-        INSERT INTO journal_entries (id, user_id, person_id, content, layer, created_at)
-        VALUES ($1::uuid, $2::uuid, $2::uuid, $3, 'conversation', $4)
-    """, entry_id, uid, request.text, ts)
+        INSERT INTO journal_entries (
+            id, user_id, person_id, content, raw, raw_encrypted, layer, created_at
+        )
+        VALUES ($1::uuid, $2::uuid, $2::uuid, $3, $4, $5, 'conversation', $6)
+    """, entry_id, uid, storage.content, storage.raw, storage.raw_encrypted, ts)
 
     # Run memory ingestion (inline for testing)
     try:

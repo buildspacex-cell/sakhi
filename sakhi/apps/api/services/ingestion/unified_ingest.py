@@ -147,7 +147,7 @@ async def ingest_heavy(
     person_id = await resolve_person_id(person_id) or person_id
     if text is None:
         row = await q(
-            "SELECT content, layer FROM journal_entries WHERE id = $1",
+            "SELECT user_id, content, raw_encrypted, layer FROM journal_entries WHERE id = $1",
             entry_id,
             one=True,
         )

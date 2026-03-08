@@ -89,6 +89,152 @@ async def test_report_message_noop_when_disabled(monkeypatch):
     assert called is False
 
 
+@pytest.mark.asyncio
+async def test_report_message_redacts_sensitive_payload(monkeypatch):
+    monkeypatch.setenv("SAKHI_MONITORING_ENABLED", "1")
+    monkeypatch.setenv("SAKHI_ALERT_WEBHOOK_URL", "https://alerts.example.com/hooks/sakhi")
+
+    captured: list[dict[str, Any]] = []
+
+    async def _fake_post(payload):
+        captured.append(dict(payload))
+
+    monkeypatch.setattr(monitoring, "_post_webhook", _fake_post)
+    monitoring.setup_monitoring(service="sakhi-api", environment="test")
+
+    result = await monitoring.report_message(
+        message="conversation event text=I feel exhausted and stuck",
+        where="api:POST /v2/turn",
+        severity="warning",
+        extra={
+            "person_id": "a1b2c3d4-1111-4000-8000-000000000001",
+            "prompt": "This should not be visible",
+        },
+    )
+
+    assert result is True
+    assert len(captured) == 1
+    payload = captured[0]
+    assert "This should not be visible" not in str(payload)
+    assert "exhausted" not in str(payload["message"])
+    assert str(payload["extra"]["prompt"]).startswith("[REDACTED")
+
+
+@pytest.mark.asyncio
+async def test_report_auth_failure_only_alerts_after_threshold(monkeypatch):
+    monkeypatch.setenv("SAKHI_MONITORING_ENABLED", "1")
+    monkeypatch.setenv("SAKHI_ALERT_WEBHOOK_URL", "https://alerts.example.com/hooks/sakhi")
+    monkeypatch.setenv("SAKHI_ALERT_AUTH_FAILURE_THRESHOLD", "3")
+    monkeypatch.setenv("SAKHI_ALERT_AUTH_FAILURE_WINDOW_SEC", "300")
+
+    captured: list[dict[str, Any]] = []
+
+    async def _fake_post(payload):
+        captured.append(dict(payload))
+
+    monkeypatch.setattr(monitoring, "_post_webhook", _fake_post)
+    monitoring.setup_monitoring(service="sakhi-api", environment="test")
+
+    first = await monitoring.report_auth_failure(
+        where="api:GET /v2/conversation/history",
+        reason="missing_or_invalid_api_key",
+    )
+    second = await monitoring.report_auth_failure(
+        where="api:GET /v2/conversation/history",
+        reason="missing_or_invalid_api_key",
+    )
+    third = await monitoring.report_auth_failure(
+        where="api:GET /v2/conversation/history",
+        reason="missing_or_invalid_api_key",
+    )
+
+    assert first is False
+    assert second is False
+    assert third is True
+    assert len(captured) == 1
+    assert captured[0]["severity"] == "critical"
+    assert captured[0]["message"] == "repeated_auth_failures_detected reason=missing_or_invalid_api_key"
+
+
+@pytest.mark.asyncio
+async def test_report_data_access_event_alerts_on_spike(monkeypatch):
+    monkeypatch.setenv("SAKHI_MONITORING_ENABLED", "1")
+    monkeypatch.setenv("SAKHI_ALERT_WEBHOOK_URL", "https://alerts.example.com/hooks/sakhi")
+    monkeypatch.setenv("SAKHI_ALERT_DATA_ACCESS_SPIKE_THRESHOLD", "2")
+    monkeypatch.setenv("SAKHI_ALERT_DATA_ACCESS_WINDOW_SEC", "600")
+
+    captured: list[dict[str, Any]] = []
+
+    async def _fake_post(payload):
+        captured.append(dict(payload))
+
+    monkeypatch.setattr(monitoring, "_post_webhook", _fake_post)
+    monitoring.setup_monitoring(service="sakhi-api", environment="test")
+
+    first = await monitoring.report_data_access_event(action="export", where="api:GET /admin/export")
+    second = await monitoring.report_data_access_event(action="export", where="api:GET /admin/export")
+
+    assert first is False
+    assert second is True
+    assert len(captured) == 1
+    assert captured[0]["message"] == "data_access_spike_detected action=export"
+
+
+@pytest.mark.asyncio
+async def test_report_exception_emits_crash_loop_alert(monkeypatch):
+    monkeypatch.setenv("SAKHI_MONITORING_ENABLED", "1")
+    monkeypatch.setenv("SAKHI_ALERT_WEBHOOK_URL", "https://alerts.example.com/hooks/sakhi")
+    monkeypatch.setenv("SAKHI_ALERT_CRASH_LOOP_THRESHOLD", "2")
+    monkeypatch.setenv("SAKHI_ALERT_CRASH_LOOP_WINDOW_SEC", "300")
+
+    captured: list[dict[str, Any]] = []
+
+    async def _fake_post(payload):
+        captured.append(dict(payload))
+
+    monkeypatch.setattr(monitoring, "_post_webhook", _fake_post)
+    monitoring.setup_monitoring(service="sakhi-api", environment="test")
+
+    await monitoring.report_exception(
+        RuntimeError("upstream timeout"),
+        where="api:POST /v2/turn",
+        dedupe_key="exc-1",
+    )
+    await monitoring.report_exception(
+        RuntimeError("upstream timeout"),
+        where="api:POST /v2/turn",
+        dedupe_key="exc-2",
+    )
+
+    assert any("crash_loop_detected" in payload["message"] for payload in captured)
+
+
+@pytest.mark.asyncio
+async def test_report_breakglass_event_emits_warning_for_grant(monkeypatch):
+    monkeypatch.setenv("SAKHI_MONITORING_ENABLED", "1")
+    monkeypatch.setenv("SAKHI_ALERT_WEBHOOK_URL", "https://alerts.example.com/hooks/sakhi")
+
+    captured: list[dict[str, Any]] = []
+
+    async def _fake_post(payload):
+        captured.append(dict(payload))
+
+    monkeypatch.setattr(monitoring, "_post_webhook", _fake_post)
+    monitoring.setup_monitoring(service="sakhi-api", environment="test")
+
+    result = await monitoring.report_breakglass_event(
+        granted=True,
+        where="api:GET /admin/export",
+        operator_id="op-1",
+        approval_ref="INC-42",
+    )
+
+    assert result is True
+    assert len(captured) == 1
+    assert captured[0]["severity"] == "warning"
+    assert captured[0]["message"] == "operator_access_granted"
+
+
 def test_report_exception_sync_runs_without_loop(monkeypatch):
     monkeypatch.setenv("SAKHI_MONITORING_ENABLED", "1")
     monkeypatch.setenv("SAKHI_ALERT_WEBHOOK_URL", "https://alerts.example.com/hooks/sakhi")

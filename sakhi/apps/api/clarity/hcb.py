@@ -60,7 +60,7 @@ async def build_context_pack(user_text: str, need: str, horizon: str, person_id:
 
     recent_entries = await q(
         """
-        SELECT id, content, created_at
+        SELECT id, user_id, content, raw_encrypted, created_at
         FROM journal_entries
         WHERE user_id = $1
         ORDER BY created_at DESC

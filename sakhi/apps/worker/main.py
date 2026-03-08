@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 from typing import List
+from urllib.parse import urlsplit, urlunsplit
 
 # Ensure project root is on sys.path so `sakhi.*` imports resolve
 # regardless of how this module is launched (dev script, python -m, etc.)
@@ -10,9 +11,9 @@ _PROJECT_ROOT = str(Path(__file__).resolve().parents[3])
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+from dotenv import load_dotenv
 from redis import Redis
 from rq import Queue, Worker
-from dotenv import load_dotenv
 
 from sakhi.apps.api.core.llm import set_router as set_llm_router
 from sakhi.apps.api.core.monitoring import report_exception_sync, setup_monitoring
@@ -26,9 +27,26 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 LOGGER = logging.getLogger("sakhi.worker")
 
 
+def _redact_url_secret(url: str) -> str:
+    try:
+        parsed = urlsplit(url)
+    except Exception:
+        return "<invalid-url>"
+    if not parsed.scheme:
+        return url
+    hostname = parsed.hostname or ""
+    if parsed.port:
+        hostname = f"{hostname}:{parsed.port}"
+    if parsed.username:
+        netloc = f"{parsed.username}:***@{hostname}"
+    else:
+        netloc = hostname
+    return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+
+
 def get_redis() -> Redis:
     url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    LOGGER.info("Connecting to Redis at %s", url)
+    LOGGER.info("Connecting to Redis at %s", _redact_url_secret(url))
     return Redis.from_url(url)
 
 
@@ -98,7 +116,7 @@ def run() -> None:
             exc,
             where="worker:main",
             severity="critical",
-            dedupe_key=f"worker-main:{exc.__class__.__name__}:{str(exc)[:120]}",
+            dedupe_key=f"worker-main:{exc.__class__.__name__}",
             extra={"phase": "worker_boot_or_run_loop"},
         )
         LOGGER.exception("Worker crashed")

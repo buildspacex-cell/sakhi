@@ -52,7 +52,7 @@ async def _reflect_person_memory(person_id: str, days: int) -> None:
     window_start = datetime.now(timezone.utc) - timedelta(days=days)
     journal_rows = await dbfetch(
         """
-        SELECT content
+        SELECT user_id, content, raw_encrypted
         FROM journal_entries
         WHERE user_id = $1
           AND created_at >= $2

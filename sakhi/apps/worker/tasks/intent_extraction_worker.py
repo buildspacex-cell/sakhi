@@ -128,7 +128,7 @@ async def run_intent_extraction_for_entry(person_id: str, entry_id: str) -> Dict
     """
     entry = await dbfetch(
         """
-        SELECT content FROM journal_entries
+        SELECT user_id, content, raw_encrypted FROM journal_entries
         WHERE id = $1 AND user_id = $2
         """,
         int(entry_id) if entry_id.isdigit() else entry_id,

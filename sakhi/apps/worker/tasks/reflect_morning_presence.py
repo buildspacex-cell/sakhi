@@ -62,7 +62,7 @@ async def reflect_morning_presence(person_id: str) -> None:
 
 
 def send_message(person_id: str, text: str) -> None:
-    LOGGER.info("morning_presence message person_id=%s text=%s", person_id, text)
+    LOGGER.info("morning_presence message person_id=%s text_len=%s", person_id, len(text or ""))
 
 
 __all__ = ["reflect_morning_presence"]

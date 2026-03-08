@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from sakhi.apps.api.core.monitoring import report_auth_failure
 from sakhi.libs.schemas.db import get_async_pool
 
 try:
@@ -82,6 +83,14 @@ class PilotAuthAndRateLimit(BaseHTTPMiddleware):
                         request.url.path,
                         "missing_or_invalid_api_key",
                     )
+                await report_auth_failure(
+                    where=f"api:{request.method} {request.url.path}",
+                    reason="missing_or_invalid_api_key",
+                    extra={
+                        "path": request.url.path,
+                        "method": request.method,
+                    },
+                )
                 return Response("Unauthorized (pilot)", status_code=401)
 
             user_id = row["user_id"]

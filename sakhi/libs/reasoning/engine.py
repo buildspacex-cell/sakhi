@@ -22,12 +22,12 @@ import json
 import logging
 from typing import Any, Dict, List
 
-from sakhi.apps.api.core.db import q as dbfetch
 from sakhi.apps.api.core.db import q as db_q
+from sakhi.apps.api.core.db import q as dbfetch
+from sakhi.apps.api.core.llm import call_llm
 from sakhi.apps.api.services.memory.recall import build_recall_context
 from sakhi.libs.embeddings import embed_text
 from sakhi.libs.json_utils import extract_json_block
-from sakhi.apps.api.core.llm import call_llm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -167,7 +167,7 @@ async def run_reasoning(person_id: str, query: str, memory_context: str | None =
     """
     Main external entrypoint for reasoning.
     """
-    LOGGER.info("[ReasoningEngine] Running reasoning for %s: %s", person_id, query)
+    LOGGER.info("[ReasoningEngine] Running reasoning for %s query_len=%s", person_id, len(query or ""))
 
     if memory_context is None:
         memory_context = await build_recall_context(person_id, query)

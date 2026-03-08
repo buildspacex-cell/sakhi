@@ -24,7 +24,7 @@ async def run_emotion_state_refresh(person_id: str) -> Dict[str, Any] | None:
     try:
         entries: List[Dict[str, Any]] = await db.fetch(
             """
-            SELECT id, content, created_at
+            SELECT id, user_id, content, raw_encrypted, created_at
             FROM journal_entries
             WHERE user_id = $1
               AND created_at >= NOW() - ($2::int || ' days')::interval

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from math import sqrt
 from typing import Iterable, Sequence
 
 from sakhi.libs.embeddings import embed_text
+from sakhi.libs.security.journal_crypto import hydrate_journal_row
 from sakhi.libs.schemas.db import get_async_pool
 
 LOGGER = logging.getLogger(__name__)
@@ -44,17 +46,13 @@ async def compute_alignment(user_id: str, theme: str = "general") -> float:
 
     pool = await get_async_pool()
     async with pool.acquire() as connection:
-        journal_rows = await connection.fetch(
+        raw_journal_rows = await connection.fetch(
             """
-            SELECT content
+            SELECT user_id, content, raw_encrypted, facets, created_at
             FROM journal_entries
             WHERE user_id = $1
-              AND (
-                    (facets ? 'intent' AND COALESCE((facets->>'intent')::boolean, false))
-                 OR content ILIKE ANY(ARRAY['%intend%', '%intend to%', '%goal%'])
-              )
             ORDER BY created_at DESC
-            LIMIT 20
+            LIMIT 200
             """,
             user_id,
         )
@@ -70,7 +68,29 @@ async def compute_alignment(user_id: str, theme: str = "general") -> float:
             user_id,
         )
 
-    intentions_text = " ".join((row["content"] or "").strip() for row in journal_rows if row.get("content")) or "no intentions recorded"
+    keyword_markers = ("intend", "goal", "plan", "decide", "priority")
+    journal_rows = [hydrate_journal_row(dict(row)) for row in raw_journal_rows]
+    intention_chunks: list[str] = []
+    for row in journal_rows:
+        text = (row.get("content") or "").strip()
+        if not text:
+            continue
+        facets = row.get("facets") or {}
+        if isinstance(facets, str):
+            try:
+                facets = json.loads(facets)
+            except Exception:
+                facets = {}
+        has_intent_facet = False
+        if isinstance(facets, dict):
+            has_intent_facet = bool(facets.get("intent"))
+        text_lower = text.lower()
+        if has_intent_facet or any(marker in text_lower for marker in keyword_markers):
+            intention_chunks.append(text)
+        if len(intention_chunks) >= 20:
+            break
+
+    intentions_text = " ".join(intention_chunks) or "no intentions recorded"
     actions_text = " ".join((row["text"] or "").strip() for row in task_rows if row.get("text")) or "no actions completed"
 
     embeddings = await _embed_texts([intentions_text, actions_text])

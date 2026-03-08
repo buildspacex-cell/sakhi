@@ -16,9 +16,9 @@ from sakhi.apps.worker.tasks.progressive_task_structuring import (
     create_draft_task,
     update_task_fields,
 )
+from sakhi.apps.worker.tasks.update_emotional_context import update_emotional_context
 from sakhi.apps.worker.utils.db import db_find, db_insert
 from sakhi.apps.worker.utils.response_composer import compose_response
-from sakhi.apps.worker.tasks.update_emotional_context import update_emotional_context
 
 router = APIRouter(prefix="/conversation", tags=["conversation"])
 LOGGER = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ Text: {message}
 
 async def send_message(person_id: str, text: str) -> None:
     """Placeholder transport hook."""
-    LOGGER.info("conversation.message person_id=%s text=%s", person_id, text)
+    LOGGER.info("conversation.message person_id=%s text_len=%s", person_id, len(text or ""))
 
 
 def _pending_action_key(person_id: str) -> str:

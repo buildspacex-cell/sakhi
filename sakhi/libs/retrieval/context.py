@@ -24,8 +24,10 @@ async def build_reflection_context(
     journal_rows = await fetch_all(
         """
         SELECT id,
+               user_id,
                coalesce(title, '') AS title,
                content,
+               raw_encrypted,
                (facets->>'salience')::numeric AS salience,
                created_at
         FROM journal_entries
@@ -101,4 +103,3 @@ async def build_reflection_context(
 
 
 __all__ = ["build_reflection_context"]
-

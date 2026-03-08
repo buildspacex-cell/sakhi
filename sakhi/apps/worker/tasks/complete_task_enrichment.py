@@ -34,7 +34,7 @@ async def _complete_task_enrichment_async() -> None:
 
 
 def send_message_to_user(person_id: Any, text: str) -> None:
-    LOGGER.info("task_enrichment.nudge person_id=%s text=%s", person_id, text)
+    LOGGER.info("task_enrichment.nudge person_id=%s text_len=%s", person_id, len(text or ""))
 
 
 __all__ = ["complete_task_enrichment"]

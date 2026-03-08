@@ -157,7 +157,10 @@ async def load_continuity_items(
                cl.scalar,
                cl.metadata,
                je.ts,
-               je.content
+               je.person_id,
+               je.user_id,
+               je.content,
+               je.raw_encrypted
         FROM continuity_labels cl
         JOIN journal_entries je
           ON cl.source_type = 'journal'
@@ -222,6 +225,7 @@ async def load_journal_entries_for_continuity(
                created_at,
                updated_at,
                content,
+               raw_encrypted,
                cleaned,
                title
         FROM journal_entries
