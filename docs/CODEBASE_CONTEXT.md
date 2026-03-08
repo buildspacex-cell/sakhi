@@ -31,9 +31,9 @@ Use this first before substantial code edits.
 
 | Metric | Value |
 |---|---:|
-| Tracked files | 1376 |
-| Python files | 849 |
-| TypeScript files (`.ts`, `.tsx`) | 370 |
+| Tracked files | 1390 |
+| Python files | 857 |
+| TypeScript files (`.ts`, `.tsx`) | 371 |
 | API route modules (`sakhi/apps/api/routes`, excluding `__init__`/`.bak`) | 80 |
 | API service modules (`sakhi/apps/api/services`, excluding `__init__`) | 232 |
 | Worker modules (`sakhi/apps/worker`, excluding `__init__`) | 114 |
@@ -41,7 +41,7 @@ Use this first before substantial code edits.
 | Engine modules (`sakhi/apps/engine`, excluding `__init__`) | 34 |
 | Web pages (`apps/web/app/**/page.tsx`) | 76 |
 | Web API routes (`apps/web/app/api/**/route.ts`) | 117 |
-| Mobile screens (`apps/mobile/app/**/*.tsx`) | 30 |
+| Mobile screens (`apps/mobile/app/**/*.tsx`) | 31 |
 | Kala source modules | 49 |
 | Kala test functions | 552 |
 
@@ -114,10 +114,10 @@ Current read:
 
 ### Audit Counts
 
-- `sakhi/tests` path-prefix count: `61`
-- `test_*.py` pattern count under `sakhi/tests`: `64`
+- `sakhi/tests` path-prefix count: `66`
+- `test_*.py` pattern count under `sakhi/tests`: `69`
 - Integration test files: `9`
-- Unit test files: `49`
+- Unit test files: `54`
 
 ## Observability Signals (2026-03-08 Context Audit)
 

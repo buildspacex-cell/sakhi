@@ -32,6 +32,7 @@ class TestProductFieldsContract:
         "memory_recall",
         "agent_task_context",
         "entry_id",
+        "continuity",
     }
 
     def test_product_fields_match_expected(self):

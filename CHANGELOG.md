@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Knowledge graph-powered symptom recommendations** + Prompt Playground
 - **Web onboarding flow** — 8 screens, 19 questions, progressive OS calibration
 - **Mobile onboarding, voice, and auth** with Ayurvedic knowledge graph
+- **Mobile continuity premium surfaces** — chat now supports `Deep Answer` (same query + full topic history via continuity deep-reflection run/status/result), and profile now includes a glass-style `Topic Reflection` page with life-occupancy bubble mapping from continuity topics/arcs
 - **Full-brain simulation harness v2** — deep-dive visualizations for coherence, alignment, identity, themes
 - **Context routing** — tiered context intelligence with hybrid router
 - **Comprehensive test suite** — e2e, integration, and unit tests
@@ -37,7 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Separated THINK vs RESPOND** in SAKHI_INSTRUCTIONS prompt for clearer reasoning
 - **Optimized conversation pipeline** — reduced turn latency from 15s to 6-8s
 - **Adaptive response** — personalized WHY required in every response, adaptive prompt placed first
-- **Environment source-of-truth clarified** — docs now explicitly define local runtime precedence (`.env.local` → `.env`), production env ownership (Railway/Vercel dashboards), and template-only role of `.env.example` files
+- **Environment source-of-truth clarified** — docs now explicitly define local runtime precedence (`.env.local` → `.env`) and production env ownership (Railway/Vercel dashboards); template env files were removed from the repository
+- **Known-user MVP privacy/trust rollout guide** — added concrete hardening checklist for founder-access risk mitigation (break-glass access, log/debug lockdown, retention/deletion policy, and beta trust gate wiring in deploy checklist)
 - **Env contract gate in build workflow** — `sakhi/infra/scripts/check_env.py` now supports profiles (`local`, `prod_api`, `prod_web`, `ci`), `make verify` now enforces local env contract checks, and CI runs a `ci` profile pre-test validation
 - **Localhost web auth bypass** — development-only bypass for protected web routes via `DEV_AUTH_BYPASS_PERSON_ID` (defaults to `a1b2c3d4-1111-4000-8000-000000000001`)
 - Reorganized monorepo structure and test directories
@@ -57,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Deep reflection persistence fallback** — continuity reflection now falls back to payload-only persistence if `window_start/window_end` timestamp writes fail
 - **Simulation deep reflection polling timeout** — continuity reflection proxy routes now force no-store responses and the simulation poller adds cache-busting params so status transitions (`queued` → `running` → `done`) are not stuck on stale cached payloads
 - **Deep reflection chat response surfacing** — reflection results now include a deterministic `chat_response` field, and web pollers probe `/continuity/reflection/result` during status waits so completed reflections reliably render as chat output in simulation and converse UI
+- **Deep reflection ownership checks** — continuity reflection status/result reads are now scoped by both reflection id and `person_id`, blocking cross-user UUID-only fetches
 - **Deep reflection LLM synthesis contract** — deep reflection now composes a compact packet (`arc_compact_global`, `recent_episode_compact`, `evidence_anchors`, `delta_since_last_reflection`, `latest_turn_context`, `response_contract`) and, when router is available, generates user-facing `chat_response` via LLM while preserving deterministic fields plus `chat_response_source` and `llm_reflection` debug payload
 - **Deep reflection topic drift guardrails** — LLM packet now filters latest-turn context to topic-matched user turns only and fixes episodic retrieval matching (`memory_episodic.person_id` or `user_id`) to avoid unrelated work/family bleed into topic-scoped reflections
 - **Deep reflection surface-policy carry-through** — LLM packet now includes continuity `surface` flags and response-contract gates (`detail_allowed`, `mirror_allowed`, `nudge_policy`) so detail-blocked runs stay mirror-only and avoid prescriptive drift
@@ -68,14 +71,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Continuity prompt simplification (chat + deep reflection)** — both continuity prompt paths now use a language-first structure (`History on this topic`, `What we know about this person`, `Current query now`), reduce score/count-heavy framing in hidden continuity context, and stop sending full raw packet JSON in deep reflection LLM prompts
 - **Continuity prompt query-priority rule** — both normal continuity chat and deep reflection prompts now explicitly prioritize answering the current query directly, while using history/person context only for grounding coherence
 - **Deep reflection mode split (deep_answer vs topic_reflection)** — `/continuity/reflection/run` now accepts `mode` and optional `user_query`; deep-answer runs use the provided query as primary input while topic-reflection runs stay longitudinal, and simulation/converse UIs now expose separate actions for both modes
+- **Mobile deep-answer contract hardening** — mobile chat now reads continuity topic from non-debug `/v2/turn` field (`continuity.topic_key/topic_label`), sends auth bearer headers on continuity endpoints for prod-bound person checks, and profile reflection auto-retries after continuity-policy enable when needed
+- **Simulation Add-Journal composer parity** — the top simulation journal composer now follows the same interaction model as "Continue the Conversation" (time-segment buttons, Cmd/Ctrl+Enter, and aligned submit row/button behavior)
 - **Deep-answer response contract + regeneration gate** — deep-answer runs now target a longer structured reply (`180-280` words with required sections: direct answer, history anchors, recommended path, alternative path, risk + next 7-day action) and auto-regenerate once when the first draft misses contract checks
+- **Auth-bound person resolution on user data routes** — routes that resolve person context (`/v2/turn`, conversation history, experience journal, memory, continuity) now bind to the authenticated principal in production and reject mismatched `?user=<uuid>` access
 - **Normal-chat response contract update** — turn prompt now targets a focused tactical answer (`60-120` words, max 1 question) instead of the prior ultra-short `30-50` style
+- **Observability redaction hardening** — monitoring payloads, telemetry request logs, and formatted application logs now redact sensitive free-text fields (`text`, `content`, `prompt`, `query`, `message`, `body`, `payload`) and inline secrets/tokens by default to reduce journal/prompt leakage risk in production sinks
+- **Monitoring burst policy + incident alert classes** — monitoring now detects repeated auth failures, crash-loop exception bursts, and export/delete spikes via configurable threshold windows, and emits normalized break-glass allow/deny alert events for privileged route access
 - **Rhythm planner path deferred by default** — turn-time `rhythm_planner_alignment` loading is now disabled unless `SAKHI_ENABLE_RHYTHM_PLANNER_ALIGNMENT=1`, preventing rhythm table dependencies from impacting core turn flows
 - **Weekly rhythm rollup deferred by policy** — `weekly_rhythm_rollup` is now disabled by default (`SAKHI_ENABLE_WEEKLY_RHYTHM_ROLLUP=0`) and scheduler enqueue is skipped unless explicitly enabled
 - **Production route guardrails** — internal operator routes (`/lab`, `/dev`, `/demo`, `/admin`) are now blocked by default in production runtime unless `SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD=1`
+- **Operator break-glass enforcement for privileged routes** — when internal routes are explicitly enabled in production, privileged paths (`/lab`, `/dev`, `/demo`, `/admin`, `/debug`, `/memory/dev`, `/system/audit`) now require `SAKHI_OPERATOR_ACCESS_TOKEN` plus operator headers (`x-sakhi-operator-id`, `x-sakhi-approval-ref`, `x-sakhi-breakglass-reason`) with audit alerts for allow/deny decisions
 - **Health/readiness hardening** — `/health` now reports dependency-aware readiness (DB required, Redis optional) with proper `503` degradation, plus explicit `/health/live` and `/health/ready` endpoints
 - **External alerting sink wiring** — API unhandled exceptions and worker job/crash failures now route through `apps/api/core/monitoring.py` to optional Sentry (`SAKHI_SENTRY_DSN`) and/or webhook on-call sinks (`SAKHI_ALERT_WEBHOOK_URL`) with dedupe window controls
 - **Context audit harness fix** — `scripts/context-audit.sh` now validates the actual `Makefile quick-test` target file list instead of checking a stale removed path
+- **Journal encryption strict-mode hardening** — journal crypto now runs fail-closed on missing/weak `SAKHI_JOURNAL_MASTER_KEY`, defaults to `SAKHI_JOURNAL_WRITE_MODE=encrypted_only`, raises on decrypt failures in strict mode, and patches remaining worker/service/read paths for encrypted-only compatibility (including keyword/search fallbacks that no longer depend on plaintext DB columns)
 - Production errors: synthesis param, JSONB serialization
 - Vercel build: styled-jsx React conflict, env var injection, monorepo .env.production
 

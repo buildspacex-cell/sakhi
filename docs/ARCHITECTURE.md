@@ -188,7 +188,7 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 ### Core Conversation
 | Route | Purpose |
 |-------|---------|
-| `POST /v2/turn` | Main conversation endpoint |
+| `POST /v2/turn` | Main conversation endpoint (includes non-debug continuity topic signal `continuity.topic_key/topic_label` when a continuity pack is active) |
 | `GET /v2/conversation/history` | Conversation history |
 
 ### System Health
@@ -235,8 +235,13 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 | `/lab/run-worker` | Test individual workers |
 | `/lab/live-turn` | Test turn with debug output |
 
-Production guardrail: internal routes (`/lab`, `/dev`, `/demo`, `/admin`) are blocked by default in production runtime unless `SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD=1`.
+Production guardrail: privileged internal routes (`/lab`, `/dev`, `/demo`, `/admin`, `/debug`, `/memory/dev`, `/system/audit`) are blocked by default in production runtime unless `SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD=1`. If re-enabled for emergency ops, requests must pass break-glass operator headers and token validation.
 Observability guardrail: unhandled API exceptions and worker failures route through `sakhi/apps/api/core/monitoring.py`, which can forward incidents to Sentry (`SAKHI_SENTRY_DSN`) and/or webhook-based on-call sinks (`SAKHI_ALERT_WEBHOOK_URL`).
+Observability privacy guardrail: monitoring payloads, telemetry request logs, and formatted log lines are redacted via `sakhi/libs/security/observability_redaction.py` so free-text fields (journal/prompt/query/message/body/payload) and inline secrets are not emitted in plaintext.
+Incident alert policy guardrail: monitoring runtime now includes burst detectors for repeated auth failures, crash loops, and export/delete spikes, plus normalized break-glass allow/deny alerts with configurable threshold/window env knobs.
+Journal privacy guardrail: all API journal-entry insert paths now write per-user encrypted payloads into `journal_entries.raw_encrypted` (derived from required `SAKHI_JOURNAL_MASTER_KEY` with user-scoped key derivation). Runtime now defaults to `SAKHI_JOURNAL_WRITE_MODE=encrypted_only` (no plaintext journal writes), with `dual_write` available only as an explicit temporary migration mode.
+Identity guardrail: in production, person-scoped routes using `resolve_person` bind to authenticated identity (request-state user or bearer-token mapped `auth_users.id`) and reject mismatched `?user=<uuid>` impersonation attempts.
+Deep reflection guardrail: reflection status/result reads are scoped by both reflection id and person id, preventing cross-user fetches by UUID alone.
 
 ### Email Intelligence
 | Route | Purpose |
@@ -501,7 +506,7 @@ embedding vector(1536)
 Runtime source of truth:
 - Local API/worker runtime loads `.env.local` when present, with fallback to `.env`.
 - Production reads environment from platform settings (Railway/Vercel).
-- `.env.example` / `.env.local.example` are template references only.
+- No template env files are maintained in-repo; local runtime config lives in `.env.local` / `.env`.
 - Contract checks are automated via `sakhi/infra/scripts/check_env.py` (`local`, `prod_api`, `prod_web`, `ci`) and wired into `make verify` + CI.
 
 ### Required
@@ -519,6 +524,8 @@ SAKHI_DISABLE_QUEUE=1  # Run workers inline (dev)
 SAKHI_MONITORING_ENABLED=1
 SAKHI_SENTRY_DSN=https://...
 SAKHI_ALERT_WEBHOOK_URL=https://...
+SAKHI_JOURNAL_MASTER_KEY=replace-with-high-entropy-secret-at-least-32-chars
+SAKHI_JOURNAL_WRITE_MODE=encrypted_only  # encrypted_only | dual_write (temporary migration only)
 ```
 
 ---

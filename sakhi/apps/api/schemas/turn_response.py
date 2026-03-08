@@ -46,6 +46,9 @@ class TurnResponseProduct(BaseModel):
     # Entry ID for the stored turn
     entry_id: Optional[str] = None
 
+    # Public continuity summary (non-debug topic signal)
+    continuity: Optional[Dict[str, Any]] = None
+
 
 # =============================================================================
 # Debug fields — only included when SAKHI_DEBUG_RESPONSE=1 or ?debug=1

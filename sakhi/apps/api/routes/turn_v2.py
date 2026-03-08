@@ -225,6 +225,20 @@ class TurnIn(BaseModel):
     media_ids: list[str] | None = None  # Previously uploaded media IDs
 
 
+def _build_public_continuity_signal(continuity_pack: Any) -> Dict[str, Any] | None:
+    """Expose a minimal, non-debug continuity summary safe for product clients."""
+    if not isinstance(continuity_pack, dict):
+        return None
+    topic_key = str(continuity_pack.get("topic_key") or "").strip()
+    if not topic_key:
+        return None
+    topic_label = str(continuity_pack.get("topic_label") or "").strip() or topic_key
+    return {
+        "topic_key": topic_key,
+        "topic_label": topic_label,
+    }
+
+
 # NOTE: _load_internal_state now uses the shared deterministic_context_loader module.
 # This ensures consistency between /v2/turn and /lab/live-turn endpoints.
 # See: sakhi/apps/api/services/turn/deterministic_context_loader.py
@@ -506,7 +520,7 @@ async def _run_post_reply_processing(
 
 @router.post("/turn")
 async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(default=None)):
-    user_id, person_label, person_key = resolve_person(request, user)
+    user_id, person_label, person_key = await resolve_person(request, user)
     logger.info("[turn_v2] entry start user=%s person_id=%s label=%s", user, user_id, person_label)
     logger.info("ACTIVE_DEV_PERSON", extra={"person_id": user_id, "person_label": person_label, "person_key": person_key})
 
@@ -1850,6 +1864,10 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             "governance_guard": governance_guard,
             "note": "Post-reply processing (memory, persona, topics, workers) runs in background",
         }
+
+    product["continuity"] = _build_public_continuity_signal(
+        metadata_payload.get("continuity_pack"),
+    )
 
     # Fire-and-forget: all post-reply processing in background
     asyncio.create_task(_run_post_reply_processing(

@@ -90,6 +90,20 @@ Migrations:
 - Active continuity topic chip from debug metadata.
 - Deep reflection run + status polling + result insertion.
 
+## Mobile Surface
+
+`apps/mobile/app/experience/converse/index.tsx` now mirrors the production deep-reflection interaction from chat:
+- Sends turns through standard `/v2/turn` and captures continuity topic metadata from product field `continuity` (`topic_key`, `topic_label`) instead of debug payloads.
+- Exposes a `Run Deep` action that queues `/continuity/reflection/run` in `mode=deep_answer` with the current query.
+- Polls `/continuity/reflection/status` + `/continuity/reflection/result` and renders a distinct premium deep-answer bubble in chat.
+- Uses authenticated bearer headers for all continuity calls so auth-bound person resolution works in production runtime.
+
+`apps/mobile/app/soul/topic-reflection.tsx` adds a profile-level longitudinal view:
+- Fetches `/continuity/topics` for the person and visualizes topic occupancy as size-weighted bubbles.
+- Loads `/continuity/arc` for the selected topic and renders included moments as relative-size arc bubbles.
+- If continuity policy is disabled, it attempts one policy-enable call and retries topics before showing an error state.
+- Uses a glass-style visual treatment so topic reflection feels clearly distinct from normal chat.
+
 ### Simulation Ask-Sakhi Debug Surface
 
 `/demo/simulation/add-journal` now requests `debug=1` from `/v2/turn` and returns

@@ -8,7 +8,7 @@
 
 ## One Paragraph
 
-Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 80 API route modules and 114 worker modules, a Next.js web app with 76 pages, a React Native mobile app with 30 screens, and a pure-computation governance kernel with 552 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, inject policy-gated continuity context when available, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
+Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 80 API route modules and 114 worker modules, a Next.js web app with 76 pages, a React Native mobile app with 31 screens, and a pure-computation governance kernel with 552 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, inject policy-gated continuity context when available, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
 
 ---
 
@@ -20,7 +20,7 @@ Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversat
 | Engine modules (sakhi/apps/engine/) | 34 computational engines |
 | Governance kernel (kala/) | ~11K lines, 49 source files, 552 tests |
 | Web app (apps/web/) | ~42K lines TypeScript, 76 pages, 117 API proxy routes |
-| Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 30 screens |
+| Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 31 screens |
 | Database tables | 179 |
 | Background workers | 86 task files + 114 worker modules |
 | Context modules | 13 (11 primary + 2 ritual caches) |
@@ -104,15 +104,22 @@ User message arrives (POST /v2/turn)
 - Continuity policy/exclusions (`/continuity/policy`)
 - Topic + arc retrieval (`/continuity/topics`, `/continuity/arc`)
 - Turn-level hidden continuity pack injection for prompt coherence (`turn_v2` metadata), including compact thread stats, sampled phase path, anchor moments, deterministic qualitative arc summary, and a chronological decision ledger (including acknowledged Sakhi suggestions) for stronger longitudinal grounding
+- Turn-level product continuity signal in `/v2/turn` responses (`continuity.topic_key`, `continuity.topic_label`) so clients can trigger deep-answer flows without enabling debug payloads
 - Deep reflection async flow (`/continuity/reflection/run|status|result`) with compact LLM synthesis packet + deterministic fallback (`chat_response_source`, `llm_reflection` debug payload) for direct chat rendering, including surface-policy carry-through (`detail_allowed`/`mirror_allowed`) to keep blocked-detail reflections mirror-only, language-first prompt framing (`history`, `person context`, `current query`) instead of raw packet JSON dumps, explicit run modes (`deep_answer` with active query vs `topic_reflection` longitudinal check-in), and deep-answer quality gating (long-form contract + one-pass regen if contract checks fail)
 - Simulation Ask-Sakhi debug inspector exposes `turn_debug` (continuity pack + prompt payload) and includes deep reflection run/status/result controls with unavailable-state messaging, cache-busted polling, and result probing so completed reflections surface immediately in `apps/web/app/lab/simulation/client.tsx`
+- Simulation "Add Journal" composer now uses the same chat flow pattern as "Continue the Conversation" (time segmented buttons, Cmd/Ctrl+Enter submit, aligned submit row behavior) to keep local testing interactions consistent.
 
 **Production hardening controls**:
 - Health probes now include liveness and readiness contracts: `GET /health/live` and `GET /health`/`GET /health/ready` (DB required, Redis optional), with readiness returning `503` on DB failure.
-- Internal/non-user routes are blocked by default in production runtime (`/lab`, `/dev`, `/demo`, `/admin`) unless explicitly re-enabled via `SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD=1`.
+- Internal/non-user routes are blocked by default in production runtime (`/lab`, `/dev`, `/demo`, `/admin`, `/debug`, `/memory/dev`, `/system/audit`) unless explicitly re-enabled via `SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD=1`; when re-enabled, break-glass operator headers + `SAKHI_OPERATOR_ACCESS_TOKEN` are required.
+- Production person resolution now enforces authenticated ownership on user-scoped routes (`/v2/turn`, conversation history, experience journal, memory, continuity): mismatched `?user=<uuid>` access is denied.
 - Rhythm rollup and planner rhythm alignment are both deferred by default (`SAKHI_ENABLE_WEEKLY_RHYTHM_ROLLUP=0`, `SAKHI_ENABLE_RHYTHM_PLANNER_ALIGNMENT=0`) so missing rhythm tables are kept out of default turn/scheduler paths.
 - External incident alerting is wired for production failures via `sakhi/apps/api/core/monitoring.py` (optional Sentry DSN and/or webhook sink), including API unhandled exception capture and worker job/crash reporting with dedupe guards.
+- Observability redaction is enforced for trust-sensitive payloads: monitoring sinks, request telemetry logs, and formatted log lines redact free-text prompt/journal/query/message/body fields plus inline secret/token values by default.
+- Monitoring alert policy now includes burst detection for repeated auth failures, crash loops, and export/delete spikes, and emits normalized break-glass grant/deny alert events for privileged route access.
 - Build/CI now fail fast on missing config using profile-based env contract validation (`make check-env`, `make verify`, CI `check_env.py --profile ci`).
+- Journal writes now include per-user encrypted payloads (`journal_entries.raw_encrypted`) across API insert paths, derived from required `SAKHI_JOURNAL_MASTER_KEY` (32+ chars) with `SAKHI_JOURNAL_WRITE_MODE=encrypted_only` as the default runtime posture (`dual_write` only for temporary migration windows).
+- Deep reflection status/result endpoints now require matching `person_id` ownership in addition to reflection id, closing UUID-only read access.
 
 ---
 
