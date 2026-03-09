@@ -356,8 +356,8 @@ async def _enrich_reflection_with_llm(
         )
         prompt_messages = _build_deep_reflection_prompt_messages(packet)
         model = os.getenv("MODEL_DEEP_REFLECTION_CHAT", os.getenv("MODEL_CHAT", "gpt-4o-mini"))
-        max_tokens = 520 if mode == "deep_answer" else 260
-        max_chars = 2800 if mode == "deep_answer" else 700
+        max_tokens = 520
+        max_chars = 2800
         llm_response = await router.chat(
             messages=prompt_messages,
             model=model,
@@ -365,7 +365,6 @@ async def _enrich_reflection_with_llm(
             max_tokens=max_tokens,
         )
         llm_text = _normalize_llm_text(llm_response.text or "", max_chars=max_chars)
-        quality_gate: dict[str, Any] | None = None
         generation_attempts: list[dict[str, Any]] = []
         generation_attempts.append(
             {
@@ -375,47 +374,6 @@ async def _enrich_reflection_with_llm(
                 "response_text": llm_text,
             }
         )
-
-        if mode == "deep_answer":
-            contract = packet.get("response_contract") or {}
-            passed, reasons = _passes_deep_answer_quality_gate(llm_text, contract)
-            quality_gate = {
-                "applied": True,
-                "initial_passed": passed,
-                "initial_issues": reasons,
-                "regenerated": False,
-            }
-            if not passed:
-                revision_prompt = _build_deep_answer_revision_prompt(contract, reasons)
-                revision_messages = prompt_messages + [
-                    {"role": "assistant", "content": llm_text or "(empty response)"},
-                    {"role": "user", "content": revision_prompt},
-                ]
-                revised = await router.chat(
-                    messages=revision_messages,
-                    model=model,
-                    temperature=0.25,
-                    max_tokens=max_tokens,
-                )
-                revised_text = _normalize_llm_text(revised.text or "", max_chars=max_chars)
-                revised_passed, revised_reasons = _passes_deep_answer_quality_gate(revised_text, contract)
-                generation_attempts.append(
-                    {
-                        "attempt": 2,
-                        "model": revised.model or model,
-                        "usage": dict(revised.usage or {}),
-                        "response_text": revised_text,
-                    }
-                )
-                quality_gate.update(
-                    {
-                        "regenerated": True,
-                        "regenerated_passed": revised_passed,
-                        "regenerated_issues": revised_reasons,
-                    }
-                )
-                if revised_text:
-                    llm_text = revised_text
 
         if llm_text:
             result["chat_response"] = llm_text
@@ -430,7 +388,6 @@ async def _enrich_reflection_with_llm(
             "prompt_messages": prompt_messages,
             "input_packet": packet,
             "response_text": llm_text,
-            "quality_gate": quality_gate,
             "generation_attempts": generation_attempts,
             "generated_at": datetime.now(UTC).isoformat(),
         }
@@ -474,10 +431,22 @@ async def _build_reflection_llm_packet(
         topic_key=topic_key,
         deterministic=deterministic,
     )
-    latest_turn_context = await _load_latest_turn_context(
-        person_id=person_id,
-        topic_keywords=topic_keywords,
-    )
+    # Topic reflection is purely longitudinal — no conversation context needed
+    if mode == "topic_reflection":
+        latest_turn_context: dict[str, Any] = {
+            "latest_topic_user_message": "",
+            "recent_topic_user_turns": [],
+            "state_hints": {},
+            "effective_user_query": "",
+            "effective_user_query_source": "none",
+            "provided_user_query": None,
+        }
+    else:
+        latest_turn_context = await _load_latest_turn_context(
+            person_id=person_id,
+            topic_keywords=topic_keywords,
+        )
+
     provided_query = str(user_query or "").strip()
     recovered_query = str(latest_turn_context.get("latest_topic_user_message") or "").strip()
     if provided_query:
@@ -497,39 +466,32 @@ async def _build_reflection_llm_packet(
     if mode == "deep_answer":
         response_contract = {
             "voice": "friend, warm, direct",
-            "length_words": "180-280",
-            "min_words": 180,
-            "max_words": 280,
+            "length_words": "150-250",
+            "min_words": 150,
+            "max_words": 250,
             "max_questions": 1,
             "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
             "format": (
-                "five short labeled sections: Direct answer, History anchors, "
-                "Recommended path, Alternative path, Risk + next 7-day action"
+                "natural prose, weave 2-3 past moments naturally, "
+                "end with one suggestion and one honest question, no section headers"
             ),
-            "required_sections": [
-                "Direct answer",
-                "History anchors",
-                "Recommended path",
-                "Alternative path",
-                "Risk + next 7-day action",
-            ],
-            "anchor_count": "2-3",
             "priority": "current_query_first",
         }
     else:
         response_contract = {
             "voice": "friend, warm, direct",
-            "length_words": "80-140",
-            "min_words": 80,
-            "max_words": 140,
+            "length_words": "150-250",
+            "min_words": 150,
+            "max_words": 250,
             "max_questions": 1,
             "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
-            "format": "single short paragraph",
+            "format": (
+                "natural prose, trace the full arc from origin to now, "
+                "highlight what changed, what keeps returning, and what's unresolved, "
+                "end with one honest question"
+            ),
             "priority": "longitudinal_reflection",
         }
-    response_contract["detail_allowed"] = detail_allowed
-    response_contract["mirror_allowed"] = mirror_allowed
-    response_contract["nudge_policy"] = "grounded_next_step" if detail_allowed else "mirror_only"
 
     return {
         "topic_key": topic_key,
@@ -880,13 +842,15 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
     if not person_lines:
         person_lines.append("- No extra person-level signals beyond the topic history.")
 
-    current_query = str(query_info.get("text") or latest.get("effective_user_query") or "").strip()
-    query_source = str(query_info.get("source") or latest.get("effective_user_query_source") or "none").strip()
-    if not current_query:
-        if request_mode == "deep_answer":
+    if request_mode == "topic_reflection":
+        # Topic reflection is purely longitudinal — no current query
+        current_query = "Reflect on this topic's full arc."
+        query_source = "longitudinal"
+    else:
+        current_query = str(query_info.get("text") or latest.get("effective_user_query") or "").strip()
+        query_source = str(query_info.get("source") or latest.get("effective_user_query_source") or "none").strip()
+        if not current_query:
             current_query = "(No active question was provided; answer as a concise decision reflection grounded in topic history.)"
-        else:
-            current_query = "(No active user query; provide a concise longitudinal reflection.)"
 
     avoid = _clean_text_list(contract.get("avoid"), limit=5)
     response_lines = [
@@ -897,32 +861,31 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
     ]
     if avoid:
         response_lines.append(f"- Avoid: {', '.join(avoid)}")
-    detail_allowed = bool(contract.get("detail_allowed", surface.get("detail_allowed")))
-    mirror_allowed = bool(contract.get("mirror_allowed", surface.get("mirror_allowed", True)))
-    if detail_allowed:
-        response_lines.append("- Detail policy: detail is allowed; keep guidance grounded.")
-    else:
-        response_lines.append("- Detail policy: mirror-only; do not prescribe next steps.")
-    response_lines.append(
-        f"- Mirror allowed: {'yes' if mirror_allowed else 'no'}"
-    )
     if request_mode == "deep_answer":
-        section_labels = _clean_text_list(contract.get("required_sections"), limit=8)
-        if section_labels:
-            response_lines.append(f"- Required section labels: {', '.join(section_labels)}")
-        response_lines.append("- Use exactly 2-3 history anchors in the History anchors section.")
-        response_lines.append("- Value add: answer current query first, then recommendation, alternative, and one risk-aware 7-day checkpoint.")
+        response_lines.append("- Value add: answer current query first, weave in 2-3 past moments naturally, end with one suggestion and one honest question.")
     else:
         response_lines.append("- Value add: highlight what changed, what repeats, and one question to carry forward.")
 
+    if request_mode == "topic_reflection":
+        preamble = (
+            "Write one longitudinal reflection for the user.\n"
+            "Stay strictly within the topic context below.\n"
+            "Reflect on the full arc — what changed, what repeats, what's unresolved.\n"
+            "Do not import concerns from unrelated topics or turns.\n\n"
+            f"Mode: {request_mode}\n\n"
+        )
+    else:
+        preamble = (
+            "Write one deep reflection reply for the user.\n"
+            "Stay strictly within the topic context below.\n"
+            "Prioritize answering the current query directly.\n"
+            "Use history and person context as grounding, not as a detour.\n"
+            "Do not import concerns from unrelated topics or turns.\n\n"
+            f"Mode: {request_mode}\n"
+            f"Current query source: {query_source or 'none'}\n\n"
+        )
     user_prompt = (
-        "Write one deep reflection reply for the user.\n"
-        "Stay strictly within the topic context below.\n"
-        "Prioritize answering the current query directly.\n"
-        "Use history and person context as grounding, not as a detour.\n"
-        "Do not import concerns from unrelated topics or turns.\n\n"
-        f"Mode: {request_mode}\n"
-        f"Current query source: {query_source or 'none'}\n\n"
+        preamble +
         "History on this topic:\n"
         + "\n".join(history_lines)
         + "\n\nWhat we know about this person on this topic:\n"
@@ -994,68 +957,6 @@ def _normalize_llm_text(text: str, *, max_chars: int = 700) -> str:
         return ""
     return _truncate(value, max_chars)
 
-
-def _passes_deep_answer_quality_gate(text: str, contract: dict[str, Any]) -> tuple[bool, list[str]]:
-    output = str(text or "").strip()
-    issues: list[str] = []
-    if not output:
-        return False, ["empty_response"]
-
-    words = len(re.findall(r"\b[\w']+\b", output))
-    min_words = int(contract.get("min_words") or 180)
-    max_words = int(contract.get("max_words") or 280)
-    if words < min_words:
-        issues.append(f"too_short:{words}<{min_words}")
-    if words > max_words:
-        issues.append(f"too_long:{words}>{max_words}")
-
-    required_sections = _clean_text_list(contract.get("required_sections"), limit=12)
-    lower_output = output.lower()
-    for section in required_sections:
-        if not _has_required_section(lower_output, section):
-            issues.append(f"missing_section:{section}")
-
-    return (len(issues) == 0), issues
-
-
-def _build_deep_answer_revision_prompt(contract: dict[str, Any], issues: list[str]) -> str:
-    required_sections = _clean_text_list(contract.get("required_sections"), limit=12)
-    section_line = ", ".join(required_sections) if required_sections else (
-        "Direct answer, History anchors, Recommended path, Alternative path, Risk + next 7-day action"
-    )
-    issue_line = "; ".join(issues) if issues else "quality contract mismatch"
-    return (
-        "Revise the previous answer to satisfy the response contract exactly.\n"
-        f"Detected issues: {issue_line}\n"
-        f"Word range: {int(contract.get('min_words') or 180)}-{int(contract.get('max_words') or 280)}.\n"
-        f"Use these exact section labels with colons: {section_line}.\n"
-        "Keep it warm, direct, and grounded in the provided history/query.\n"
-        "Return plain text only."
-    )
-
-
-def _has_required_section(output_lower: str, section_label: str) -> bool:
-    label = str(section_label or "").lower().strip()
-    if not label:
-        return True
-    variants = {
-        label,
-        label.replace("+", "and"),
-        label.replace("+", "&"),
-        label.replace("+", "/"),
-        label.replace("7-day", "7 day"),
-    }
-    for variant in variants:
-        if f"{variant}:" in output_lower:
-            return True
-    if label == "risk + next 7-day action":
-        return bool(
-            re.search(
-                r"risk\s*(\+|and|&|/)\s*next\s*7[- ]day\s*action\s*:",
-                output_lower,
-            )
-        )
-    return False
 
 
 def _truncate(text: str, max_chars: int) -> str:
@@ -1199,27 +1100,12 @@ def _compose_chat_response(
     user_query: str | None,
 ) -> str:
     if mode == "deep_answer" and str(user_query or "").strip():
-        query = str(user_query or "").strip()
         fallback_lines = [
-            f"Direct answer: On your question, yes, prioritize the current decision around this thread and move with one explicit operating choice.",
-            (
-                "History anchors: "
-                + " ".join(
-                    part
-                    for part in [
-                        origin_story.strip(),
-                        key_pivots[0].strip() if key_pivots else "",
-                        current_stage.strip(),
-                    ]
-                    if part
-                )
-            ),
-            "Recommended path: Commit to one path for the next week and define a measurable checkpoint tied to this question.",
-            "Alternative path: Keep options open for one short validation sprint, but cap scope so it does not dilute focus.",
-            (
-                "Risk + next 7-day action: The biggest risk is drift through over-analysis. "
-                + (open_questions[0].strip() if open_questions else "Set one check-in question for day seven.")
-            ),
+            origin_story.strip(),
+            key_pivots[0].strip() if key_pivots else "",
+            current_stage.strip(),
+            "One path worth trying: commit to a single direction for the next week and define one measurable checkpoint.",
+            (open_questions[0].strip() if open_questions else "Set one check-in question for day seven."),
         ]
         return " ".join(line for line in fallback_lines if line.strip())
 

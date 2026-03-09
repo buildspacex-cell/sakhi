@@ -102,7 +102,9 @@ async def generate_reply(
     adaptive_context = None
     adaptive_prompt = None
     adaptive_error = None  # Track top-level errors
-    use_adaptive = os.getenv("SAKHI_USE_ADAPTIVE_RESPONSE", "1") == "1"
+    # MVP: disabled — continuity-first prompt in build_prompt() is the primary path.
+    # Adaptive pipeline was built for Ayurveda-first model; re-enable post-MVP.
+    use_adaptive = os.getenv("SAKHI_USE_ADAPTIVE_RESPONSE", "0") == "1"
 
     # Run adaptive pipeline, recall, and patterns IN PARALLEL
     # These are independent operations that each involve embedding/DB calls

@@ -285,18 +285,23 @@ async def test_load_latest_turn_context_filters_to_topic_user_turns(monkeypatch:
 
 
 @pytest.mark.asyncio
-async def test_build_reflection_llm_packet_respects_surface_policy(monkeypatch: pytest.MonkeyPatch):
+async def test_build_reflection_llm_packet_skips_turn_context_for_topic_reflection(monkeypatch: pytest.MonkeyPatch):
+    """Topic reflection should NOT call _load_latest_turn_context."""
+    turn_context_called = False
+    original_load = reflection._load_latest_turn_context
+
+    async def spy_load(*args, **kwargs):
+        nonlocal turn_context_called
+        turn_context_called = True
+        return await original_load(*args, **kwargs)
+
     monkeypatch.setattr(reflection, "_load_recent_topic_episodes", AsyncMock(return_value=[]))
     monkeypatch.setattr(
         reflection,
         "_build_delta_since_last_reflection",
         AsyncMock(return_value={"has_previous": False}),
     )
-    monkeypatch.setattr(
-        reflection,
-        "_load_latest_turn_context",
-        AsyncMock(return_value={"latest_topic_user_message": "", "recent_topic_user_turns": []}),
-    )
+    monkeypatch.setattr(reflection, "_load_latest_turn_context", spy_load)
 
     packet = await reflection._build_reflection_llm_packet(
         person_id="person-1",
@@ -316,10 +321,11 @@ async def test_build_reflection_llm_packet_respects_surface_policy(monkeypatch: 
         user_query=None,
     )
 
+    assert not turn_context_called, "_load_latest_turn_context should not be called for topic_reflection"
+
     assert packet["surface"]["detail_allowed"] is False
-    assert packet["response_contract"]["detail_allowed"] is False
-    assert packet["response_contract"]["mirror_allowed"] is True
-    assert packet["response_contract"]["nudge_policy"] == "mirror_only"
+    assert packet["response_contract"]["voice"] == "friend, warm, direct"
+    assert packet["response_contract"]["priority"] == "longitudinal_reflection"
 
 
 @pytest.mark.asyncio
@@ -363,10 +369,10 @@ async def test_build_reflection_llm_packet_prefers_provided_query(monkeypatch: p
     assert packet["current_query"]["source"] == "provided"
     assert packet["current_query"]["text"] == "Should we run MVP pilots before pre-seed?"
     assert packet["latest_turn_context"]["effective_user_query_source"] == "provided"
-    assert packet["response_contract"]["length_words"] == "180-280"
-    assert packet["response_contract"]["min_words"] == 180
-    assert packet["response_contract"]["max_words"] == 280
-    assert "Direct answer" in packet["response_contract"]["required_sections"]
+    assert packet["response_contract"]["length_words"] == "150-250"
+    assert packet["response_contract"]["min_words"] == 150
+    assert packet["response_contract"]["max_words"] == 250
+    assert "required_sections" not in packet["response_contract"]
 
 
 def test_build_deep_reflection_prompt_messages_uses_language_first_sections():
@@ -422,90 +428,6 @@ def test_build_deep_reflection_prompt_messages_uses_language_first_sections():
     assert "Response contract:" in user_prompt
     assert "Should continuity be our core offering?" in user_prompt
     assert "PACKET:" not in user_prompt
-
-
-@pytest.mark.asyncio
-async def test_enrich_reflection_with_llm_regenerates_deep_answer_on_contract_failure(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    class _FakeRouter:
-        def __init__(self):
-            self.calls: list[dict[str, object]] = []
-
-        async def chat(self, **kwargs):
-            self.calls.append(kwargs)
-            if len(self.calls) == 1:
-                return SimpleNamespace(
-                    text="Direct answer: yes. History anchors: stable thread.",
-                    model="gpt-4o-mini",
-                    provider="openai",
-                    usage={"total_tokens": 120},
-                )
-            return SimpleNamespace(
-                text=(
-                    "Direct answer: You should run the MVP with target users first and use that learning to shape pre-seed timing. "
-                    "This gives you better leverage, cleaner narrative confidence, and clearer proof points before asking investors to underwrite the next phase. "
-                    "History anchors: You began with a broad product thesis, then moved through validation pressure, and now keep returning to continuity as the strongest throughline. "
-                    "Across multiple updates, this thread remained the most coherent signal while external noise repeatedly tried to pull the team back into positioning debates. "
-                    "You have already seen that focused building creates calmer decisions than abstract strategy loops. "
-                    "Recommended path: Commit to a 4-week pilot with clear success criteria, capture weekly usage evidence, and use those findings to sharpen the core message before investor conversations. "
-                    "Set one owner for pilot operations, one owner for insight synthesis, and one fixed weekly checkpoint where you decide continue, adjust, or stop based on evidence. "
-                    "Alternative path: If runway pressure is immediate, raise a small pre-seed now but frame it around concrete pilot milestones and strict scope. "
-                    "This can work if you protect execution bandwidth and avoid expanding product narrative promises beyond what the pilot can actually validate in the next month. "
-                    "Risk + next 7-day action: The biggest risk is diluting focus by doing both halfway; in the next seven days, finalize pilot goals, recruit five users, define success thresholds, and book one review to decide go or adjust."
-                ),
-                model="gpt-4o-mini",
-                provider="openai",
-                usage={"total_tokens": 420},
-            )
-
-    monkeypatch.setattr(reflection, "get_router", lambda: _FakeRouter())
-    monkeypatch.setattr(
-        reflection,
-        "_build_reflection_llm_packet",
-        AsyncMock(
-            return_value={
-                "topic_key": "sakhi",
-                "request_mode": "deep_answer",
-                "response_contract": {
-                    "length_words": "180-280",
-                    "min_words": 180,
-                    "max_words": 280,
-                    "required_sections": [
-                        "Direct answer",
-                        "History anchors",
-                        "Recommended path",
-                        "Alternative path",
-                        "Risk + next 7-day action",
-                    ],
-                },
-                "arc_compact_global": {"current_stage": "deterministic core"},
-            }
-        ),
-    )
-
-    deterministic = {
-        "chat_response": "deterministic fallback",
-        "surface": {"detail_allowed": True, "mirror_allowed": True},
-    }
-    result = await reflection._enrich_reflection_with_llm(
-        person_id="person-1",
-        topic_key="sakhi",
-        arc_payload={"included_moments": []},
-        deterministic=deterministic,
-        mode="deep_answer",
-        user_query="Should we run MVP pilot first or raise pre-seed first?",
-    )
-
-    assert result["chat_response_source"] == "llm"
-    assert result["chat_response"].startswith("Direct answer:")
-    assert "Risk + next 7-day action:" in result["chat_response"]
-    quality_gate = result["llm_reflection"]["quality_gate"]
-    assert quality_gate["applied"] is True
-    assert quality_gate["initial_passed"] is False
-    assert quality_gate["regenerated"] is True
-    assert quality_gate["regenerated_passed"] is True
-    assert len(result["llm_reflection"]["generation_attempts"]) == 2
 
 
 @pytest.mark.asyncio
