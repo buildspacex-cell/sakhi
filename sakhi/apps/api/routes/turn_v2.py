@@ -225,6 +225,56 @@ class TurnIn(BaseModel):
     media_ids: list[str] | None = None  # Previously uploaded media IDs
 
 
+_DEEP_REFLECT_MIN_MOMENTS = 8
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _build_deep_reflect_signal(continuity_pack: dict[str, Any]) -> Dict[str, Any]:
+    surface = continuity_pack.get("surface") if isinstance(continuity_pack.get("surface"), dict) else {}
+    history = (
+        continuity_pack.get("history_compact")
+        if isinstance(continuity_pack.get("history_compact"), dict)
+        else {}
+    )
+    evidence = continuity_pack.get("evidence") if isinstance(continuity_pack.get("evidence"), list) else []
+
+    mirror_allowed = bool(surface.get("mirror_allowed", True))
+    detail_allowed = bool(surface.get("detail_allowed"))
+    selected_count = max(
+        _safe_int(history.get("element_count"), 0),
+        len(evidence),
+    )
+
+    ready = bool(
+        mirror_allowed
+        and detail_allowed
+        and selected_count >= _DEEP_REFLECT_MIN_MOMENTS
+    )
+    if not mirror_allowed:
+        reason = "mirror_blocked"
+    elif not detail_allowed:
+        reason = "detail_blocked"
+    elif selected_count < _DEEP_REFLECT_MIN_MOMENTS:
+        reason = "insufficient_depth"
+    else:
+        reason = "ready"
+
+    return {
+        "ready": ready,
+        "reason": reason,
+        "mirror_allowed": mirror_allowed,
+        "detail_allowed": detail_allowed,
+        "selected_count": selected_count,
+        "min_moments": _DEEP_REFLECT_MIN_MOMENTS,
+    }
+
+
 def _build_public_continuity_signal(continuity_pack: Any) -> Dict[str, Any] | None:
     """Expose a minimal, non-debug continuity summary safe for product clients."""
     if not isinstance(continuity_pack, dict):
@@ -236,6 +286,7 @@ def _build_public_continuity_signal(continuity_pack: Any) -> Dict[str, Any] | No
     return {
         "topic_key": topic_key,
         "topic_label": topic_label,
+        "deep_reflect": _build_deep_reflect_signal(continuity_pack),
     }
 
 

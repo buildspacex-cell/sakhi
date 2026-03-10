@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sakhi Glass Memory Lane — Adaptive Density Preview</title>
+    <style>
+      :root {
+        --bg: #040b18;
+        --panel: rgba(15, 25, 45, 0.88);
+        --panel-soft: rgba(22, 35, 62, 0.76);
+        --line: rgba(195, 214, 250, 0.22);
+        --text: #eef5ff;
+        --muted: #a7b8d9;
+        --chip: rgba(140, 176, 235, 0.2);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(620px 620px at 8% 18%, rgba(103, 209, 226, 0.15), transparent 66%),
+          radial-gradient(500px 500px at 94% 80%, rgba(238, 190, 116, 0.11), transparent 67%),
+          linear-gradient(160deg, #030916 0%, #061125 45%, #030815 100%);
+        padding: 24px;
+      }
+
+      .wrap {
+        max-width: 1380px;
+        margin: 0 auto;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 11px;
+        color: #8ba2cb;
+        margin-bottom: 8px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(24px, 2.9vw, 40px);
+        font-weight: 620;
+      }
+
+      .sub {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 16px;
+        max-width: 920px;
+        line-height: 1.46;
+      }
+
+      .modes {
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .mode-chip {
+        border-radius: 999px;
+        border: 1px solid rgba(201, 218, 246, 0.25);
+        background: var(--chip);
+        color: #d4e3ff;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .grid {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 18px;
+      }
+
+      .phone {
+        border-radius: 28px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(10, 18, 34, 0.95), rgba(8, 14, 27, 0.93));
+        box-shadow:
+          0 24px 52px rgba(0, 0, 0, 0.38),
+          inset 0 1px 0 rgba(229, 239, 255, 0.12);
+        overflow: hidden;
+      }
+
+      .phone-head {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(14, 24, 44, 0.98), rgba(12, 20, 37, 0.9));
+      }
+
+      .title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .note {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.38;
+      }
+
+      .screen {
+        padding: 12px;
+      }
+
+      .glass {
+        border-radius: 22px;
+        border: 1px solid rgba(205, 223, 255, 0.24);
+        background: var(--panel-soft);
+        padding: 12px;
+      }
+
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .lane-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .month-reflector {
+        border-radius: 999px;
+        border: 1px solid rgba(201, 220, 250, 0.35);
+        background: rgba(133, 173, 236, 0.16);
+        color: #dbe8ff;
+        font-size: 11px;
+        padding: 4px 10px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .lane-hint {
+        color: #9ab0d7;
+        font-size: 11px;
+        letter-spacing: 0.03em;
+      }
+
+      .thread {
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .count {
+        border-radius: 999px;
+        border: 1px solid rgba(200, 219, 251, 0.3);
+        padding: 4px 9px;
+        font-size: 11px;
+        color: #d0e1ff;
+      }
+
+      .lane {
+        display: grid;
+        grid-auto-flow: column;
+        gap: 10px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 8px;
+      }
+
+      .lane::-webkit-scrollbar {
+        height: 7px;
+      }
+
+      .lane::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: rgba(166, 188, 224, 0.36);
+      }
+
+      .stack-scroll {
+        margin-top: 8px;
+        max-height: 320px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .stack-scroll::-webkit-scrollbar {
+        width: 7px;
+      }
+
+      .stack-scroll::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: rgba(166, 188, 224, 0.36);
+      }
+
+      .month-block + .month-block {
+        margin-top: 10px;
+      }
+
+      .month-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        backdrop-filter: blur(10px);
+        border-radius: 999px;
+        border: 1px solid rgba(201, 220, 250, 0.35);
+        background: rgba(133, 173, 236, 0.24);
+        color: #dbe8ff;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        width: fit-content;
+        margin-bottom: 8px;
+      }
+
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .photo-card {
+        border-radius: 14px;
+        border: 1px solid rgba(198, 219, 252, 0.3);
+        background:
+          linear-gradient(160deg, rgba(89, 142, 218, 0.24), rgba(63, 91, 131, 0.22)),
+          rgba(28, 42, 66, 0.52);
+        min-height: 88px;
+        padding: 9px;
+      }
+
+      .photo-card .date {
+        display: inline-block;
+        border-radius: 999px;
+        border: 1px solid rgba(201, 220, 250, 0.34);
+        color: #d8e6ff;
+        font-size: 10px;
+        padding: 2px 7px;
+      }
+
+      .photo-card .excerpt {
+        margin: 7px 0 0;
+        font-size: 12px;
+        line-height: 1.26;
+      }
+
+      .moment {
+        scroll-snap-align: start;
+        border-radius: 20px;
+        border: 1px solid rgba(198, 219, 252, 0.3);
+        background:
+          linear-gradient(160deg, rgba(89, 142, 218, 0.24), rgba(63, 91, 131, 0.22)),
+          rgba(28, 42, 66, 0.52);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .moment .date {
+        display: inline-block;
+        border-radius: 999px;
+        border: 1px solid rgba(201, 220, 250, 0.34);
+        color: #d8e6ff;
+        font-size: 11px;
+        padding: 3px 8px;
+      }
+
+      .moment .excerpt {
+        margin: 10px 0 0;
+        color: var(--text);
+      }
+
+      .moment .meta {
+        position: absolute;
+        left: 12px;
+        bottom: 11px;
+        right: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        color: #b4c7e8;
+        font-size: 12px;
+      }
+
+      .detail {
+        margin-top: 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(207, 226, 255, 0.25);
+        background: rgba(14, 22, 39, 0.84);
+        padding: 10px 11px;
+      }
+
+      .detail-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .detail-copy {
+        margin-top: 6px;
+        font-size: 13px;
+        line-height: 1.42;
+        color: var(--muted);
+      }
+
+      .detail-obs {
+        margin-top: 9px;
+        border-left: 2px solid rgba(113, 201, 216, 0.68);
+        padding-left: 8px;
+        font-size: 12px;
+        color: #d6e5ff;
+      }
+
+      .cta {
+        margin-top: 10px;
+        border-radius: 13px;
+        border: 1px solid rgba(233, 207, 155, 0.44);
+        background: linear-gradient(180deg, rgba(97, 73, 42, 0.58), rgba(62, 45, 25, 0.56));
+        color: #ffe4ba;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 650;
+        padding: 9px;
+      }
+
+      .large .lane {
+        grid-auto-columns: 220px;
+      }
+
+      .large .moment {
+        min-height: 198px;
+        padding: 12px;
+      }
+
+      .large .moment .excerpt {
+        font-size: 19px;
+        line-height: 1.34;
+      }
+
+      .medium .lane {
+        grid-auto-columns: 164px;
+      }
+
+      .medium .moment {
+        min-height: 146px;
+        padding: 10px;
+      }
+
+      .medium .moment .excerpt {
+        font-size: 15px;
+        line-height: 1.32;
+      }
+
+      .compact .lane {
+        grid-auto-columns: 114px;
+      }
+
+      .compact .moment {
+        min-height: 94px;
+        padding: 9px;
+        border-radius: 16px;
+      }
+
+      .compact .moment .date {
+        font-size: 10px;
+        padding: 2px 7px;
+      }
+
+      .compact .moment .excerpt {
+        font-size: 12px;
+        line-height: 1.25;
+        margin-top: 8px;
+      }
+
+      .compact .moment .meta {
+        display: none;
+      }
+
+      .footer {
+        margin-top: 14px;
+        font-size: 13px;
+        color: #a1b6dc;
+      }
+
+      @media (max-width: 720px) {
+        body {
+          padding: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="eyebrow">Sakhi Reflection · Chosen Direction</div>
+      <h1>Glass Memory Lane with Adaptive Density</h1>
+      <p class="sub">
+        Same interaction flow, different density by story depth. This keeps the iPhoto feeling as moments grow:
+        large cards for short threads, medium cards for active threads, and a vertical stacked album for deep history.
+      </p>
+
+      <div class="modes">
+        <div class="mode-chip">1-8 moments: Large cards</div>
+        <div class="mode-chip">9-24 moments: Medium cards</div>
+        <div class="mode-chip">25+ moments: Vertical stacked photos + persistent detail panel</div>
+      </div>
+
+      <div class="grid">
+        <section class="phone large">
+          <header class="phone-head">
+            <h2 class="title">Focus Mode · Early Thread (6 moments)</h2>
+            <p class="note">More breathing room, richer excerpts, emotional read-first.</p>
+          </header>
+          <div class="screen">
+            <div class="glass">
+              <div class="row">
+                <div class="thread">Sakhi</div>
+                <div class="count">6 moments</div>
+              </div>
+              <div class="lane-head">
+                <div class="month-reflector">Nov 2025</div>
+                <div class="lane-hint">Swipe memories</div>
+              </div>
+              <div class="lane" data-lane="focus">
+                <article class="moment" data-month="Nov 2025">
+                  <span class="date">27 Nov</span>
+                  <p class="excerpt">Talked to Ravi. Unsure if this is passing frustration or real commitment.</p>
+                  <div class="meta"><span>founder alignment</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Nov 2025">
+                  <span class="date">30 Nov</span>
+                  <p class="excerpt">Rhythm clicked. It felt like lived pace, not feature speculation.</p>
+                  <div class="meta"><span>core framing</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Dec 2025">
+                  <span class="date">03 Dec</span>
+                  <p class="excerpt">Doubt surfaced around brittle behavior and narrative drift.</p>
+                  <div class="meta"><span>quality tension</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Dec 2025">
+                  <span class="date">07 Dec</span>
+                  <p class="excerpt">Core promise clarified: help people feel seen without repeating themselves.</p>
+                  <div class="meta"><span>product intent</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Dec 2025">
+                  <span class="date">13 Dec</span>
+                  <p class="excerpt">Execution lag showed up. Confidence dipped, but the direction stayed true.</p>
+                  <div class="meta"><span>energy dip</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Jan 2026">
+                  <span class="date">02 Jan</span>
+                  <p class="excerpt">First coherent week. Fewer ideas, more shipping, less narrative noise.</p>
+                  <div class="meta"><span>stability rise</span><span>↗</span></div>
+                </article>
+              </div>
+              <div class="detail">
+                <div class="detail-title">Moment detail</div>
+                <div class="detail-copy">Talked to Ravi. Unsure if this is passing frustration or real commitment.</div>
+                <div class="detail-obs">Sakhi noticed this as a founder-alignment checkpoint, not idea chatter.</div>
+              </div>
+              <div class="cta">Summarize Sakhi Story</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="phone medium">
+          <header class="phone-head">
+            <h2 class="title">Flow Mode · Active Thread (18 moments)</h2>
+            <p class="note">Balanced density: still readable, faster scanning.</p>
+          </header>
+          <div class="screen">
+            <div class="glass">
+              <div class="row">
+                <div class="thread">Sakhi</div>
+                <div class="count">18 moments</div>
+              </div>
+              <div class="lane-head">
+                <div class="month-reflector">Jan 2026</div>
+                <div class="lane-hint">Swipe memories</div>
+              </div>
+              <div class="lane" data-lane="flow">
+                <article class="moment" data-month="Jan 2026">
+                  <span class="date">11 Jan</span>
+                  <p class="excerpt">VC call stung. Shift from pitch to product proof.</p>
+                  <div class="meta"><span>validation pivot</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Jan 2026">
+                  <span class="date">19 Jan</span>
+                  <p class="excerpt">Stop chasing validation. Build the experience.</p>
+                  <div class="meta"><span>decision point</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Jan 2026">
+                  <span class="date">27 Jan</span>
+                  <p class="excerpt">User conversations showed continuity beats novelty for trust.</p>
+                  <div class="meta"><span>user signal</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Feb 2026">
+                  <span class="date">16 Feb</span>
+                  <p class="excerpt">Back to basics and coherence in execution.</p>
+                  <div class="meta"><span>return pattern</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Feb 2026">
+                  <span class="date">22 Feb</span>
+                  <p class="excerpt">Narrative confusion surfaced: feature list vs clear emotional promise.</p>
+                  <div class="meta"><span>message tension</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Mar 2026">
+                  <span class="date">03 Mar</span>
+                  <p class="excerpt">Deep reflect framed as premium direction.</p>
+                  <div class="meta"><span>product thesis</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Mar 2026">
+                  <span class="date">05 Mar</span>
+                  <p class="excerpt">Debug experience improved. Evidence transparency feels stronger.</p>
+                  <div class="meta"><span>trust UX</span><span>↗</span></div>
+                </article>
+                <article class="moment" data-month="Mar 2026">
+                  <span class="date">08 Mar</span>
+                  <p class="excerpt">Decision settled: reflection lives in profile, chat stays clean.</p>
+                  <div class="meta"><span>IA decision</span><span>↗</span></div>
+                </article>
+              </div>
+              <div class="detail">
+                <div class="detail-title">Moment detail</div>
+                <div class="detail-copy">VC call stung. Shift from pitch to product proof.</div>
+                <div class="detail-obs">Sakhi noticed this as a pivot: approval pressure to execution clarity.</div>
+              </div>
+              <div class="cta">Summarize Sakhi Story</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="phone compact">
+          <header class="phone-head">
+            <h2 class="title">Atlas Mode · Deep Thread (35+ moments)</h2>
+            <p class="note">iPhoto-like overview: vertical photo stack with sticky month markers.</p>
+          </header>
+          <div class="screen">
+            <div class="glass">
+              <div class="row">
+                <div class="thread">Sakhi</div>
+                <div class="count">35 moments</div>
+              </div>
+              <div class="lane-head">
+                <div class="lane-hint">Scroll memories</div>
+                <div class="lane-hint">Month stays pinned</div>
+              </div>
+              <div class="stack-scroll">
+                <section class="month-block">
+                  <div class="month-sticky">Nov 2025</div>
+                  <div class="photo-grid">
+                    <article class="photo-card">
+                      <span class="date">27 Nov</span>
+                      <p class="excerpt">Origin thread starts.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">30 Nov</span>
+                      <p class="excerpt">Rhythm framing.</p>
+                    </article>
+                  </div>
+                </section>
+                <section class="month-block">
+                  <div class="month-sticky">Dec 2025</div>
+                  <div class="photo-grid">
+                    <article class="photo-card">
+                      <span class="date">03 Dec</span>
+                      <p class="excerpt">RAG tension.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">07 Dec</span>
+                      <p class="excerpt">Core promise.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">13 Dec</span>
+                      <p class="excerpt">Execution lag.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">19 Dec</span>
+                      <p class="excerpt">Direction holds.</p>
+                    </article>
+                  </div>
+                </section>
+                <section class="month-block">
+                  <div class="month-sticky">Jan 2026</div>
+                  <div class="photo-grid">
+                    <article class="photo-card">
+                      <span class="date">11 Jan</span>
+                      <p class="excerpt">Validation tension.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">13 Jan</span>
+                      <p class="excerpt">Founder advice.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">19 Jan</span>
+                      <p class="excerpt">Execution commitment.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">27 Jan</span>
+                      <p class="excerpt">Usage signal.</p>
+                    </article>
+                  </div>
+                </section>
+                <section class="month-block">
+                  <div class="month-sticky">Feb 2026</div>
+                  <div class="photo-grid">
+                    <article class="photo-card">
+                      <span class="date">16 Feb</span>
+                      <p class="excerpt">Return to coherence.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">22 Feb</span>
+                      <p class="excerpt">Message tension.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">25 Feb</span>
+                      <p class="excerpt">Narrative simplification.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">28 Feb</span>
+                      <p class="excerpt">Prompt cleanup.</p>
+                    </article>
+                  </div>
+                </section>
+                <section class="month-block">
+                  <div class="month-sticky">Mar 2026</div>
+                  <div class="photo-grid">
+                    <article class="photo-card">
+                      <span class="date">03 Mar</span>
+                      <p class="excerpt">Deterministic core.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">05 Mar</span>
+                      <p class="excerpt">Narrative alignment.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">06 Mar</span>
+                      <p class="excerpt">Prompt tune-up.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">08 Mar</span>
+                      <p class="excerpt">Reflection IA set.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">09 Mar</span>
+                      <p class="excerpt">Release prep.</p>
+                    </article>
+                    <article class="photo-card">
+                      <span class="date">10 Mar</span>
+                      <p class="excerpt">Cohort readiness.</p>
+                    </article>
+                  </div>
+                </section>
+              </div>
+              <div class="detail">
+                <div class="detail-title">Selected moment · 11 Jan</div>
+                <div class="detail-copy">VC feedback was blunt. Confidence dropped, but it forced a sharper build path.</div>
+                <div class="detail-obs">Sakhi noticed this as the strongest pivot in the full thread history.</div>
+              </div>
+              <div class="cta">Summarize Sakhi Story</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <p class="footer">
+        Proposed default for Vidhya now: <strong>Atlas Mode</strong> (35 moments) with vertical stacked photos and a persistent detail panel.
+      </p>
+    </div>
+    <script>
+      (() => {
+        const panes = Array.from(document.querySelectorAll(".glass"));
+
+        const updateReflector = (lane, reflector) => {
+          const cards = Array.from(lane.querySelectorAll(".moment"));
+          if (!cards.length) return;
+          const laneRect = lane.getBoundingClientRect();
+          const targetX = laneRect.left + laneRect.width * 0.45;
+          let closest = cards[0];
+          let best = Infinity;
+
+          for (const card of cards) {
+            const rect = card.getBoundingClientRect();
+            const center = rect.left + rect.width * 0.5;
+            const distance = Math.abs(center - targetX);
+            if (distance < best) {
+              best = distance;
+              closest = card;
+            }
+          }
+
+          const month = closest.getAttribute("data-month");
+          if (month) reflector.textContent = month;
+        };
+
+        for (const pane of panes) {
+          const lane = pane.querySelector(".lane");
+          const reflector = pane.querySelector(".month-reflector");
+          if (!lane || !reflector) continue;
+
+          let raf = 0;
+          const onScroll = () => {
+            if (raf) cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(() => updateReflector(lane, reflector));
+          };
+
+          lane.addEventListener("scroll", onScroll, { passive: true });
+          window.addEventListener("resize", onScroll);
+          onScroll();
+        }
+      })();
+    </script>
+  </body>
+</html>

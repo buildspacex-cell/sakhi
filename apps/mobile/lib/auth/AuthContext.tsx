@@ -6,6 +6,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as SecureStore from "expo-secure-store";
 import { supabase } from "../supabase";
+import { config } from "../config";
 
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -48,12 +49,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
+  const devBypassPersonId = (config.devBypassPersonId || "").trim();
+  const releaseBypassPersonId = (config.releaseBypassPersonId || "").trim();
+  const releaseBypassEnabled = (config.releaseBypassEnabled || "").trim() === "1";
+  const isDevBypassActive = __DEV__ && !!devBypassPersonId;
+  const isReleaseBypassActive =
+    !__DEV__ && releaseBypassEnabled && !!releaseBypassPersonId;
+  const activeBypassPersonId = isDevBypassActive ? devBypassPersonId : releaseBypassPersonId;
+  const isBypassActive = isDevBypassActive || isReleaseBypassActive;
 
   useEffect(() => {
     if (Platform.OS === "ios") {
       AppleAuthentication.isAvailableAsync().then(setIsAppleAuthAvailable);
     }
   }, []);
+
+  // Development-only auth bypass for end-to-end profile testing in iOS simulator.
+  useEffect(() => {
+    if (!isBypassActive) return;
+    setSession(null);
+    setUser({
+      id: activeBypassPersonId,
+      email: "dev-bypass@sakhi.local",
+      fullName: "Dev Profile",
+      personId: activeBypassPersonId,
+    });
+    setIsLoading(false);
+  }, [activeBypassPersonId, isBypassActive]);
 
   const transformUser = useCallback((supabaseUser: User | null): AuthUser | null => {
     if (!supabaseUser) return null;
@@ -99,6 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // tokens, token refresh, and no-session equally), so we don't need a separate
   // getSession() call that can race/conflict.
   useEffect(() => {
+    if (isBypassActive) return;
+
     let mounted = true;
     let initialResolved = false;
 
@@ -165,7 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [transformUser, fetchAndCachePersonId]);
+  }, [transformUser, fetchAndCachePersonId, isBypassActive]);
 
   // Sign in with Google
   const signInWithGoogle = useCallback(async () => {
@@ -274,12 +298,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign out
   const signOut = useCallback(async () => {
+    if (isBypassActive) {
+      return;
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     setUser(null);
     setSession(null);
     try { await SecureStore.deleteItemAsync(PERSON_ID_KEY); } catch {}
-  }, []);
+  }, [isBypassActive]);
 
   // Refresh session
   const refreshSession = useCallback(async () => {
@@ -292,7 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     isLoading,
-    isAuthenticated: !!session && !!user,
+    isAuthenticated: isBypassActive ? !!user?.personId : !!session && !!user,
     isAppleAuthAvailable,
     signInWithGoogle,
     signInWithApple,

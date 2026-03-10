@@ -36,6 +36,23 @@ function getConfig(key: string): string {
   return "";
 }
 
+function getOptionalConfig(key: string): string {
+  const envKey = `EXPO_PUBLIC_${key.toUpperCase()}`;
+  const snakeKey = key.replace(/([A-Z])/g, "_$1").toUpperCase();
+  const fullEnvKey = `EXPO_PUBLIC_${snakeKey}`;
+
+  if (process.env[envKey]) return process.env[envKey] as string;
+  if (process.env[fullEnvKey]) return process.env[fullEnvKey] as string;
+
+  const extra = Constants.expoConfig?.extra;
+  if (extra?.[key]) return extra[key] as string;
+
+  const camelKey = key.toLowerCase().replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+  if (extra?.[camelKey]) return extra[camelKey] as string;
+
+  return "";
+}
+
 // Configuration values
 export const config = {
   get supabaseUrl() {
@@ -46,6 +63,18 @@ export const config = {
   },
   get backendUrl() {
     return getConfig("BACKEND_URL");
+  },
+  get devBypassPersonId() {
+    return getOptionalConfig("DEV_BYPASS_PERSON_ID");
+  },
+  get releaseBypassPersonId() {
+    return getOptionalConfig("RELEASE_BYPASS_PERSON_ID");
+  },
+  get releaseBypassEnabled() {
+    return getOptionalConfig("RELEASE_BYPASS_ENABLED");
+  },
+  get easBuildProfile() {
+    return getOptionalConfig("EAS_BUILD_PROFILE");
   },
   get openaiApiKey() {
     return process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
@@ -59,6 +88,10 @@ if (__DEV__) {
       supabaseUrl: config.supabaseUrl ? "SET" : "NOT SET",
       supabaseAnonKey: config.supabaseAnonKey ? "SET (hidden)" : "NOT SET",
       backendUrl: config.backendUrl,
+      devBypassPersonId: config.devBypassPersonId ? "SET" : "NOT SET",
+      releaseBypassEnabled: config.releaseBypassEnabled || "0",
+      releaseBypassPersonId: config.releaseBypassPersonId ? "SET" : "NOT SET",
+      easBuildProfile: config.easBuildProfile || "unknown",
     });
   } catch (e) {
     console.error("Config loading failed:", e);

@@ -25,24 +25,52 @@ interface Message {
   kind?: "normal" | "deep" | "system";
 }
 
-interface ContinuityPackDebug {
+interface DeepReflectSignal {
+  ready: boolean;
+  reason: string;
+  mirror_allowed: boolean;
+  detail_allowed: boolean;
+  selected_count: number;
+  min_moments: number;
+}
+
+interface ContinuitySignal {
   topic_key: string;
   topic_label?: string;
+  deep_reflect?: DeepReflectSignal;
 }
 
 const BACKEND_URL = config.backendUrl || "https://sakhi-production-930f.up.railway.app";
 const DEEP_POLL_INTERVAL_MS = 2000;
 const DEEP_POLL_MAX_ATTEMPTS = 70;
 
-function toContinuityPack(raw: unknown): ContinuityPackDebug | null {
+function toNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function toContinuitySignal(raw: unknown): ContinuitySignal | null {
   if (!raw || typeof raw !== "object") return null;
   const data = raw as Record<string, unknown>;
   const topicKey = String(data.topic_key || "").trim();
   if (!topicKey) return null;
-  const topicLabel = String(data.topic_label || "").trim();
+
+  const deepRaw = data.deep_reflect;
+  const deep = deepRaw && typeof deepRaw === "object" ? (deepRaw as Record<string, unknown>) : null;
+
   return {
     topic_key: topicKey,
-    topic_label: topicLabel || undefined,
+    topic_label: String(data.topic_label || "").trim() || undefined,
+    deep_reflect: deep
+      ? {
+          ready: Boolean(deep.ready),
+          reason: String(deep.reason || "unknown").trim() || "unknown",
+          mirror_allowed: Boolean(deep.mirror_allowed),
+          detail_allowed: Boolean(deep.detail_allowed),
+          selected_count: toNumber(deep.selected_count, 0),
+          min_moments: Math.max(1, toNumber(deep.min_moments, 8)),
+        }
+      : undefined,
   };
 }
 
@@ -54,7 +82,7 @@ function formatDeepReflectionResult(payload: Record<string, unknown>): string {
   }
 
   const topicLabel = String(result.topic_label || payload.topic_key || "this thread");
-  const lines: string[] = [`Deep reflection on ${topicLabel}:`];
+  const lines: string[] = [`Whole story on ${topicLabel}:`];
 
   const originStory = String(result.origin_story || "").trim();
   const keyPivots = Array.isArray(result.key_pivots) ? result.key_pivots : [];
@@ -62,9 +90,9 @@ function formatDeepReflectionResult(payload: Record<string, unknown>): string {
 
   if (originStory) lines.push(`Start: ${originStory}`);
   if (typeof keyPivots[0] === "string" && keyPivots[0].trim()) {
-    lines.push(`Pivot: ${keyPivots[0].trim()}`);
+    lines.push(`Shift: ${keyPivots[0].trim()}`);
   }
-  if (currentStage) lines.push(`Current: ${currentStage}`);
+  if (currentStage) lines.push(`Now: ${currentStage}`);
 
   return lines.join("\n");
 }
@@ -83,7 +111,7 @@ export default function ConversationScreen() {
   const [isSending, setIsSending] = useState(false);
   const [isRunningDeepAnswer, setIsRunningDeepAnswer] = useState(false);
   const [deepReflectionStatus, setDeepReflectionStatus] = useState("");
-  const [activeContinuityPack, setActiveContinuityPack] = useState<ContinuityPackDebug | null>(null);
+  const [activeContinuitySignal, setActiveContinuitySignal] = useState<ContinuitySignal | null>(null);
   const [latestUserMessage, setLatestUserMessage] = useState("");
 
   const personId = user?.personId || "";
@@ -105,7 +133,32 @@ export default function ConversationScreen() {
   };
 
   const displayName = user?.fullName?.split(" ")[0] || "";
-  const deepAnswerReady = Boolean(activeContinuityPack?.topic_key && latestUserMessage.trim());
+  const deepReflectSignal = activeContinuitySignal?.deep_reflect;
+  const deepSelectedCount = deepReflectSignal?.selected_count || 0;
+  const deepMinMoments = deepReflectSignal?.min_moments || 8;
+  const deepThreadLabel =
+    activeContinuitySignal?.topic_label || activeContinuitySignal?.topic_key || "this thread";
+  const hasDeepQuery = latestUserMessage.trim().length > 0;
+  const deepAnswerReady = Boolean(activeContinuitySignal?.topic_key && deepReflectSignal?.ready && hasDeepQuery);
+  const deepStatusHint = (() => {
+    if (!activeContinuitySignal?.topic_key) {
+      return "Deep Reflect will appear when this chat forms a clear thread.";
+    }
+    if (!hasDeepQuery) {
+      return "Send one message to set your current question.";
+    }
+    const reason = deepReflectSignal?.reason || "insufficient_depth";
+    if (reason === "ready") {
+      return `Deep Reflect is ready for ${deepThreadLabel}.`;
+    }
+    if (reason === "mirror_blocked") {
+      return "Deep Reflect is temporarily unavailable while this thread is still stabilizing.";
+    }
+    if (reason === "detail_blocked") {
+      return "Deep Reflect will unlock once this thread has clearer detail.";
+    }
+    return `Deep Reflect unlocks once your story runs long enough to draw from (${deepSelectedCount}/${deepMinMoments}).`;
+  })();
 
   const ensureContinuityPolicyEnabled = useCallback(async () => {
     if (!personId) return;
@@ -217,8 +270,7 @@ export default function ConversationScreen() {
 
       if (res.ok) {
         const data = await res.json();
-        const pack = toContinuityPack(data.continuity);
-        setActiveContinuityPack(pack);
+        setActiveContinuitySignal(toContinuitySignal(data.continuity));
 
         if (data.reply) {
           const sakhiMessage: Message = {
@@ -263,7 +315,7 @@ export default function ConversationScreen() {
   }, [authToken, inputText, personId]);
 
   const handleRunDeepAnswer = useCallback(async () => {
-    if (!personId || !activeContinuityPack?.topic_key || !latestUserMessage.trim() || isRunningDeepAnswer) {
+    if (!personId || !activeContinuitySignal?.topic_key || !hasDeepQuery || isRunningDeepAnswer) {
       return;
     }
 
@@ -275,7 +327,7 @@ export default function ConversationScreen() {
       {
         id: pendingId,
         role: "sakhi",
-        content: "Deep answer is reading your full topic history...",
+        content: `Deep Reflect is reading the full ${deepThreadLabel} story...`,
         timestamp: new Date(),
         kind: "system",
       },
@@ -294,10 +346,10 @@ export default function ConversationScreen() {
         },
         body: JSON.stringify({
           person_id: personId,
-          topic_key: activeContinuityPack.topic_key,
+          topic_key: activeContinuitySignal.topic_key,
           window: "3650d",
           mode: "deep_answer",
-          user_query: latestUserMessage,
+          user_query: latestUserMessage.trim(),
         }),
       });
 
@@ -331,7 +383,7 @@ export default function ConversationScreen() {
           {
             id: `deep-fail-${Date.now()}`,
             role: "sakhi",
-            content: "Deep answer did not complete this time. Please try again.",
+            content: "Deep Reflect did not complete this time. Please try again.",
             timestamp: new Date(),
             kind: "system",
           },
@@ -344,7 +396,7 @@ export default function ConversationScreen() {
         {
           id: `deep-error-${Date.now()}`,
           role: "sakhi",
-          content: "Could not run deep answer right now.",
+          content: "Could not run Deep Reflect right now.",
           timestamp: new Date(),
           kind: "system",
         },
@@ -354,7 +406,16 @@ export default function ConversationScreen() {
       setIsRunningDeepAnswer(false);
       setDeepReflectionStatus("");
     }
-  }, [activeContinuityPack?.topic_key, authToken, isRunningDeepAnswer, latestUserMessage, personId, pollDeepAnswer]);
+  }, [
+    activeContinuitySignal?.topic_key,
+    authToken,
+    deepThreadLabel,
+    hasDeepQuery,
+    isRunningDeepAnswer,
+    latestUserMessage,
+    personId,
+    pollDeepAnswer,
+  ]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -406,14 +467,15 @@ export default function ConversationScreen() {
           {!hasMessages ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyPrompt}>A clear space to think out loud.</Text>
-              <Text style={styles.emptyHint}>Send one message, then run Deep Answer for a whole-story lens.</Text>
+              <Text style={styles.emptyHint}>Start anywhere. Sakhi keeps context as you talk.</Text>
+              <Text style={styles.emptyHint}>Deep Reflect unlocks once your story runs long enough to draw from.</Text>
             </View>
           ) : (
             <>
               {messages.map((msg) => {
                 const isUser = msg.role === "user";
-                const isDeep = msg.kind === "deep";
                 const isSystem = msg.kind === "system";
+                const isDeep = msg.kind === "deep";
 
                 return (
                   <View
@@ -422,20 +484,20 @@ export default function ConversationScreen() {
                       styles.bubble,
                       isUser
                         ? styles.userBubble
-                        : isDeep
-                          ? styles.deepBubble
-                          : isSystem
+                        : isSystem
                             ? styles.systemBubble
-                            : styles.sakhiBubble,
+                            : isDeep
+                                ? styles.deepBubble
+                                : styles.sakhiBubble,
                     ]}
                   >
-                    {!isUser && isDeep && <Text style={styles.deepBadge}>Sakhi · Deep Answer</Text>}
+                    {isDeep ? <Text style={styles.deepBadge}>Whole Story</Text> : null}
                     <Text style={[styles.bubbleText, !isUser && styles.sakhiBubbleText]}>{msg.content}</Text>
                   </View>
                 );
               })}
-              {(isSending || isRunningDeepAnswer) && (
-                <View style={[styles.bubble, styles.systemBubble, { opacity: 0.7 }]}> 
+              {isSending && (
+                <View style={[styles.bubble, styles.systemBubble, { opacity: 0.7 }]}>
                   <ActivityIndicator size="small" color={palette.muted} />
                 </View>
               )}
@@ -444,28 +506,38 @@ export default function ConversationScreen() {
         </ScrollView>
 
         <View style={styles.inputArea}>
-          <View style={styles.deepBar}>
-            <View style={styles.deepTopicPill}>
-              <Text style={styles.deepTopicText}>
-                {activeContinuityPack?.topic_key
-                  ? `Thread: ${activeContinuityPack.topic_label || activeContinuityPack.topic_key}`
-                  : "Thread unlocks after the first reply"}
-              </Text>
-            </View>
-            <Pressable
-              style={[
-                styles.deepAction,
-                (!deepAnswerReady || isRunningDeepAnswer) && styles.deepActionDisabled,
-              ]}
-              onPress={handleRunDeepAnswer}
-              disabled={!deepAnswerReady || isRunningDeepAnswer}
-            >
-              <Text style={styles.deepActionText}>
-                {isRunningDeepAnswer ? `Deep ${deepReflectionStatus || "running"}` : "Run Deep"}
-              </Text>
-            </Pressable>
-          </View>
-
+          {hasMessages && activeContinuitySignal?.topic_key ? (
+            <>
+              <View style={styles.deepActionRow}>
+                <View style={[styles.deepInfoPill, deepAnswerReady && styles.deepInfoPillReady]}>
+                  <Text style={styles.deepInfoText}>{deepStatusHint}</Text>
+                </View>
+                <Pressable
+                  style={[
+                    styles.deepRunButton,
+                    (!deepAnswerReady || isRunningDeepAnswer) && styles.deepRunButtonDisabled,
+                  ]}
+                  onPress={() => void handleRunDeepAnswer()}
+                  disabled={!deepAnswerReady || isRunningDeepAnswer}
+                >
+                  {isRunningDeepAnswer ? (
+                    <View style={styles.deepRunButtonContent}>
+                      <ActivityIndicator size="small" color="#f5dcb2" />
+                      <Text style={styles.deepRunButtonText}>Reading...</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.deepRunButtonContent}>
+                      <Ionicons name="sparkles" size={14} color="#ffe6bf" />
+                      <Text style={styles.deepRunButtonText}>Run Deep</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+              {deepReflectionStatus ? (
+                <Text style={styles.deepStatusText}>Deep Reflect status: {deepReflectionStatus}</Text>
+              ) : null}
+            </>
+          ) : null}
           <View style={styles.inputRow}>
             <TextInput
               style={styles.textInput}
@@ -476,13 +548,13 @@ export default function ConversationScreen() {
               onSubmitEditing={sendMessage}
               returnKeyType="send"
               multiline={false}
-              editable={!isSending && !isRunningDeepAnswer}
+              editable={!isSending}
             />
             {inputText.trim().length > 0 && (
               <Pressable
-                style={[styles.sendButton, (isSending || isRunningDeepAnswer) && styles.sendButtonDisabled]}
+                style={[styles.sendButton, isSending && styles.sendButtonDisabled]}
                 onPress={sendMessage}
-                disabled={isSending || isRunningDeepAnswer}
+                disabled={isSending}
               >
                 <Ionicons name="arrow-up" size={20} color="#ffffff" />
               </Pressable>
@@ -501,7 +573,6 @@ const palette = {
   subtle: "#7d8899",
   faint: "#5a6372",
   accent: "#349ba9",
-  deepAccent: "#d4b06e",
   cardBg: "rgba(21, 28, 40, 0.74)",
   border: "rgba(228, 236, 250, 0.14)",
 };
@@ -635,27 +706,23 @@ const styles = StyleSheet.create({
   },
   deepBubble: {
     alignSelf: "flex-start",
-    maxWidth: "92%",
-    backgroundColor: "rgba(212, 176, 110, 0.14)",
-    borderColor: "rgba(242, 209, 147, 0.42)",
+    backgroundColor: "rgba(78, 56, 24, 0.58)",
+    borderColor: "rgba(233, 193, 128, 0.4)",
     borderBottomLeftRadius: 8,
-    paddingTop: 10,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+  },
+  deepBadge: {
+    color: "#f0d5a6",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    marginBottom: 6,
+    textTransform: "uppercase",
   },
   systemBubble: {
     alignSelf: "flex-start",
     backgroundColor: "rgba(78, 89, 110, 0.32)",
     borderColor: "rgba(170, 186, 212, 0.2)",
     borderBottomLeftRadius: 8,
-  },
-  deepBadge: {
-    color: "#f3d3a1",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-    marginBottom: 8,
-    textTransform: "uppercase",
   },
   bubbleText: {
     fontSize: 15,
@@ -670,43 +737,69 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 28,
+    gap: 8,
     borderTopWidth: 1,
     borderTopColor: palette.border,
   },
-  deepBar: {
+  deepActionRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
     gap: 8,
   },
-  deepTopicPill: {
+  deepInfoPill: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  deepTopicText: {
-    color: palette.muted,
-    fontSize: 12,
-  },
-  deepAction: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(242, 209, 147, 0.45)",
-    backgroundColor: "rgba(212, 176, 110, 0.2)",
+    borderColor: "rgba(178, 197, 226, 0.24)",
+    backgroundColor: "rgba(20, 31, 50, 0.72)",
+    paddingVertical: 10,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    minHeight: 42,
+    justifyContent: "center",
   },
-  deepActionDisabled: {
-    opacity: 0.55,
+  deepInfoPillReady: {
+    borderColor: "rgba(225, 190, 116, 0.44)",
+    backgroundColor: "rgba(85, 66, 35, 0.46)",
   },
-  deepActionText: {
-    color: "#ffe2b8",
+  deepInfoText: {
+    color: "#c6d3ea",
     fontSize: 12,
+    lineHeight: 17,
+  },
+  deepRunButton: {
+    minWidth: 116,
+    height: 46,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(243, 214, 164, 0.58)",
+    backgroundColor: "rgba(117, 86, 42, 0.62)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    shadowColor: "#c98f45",
+    shadowOpacity: 0.32,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  deepRunButtonDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0.08,
+  },
+  deepRunButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  deepRunButtonText: {
+    color: "#fce7c3",
+    fontSize: 14,
     fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  deepStatusText: {
+    color: palette.subtle,
+    fontSize: 11,
+    paddingHorizontal: 4,
   },
   inputRow: {
     flexDirection: "row",

@@ -176,6 +176,17 @@ Workers run in background. Faster responses, requires Redis.
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server-side) |
 | `NEXT_PUBLIC_API_BASE` | Yes | Python API URL (default: `http://localhost:8000`) |
 
+### Expo Mobile (`apps/mobile/.env.local`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `EXPO_PUBLIC_BACKEND_URL` | Yes | Python API URL reachable by simulator/device |
+| `EXPO_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
+| `EXPO_PUBLIC_DEV_BYPASS_PERSON_ID` | Optional (dev only) | Bypass mobile login in `__DEV__` and force a specific `person_id` for end-to-end profile testing (works with backend dev mode / `SAKHI_ENFORCE_USER_BINDING=0`) |
+| `EXPO_PUBLIC_RELEASE_BYPASS_ENABLED` | Optional (internal TestFlight only) | Enables release fixed-profile bypass in non-dev builds (Fastlane/EAS) |
+| `EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID` | Optional (internal TestFlight only) | Fixed `person_id` used by release bypass |
+
 ### Python API (`.env` in root)
 
 | Variable | Required | Description |

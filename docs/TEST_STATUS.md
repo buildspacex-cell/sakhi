@@ -1,6 +1,6 @@
 # Test Status Tracking
 
-> Last Updated: 2026-03-08
+> Last Updated: 2026-03-09
 >
 > Run `make test-coverage` to regenerate this report.
 
@@ -156,10 +156,11 @@ sakhi/tests/
 
 ---
 
-## Recent Additions (2026-03-08)
+## Recent Additions (2026-03-09)
 
 | Area | Status | Test Files | Notes |
 |------|--------|------------|-------|
+| Turn v2 continuity product signal | ✅ | `unit/routes/test_turn_v2_continuity_signal.py` | Verifies non-debug `/v2/turn` continuity payload includes `deep_reflect` readiness contract (`ready`, `reason`, `mirror_allowed`, `detail_allowed`, `selected_count`, `min_moments`) |
 | Continuity service | ✅ | `unit/services/test_continuity_service.py`, `unit/services/test_continuity_chat.py`, `unit/services/test_continuity_reflection.py` | Policy gating, arc payload shaping, continuity pack generation (including compact history stats/phase path/anchors, qualitative arc summary with mirror-only mode, and decision ledger with acknowledged Sakhi suggestions), deep reflection job lifecycle, deterministic+LLM response persistence contract, window-write fallback persistence, topic-drift filtering, surface-policy mirror-only packet contract, deep-answer mode query preference over reconstructed turn context, and deep-answer quality-gate regeneration coverage |
 | Monitoring / on-call sink | ✅ | `unit/services/test_monitoring.py` | Webhook alert payload shaping, dedupe window behavior, disabled no-op behavior, sync exception-report bridge, burst-threshold alerts (auth failures, crash loops, export/delete spikes), and normalized break-glass alert events |
 | Observability redaction | ✅ | `unit/services/test_observability_redaction.py`, `unit/services/test_monitoring.py` | Redacts sensitive free-text keys in telemetry/monitoring payloads and strips inline secret/token data from formatted log/alert strings |

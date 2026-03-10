@@ -21,7 +21,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.buildspacex.sakhi",
-      buildNumber: "11",
+      buildNumber: "13",
       usesAppleSignIn: true,
       infoPlist: {
         CFBundleURLTypes: [
@@ -78,6 +78,10 @@ module.exports = {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL,
+      devBypassPersonId: process.env.EXPO_PUBLIC_DEV_BYPASS_PERSON_ID,
+      releaseBypassPersonId: process.env.EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID,
+      releaseBypassEnabled: process.env.EXPO_PUBLIC_RELEASE_BYPASS_ENABLED,
+      easBuildProfile: process.env.EAS_BUILD_PROFILE,
       eas: {
         projectId: "065334a1-741a-47fe-8796-63b9d91faa66",
       },

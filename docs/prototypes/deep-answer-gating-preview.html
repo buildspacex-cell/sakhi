@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sakhi Deep Answer Gate Preview</title>
+    <style>
+      :root {
+        --bg: #020816;
+        --panel: rgba(10, 18, 34, 0.86);
+        --panel-soft: rgba(20, 31, 54, 0.72);
+        --text: #eef3ff;
+        --muted: #a4b0c9;
+        --faint: #7583a0;
+        --line: rgba(180, 196, 231, 0.2);
+        --accent: #56c6d6;
+        --deep: #d9b97a;
+        --ok: #58d094;
+        --warn: #f0b35f;
+        --bad: #e38a8a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(420px 420px at 12% 22%, rgba(79, 196, 214, 0.18), transparent 60%),
+          radial-gradient(360px 360px at 90% 80%, rgba(224, 183, 107, 0.1), transparent 62%),
+          linear-gradient(145deg, #020713, #050d1f 42%, #030816 100%);
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      .wrap {
+        max-width: 1320px;
+        margin: 0 auto;
+      }
+
+      .hero {
+        margin-bottom: 18px;
+      }
+
+      .eyebrow {
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--faint);
+        font-size: 11px;
+      }
+
+      h1 {
+        margin: 8px 0 10px;
+        font-size: clamp(24px, 2.8vw, 38px);
+        font-weight: 580;
+      }
+
+      .sub {
+        margin: 0;
+        color: var(--muted);
+        max-width: 920px;
+      }
+
+      .grid {
+        margin-top: 24px;
+        display: grid;
+        gap: 20px;
+        grid-template-columns: minmax(360px, 430px) minmax(420px, 1fr);
+        align-items: start;
+      }
+
+      .phone-shell {
+        width: min(430px, 100%);
+        aspect-ratio: 430 / 880;
+        border-radius: 36px;
+        border: 1px solid rgba(216, 224, 246, 0.22);
+        background: linear-gradient(180deg, rgba(5, 13, 29, 0.95), rgba(3, 8, 20, 0.96));
+        box-shadow:
+          0 26px 60px rgba(0, 0, 0, 0.46),
+          inset 0 1px 0 rgba(220, 231, 255, 0.2);
+        overflow: hidden;
+        position: sticky;
+        top: 18px;
+      }
+
+      .phone-screen {
+        height: 100%;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      .phone-header {
+        border-bottom: 1px solid var(--line);
+        padding: 22px 20px 18px;
+        background: linear-gradient(180deg, rgba(7, 17, 37, 0.94), rgba(7, 17, 37, 0.72));
+      }
+
+      .brand {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .greeting-row {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .greeting {
+        font-size: 21px;
+        font-weight: 560;
+        line-height: 1.26;
+      }
+
+      .profile-pill {
+        border: 1px solid rgba(194, 211, 245, 0.35);
+        color: #d2def8;
+        font-size: 14px;
+        padding: 7px 13px;
+        border-radius: 999px;
+        background: rgba(108, 150, 198, 0.22);
+        white-space: nowrap;
+      }
+
+      .messages {
+        padding: 18px;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .empty {
+        margin-top: auto;
+        margin-bottom: auto;
+        text-align: center;
+        padding: 0 12px;
+      }
+
+      .empty h2 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        font-weight: 510;
+        line-height: 1.28;
+      }
+
+      .empty p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.45;
+      }
+
+      .bubble {
+        border-radius: 18px;
+        padding: 11px 13px;
+        font-size: 15px;
+        line-height: 1.48;
+        width: fit-content;
+        max-width: 92%;
+        border: 1px solid var(--line);
+      }
+
+      .bubble.user {
+        align-self: flex-end;
+        background: linear-gradient(180deg, rgba(70, 157, 196, 0.34), rgba(39, 109, 147, 0.28));
+      }
+
+      .bubble.sakhi {
+        background: rgba(27, 39, 62, 0.72);
+      }
+
+      .bubble.deep {
+        background: linear-gradient(180deg, rgba(86, 57, 19, 0.66), rgba(48, 37, 18, 0.64));
+        border-color: rgba(224, 188, 114, 0.4);
+      }
+
+      .bubble.deep .badge {
+        color: #edcc8c;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 6px;
+        display: inline-block;
+      }
+
+      .composer-wrap {
+        border-top: 1px solid var(--line);
+        padding: 12px 14px 15px;
+        background: linear-gradient(180deg, rgba(5, 12, 27, 0.82), rgba(4, 10, 22, 0.96));
+      }
+
+      .deep-inline-card {
+        align-self: stretch;
+        border: 1px solid rgba(186, 202, 238, 0.24);
+        border-radius: 16px;
+        padding: 11px 12px;
+        background: linear-gradient(180deg, rgba(13, 24, 45, 0.78), rgba(9, 17, 34, 0.76));
+      }
+
+      .deep-inline-card.ready {
+        border-color: rgba(226, 190, 114, 0.42);
+        background: linear-gradient(180deg, rgba(67, 52, 28, 0.68), rgba(32, 26, 16, 0.64));
+      }
+
+      .deep-inline-kicker {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #9fb4dd;
+      }
+
+      .deep-inline-card.ready .deep-inline-kicker {
+        color: #edcc8c;
+      }
+
+      .deep-inline-title {
+        margin-top: 5px;
+        font-size: 15px;
+        font-weight: 560;
+        line-height: 1.35;
+      }
+
+      .deep-inline-sub {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .deep-inline-action {
+        margin-top: 10px;
+        min-width: 120px;
+        height: 36px;
+        border-radius: 999px;
+        border: 1px solid rgba(226, 190, 114, 0.42);
+        background: linear-gradient(180deg, rgba(206, 163, 86, 0.28), rgba(106, 78, 36, 0.26));
+        color: #f3d9a8;
+        font-size: 15px;
+        font-weight: 610;
+        cursor: pointer;
+      }
+
+      .deep-inline-action:active {
+        transform: translateY(1px);
+      }
+
+      .composer-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+      }
+
+      .composer {
+        height: 48px;
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid rgba(174, 192, 232, 0.26);
+        background: rgba(14, 24, 46, 0.72);
+        color: var(--text);
+        padding: 0 14px;
+        font-size: 17px;
+        outline: none;
+      }
+
+      .send {
+        width: 46px;
+        border: 1px solid rgba(99, 172, 206, 0.5);
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(76, 166, 207, 0.76), rgba(46, 119, 163, 0.76));
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: inset 0 1px 0 rgba(211, 222, 245, 0.1);
+      }
+
+      .panel h3 {
+        margin: 2px 0 8px;
+        font-size: 18px;
+      }
+
+      .panel p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .controls {
+        margin-top: 16px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .row {
+        border: 1px solid var(--line);
+        background: var(--panel-soft);
+        border-radius: 14px;
+        padding: 11px 12px;
+      }
+
+      .row label {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: var(--faint);
+        margin-bottom: 7px;
+      }
+
+      .row input[type="range"] {
+        width: 100%;
+      }
+
+      .stat {
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 540;
+      }
+
+      .stat.small {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .switch {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .switch input {
+        width: 18px;
+        height: 18px;
+      }
+
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .badge {
+        border-radius: 999px;
+        font-size: 12px;
+        padding: 6px 10px;
+        border: 1px solid transparent;
+      }
+
+      .badge.ok {
+        background: rgba(47, 151, 103, 0.2);
+        border-color: rgba(108, 219, 164, 0.44);
+        color: #8ff2c0;
+      }
+
+      .badge.warn {
+        background: rgba(159, 121, 50, 0.24);
+        border-color: rgba(238, 181, 90, 0.44);
+        color: #f3cf8e;
+      }
+
+      .badge.bad {
+        background: rgba(163, 82, 82, 0.24);
+        border-color: rgba(222, 137, 137, 0.44);
+        color: #ffbfbf;
+      }
+
+      .cta-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .mini-btn {
+        border-radius: 10px;
+        border: 1px solid rgba(177, 196, 235, 0.32);
+        background: rgba(25, 39, 68, 0.68);
+        color: var(--text);
+        font-size: 13px;
+        padding: 9px 12px;
+        cursor: pointer;
+      }
+
+      .mini-btn.primary {
+        border-color: rgba(124, 205, 241, 0.48);
+        background: rgba(56, 145, 191, 0.3);
+      }
+
+      .foot {
+        margin-top: 12px;
+        border-top: 1px dashed rgba(182, 197, 228, 0.28);
+        padding-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      @media (max-width: 1090px) {
+        body {
+          padding: 16px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .phone-shell {
+          position: static;
+          margin: 0 auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="hero">
+        <div class="eyebrow">Prototype Preview</div>
+        <h1>Deep Answer Gate - Dynamic Readiness</h1>
+        <p class="sub">
+          This mock frames Deep in user language: talk naturally and Sakhi keeps context.
+          Deep unlocks when there is enough real story depth to give grounded whole-journey insight.
+        </p>
+      </section>
+
+      <section class="grid">
+        <div class="phone-shell">
+          <div class="phone-screen">
+            <header class="phone-header">
+              <div class="brand">Sakhi</div>
+              <div class="greeting-row">
+                <div class="greeting">Good afternoon, Ravi</div>
+                <div class="profile-pill">Profile</div>
+              </div>
+            </header>
+
+            <main class="messages" id="messages">
+              <div class="empty" id="emptyState">
+                <h2>A clear space to think out loud.</h2>
+                <p id="emptyHint">Deep Reflect unlocks once your story runs long enough to draw from.</p>
+              </div>
+            </main>
+
+            <footer class="composer-wrap">
+              <div class="composer-row">
+                <input id="composer" class="composer" placeholder="What's on your mind?" />
+                <button id="sendBtn" class="send" type="button">↑</button>
+              </div>
+            </footer>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Deep readiness controls</h3>
+          <p>Use these controls to simulate when Deep Answer should stay locked vs unlock.</p>
+
+          <div class="controls">
+            <div class="row switch">
+              <div>
+                <label>Topic available</label>
+                <div class="stat" id="topicAvailableText">No</div>
+              </div>
+              <input id="topicAvailable" type="checkbox" />
+            </div>
+
+            <div class="row switch">
+              <div>
+                <label>Auto-detect topic after first reply</label>
+                <div class="stat" id="autoDetectText">Yes</div>
+              </div>
+              <input id="autoDetect" type="checkbox" checked />
+            </div>
+
+            <div class="row">
+              <label for="classification">Classification score</label>
+              <input id="classification" type="range" min="0" max="1" step="0.01" value="0.61" />
+              <div class="stat" id="classificationValue">0.61</div>
+            </div>
+
+            <div class="row">
+              <label for="coherence">Coherence score</label>
+              <input id="coherence" type="range" min="0" max="1" step="0.01" value="0.64" />
+              <div class="stat" id="coherenceValue">0.64</div>
+            </div>
+
+            <div class="row">
+              <label for="selectedCount">Selected moments (topic history size)</label>
+              <input id="selectedCount" type="range" min="0" max="22" step="1" value="4" />
+              <div class="stat" id="selectedCountValue">4</div>
+            </div>
+
+            <div class="row">
+              <label for="spanDays">Span days in topic arc</label>
+              <input id="spanDays" type="range" min="0" max="180" step="1" value="6" />
+              <div class="stat" id="spanDaysValue">6 days</div>
+            </div>
+
+            <div class="row">
+              <label for="minMoments">Gate: minimum moments for deep unlock</label>
+              <input id="minMoments" type="range" min="3" max="14" step="1" value="8" />
+              <div class="stat" id="minMomentsValue">8</div>
+            </div>
+
+            <div class="row">
+              <label for="minSpan">Gate: minimum span days for deep unlock</label>
+              <input id="minSpan" type="range" min="3" max="45" step="1" value="14" />
+              <div class="stat" id="minSpanValue">14 days</div>
+            </div>
+
+            <div class="row">
+              <label>Computed readiness</label>
+              <div class="badges" id="readinessBadges"></div>
+            </div>
+
+            <div class="row">
+              <label>Experience metrics</label>
+              <div class="stat" id="metricFirstDeep">First Deep experienced: No</div>
+              <div class="stat small" id="metricCardShows">Inline prompts shown: 0</div>
+              <div class="stat small" id="metricRuns">Deep runs: 0</div>
+            </div>
+
+            <div class="row">
+              <label>Quick simulation</label>
+              <div class="cta-row">
+                <button id="seedEarly" class="mini-btn" type="button">Seed early story</button>
+                <button id="seedReady" class="mini-btn primary" type="button">Seed deep-ready story</button>
+                <button id="resetAll" class="mini-btn" type="button">Reset</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="foot">
+            <strong>Consumer framing:</strong> normal chat helps in the moment.
+            Deep is a premium “whole-journey” lens, so it should unlock only after enough meaningful history exists.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const state = {
+        topicAvailable: false,
+        autoDetect: true,
+        classification: 0.61,
+        coherence: 0.64,
+        selectedCount: 4,
+        spanDays: 6,
+        minMoments: 8,
+        minSpan: 14,
+        messageCount: 0,
+        hasExperiencedDeep: false,
+        firstDeepAtMessage: null,
+        lastInlineCardKey: "none",
+        metrics: {
+          inlineCardShows: 0,
+          inlineCardLockedShows: 0,
+          inlineCardReadyShows: 0,
+          deepRuns: 0,
+        },
+      };
+
+      const refs = {
+        topicAvailable: document.getElementById("topicAvailable"),
+        autoDetect: document.getElementById("autoDetect"),
+        classification: document.getElementById("classification"),
+        coherence: document.getElementById("coherence"),
+        selectedCount: document.getElementById("selectedCount"),
+        spanDays: document.getElementById("spanDays"),
+        minMoments: document.getElementById("minMoments"),
+        minSpan: document.getElementById("minSpan"),
+        topicAvailableText: document.getElementById("topicAvailableText"),
+        autoDetectText: document.getElementById("autoDetectText"),
+        classificationValue: document.getElementById("classificationValue"),
+        coherenceValue: document.getElementById("coherenceValue"),
+        selectedCountValue: document.getElementById("selectedCountValue"),
+        spanDaysValue: document.getElementById("spanDaysValue"),
+        minMomentsValue: document.getElementById("minMomentsValue"),
+        minSpanValue: document.getElementById("minSpanValue"),
+        readinessBadges: document.getElementById("readinessBadges"),
+        metricFirstDeep: document.getElementById("metricFirstDeep"),
+        metricCardShows: document.getElementById("metricCardShows"),
+        metricRuns: document.getElementById("metricRuns"),
+        composer: document.getElementById("composer"),
+        sendBtn: document.getElementById("sendBtn"),
+        messages: document.getElementById("messages"),
+        emptyState: document.getElementById("emptyState"),
+        emptyHint: document.getElementById("emptyHint"),
+        seedEarly: document.getElementById("seedEarly"),
+        seedReady: document.getElementById("seedReady"),
+        resetAll: document.getElementById("resetAll"),
+      };
+
+      function derive() {
+        const mirrorAllowed = state.topicAvailable && state.classification >= 0.52 && state.coherence >= 0.5;
+        const detailAllowed = mirrorAllowed && state.classification >= 0.72 && state.coherence >= 0.5;
+        const historyReady = state.selectedCount >= state.minMoments && state.spanDays >= state.minSpan;
+        const hasQuery = state.messageCount > 0;
+
+        let stage = "ready";
+        let reason = "";
+
+        if (!hasQuery) {
+          stage = "pre_turn";
+          reason = "need_message";
+        } else if (!state.topicAvailable) {
+          stage = "no_topic";
+          reason = "no_topic";
+        } else if (!mirrorAllowed) {
+          stage = "mirror_blocked";
+          reason = "weak_signal";
+        } else if (!detailAllowed || !historyReady) {
+          stage = "warming";
+          reason = !detailAllowed ? "detail_threshold" : "history_threshold";
+        }
+
+        return {
+          mirrorAllowed,
+          detailAllowed,
+          historyReady,
+          hasQuery,
+          stage,
+          reason,
+          canRunDeep: stage === "ready",
+        };
+      }
+
+      function badge(label, type) {
+        const el = document.createElement("span");
+        el.className = `badge ${type}`;
+        el.textContent = label;
+        return el;
+      }
+
+      function escapeHtml(input) {
+        return input
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function addBubble(kind, text) {
+        const msg = document.createElement("article");
+        msg.className = `bubble ${kind}`;
+
+        if (kind === "deep") {
+          const badgeEl = document.createElement("span");
+          badgeEl.className = "badge";
+          badgeEl.textContent = "Sakhi · Deep Answer";
+          msg.appendChild(badgeEl);
+        }
+
+        const body = document.createElement("div");
+        body.innerHTML = escapeHtml(text).replaceAll("\n", "<br>");
+        msg.appendChild(body);
+
+        refs.messages.appendChild(msg);
+        refs.messages.scrollTop = refs.messages.scrollHeight;
+      }
+
+      function removeEmptyStateIfNeeded() {
+        if (refs.emptyState && refs.emptyState.parentNode) {
+          refs.emptyState.remove();
+        }
+      }
+
+      function removeInlineDeepCardIfNeeded() {
+        const inlineCard = document.getElementById("deepInlineCard");
+        if (inlineCard && inlineCard.parentNode) {
+          inlineCard.remove();
+        }
+      }
+
+      function trackInlineCardImpression(kind, stage) {
+        const key = `${kind}:${stage}:${state.hasExperiencedDeep ? "experienced" : "new"}`;
+        if (state.lastInlineCardKey === key) return;
+        state.lastInlineCardKey = key;
+        state.metrics.inlineCardShows += 1;
+        if (kind === "ready") state.metrics.inlineCardReadyShows += 1;
+        if (kind === "locked") state.metrics.inlineCardLockedShows += 1;
+      }
+
+      function renderInlineDeepCard(d) {
+        removeInlineDeepCardIfNeeded();
+        if (state.messageCount <= 0) {
+          state.lastInlineCardKey = "none";
+          return;
+        }
+
+        let kind = "none";
+        let kicker = "";
+        let title = "";
+        let sub = "";
+
+        if (d.canRunDeep) {
+          kind = "ready";
+          kicker = "Deep Reflect is ready";
+          title = "Want a whole-journey answer on this?";
+          sub = "Use your broader history for a more grounded answer.";
+        } else if (!state.hasExperiencedDeep) {
+          kind = "locked";
+          kicker = "Deep Reflect";
+          title = "Deep Reflect unlocks once your story runs long enough to draw from.";
+          sub =
+            d.stage === "warming"
+              ? `You're close: ${state.selectedCount}/${state.minMoments} moments across ${state.spanDays}/${state.minSpan} days.`
+              : "Keep chatting naturally. Sakhi is connecting context in the background.";
+        }
+
+        if (kind === "none") {
+          state.lastInlineCardKey = "none";
+          return;
+        }
+
+        trackInlineCardImpression(kind, d.stage);
+
+        const card = document.createElement("article");
+        card.id = "deepInlineCard";
+        card.className = `deep-inline-card ${kind}`;
+
+        const kickerEl = document.createElement("div");
+        kickerEl.className = "deep-inline-kicker";
+        kickerEl.textContent = kicker;
+        card.appendChild(kickerEl);
+
+        const titleEl = document.createElement("div");
+        titleEl.className = "deep-inline-title";
+        titleEl.textContent = title;
+        card.appendChild(titleEl);
+
+        if (sub) {
+          const subEl = document.createElement("div");
+          subEl.className = "deep-inline-sub";
+          subEl.textContent = sub;
+          card.appendChild(subEl);
+        }
+
+        if (kind === "ready") {
+          const action = document.createElement("button");
+          action.className = "deep-inline-action";
+          action.type = "button";
+          action.textContent = "Run Deep Reflect";
+          action.addEventListener("click", runDeep);
+          card.appendChild(action);
+        }
+
+        refs.messages.appendChild(card);
+        refs.messages.scrollTop = refs.messages.scrollHeight;
+      }
+
+      function resetExperienceMetrics() {
+        state.hasExperiencedDeep = false;
+        state.firstDeepAtMessage = null;
+        state.lastInlineCardKey = "none";
+        state.metrics = {
+          inlineCardShows: 0,
+          inlineCardLockedShows: 0,
+          inlineCardReadyShows: 0,
+          deepRuns: 0,
+        };
+      }
+
+      function refreshUI() {
+        const d = derive();
+
+        refs.topicAvailable.checked = state.topicAvailable;
+        refs.autoDetect.checked = state.autoDetect;
+
+        refs.topicAvailableText.textContent = state.topicAvailable ? "Yes" : "No";
+        refs.autoDetectText.textContent = state.autoDetect ? "Yes" : "No";
+        refs.classificationValue.textContent = state.classification.toFixed(2);
+        refs.coherenceValue.textContent = state.coherence.toFixed(2);
+        refs.selectedCountValue.textContent = String(state.selectedCount);
+        refs.spanDaysValue.textContent = `${state.spanDays} days`;
+        refs.minMomentsValue.textContent = String(state.minMoments);
+        refs.minSpanValue.textContent = `${state.minSpan} days`;
+
+        refs.readinessBadges.innerHTML = "";
+        refs.readinessBadges.appendChild(badge(`mirror_allowed: ${d.mirrorAllowed ? "yes" : "no"}`, d.mirrorAllowed ? "ok" : "bad"));
+        refs.readinessBadges.appendChild(badge(`detail_allowed: ${d.detailAllowed ? "yes" : "no"}`, d.detailAllowed ? "ok" : "warn"));
+        refs.readinessBadges.appendChild(badge(`history_ready: ${d.historyReady ? "yes" : "no"}`, d.historyReady ? "ok" : "warn"));
+        refs.readinessBadges.appendChild(badge(`messages: ${state.messageCount}`, state.messageCount > 0 ? "ok" : "warn"));
+
+        refs.emptyHint.textContent =
+          "Deep Reflect unlocks once your story runs long enough to draw from.";
+        refs.metricFirstDeep.textContent = state.hasExperiencedDeep
+          ? `First Deep experienced: Yes (after ${state.firstDeepAtMessage} message${state.firstDeepAtMessage === 1 ? "" : "s"})`
+          : "First Deep experienced: No";
+        refs.metricCardShows.textContent =
+          `Inline prompts shown: ${state.metrics.inlineCardShows} (locked ${state.metrics.inlineCardLockedShows} · ready ${state.metrics.inlineCardReadyShows})`;
+        refs.metricRuns.textContent = `Deep runs: ${state.metrics.deepRuns}`;
+
+        renderInlineDeepCard(d);
+      }
+
+      function sendMessage() {
+        const text = refs.composer.value.trim();
+        if (!text) return;
+
+        removeEmptyStateIfNeeded();
+        removeInlineDeepCardIfNeeded();
+        state.lastInlineCardKey = "none";
+        addBubble("user", text);
+        refs.composer.value = "";
+        state.messageCount += 1;
+
+        if (!state.topicAvailable && state.autoDetect) {
+          state.topicAvailable = true;
+          state.classification = Math.max(state.classification, 0.57);
+          state.coherence = Math.max(state.coherence, 0.54);
+        }
+
+        state.selectedCount = Math.min(22, state.selectedCount + 1);
+        state.spanDays = Math.min(180, state.spanDays + 2);
+
+        setTimeout(() => {
+          const d = derive();
+          let reply = "I hear you. Keep sharing naturally - I am building context as we go.";
+          if (d.stage === "warming") {
+            reply = "I can see your direction forming. A little more history and Deep will be much stronger.";
+          }
+          if (d.stage === "ready") {
+            reply = "Great, we now have enough shared history. Deep can use your whole journey, not just recent lines.";
+          }
+          addBubble("sakhi", reply);
+          refreshUI();
+        }, 320);
+
+        refreshUI();
+      }
+
+      function runDeep() {
+        const d = derive();
+        if (!d.canRunDeep) {
+          const lockReason = {
+            need_message: "Share one message first.",
+            no_topic: "Give me one more turn so I can lock onto your direction.",
+            weak_signal: "Need a bit more context so Deep stays grounded.",
+            detail_threshold: "Almost there. A little more history will make Deep more accurate.",
+            history_threshold: "Need a bit more shared history before Deep runs.",
+          }[d.reason] || "Deep is locked.";
+          removeEmptyStateIfNeeded();
+          addBubble("sakhi", lockReason);
+          return;
+        }
+
+        removeEmptyStateIfNeeded();
+        const message = [
+          "You are leaning toward user testing before pre-seed, and the arc supports that.",
+          `Across ${state.selectedCount} moments over ${state.spanDays} days, the pattern is consistent: clarity rises when you test with real users and drops when you optimize for pitch optics too early.`,
+          "For this week, run 5 target-user sessions and track one metric that proves daily retention. If that metric is flat, then tighten scope before fundraising outreach.",
+          "Question to hold: what evidence would make this decision obvious to both you and your co-founder?",
+        ].join(" ");
+        state.metrics.deepRuns += 1;
+        if (!state.hasExperiencedDeep) {
+          state.hasExperiencedDeep = true;
+          state.firstDeepAtMessage = state.messageCount;
+        }
+        addBubble("deep", message);
+        refreshUI();
+      }
+
+      function seedEarlyThread() {
+        resetExperienceMetrics();
+        state.topicAvailable = true;
+        state.classification = 0.62;
+        state.coherence = 0.67;
+        state.selectedCount = 5;
+        state.spanDays = 7;
+        state.messageCount = 1;
+        refs.messages.innerHTML = "";
+        addBubble("user", "Should we push for pre-seed now or keep user testing?");
+        addBubble("sakhi", "I can help with that. We have a thread, but still shallow depth for Deep.");
+        refreshUI();
+      }
+
+      function seedReadyThread() {
+        resetExperienceMetrics();
+        state.topicAvailable = true;
+        state.classification = 0.81;
+        state.coherence = 0.86;
+        state.selectedCount = 12;
+        state.spanDays = 46;
+        state.messageCount = 1;
+        refs.messages.innerHTML = "";
+        addBubble("user", "MVP is almost ready. Do we keep testing or pitch pre-seed?");
+        addBubble("sakhi", "Great moment for a whole-story decision. Deep can now ground this in your full arc.");
+        refreshUI();
+      }
+
+      function resetAll() {
+        resetExperienceMetrics();
+        state.topicAvailable = false;
+        state.autoDetect = true;
+        state.classification = 0.61;
+        state.coherence = 0.64;
+        state.selectedCount = 4;
+        state.spanDays = 6;
+        state.minMoments = 8;
+        state.minSpan = 14;
+        state.messageCount = 0;
+
+        refs.classification.value = state.classification;
+        refs.coherence.value = state.coherence;
+        refs.selectedCount.value = state.selectedCount;
+        refs.spanDays.value = state.spanDays;
+        refs.minMoments.value = state.minMoments;
+        refs.minSpan.value = state.minSpan;
+
+        refs.messages.innerHTML = "";
+        refs.messages.appendChild(refs.emptyState);
+        refs.composer.value = "";
+        refreshUI();
+      }
+
+      refs.topicAvailable.addEventListener("change", (e) => {
+        state.topicAvailable = e.target.checked;
+        refreshUI();
+      });
+
+      refs.autoDetect.addEventListener("change", (e) => {
+        state.autoDetect = e.target.checked;
+        refreshUI();
+      });
+
+      refs.classification.addEventListener("input", (e) => {
+        state.classification = Number(e.target.value);
+        refreshUI();
+      });
+
+      refs.coherence.addEventListener("input", (e) => {
+        state.coherence = Number(e.target.value);
+        refreshUI();
+      });
+
+      refs.selectedCount.addEventListener("input", (e) => {
+        state.selectedCount = Number(e.target.value);
+        refreshUI();
+      });
+
+      refs.spanDays.addEventListener("input", (e) => {
+        state.spanDays = Number(e.target.value);
+        refreshUI();
+      });
+
+      refs.minMoments.addEventListener("input", (e) => {
+        state.minMoments = Number(e.target.value);
+        refreshUI();
+      });
+
+      refs.minSpan.addEventListener("input", (e) => {
+        state.minSpan = Number(e.target.value);
+        refreshUI();
+      });
+
+      refs.sendBtn.addEventListener("click", sendMessage);
+      refs.composer.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      refs.seedEarly.addEventListener("click", seedEarlyThread);
+      refs.seedReady.addEventListener("click", seedReadyThread);
+      refs.resetAll.addEventListener("click", resetAll);
+
+      refreshUI();
+    </script>
+  </body>
+</html>

@@ -182,6 +182,38 @@ Notes:
 - Used by middleware and `GET /api/auth/me` to bypass login for protected web routes
 - Set `DEV_AUTH_BYPASS_PERSON_ID=` (empty) to disable
 
+### Mobile Dev Profile Override (iOS/Expo)
+For development-only iOS simulator/device testing against a fixed profile without login:
+
+```bash
+# In apps/mobile/.env.local (development only)
+EXPO_PUBLIC_DEV_BYPASS_PERSON_ID=6b5b2fbc-9efb-4ba4-be0a-9ec527e23f90
+```
+
+Notes:
+- Active only in `__DEV__` builds (never production bundles)
+- Injects a local auth user with `personId=<override>` so mobile chat/continuity/deep-answer routes run end-to-end on that profile
+- Requires a backend dev runtime (or `SAKHI_ENFORCE_USER_BINDING=0`); production auth-bound routes still require real Supabase auth
+- Leave empty or remove to restore normal Supabase auth flow
+
+### Internal TestFlight Profile Override (iOS)
+For internal co-founder QA on TestFlight with a fixed profile:
+
+```bash
+cd apps/mobile
+eas build --platform ios --profile testflight-vidhya
+```
+
+Notes:
+- Uses `apps/mobile/eas.json` profile `testflight-vidhya`
+- Sets release bypass env to `a1b2c3d4-1111-4000-8000-000000000001` for that build only
+- Release bypass activates in release builds when both are set:
+  - `EXPO_PUBLIC_RELEASE_BYPASS_ENABLED=1`
+  - `EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID=<person_id>`
+- Do not use this profile for public MVP rollout builds
+
+Fastlane builds can use the same override by exporting env vars before `fastlane beta`.
+
 ### Documentation Generation
 Auto-generate docs from code:
 

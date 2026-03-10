@@ -188,7 +188,7 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 ### Core Conversation
 | Route | Purpose |
 |-------|---------|
-| `POST /v2/turn` | Main conversation endpoint (includes non-debug continuity topic signal `continuity.topic_key/topic_label` when a continuity pack is active) |
+| `POST /v2/turn` | Main conversation endpoint (includes non-debug continuity signal when a continuity pack is active: `continuity.topic_key/topic_label` plus `continuity.deep_reflect` readiness metadata for dynamic client unlocks) |
 | `GET /v2/conversation/history` | Conversation history |
 
 ### System Health
