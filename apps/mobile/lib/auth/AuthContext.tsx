@@ -16,6 +16,10 @@ WebBrowser.maybeCompleteAuthSession();
 // =============================================================================
 
 const PERSON_ID_KEY = "sakhi_person_id";
+const BYPASS_PROFILE_LABELS: Record<string, string> = {
+  "a1b2c3d4-1111-4000-8000-000000000001": "Vidhya",
+  "4ea551dc-517c-443b-8f1f-d1f528ac10ba": "Ravi",
+};
 
 interface AuthUser {
   id: string;
@@ -67,11 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Development-only auth bypass for end-to-end profile testing in iOS simulator.
   useEffect(() => {
     if (!isBypassActive) return;
+    const bypassName =
+      BYPASS_PROFILE_LABELS[activeBypassPersonId]
+      || "Sakhi User";
     setSession(null);
     setUser({
       id: activeBypassPersonId,
       email: "dev-bypass@sakhi.local",
-      fullName: "Dev Profile",
+      fullName: bypassName,
       personId: activeBypassPersonId,
     });
     setIsLoading(false);

@@ -17,6 +17,8 @@ import { useRouter } from "expo-router";
 
 import { useAuth } from "../../lib/auth/AuthContext";
 import { config } from "../../lib/config";
+import { trackSupportDebugEvent, type SupportDebugEventInput } from "../../lib/support/debugTelemetry";
+import { Analytics } from "../../lib/analytics/events";
 
 interface ContinuityTopicSummary {
   anchor: string;
@@ -25,6 +27,10 @@ interface ContinuityTopicSummary {
   selected_count: number;
   span_days: number;
   direction: string;
+  surface?: {
+    mirror_allowed?: boolean;
+    detail_allowed?: boolean;
+  };
 }
 
 interface ContinuityMoment {
@@ -58,6 +64,9 @@ const BACKEND_URL = config.backendUrl || "https://sakhi-production-930f.up.railw
 const REFLECT_POLL_INTERVAL_MS = 2000;
 const REFLECT_POLL_MAX_ATTEMPTS = 70;
 const MIN_DEEP_MOMENTS = 8;
+const MIN_CROSS_CONTEXT_MOMENTS = 6;
+const MIN_RELATED_TOPIC_MOMENTS = 1;
+const MAX_CROSS_CONTEXT_TOPICS = 3;
 const MOMENT_CARD_WIDTH = 246;
 const MOMENT_CARD_GAP = 12;
 const FLOW_CARD_WIDTH = 184;
@@ -148,14 +157,45 @@ export default function TopicReflectionScreen() {
   const [, setDeepReflectStatus] = useState("");
   const [deepReflectText, setDeepReflectText] = useState("");
   const [deepReflectError, setDeepReflectError] = useState("");
+  const [meStoryLoading, setMeStoryLoading] = useState(false);
+  const [, setMeStoryStatus] = useState("");
+  const [meStoryText, setMeStoryText] = useState("");
+  const [meStoryError, setMeStoryError] = useState("");
   const [activeMomentMonth, setActiveMomentMonth] = useState("Timeline");
   const [momentOpening, setMomentOpening] = useState(false);
   const threadZoom = useRef(new Animated.Value(0)).current;
   const momentOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debugSequenceRef = useRef(0);
+
+  const emitDebugEvent = useCallback(
+    (event: SupportDebugEventInput) => {
+      if (!personId || !BACKEND_URL) return;
+      debugSequenceRef.current += 1;
+      void trackSupportDebugEvent({
+        backendUrl: BACKEND_URL,
+        authToken,
+        personId,
+        event: {
+          ...event,
+          seq: debugSequenceRef.current,
+        },
+      });
+    },
+    [authToken, personId],
+  );
 
   const loadArc = useCallback(
     async (anchor: string) => {
       if (!personId || !anchor) return;
+      const requestStartedAt = Date.now();
+      emitDebugEvent({
+        type: "api_start",
+        name: "load_topic_arc",
+        screen: "reflection",
+        route: "/continuity/arc",
+        method: "GET",
+        metadata: { anchor },
+      });
       setLoadingArc(true);
       setSelectedMoment(null);
       setDeepReflectText("");
@@ -175,17 +215,36 @@ export default function TopicReflectionScreen() {
         if (!res.ok) {
           throw new Error(`Arc fetch failed (${res.status})`);
         }
+        emitDebugEvent({
+          type: "api_end",
+          name: "load_topic_arc",
+          screen: "reflection",
+          route: "/continuity/arc",
+          method: "GET",
+          status: res.status,
+          latencyMs: Date.now() - requestStartedAt,
+          requestId: res.headers.get("x-request-id") || undefined,
+          metadata: { ok: res.ok, anchor },
+        });
 
         const payload = (await res.json()) as ContinuityArcResponse;
         setArc(payload);
       } catch (err) {
         console.error("[topic-reflection] arc load error", err);
+        emitDebugEvent({
+          type: "ui_error",
+          name: "load_topic_arc_failed",
+          screen: "reflection",
+          route: "/continuity/arc",
+          method: "GET",
+          metadata: { anchor },
+        });
         setArc(null);
       } finally {
         setLoadingArc(false);
       }
     },
-    [authToken, personId],
+    [authToken, emitDebugEvent, personId],
   );
 
   const ensureContinuityPolicyEnabled = useCallback(async (): Promise<boolean> => {
@@ -206,10 +265,29 @@ export default function TopicReflectionScreen() {
   }, [authToken, personId]);
 
   const fetchTopics = useCallback(async (): Promise<ContinuityTopicSummary[]> => {
+    const requestStartedAt = Date.now();
+    emitDebugEvent({
+      type: "api_start",
+      name: "load_topics",
+      screen: "reflection",
+      route: "/continuity/topics",
+      method: "GET",
+    });
     const params = new URLSearchParams({ person_id: personId, window: "3650d" });
     const res = await fetch(`${BACKEND_URL}/continuity/topics?${params.toString()}`, {
       cache: "no-store",
       headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+    });
+    emitDebugEvent({
+      type: "api_end",
+      name: "load_topics",
+      screen: "reflection",
+      route: "/continuity/topics",
+      method: "GET",
+      status: res.status,
+      latencyMs: Date.now() - requestStartedAt,
+      requestId: res.headers.get("x-request-id") || undefined,
+      metadata: { ok: res.ok },
     });
     if (!res.ok) {
       const error = new Error(`Topics fetch failed (${res.status})`) as Error & {
@@ -220,7 +298,7 @@ export default function TopicReflectionScreen() {
     }
     const payload = (await res.json()) as { topics?: ContinuityTopicSummary[] };
     return payload.topics || [];
-  }, [authToken, personId]);
+  }, [authToken, emitDebugEvent, personId]);
 
   const pollTopicReflection = useCallback(
     async (reflectionId: string, person: string): Promise<string | null> => {
@@ -287,11 +365,28 @@ export default function TopicReflectionScreen() {
   const runDeepReflect = useCallback(async () => {
     if (!personId || !selectedAnchor || deepReflectLoading) return;
 
+    emitDebugEvent({
+      type: "action",
+      name: "topic_story_pressed",
+      screen: "reflection",
+      route: "/continuity/reflection/run",
+      method: "POST",
+      metadata: { anchor: selectedAnchor },
+    });
     setDeepReflectLoading(true);
     setDeepReflectStatus("queued");
     setDeepReflectError("");
 
     try {
+      const requestStartedAt = Date.now();
+      emitDebugEvent({
+        type: "api_start",
+        name: "run_topic_reflection",
+        screen: "reflection",
+        route: "/continuity/reflection/run",
+        method: "POST",
+        metadata: { mode: "topic_reflection", anchor: selectedAnchor },
+      });
       const res = await fetch(`${BACKEND_URL}/continuity/reflection/run`, {
         method: "POST",
         headers: {
@@ -304,6 +399,17 @@ export default function TopicReflectionScreen() {
           window: "3650d",
           mode: "topic_reflection",
         }),
+      });
+      emitDebugEvent({
+        type: "api_end",
+        name: "run_topic_reflection",
+        screen: "reflection",
+        route: "/continuity/reflection/run",
+        method: "POST",
+        status: res.status,
+        latencyMs: Date.now() - requestStartedAt,
+        requestId: res.headers.get("x-request-id") || undefined,
+        metadata: { ok: res.ok, mode: "topic_reflection", anchor: selectedAnchor },
       });
 
       if (!res.ok) {
@@ -318,21 +424,47 @@ export default function TopicReflectionScreen() {
 
       const deepText = await pollTopicReflection(reflectionId, personId);
       if (deepText) {
+        Analytics.topicStoryCompleted({
+          latency_ms: Date.now() - requestStartedAt,
+          request_id: res.headers.get("x-request-id") || undefined,
+        });
         setDeepReflectText(deepText);
       } else {
+        emitDebugEvent({
+          type: "ui_error",
+          name: "topic_story_incomplete",
+          screen: "reflection",
+          route: "/continuity/reflection/status",
+          metadata: { anchor: selectedAnchor },
+        });
         setDeepReflectError("Whole-story summary did not complete this time. Please try again.");
       }
     } catch (err) {
       console.error("[topic-reflection] deep run error", err);
+      emitDebugEvent({
+        type: "ui_error",
+        name: "topic_story_failed",
+        screen: "reflection",
+        route: "/continuity/reflection/run",
+        method: "POST",
+        metadata: { anchor: selectedAnchor },
+      });
       setDeepReflectError("Could not summarize this story right now.");
     } finally {
       setDeepReflectLoading(false);
       setDeepReflectStatus("");
     }
-  }, [authToken, deepReflectLoading, personId, pollTopicReflection, selectedAnchor]);
+  }, [authToken, deepReflectLoading, emitDebugEvent, personId, pollTopicReflection, selectedAnchor]);
 
   const openThread = useCallback(
     (anchor: string) => {
+      Analytics.topicSelected({ topic_key: anchor });
+      emitDebugEvent({
+        type: "action",
+        name: "topic_bubble_selected",
+        screen: "reflection",
+        metadata: { anchor },
+      });
       setSelectedAnchor(anchor);
       setThreadOpen(true);
       threadZoom.setValue(0);
@@ -345,7 +477,7 @@ export default function TopicReflectionScreen() {
       }).start();
       void loadArc(anchor);
     },
-    [loadArc, threadZoom],
+    [emitDebugEvent, loadArc, threadZoom],
   );
 
   const closeThread = useCallback(() => {
@@ -361,6 +493,15 @@ export default function TopicReflectionScreen() {
   }, [threadZoom]);
 
   const openMoment = useCallback((moment: ContinuityMoment) => {
+    emitDebugEvent({
+      type: "action",
+      name: "moment_opened",
+      screen: "reflection",
+      metadata: {
+        ts: String(moment.ts || ""),
+        facet: String(moment.facet || ""),
+      },
+    });
     if (momentOpenTimerRef.current) {
       clearTimeout(momentOpenTimerRef.current);
       momentOpenTimerRef.current = null;
@@ -371,7 +512,7 @@ export default function TopicReflectionScreen() {
       setMomentOpening(false);
       momentOpenTimerRef.current = null;
     }, 220);
-  }, []);
+  }, [emitDebugEvent]);
 
   const closeMoment = useCallback(() => {
     if (momentOpenTimerRef.current) {
@@ -387,6 +528,8 @@ export default function TopicReflectionScreen() {
 
     setLoadingTopics(true);
     setError("");
+    setMeStoryError("");
+    setMeStoryText("");
 
     try {
       let topicItems: ContinuityTopicSummary[] = [];
@@ -424,6 +567,13 @@ export default function TopicReflectionScreen() {
       }
     } catch (err) {
       console.error("[topic-reflection] topics load error", err);
+      emitDebugEvent({
+        type: "ui_error",
+        name: "load_topics_failed",
+        screen: "reflection",
+        route: "/continuity/topics",
+        method: "GET",
+      });
       setTopics([]);
       setSelectedAnchor("");
       setArc(null);
@@ -431,11 +581,23 @@ export default function TopicReflectionScreen() {
     } finally {
       setLoadingTopics(false);
     }
-  }, [ensureContinuityPolicyEnabled, fetchTopics, loadArc, personId]);
+  }, [emitDebugEvent, ensureContinuityPolicyEnabled, fetchTopics, loadArc, personId]);
 
   useEffect(() => {
     void loadTopics();
   }, [loadTopics]);
+
+  useEffect(() => {
+    Analytics.reflectionOpened();
+    emitDebugEvent({
+      type: "screen_view",
+      name: "reflection_opened",
+      screen: "reflection",
+      route: "/mobile/reflection",
+    });
+    // fire once on screen mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -525,6 +687,143 @@ export default function TopicReflectionScreen() {
   const deepReflectReady = useMemo(() => {
     return depthMomentCount >= MIN_DEEP_MOMENTS;
   }, [depthMomentCount]);
+  const myStoryEligibleTopics = useMemo(
+    () =>
+      topics.filter((topic) => {
+        const mirrorAllowed = topic.surface?.mirror_allowed;
+        if (mirrorAllowed === false) {
+          return false;
+        }
+        return toFiniteNumber(topic.selected_count, 0) >= MIN_RELATED_TOPIC_MOMENTS;
+      }),
+    [topics],
+  );
+  const selectedAnchorEligibleForMyStory = useMemo(
+    () =>
+      myStoryEligibleTopics.some(
+        (topic) =>
+          topic.anchor === selectedAnchor
+          && toFiniteNumber(topic.selected_count, 0) >= MIN_CROSS_CONTEXT_MOMENTS,
+      ),
+    [myStoryEligibleTopics, selectedAnchor],
+  );
+  const myStoryTopicKeys = useMemo(() => {
+    if (!selectedAnchorEligibleForMyStory || !selectedAnchor) return [];
+    const related = myStoryEligibleTopics
+      .map((topic) => topic.anchor)
+      .filter((anchor) => anchor && anchor !== selectedAnchor);
+    return [selectedAnchor, ...related].slice(0, MAX_CROSS_CONTEXT_TOPICS);
+  }, [myStoryEligibleTopics, selectedAnchor, selectedAnchorEligibleForMyStory]);
+  const myStoryReady = selectedAnchorEligibleForMyStory && myStoryTopicKeys.length >= 2;
+  const myStoryUnlockHint = (() => {
+    const selectedLabel = selectedTopic?.label || selectedAnchor || "This thread";
+    if (!selectedAnchorEligibleForMyStory) {
+      return `${selectedLabel} needs more depth before My Story can anchor here.`;
+    }
+    if (myStoryTopicKeys.length < 2) {
+      return "My Story unlocks after one more topic appears.";
+    }
+    return "";
+  })();
+
+  const runMeStory = useCallback(async () => {
+    if (!personId || meStoryLoading || myStoryTopicKeys.length < 2) return;
+
+    const primaryTopic = myStoryTopicKeys[0];
+    emitDebugEvent({
+      type: "action",
+      name: "me_story_pressed",
+      screen: "reflection",
+      route: "/continuity/reflection/run",
+      method: "POST",
+      metadata: {
+        topic_count: myStoryTopicKeys.length,
+        primary_topic: primaryTopic,
+      },
+    });
+    setMeStoryLoading(true);
+    setMeStoryStatus("queued");
+    setMeStoryError("");
+    setMeStoryText("");
+
+    try {
+      const requestStartedAt = Date.now();
+      emitDebugEvent({
+        type: "api_start",
+        name: "run_cross_context_story",
+        screen: "reflection",
+        route: "/continuity/reflection/run",
+        method: "POST",
+        metadata: { mode: "cross_context", topic_count: myStoryTopicKeys.length },
+      });
+      const res = await fetch(`${BACKEND_URL}/continuity/reflection/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({
+          person_id: personId,
+          topic_key: primaryTopic,
+          topic_keys: myStoryTopicKeys,
+          window: "3650d",
+          mode: "cross_context",
+        }),
+      });
+      emitDebugEvent({
+        type: "api_end",
+        name: "run_cross_context_story",
+        screen: "reflection",
+        route: "/continuity/reflection/run",
+        method: "POST",
+        status: res.status,
+        latencyMs: Date.now() - requestStartedAt,
+        requestId: res.headers.get("x-request-id") || undefined,
+        metadata: { ok: res.ok, mode: "cross_context" },
+      });
+
+      if (!res.ok) {
+        throw new Error(`My Story request failed (${res.status})`);
+      }
+
+      const data = (await res.json()) as Record<string, unknown>;
+      const reflectionId = String(data.reflection_id || "");
+      if (!reflectionId) {
+        throw new Error("My Story response missing reflection id");
+      }
+
+      const storyText = await pollTopicReflection(reflectionId, personId);
+      if (storyText) {
+        Analytics.meStoryCompleted({
+          topic_count: myStoryTopicKeys.length,
+          latency_ms: Date.now() - requestStartedAt,
+          request_id: res.headers.get("x-request-id") || undefined,
+        });
+        setMeStoryText(storyText);
+      } else {
+        emitDebugEvent({
+          type: "ui_error",
+          name: "me_story_incomplete",
+          screen: "reflection",
+          route: "/continuity/reflection/status",
+        });
+        setMeStoryError("My Story did not complete this time. Please try again.");
+      }
+    } catch (err) {
+      console.error("[topic-reflection] me story run error", err);
+      emitDebugEvent({
+        type: "ui_error",
+        name: "me_story_failed",
+        screen: "reflection",
+        route: "/continuity/reflection/run",
+        method: "POST",
+      });
+      setMeStoryError("Could not build My Story right now.");
+    } finally {
+      setMeStoryLoading(false);
+      setMeStoryStatus("");
+    }
+  }, [authToken, emitDebugEvent, meStoryLoading, myStoryTopicKeys, personId, pollTopicReflection]);
 
   const threadLabel = selectedTopic?.label || arc?.label || selectedAnchor || "Thread";
   const threadLoadingText = deepReflectLoading
@@ -598,6 +897,38 @@ export default function TopicReflectionScreen() {
             </View>
           )}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </View>
+
+        <View style={styles.glassCard}>
+          <Text style={styles.cardTitle}>My Story</Text>
+          <Text style={styles.cardSubtitle}>Cross-context reflection across your active topics.</Text>
+          <View style={styles.storyActionBlock}>
+            <Pressable
+              style={[
+                styles.deepReflectButton,
+                (!myStoryReady || meStoryLoading || loadingTopics) && styles.deepReflectButtonDisabled,
+              ]}
+              onPress={() => void runMeStory()}
+              disabled={!myStoryReady || meStoryLoading || loadingTopics}
+            >
+              {meStoryLoading ? (
+                <View style={styles.deepReflectButtonContent}>
+                  <ActivityIndicator size="small" color="#f5dcb2" />
+                  <Text style={styles.deepReflectButtonText}>Building My Story...</Text>
+                </View>
+              ) : (
+                <View style={styles.deepReflectButtonContent}>
+                  <Ionicons name="sparkles" size={15} color="#ffe6bf" />
+                  <Text style={styles.deepReflectButtonText}>My Story</Text>
+                </View>
+              )}
+            </Pressable>
+            {!myStoryReady ? (
+              <Text style={styles.depthHint}>{myStoryUnlockHint}</Text>
+            ) : null}
+          </View>
+          {meStoryError ? <Text style={styles.errorText}>{meStoryError}</Text> : null}
+          {meStoryText ? <Text style={styles.deepReflectText}>{meStoryText}</Text> : null}
         </View>
       </ScrollView>
 
@@ -1152,6 +1483,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.32,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
+  },
+  storyActionBlock: {
+    marginTop: 14,
+    gap: 8,
   },
   deepReflectButtonDisabled: {
     opacity: 0.5,
