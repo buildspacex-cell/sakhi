@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
+  Modal,
   ScrollView,
   StyleSheet,
   SafeAreaView,
@@ -16,6 +17,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../lib/auth/AuthContext";
 import { config } from "../../../lib/config";
+import { trackSupportDebugEvent, type SupportDebugEventInput } from "../../../lib/support/debugTelemetry";
+import { Analytics } from "../../../lib/analytics/events";
 
 interface Message {
   id: string;
@@ -34,10 +37,19 @@ interface DeepReflectSignal {
   min_moments: number;
 }
 
+interface WholeStorySignal {
+  ready: boolean;
+  reason: string;
+  selected_topics: string[];
+  selected_count_total: number;
+  correlation_score: number;
+}
+
 interface ContinuitySignal {
   topic_key: string;
   topic_label?: string;
   deep_reflect?: DeepReflectSignal;
+  whole_story?: WholeStorySignal;
 }
 
 const BACKEND_URL = config.backendUrl || "https://sakhi-production-930f.up.railway.app";
@@ -57,6 +69,13 @@ function toContinuitySignal(raw: unknown): ContinuitySignal | null {
 
   const deepRaw = data.deep_reflect;
   const deep = deepRaw && typeof deepRaw === "object" ? (deepRaw as Record<string, unknown>) : null;
+  const wholeRaw = data.whole_story;
+  const whole = wholeRaw && typeof wholeRaw === "object" ? (wholeRaw as Record<string, unknown>) : null;
+  const selectedTopics = Array.isArray(whole?.selected_topics)
+    ? whole?.selected_topics
+        .map((item) => String(item || "").trim().toLowerCase().replace(/\s+/g, "_"))
+        .filter(Boolean)
+    : [];
 
   return {
     topic_key: topicKey,
@@ -69,6 +88,15 @@ function toContinuitySignal(raw: unknown): ContinuitySignal | null {
           detail_allowed: Boolean(deep.detail_allowed),
           selected_count: toNumber(deep.selected_count, 0),
           min_moments: Math.max(1, toNumber(deep.min_moments, 8)),
+        }
+      : undefined,
+    whole_story: whole
+      ? {
+          ready: Boolean(whole.ready),
+          reason: String(whole.reason || "unknown").trim() || "unknown",
+          selected_topics: selectedTopics,
+          selected_count_total: Math.max(0, toNumber(whole.selected_count_total, 0)),
+          correlation_score: toNumber(whole.correlation_score, 0),
         }
       : undefined,
   };
@@ -105,6 +133,7 @@ export default function ConversationScreen() {
   const router = useRouter();
   const { user, session, signOut } = useAuth();
   const scrollViewRef = useRef<ScrollView>(null);
+  const debugSequenceRef = useRef(0);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -113,9 +142,39 @@ export default function ConversationScreen() {
   const [deepReflectionStatus, setDeepReflectionStatus] = useState("");
   const [activeContinuitySignal, setActiveContinuitySignal] = useState<ContinuitySignal | null>(null);
   const [latestUserMessage, setLatestUserMessage] = useState("");
+  const [accountMenuVisible, setAccountMenuVisible] = useState(false);
 
   const personId = user?.personId || "";
   const authToken = session?.access_token || "";
+
+  const emitDebugEvent = useCallback(
+    (event: SupportDebugEventInput) => {
+      if (!personId || !BACKEND_URL) return;
+      debugSequenceRef.current += 1;
+      void trackSupportDebugEvent({
+        backendUrl: BACKEND_URL,
+        authToken,
+        personId,
+        event: {
+          ...event,
+          seq: debugSequenceRef.current,
+        },
+      });
+    },
+    [authToken, personId],
+  );
+
+  useEffect(() => {
+    emitDebugEvent({
+      type: "screen_view",
+      name: "chat_opened",
+      screen: "chat",
+      route: "/mobile/chat",
+      metadata: { has_messages: messages.length > 0 },
+    });
+    // fire once on screen mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -125,6 +184,14 @@ export default function ConversationScreen() {
     }
   }, [messages]);
 
+  const prevDeepReadyRef = useRef(false);
+  useEffect(() => {
+    if (deepAnswerReady && !prevDeepReadyRef.current) {
+      Analytics.deepButtonShown({ mode: "whole_story" });
+    }
+    prevDeepReadyRef.current = deepAnswerReady;
+  }, [deepAnswerReady]);
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -133,13 +200,30 @@ export default function ConversationScreen() {
   };
 
   const displayName = user?.fullName?.split(" ")[0] || "";
-  const deepReflectSignal = activeContinuitySignal?.deep_reflect;
-  const deepSelectedCount = deepReflectSignal?.selected_count || 0;
-  const deepMinMoments = deepReflectSignal?.min_moments || 8;
+  const wholeStorySignal = activeContinuitySignal?.whole_story;
   const deepThreadLabel =
     activeContinuitySignal?.topic_label || activeContinuitySignal?.topic_key || "this thread";
+  const wholeStoryTopics = useMemo(
+    () => wholeStorySignal?.selected_topics || [],
+    [wholeStorySignal?.selected_topics],
+  );
+  const wholeStorySelectedTopics = useMemo(() => {
+    const primary = activeContinuitySignal?.topic_key || "";
+    const normalized = wholeStoryTopics
+      .map((topic) => String(topic || "").trim())
+      .filter(Boolean);
+    if (primary && !normalized.includes(primary)) {
+      normalized.unshift(primary);
+    }
+    return normalized.slice(0, 3);
+  }, [activeContinuitySignal?.topic_key, wholeStoryTopics]);
+  const wholeStoryReady = Boolean(
+    wholeStorySignal?.ready && wholeStorySelectedTopics.length >= 2,
+  );
   const hasDeepQuery = latestUserMessage.trim().length > 0;
-  const deepAnswerReady = Boolean(activeContinuitySignal?.topic_key && deepReflectSignal?.ready && hasDeepQuery);
+  const deepAnswerReady = Boolean(
+    activeContinuitySignal?.topic_key && hasDeepQuery && wholeStoryReady,
+  );
   const deepStatusHint = (() => {
     if (!activeContinuitySignal?.topic_key) {
       return "Deep Reflect will appear when this chat forms a clear thread.";
@@ -147,17 +231,31 @@ export default function ConversationScreen() {
     if (!hasDeepQuery) {
       return "Send one message to set your current question.";
     }
-    const reason = deepReflectSignal?.reason || "insufficient_depth";
-    if (reason === "ready") {
-      return `Deep Reflect is ready for ${deepThreadLabel}.`;
+    if (wholeStoryReady) {
+      const primary = deepThreadLabel;
+      const linked = wholeStorySelectedTopics
+        .filter((topic) => topic !== activeContinuitySignal.topic_key)
+        .slice(0, 2)
+        .join(", ");
+      if (linked) {
+        return `Deep Reflect is ready across ${primary} and ${linked}.`;
+      }
+      return `Deep Reflect is ready with whole-story context for ${primary}.`;
     }
-    if (reason === "mirror_blocked") {
-      return "Deep Reflect is temporarily unavailable while this thread is still stabilizing.";
+    if (wholeStorySignal && !wholeStorySignal.ready) {
+      const reason = wholeStorySignal.reason || "insufficient_depth";
+      if (reason === "insufficient_overlap") {
+        return "Deep Reflect is waiting for clearer links across your active threads.";
+      }
+      if (reason === "threads_inactive") {
+        return "Deep Reflect will unlock after more recent activity across related threads.";
+      }
+      if (reason === "insufficient_depth") {
+        return "Deep Reflect unlocks once this thread has deeper linked history.";
+      }
+      return "Deep Reflect unlocks once this thread has enough linked history.";
     }
-    if (reason === "detail_blocked") {
-      return "Deep Reflect will unlock once this thread has clearer detail.";
-    }
-    return `Deep Reflect unlocks once your story runs long enough to draw from (${deepSelectedCount}/${deepMinMoments}).`;
+    return "Deep Reflect unlocks once a second thread clearly links to this one.";
   })();
 
   const ensureContinuityPolicyEnabled = useCallback(async () => {
@@ -237,6 +335,13 @@ export default function ConversationScreen() {
   const sendMessage = useCallback(async () => {
     const text = inputText.trim();
     if (!text || !personId) return;
+    Analytics.messageSent();
+    emitDebugEvent({
+      type: "action",
+      name: "send_message_pressed",
+      screen: "chat",
+      metadata: { input_length: text.length },
+    });
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -253,6 +358,15 @@ export default function ConversationScreen() {
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
+    const requestStartMs = Date.now();
+    emitDebugEvent({
+      type: "api_start",
+      name: "turn_v2",
+      screen: "chat",
+      route: "/v2/turn",
+      method: "POST",
+      metadata: { source: "chat_send" },
+    });
 
     try {
       const url = `${BACKEND_URL}/v2/turn?user=${encodeURIComponent(personId)}`;
@@ -267,9 +381,26 @@ export default function ConversationScreen() {
       });
 
       clearTimeout(timeout);
+      emitDebugEvent({
+        type: "api_end",
+        name: "turn_v2",
+        screen: "chat",
+        route: "/v2/turn",
+        method: "POST",
+        status: res.status,
+        latencyMs: Date.now() - requestStartMs,
+        requestId: res.headers.get("x-request-id") || undefined,
+        metadata: { ok: res.ok },
+      });
 
       if (res.ok) {
         const data = await res.json();
+        Analytics.turnCompleted({
+          latency_ms: Date.now() - requestStartMs,
+          status: res.status,
+          request_id: res.headers.get("x-request-id") || undefined,
+          has_continuity: Boolean(data.continuity?.topic_key),
+        });
         setActiveContinuitySignal(toContinuitySignal(data.continuity));
 
         if (data.reply) {
@@ -292,11 +423,43 @@ export default function ConversationScreen() {
           kind: "system",
         };
         setMessages((prev) => [...prev, sakhiMessage]);
+        Analytics.turnFailed({
+          status: res.status,
+          latency_ms: Date.now() - requestStartMs,
+          reason: "http_error",
+          request_id: res.headers.get("x-request-id") || undefined,
+        });
+        emitDebugEvent({
+          type: "ui_error",
+          name: "turn_http_error",
+          screen: "chat",
+          route: "/v2/turn",
+          method: "POST",
+          status: res.status,
+          latencyMs: Date.now() - requestStartMs,
+        });
         console.error(`[turn] HTTP ${res.status}: ${statusText.slice(0, 200)}`);
       }
     } catch (err: unknown) {
       clearTimeout(timeout);
+      emitDebugEvent({
+        type: "api_end",
+        name: "turn_v2",
+        screen: "chat",
+        route: "/v2/turn",
+        method: "POST",
+        status: 0,
+        latencyMs: Date.now() - requestStartMs,
+        metadata: {
+          aborted: err instanceof Error && err.name === "AbortError",
+        },
+      });
       const isTimeout = err instanceof Error && err.name === "AbortError";
+      Analytics.turnFailed({
+        status: 0,
+        latency_ms: Date.now() - requestStartMs,
+        reason: isTimeout ? "timeout" : "network",
+      });
       const errorMsg = isTimeout
         ? "That took too long. Try again - sometimes the first message is slow."
         : `Connection issue: ${err instanceof Error ? err.message : "unknown"}`;
@@ -308,18 +471,43 @@ export default function ConversationScreen() {
         kind: "system",
       };
       setMessages((prev) => [...prev, sakhiMessage]);
+      emitDebugEvent({
+        type: "ui_error",
+        name: isTimeout ? "turn_timeout" : "turn_fetch_error",
+        screen: "chat",
+        route: "/v2/turn",
+        method: "POST",
+      });
       console.error("[turn] fetch error:", err);
     } finally {
       setIsSending(false);
     }
-  }, [authToken, inputText, personId]);
+  }, [authToken, emitDebugEvent, inputText, personId]);
 
   const handleRunDeepAnswer = useCallback(async () => {
-    if (!personId || !activeContinuitySignal?.topic_key || !hasDeepQuery || isRunningDeepAnswer) {
+    if (
+      !personId
+      || !activeContinuitySignal?.topic_key
+      || !hasDeepQuery
+      || !wholeStoryReady
+      || isRunningDeepAnswer
+    ) {
       return;
     }
+    const selectedTopics = wholeStorySelectedTopics;
 
     const pendingId = `deep-pending-${Date.now()}`;
+    Analytics.deepStarted({ mode: "whole_story" });
+    emitDebugEvent({
+      type: "action",
+      name: "run_deep_pressed",
+      screen: "chat",
+      route: "/continuity/reflection/run",
+      method: "POST",
+      metadata: {
+        selected_topics: selectedTopics.length,
+      },
+    });
     setIsRunningDeepAnswer(true);
     setDeepReflectionStatus("queued");
     setMessages((prev) => [
@@ -327,7 +515,7 @@ export default function ConversationScreen() {
       {
         id: pendingId,
         role: "sakhi",
-        content: `Deep Reflect is reading the full ${deepThreadLabel} story...`,
+        content: "Deep Reflect is reading your whole story across linked threads...",
         timestamp: new Date(),
         kind: "system",
       },
@@ -338,6 +526,14 @@ export default function ConversationScreen() {
     };
 
     try {
+      const deepStartMs = Date.now();
+      emitDebugEvent({
+        type: "api_start",
+        name: "run_whole_story",
+        screen: "chat",
+        route: "/continuity/reflection/run",
+        method: "POST",
+      });
       const res = await fetch(`${BACKEND_URL}/continuity/reflection/run`, {
         method: "POST",
         headers: {
@@ -348,9 +544,21 @@ export default function ConversationScreen() {
           person_id: personId,
           topic_key: activeContinuitySignal.topic_key,
           window: "3650d",
-          mode: "deep_answer",
+          mode: "whole_story",
+          topic_keys: selectedTopics,
           user_query: latestUserMessage.trim(),
         }),
+      });
+      emitDebugEvent({
+        type: "api_end",
+        name: "run_whole_story",
+        screen: "chat",
+        route: "/continuity/reflection/run",
+        method: "POST",
+        status: res.status,
+        latencyMs: Date.now() - deepStartMs,
+        requestId: res.headers.get("x-request-id") || undefined,
+        metadata: { ok: res.ok },
       });
 
       if (!res.ok) {
@@ -367,6 +575,11 @@ export default function ConversationScreen() {
       removePending();
 
       if (deepReply) {
+        Analytics.deepCompleted({
+          mode: "whole_story",
+          latency_ms: Date.now() - deepStartMs,
+          request_id: res.headers.get("x-request-id") || undefined,
+        });
         setMessages((prev) => [
           ...prev,
           {
@@ -378,6 +591,12 @@ export default function ConversationScreen() {
           },
         ]);
       } else {
+        emitDebugEvent({
+          type: "ui_error",
+          name: "deep_reflect_incomplete",
+          screen: "chat",
+          route: "/continuity/reflection/status",
+        });
         setMessages((prev) => [
           ...prev,
           {
@@ -391,6 +610,13 @@ export default function ConversationScreen() {
       }
     } catch (err) {
       removePending();
+      emitDebugEvent({
+        type: "ui_error",
+        name: "deep_reflect_run_failed",
+        screen: "chat",
+        route: "/continuity/reflection/run",
+        method: "POST",
+      });
       setMessages((prev) => [
         ...prev,
         {
@@ -409,18 +635,29 @@ export default function ConversationScreen() {
   }, [
     activeContinuitySignal?.topic_key,
     authToken,
-    deepThreadLabel,
     hasDeepQuery,
     isRunningDeepAnswer,
     latestUserMessage,
     personId,
     pollDeepAnswer,
+    wholeStoryReady,
+    wholeStorySelectedTopics,
+    emitDebugEvent,
   ]);
 
   const handleSignOut = async () => {
+    setAccountMenuVisible(false);
     await signOut();
     router.replace("/" as never);
   };
+
+  const openAccountRoute = useCallback(
+    (path: string) => {
+      setAccountMenuVisible(false);
+      router.push(path as never);
+    },
+    [router],
+  );
 
   const hasMessages = messages.length > 0;
 
@@ -438,18 +675,15 @@ export default function ConversationScreen() {
             {displayName ? `, ${displayName}` : ""}
           </Text>
         </View>
-        <View style={styles.headerActions}>
-          <Pressable
-            style={styles.headerPill}
-            onPress={() => router.push("/soul/topic-reflection" as never)}
-          >
-            <Ionicons name="sparkles-outline" size={14} color={palette.fg} />
-            <Text style={styles.headerPillText}>Profile</Text>
-          </Pressable>
-          <Pressable onPress={handleSignOut} hitSlop={12}>
-            <Text style={styles.signOutText}>Sign out</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={styles.accountTrigger}
+          onPress={() => setAccountMenuVisible(true)}
+          hitSlop={12}
+        >
+          <Ionicons name="person-circle-outline" size={16} color={palette.fg} />
+          <Text style={styles.accountTriggerText}>Profile</Text>
+          <Ionicons name="chevron-down" size={14} color={palette.muted} />
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView
@@ -506,7 +740,7 @@ export default function ConversationScreen() {
         </ScrollView>
 
         <View style={styles.inputArea}>
-          {hasMessages && activeContinuitySignal?.topic_key ? (
+          {hasMessages ? (
             <>
               <View style={styles.deepActionRow}>
                 <View style={[styles.deepInfoPill, deepAnswerReady && styles.deepInfoPillReady]}>
@@ -562,6 +796,66 @@ export default function ConversationScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={accountMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAccountMenuVisible(false)}
+      >
+        <Pressable style={styles.accountOverlay} onPress={() => setAccountMenuVisible(false)}>
+          <Pressable
+            style={styles.accountSheet}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text style={styles.accountSheetKicker}>Account Hub</Text>
+            <Text style={styles.accountSheetTitle}>
+              {displayName ? `${displayName}'s space` : "Your space"}
+            </Text>
+
+            <Pressable
+              style={styles.accountItem}
+              onPress={() => openAccountRoute("/soul/topic-reflection")}
+            >
+              <View style={styles.accountItemCopy}>
+                <Text style={styles.accountItemTitle}>Profile</Text>
+                <Text style={styles.accountItemSubtitle}>Reflection and topic story</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={palette.muted} />
+            </Pressable>
+
+            <Pressable
+              style={styles.accountItem}
+              onPress={() => openAccountRoute("/account/settings")}
+            >
+              <View style={styles.accountItemCopy}>
+                <Text style={styles.accountItemTitle}>Settings</Text>
+                <Text style={styles.accountItemSubtitle}>App, privacy, and account controls</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={palette.muted} />
+            </Pressable>
+
+            <Pressable
+              style={styles.accountItem}
+              onPress={() => openAccountRoute("/account/support")}
+            >
+              <View style={styles.accountItemCopy}>
+                <Text style={styles.accountItemTitle}>Report an issue</Text>
+                <Text style={styles.accountItemSubtitle}>Something not working? Let us know</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={palette.muted} />
+            </Pressable>
+
+            <Pressable style={[styles.accountItem, styles.accountItemDanger]} onPress={handleSignOut}>
+              <View style={styles.accountItemCopy}>
+                <Text style={[styles.accountItemTitle, styles.accountItemDangerText]}>Sign out</Text>
+                <Text style={styles.accountItemSubtitle}>End this session on this device</Text>
+              </View>
+              <Ionicons name="log-out-outline" size={16} color="#ef6f7e" />
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -628,29 +922,84 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: palette.fg,
   },
-  headerActions: {
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  headerPill: {
+  accountTrigger: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     borderRadius: 999,
     backgroundColor: "rgba(255, 255, 255, 0.09)",
     borderWidth: 1,
     borderColor: palette.border,
   },
-  headerPillText: {
+  accountTriggerText: {
     color: palette.fg,
     fontSize: 11,
     fontWeight: "600",
   },
-  signOutText: {
+  accountOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(6, 9, 15, 0.7)",
+    justifyContent: "flex-end",
+    paddingHorizontal: 14,
+    paddingBottom: 20,
+  },
+  accountSheet: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: "rgba(15, 23, 38, 0.96)",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  accountSheetKicker: {
+    color: palette.muted,
+    textTransform: "uppercase",
+    fontSize: 11,
+    letterSpacing: 1.1,
+  },
+  accountSheetTitle: {
+    color: palette.fg,
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  accountItem: {
+    minHeight: 68,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(176, 196, 228, 0.2)",
+    backgroundColor: "rgba(26, 38, 60, 0.72)",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  accountItemCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  accountItemTitle: {
+    color: palette.fg,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  accountItemSubtitle: {
+    color: palette.muted,
     fontSize: 12,
-    color: palette.subtle,
+    lineHeight: 17,
+  },
+  accountItemDanger: {
+    borderColor: "rgba(239, 111, 126, 0.35)",
+    backgroundColor: "rgba(88, 33, 44, 0.36)",
+    marginTop: 3,
+  },
+  accountItemDangerText: {
+    color: "#f8bcc6",
   },
 
   messagesArea: {

@@ -201,6 +201,49 @@ export interface TurnContinuityEvidenceDebug {
   confidence?: number;
 }
 
+export interface TurnContinuityCandidateTopicDebug {
+  topic_key?: string;
+  topic_label?: string;
+  score?: number;
+  selected_count?: number;
+  detail_allowed?: boolean;
+}
+
+export interface TurnContinuityCrossContextDebug {
+  correlated_topic_key?: string;
+  correlated_topic_label?: string;
+  correlated_selected_count?: number;
+  ready?: boolean;
+  reason?: string;
+  correlation_score?: number;
+  correlation_type?: string;
+  correlation_breakdown?: Record<string, number>;
+  overlap_pairs?: number;
+}
+
+export interface TurnContinuityWholeStoryDebug {
+  ready?: boolean;
+  reason?: string;
+  selected_topics?: string[];
+  selected_count_total?: number;
+  correlation_score?: number;
+}
+
+export interface TurnContinuityDimensionSignalDebug {
+  level?: number;
+  direction?: "pressured" | "neutral" | "resourced" | string;
+  affected_topics?: string[];
+  evidence_summary?: string;
+  signal_markers?: Record<string, any>;
+  surface?: boolean;
+}
+
+export interface TurnContinuityLifeDimensionsDebug {
+  time_availability?: TurnContinuityDimensionSignalDebug | null;
+  financial_pressure?: TurnContinuityDimensionSignalDebug | null;
+  emotional_bandwidth?: TurnContinuityDimensionSignalDebug | null;
+}
+
 export interface TurnContinuityPackDebug {
   topic_key?: string;
   topic_label?: string;
@@ -212,6 +255,10 @@ export interface TurnContinuityPackDebug {
     disclaimer?: string;
   };
   evidence?: TurnContinuityEvidenceDebug[];
+  candidate_topics?: TurnContinuityCandidateTopicDebug[];
+  cross_context?: TurnContinuityCrossContextDebug | null;
+  whole_story?: TurnContinuityWholeStoryDebug | null;
+  life_dimensions?: TurnContinuityLifeDimensionsDebug | null;
 }
 
 export interface TurnConversationEngineDebug {
@@ -241,7 +288,12 @@ export interface SimulationAddJournalResult {
 }
 
 export interface ContinuityDeepReflectionResultBody {
-  reflection_mode?: "deep_answer" | "topic_reflection" | string;
+  reflection_mode?:
+    | "deep_answer"
+    | "topic_reflection"
+    | "whole_story"
+    | "cross_context"
+    | string;
   query_context?: {
     active_query?: string;
     active_query_source?: "provided" | "topic_turn_recovery" | "derived_or_none" | "none" | string;
@@ -282,7 +334,7 @@ export interface ContinuityDeepReflectionResponse {
   reflection_id: string;
   topic_key?: string;
   status: string;
-  mode?: "deep_answer" | "topic_reflection" | string;
+  mode?: "deep_answer" | "topic_reflection" | "whole_story" | "cross_context" | string;
   user_query_present?: boolean;
   error?: string | null;
   result?: ContinuityDeepReflectionResultBody;

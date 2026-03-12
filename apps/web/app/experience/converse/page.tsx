@@ -124,9 +124,14 @@ interface ContinuityPackDebug {
     pivots_signal?: string;
     current_signal?: string;
   };
+  whole_story?: {
+    ready?: boolean;
+    reason?: string;
+    selected_topics?: string[];
+  };
 }
 
-type DeepReflectionRunMode = "deep_answer" | "topic_reflection";
+type DeepReflectionRunMode = "whole_story";
 
 // =============================================================================
 // COMPONENT
@@ -258,6 +263,42 @@ function ConverseContent() {
     }
     return "";
   }, [messages]);
+  const wholeStorySignal = activeContinuityPack?.whole_story;
+  const wholeStoryTopicKeys = useMemo(() => {
+    const raw = Array.isArray(wholeStorySignal?.selected_topics)
+      ? wholeStorySignal.selected_topics
+      : [];
+    const normalized = raw
+      .map((topic) => String(topic || "").trim())
+      .filter(Boolean);
+    const primary = String(activeContinuityPack?.topic_key || "").trim();
+    if (primary && !normalized.includes(primary)) {
+      normalized.unshift(primary);
+    }
+    return normalized.slice(0, 3);
+  }, [activeContinuityPack?.topic_key, wholeStorySignal?.selected_topics]);
+  const wholeStoryReady = Boolean(
+    wholeStorySignal?.ready && wholeStoryTopicKeys.length >= 2,
+  );
+  const deepReflectionReady = Boolean(
+    activeContinuityPack?.topic_key && latestUserMessage && wholeStoryReady,
+  );
+  const deepReflectionHint = (() => {
+    if (!latestUserMessage) {
+      return "Send one message first.";
+    }
+    if (wholeStoryReady) {
+      return "Deep Reflect is ready with linked-thread context.";
+    }
+    const reason = String(wholeStorySignal?.reason || "insufficient_depth").trim();
+    if (reason === "insufficient_overlap") {
+      return "Waiting for a clearer second thread link.";
+    }
+    if (reason === "threads_inactive") {
+      return "Waiting for more recent activity across linked threads.";
+    }
+    return "Deep Reflect unlocks once linked history is deeper.";
+  })();
 
   const loadContinuityPolicy = useCallback(async () => {
     if (!authUser?.person_id) return;
@@ -662,14 +703,21 @@ function ConverseContent() {
     [formatDeepReflectionResult]
   );
 
-  const handleRunDeepReflection = useCallback(async (mode: DeepReflectionRunMode) => {
-    if (!authUser?.person_id || !activeContinuityPack?.topic_key || isRunningDeepReflection) return;
-    const queryText = mode === "deep_answer" ? latestUserMessage : "";
-    if (mode === "deep_answer" && !queryText) return;
+  const handleRunDeepReflection = useCallback(async () => {
+    if (
+      !authUser?.person_id
+      || !activeContinuityPack?.topic_key
+      || !deepReflectionReady
+      || isRunningDeepReflection
+    ) {
+      return;
+    }
+    const queryText = latestUserMessage.trim();
+    if (!queryText) return;
 
     setIsRunningDeepReflection(true);
     setDeepReflectionStatus("queued");
-    setDeepReflectionMode(mode);
+    setDeepReflectionMode("whole_story");
 
     try {
       const res = await fetch("/api/continuity/reflection/run", {
@@ -679,8 +727,9 @@ function ConverseContent() {
           person_id: authUser.person_id,
           topic_key: activeContinuityPack.topic_key,
           window: "3650d",
-          mode,
-          user_query: mode === "deep_answer" ? queryText : undefined,
+          mode: "whole_story",
+          topic_keys: wholeStoryTopicKeys,
+          user_query: queryText,
         }),
       });
       if (!res.ok) {
@@ -698,9 +747,11 @@ function ConverseContent() {
   }, [
     activeContinuityPack?.topic_key,
     authUser?.person_id,
+    deepReflectionReady,
     isRunningDeepReflection,
     latestUserMessage,
     pollDeepReflection,
+    wholeStoryTopicKeys,
   ]);
 
   const handleContinuityToggle = useCallback(async () => {
@@ -1364,46 +1415,33 @@ function ConverseContent() {
                   </span>
                   <button
                     onClick={() => {
-                      void handleRunDeepReflection("deep_answer");
+                      void handleRunDeepReflection();
                     }}
-                    disabled={isRunningDeepReflection || !latestUserMessage}
+                    disabled={isRunningDeepReflection || !deepReflectionReady}
                     style={{
                       background: palette.cardBg,
                       border: `1px solid ${palette.border}`,
                       color: palette.fg,
                       fontSize: "12px",
-                      cursor: isRunningDeepReflection || !latestUserMessage ? "default" : "pointer",
+                      cursor: isRunningDeepReflection || !deepReflectionReady ? "default" : "pointer",
                       padding: "6px 10px",
                       borderRadius: "999px",
-                      opacity: isRunningDeepReflection || !latestUserMessage ? 0.7 : 1,
+                      opacity: isRunningDeepReflection || !deepReflectionReady ? 0.7 : 1,
                     }}
-                    title={latestUserMessage ? "Run deep answer with current query + full history" : "Send a user message first to run Deep Answer"}
+                    title={deepReflectionHint}
                   >
-                    {isRunningDeepReflection && deepReflectionMode === "deep_answer"
-                      ? `Deep Answer: ${deepReflectionStatus || "running"}`
-                      : "Run Deep Answer"}
+                    {isRunningDeepReflection && deepReflectionMode === "whole_story"
+                      ? `Deep Reflect: ${deepReflectionStatus || "running"}`
+                      : "Run Deep Reflect"}
                   </button>
-                  <button
-                    onClick={() => {
-                      void handleRunDeepReflection("topic_reflection");
-                    }}
-                    disabled={isRunningDeepReflection}
+                  <span
                     style={{
-                      background: palette.cardBg,
-                      border: `1px solid ${palette.border}`,
-                      color: palette.fg,
-                      fontSize: "12px",
-                      cursor: isRunningDeepReflection ? "default" : "pointer",
-                      padding: "6px 10px",
-                      borderRadius: "999px",
-                      opacity: isRunningDeepReflection ? 0.7 : 1,
+                      color: palette.muted,
+                      fontSize: "11px",
                     }}
-                    title="Run longitudinal topic reflection without requiring a current query"
                   >
-                    {isRunningDeepReflection && deepReflectionMode === "topic_reflection"
-                      ? `Topic Reflection: ${deepReflectionStatus || "running"}`
-                      : "Run Topic Reflection"}
-                  </button>
+                    {deepReflectionHint}
+                  </span>
                 </>
               )}
             </div>

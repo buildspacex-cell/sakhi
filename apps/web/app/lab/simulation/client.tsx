@@ -91,7 +91,7 @@ const palette = {
   edges: "#e6923a",
 };
 
-type DeepReflectionRunMode = "deep_answer" | "topic_reflection";
+type DeepReflectionRunMode = "deep_answer" | "topic_reflection" | "whole_story" | "cross_context";
 
 type ContinuityEventRef = CompiledContinuityEventRef;
 type PositionedContinuityEvent = ContinuityEventRef & {
@@ -213,13 +213,30 @@ export default function SimulationDemoClient() {
   }, [askText, askTimeOfDay, askLoading, personaId]);
 
   const handleRunAskDeepReflection = useCallback(async (mode: DeepReflectionRunMode) => {
-    const topicKey = String(askLastDebug?.continuity_pack?.topic_key || "").trim();
+    const continuityPack = askLastDebug?.continuity_pack || null;
+    const topicKey = String(continuityPack?.topic_key || "").trim();
     if (!topicKey || askReflectionLoading) return;
-    const queryText = mode === "deep_answer" ? String(askLastEntry?.content || "").trim() : "";
-    if (mode === "deep_answer" && !queryText) {
-      setAskReflectionError("Deep Answer needs an active query from the latest user message.");
+    const queryText =
+      mode === "deep_answer" || mode === "whole_story"
+        ? String(askLastEntry?.content || "").trim()
+        : "";
+    if ((mode === "deep_answer" || mode === "whole_story") && !queryText) {
+      setAskReflectionError(
+        mode === "whole_story"
+          ? "Whole Story needs the latest user query in this turn."
+          : "Deep Answer needs an active query from the latest user message.",
+      );
       return;
     }
+    const wholeStoryTopics = Array.isArray(continuityPack?.whole_story?.selected_topics)
+      ? continuityPack.whole_story.selected_topics
+          .map((item) => String(item || "").trim().toLowerCase().replace(/\s+/g, "_"))
+          .filter(Boolean)
+      : [];
+    const runTopicKeys =
+      mode === "whole_story" || mode === "cross_context"
+        ? (wholeStoryTopics.length > 0 ? wholeStoryTopics : [topicKey]).slice(0, 3)
+        : [];
 
     setAskReflectionLoading(true);
     setAskReflectionError(null);
@@ -252,7 +269,8 @@ export default function SimulationDemoClient() {
           topic_key: topicKey,
           window: "3650d",
           mode,
-          user_query: mode === "deep_answer" ? queryText : undefined,
+          topic_keys: runTopicKeys,
+          user_query: mode === "deep_answer" || mode === "whole_story" ? queryText : undefined,
         }),
       });
       if (!runRes.ok) {
@@ -354,7 +372,7 @@ export default function SimulationDemoClient() {
     } finally {
       setAskReflectionLoading(false);
     }
-  }, [askLastDebug?.continuity_pack?.topic_key, askLastEntry?.content, askReflectionLoading, data?.user_id, personaId]);
+  }, [askLastDebug, askLastEntry?.content, askReflectionLoading, data?.user_id, personaId]);
 
   const reloadSimulationData = useCallback(
     async (targetPersonaId: string): Promise<SimulationData> => {
@@ -4974,6 +4992,29 @@ function AskSakhiSection({
   const personaName = PERSONA_NAMES[personaId] ?? personaId;
   const continuityPack = debug?.continuity_pack || null;
   const continuityEvidence = continuityPack?.evidence || [];
+  const candidateTopics = Array.isArray(continuityPack?.candidate_topics)
+    ? continuityPack.candidate_topics
+    : [];
+  const crossContextSignal =
+    continuityPack?.cross_context && typeof continuityPack.cross_context === "object"
+      ? continuityPack.cross_context
+      : null;
+  const wholeStorySignal =
+    continuityPack?.whole_story && typeof continuityPack.whole_story === "object"
+      ? continuityPack.whole_story
+      : null;
+  const wholeStoryTopics = Array.isArray(wholeStorySignal?.selected_topics)
+    ? wholeStorySignal.selected_topics
+        .map((item) => String(item || "").trim().toLowerCase().replace(/\s+/g, "_"))
+        .filter(Boolean)
+    : [];
+  const surfacedLifeDimensions = continuityPack?.life_dimensions
+    ? ([
+        ["time_availability", continuityPack.life_dimensions.time_availability],
+        ["financial_pressure", continuityPack.life_dimensions.financial_pressure],
+        ["emotional_bandwidth", continuityPack.life_dimensions.emotional_bandwidth],
+      ] as const).filter(([, payload]) => payload && typeof payload === "object")
+    : [];
   const arcCompact = continuityPack?.arc_compact || null;
   const engineDebug = debug?.conversation_engine_debug || null;
   const promptText = engineDebug?.base_prompt || engineDebug?.prompt || "";
@@ -4985,7 +5026,14 @@ function AskSakhiSection({
   const reflectionMode =
     String(reflectionBody?.reflection_mode || deepReflectionMode || "topic_reflection").trim() ||
     "topic_reflection";
-  const reflectionModeLabel = reflectionMode === "deep_answer" ? "Deep Answer" : "Topic Reflection";
+  const reflectionModeLabel =
+    reflectionMode === "deep_answer"
+      ? "Deep Answer"
+      : reflectionMode === "whole_story"
+        ? "Whole Story"
+        : reflectionMode === "cross_context"
+          ? "Cross Context"
+          : "Topic Reflection";
   const reflectionQueryContext =
     reflectionBody && reflectionBody.query_context && typeof reflectionBody.query_context === "object"
       ? reflectionBody.query_context
@@ -5022,12 +5070,56 @@ function AskSakhiSection({
   const deepReflectionTopicKey = String(continuityPack?.topic_key || "").trim();
   const canRunDeepReflection = deepReflectionTopicKey.length > 0;
   const canRunDeepAnswer = canRunDeepReflection && Boolean(String(lastEntry?.content || "").trim());
+  const canRunWholeStory =
+    canRunDeepReflection &&
+    Boolean(wholeStorySignal?.ready) &&
+    wholeStoryTopics.length >= 2 &&
+    Boolean(String(lastEntry?.content || "").trim());
+  const canRunCrossContext =
+    canRunDeepReflection &&
+    Boolean(crossContextSignal?.ready) &&
+    String(crossContextSignal?.correlated_topic_key || "").trim().length > 0;
   const deepReflectionDisabledReason = canRunDeepReflection
     ? ""
     : "No continuity topic was selected for this turn yet. Send a follow-up tied to a recurring thread (sakhi, family, career) and try again.";
   const deepAnswerDisabledReason = canRunDeepAnswer
     ? ""
     : "Deep Answer needs the latest user query in this turn.";
+  const wholeStoryDisabledReason = canRunWholeStory
+    ? ""
+    : "Whole Story unlocks when linked topics are ready and the latest query is present.";
+  const crossContextDisabledReason = canRunCrossContext
+    ? ""
+    : "Cross Context unlocks when a strong correlated thread is detected.";
+  const gateRows = [
+    {
+      label: "Primary topic detected",
+      pass: canRunDeepReflection,
+      detail: canRunDeepReflection ? deepReflectionTopicKey : "No topic_key selected yet",
+    },
+    {
+      label: "Candidate topics available",
+      pass: candidateTopics.length >= 2,
+      detail:
+        candidateTopics.length > 0
+          ? `${candidateTopics.length} candidates`
+          : "Need at least two surfaced topics",
+    },
+    {
+      label: "Cross-context correlation ready",
+      pass: Boolean(crossContextSignal?.ready),
+      detail: crossContextSignal
+        ? `${crossContextSignal.reason || "unknown"} · score ${Number(crossContextSignal.correlation_score || 0).toFixed(2)}`
+        : "No cross_context signal in this turn",
+    },
+    {
+      label: "Whole-story ready",
+      pass: Boolean(wholeStorySignal?.ready),
+      detail: wholeStorySignal
+        ? `${wholeStorySignal.reason || "unknown"} · topics ${wholeStoryTopics.length}`
+        : "No whole_story signal in this turn",
+    },
+  ];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -5314,6 +5406,119 @@ function AskSakhiSection({
                         </div>
                       </div>
                     )}
+                    <div
+                      style={{
+                        border: `1px solid ${palette.border}`,
+                        borderRadius: 8,
+                        padding: "10px 12px",
+                        background: palette.card,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: palette.text,
+                          marginBottom: 6,
+                        }}
+                      >
+                        Cross-Topic Gate Validation
+                      </div>
+                      <div style={{ fontSize: 11, color: palette.muted, marginBottom: 8 }}>
+                        Go / no-go check for whole-story readiness before onboarding cohorts.
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                          gap: 8,
+                          marginBottom: 8,
+                        }}
+                      >
+                        {gateRows.map((row) => (
+                          <div
+                            key={row.label}
+                            style={{
+                              border: `1px solid ${row.pass ? `${palette.balanced}66` : palette.border}`,
+                              borderRadius: 8,
+                              background: row.pass ? "#f7faf7" : palette.bg,
+                              padding: "8px 10px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                marginBottom: 3,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: row.pass ? palette.balanced : palette.chaos,
+                                textTransform: "uppercase",
+                                letterSpacing: 0.35,
+                              }}
+                            >
+                              {row.pass ? "Pass" : "Blocked"}
+                            </div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: palette.text }}>
+                              {row.label}
+                            </div>
+                            <div style={{ fontSize: 11, color: palette.muted, marginTop: 2 }}>
+                              {row.detail}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {candidateTopics.length > 0 && (
+                        <div style={{ fontSize: 11, color: palette.text, marginBottom: 6 }}>
+                          <strong>Candidates:</strong>{" "}
+                          {candidateTopics
+                            .map((item) => {
+                              const key = String(item.topic_key || "").trim() || "unknown";
+                              const score = Number(item.score || 0);
+                              const count = Number(item.selected_count || 0);
+                              return `${key} (${count}, ${score.toFixed(2)})`;
+                            })
+                            .join(" · ")}
+                        </div>
+                      )}
+
+                      {crossContextSignal && (
+                        <div style={{ fontSize: 11, color: palette.text, marginBottom: 6 }}>
+                          <strong>Best correlation:</strong>{" "}
+                          {(crossContextSignal.correlated_topic_label ||
+                            crossContextSignal.correlated_topic_key ||
+                            "unknown") as string}
+                          {" · "}
+                          {String(crossContextSignal.correlation_type || "composite")} · score{" "}
+                          {Number(crossContextSignal.correlation_score || 0).toFixed(2)} · overlap{" "}
+                          {Number(crossContextSignal.overlap_pairs || 0)}
+                        </div>
+                      )}
+
+                      {wholeStorySignal && (
+                        <div style={{ fontSize: 11, color: palette.text, marginBottom: 6 }}>
+                          <strong>Whole-story topics:</strong>{" "}
+                          {wholeStoryTopics.length > 0 ? wholeStoryTopics.join(", ") : "none"} · total moments{" "}
+                          {Number(wholeStorySignal.selected_count_total || 0)}
+                        </div>
+                      )}
+
+                      {surfacedLifeDimensions.length > 0 && (
+                        <div style={{ fontSize: 11, color: palette.text }}>
+                          <strong>Life dimensions:</strong>{" "}
+                          {surfacedLifeDimensions
+                            .map(([key, payload]) => {
+                              const level = Number(payload?.level || 0).toFixed(2);
+                              const direction = String(payload?.direction || "neutral");
+                              return `${key} ${direction} (${level})`;
+                            })
+                            .join(" · ")}
+                        </div>
+                      )}
+                    </div>
 
                     <div
                       style={{
@@ -5336,7 +5541,7 @@ function AskSakhiSection({
                         <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>
                           Deep Reflection Test
                           <div style={{ fontSize: 11, fontWeight: 400, color: palette.muted }}>
-                            Deep Answer = current query + full history, Topic Reflection = whole-story arc without a required query.
+                            Deep Answer = topic + query, Whole Story = query + linked topics, Cross Context = linked-thread longitudinal read, Topic Reflection = single-topic arc.
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -5392,6 +5597,58 @@ function AskSakhiSection({
                               ? "Running..."
                               : "Run Topic Reflection"}
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => onRunDeepReflection("whole_story")}
+                            disabled={deepReflectionLoading || !canRunWholeStory}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "none",
+                              background:
+                                deepReflectionLoading || !canRunWholeStory
+                                  ? palette.muted
+                                  : palette.accent,
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor:
+                                deepReflectionLoading || !canRunWholeStory
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity: deepReflectionLoading || !canRunWholeStory ? 0.8 : 1,
+                            }}
+                          >
+                            {deepReflectionLoading && deepReflectionMode === "whole_story"
+                              ? "Running..."
+                              : "Run Whole Story"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onRunDeepReflection("cross_context")}
+                            disabled={deepReflectionLoading || !canRunCrossContext}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "none",
+                              background:
+                                deepReflectionLoading || !canRunCrossContext
+                                  ? palette.muted
+                                  : palette.accent,
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor:
+                                deepReflectionLoading || !canRunCrossContext
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity: deepReflectionLoading || !canRunCrossContext ? 0.8 : 1,
+                            }}
+                          >
+                            {deepReflectionLoading && deepReflectionMode === "cross_context"
+                              ? "Running..."
+                              : "Run Cross Context"}
+                          </button>
                         </div>
                       </div>
 
@@ -5405,10 +5662,20 @@ function AskSakhiSection({
                           {deepAnswerDisabledReason}
                         </div>
                       )}
+                      {!deepReflectionLoading && canRunDeepReflection && !canRunWholeStory && (
+                        <div style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
+                          {wholeStoryDisabledReason}
+                        </div>
+                      )}
+                      {!deepReflectionLoading && canRunDeepReflection && !canRunCrossContext && (
+                        <div style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
+                          {crossContextDisabledReason}
+                        </div>
+                      )}
 
                       {deepReflectionStatus && (
                         <div style={{ fontSize: 11, color: palette.muted, marginTop: 8 }}>
-                          Status{deepReflectionMode ? ` (${deepReflectionMode === "deep_answer" ? "deep_answer" : "topic_reflection"})` : ""}: {deepReflectionStatus}
+                          Status{deepReflectionMode ? ` (${deepReflectionMode})` : ""}: {deepReflectionStatus}
                         </div>
                       )}
 

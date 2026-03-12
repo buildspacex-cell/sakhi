@@ -1,19 +1,32 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { PostHogProvider } from 'posthog-react-native';
+
 import { AuthProvider, useAuth } from '../lib/auth/AuthContext';
+import { posthog, identifyUser, resetUser } from '../lib/analytics/client';
 
 // Keep splash visible until auth resolves
 SplashScreen.preventAutoHideAsync();
 
 function AppContent() {
-  const { isLoading } = useAuth();
+  const { isLoading, user } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
       SplashScreen.hideAsync();
     }
   }, [isLoading]);
+
+  // Identify user in PostHog once auth resolves
+  useEffect(() => {
+    if (!isLoading && user?.personId) {
+      identifyUser(user.personId);
+    }
+    if (!isLoading && !user) {
+      resetUser();
+    }
+  }, [isLoading, user?.personId]);
 
   return (
     <Stack
@@ -36,6 +49,7 @@ function AppContent() {
             presentation: "fullScreenModal",
           }}
         />
+        <Stack.Screen name="account" options={{ headerShown: false }} />
         <Stack.Screen name="soul" options={{ headerShown: false }} />
         <Stack.Screen name="experience" options={{ headerShown: false }} />
     </Stack>
@@ -44,8 +58,10 @@ function AppContent() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <PostHogProvider client={posthog}>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </PostHogProvider>
   );
 }

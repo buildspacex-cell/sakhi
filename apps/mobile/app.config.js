@@ -82,6 +82,8 @@ module.exports = {
       releaseBypassPersonId: process.env.EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID,
       releaseBypassEnabled: process.env.EXPO_PUBLIC_RELEASE_BYPASS_ENABLED,
       easBuildProfile: process.env.EAS_BUILD_PROFILE,
+      posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY,
+      posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST,
       eas: {
         projectId: "065334a1-741a-47fe-8796-63b9d91faa66",
       },
