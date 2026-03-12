@@ -27,6 +27,7 @@ prometheus-client = "^0.20.0"
 starlette-exporter = "^0.15.1"
 pandas = "^2.3.3"
 pyjwt = "^2.11.0"
+posthog = "^3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"

@@ -24,6 +24,30 @@ class ContinuityThresholdProfile:
     surface_detail_min: float
 
 
+@dataclass(frozen=True)
+class CrossTopicContinuityThresholdProfile:
+    version: str
+    max_candidate_topics: int
+    max_topic_keys: int
+    correlation_cache_ttl_hours: int
+    life_dimensions_cache_ttl_hours: int
+    correlation_full_sweep_max_topics: int
+    cross_context_min_moments: int
+    cross_context_min_combined_score: float
+    cross_context_recent_activity_days: int
+    whole_story_min_primary_moments: int
+    whole_story_min_total_moments: int
+    whole_story_min_related_moments: int
+    dimension_time_window_days: int
+    dimension_emotion_window_days: int
+    dimension_financial_window_days: int
+    dimension_surface_min_topics: int
+    dimension_surface_min_entries: int
+    dimension_surface_level_high: float
+    dimension_surface_level_low: float
+    financial_surface_min_level: float
+
+
 SIMULATION_CONTINUITY_THRESHOLD_PROFILE = ContinuityThresholdProfile(
     version="2026.03.03.1",
     anchor_min_score=1.0,
@@ -35,4 +59,32 @@ SIMULATION_CONTINUITY_THRESHOLD_PROFILE = ContinuityThresholdProfile(
     coherence_min=0.5,
     surface_mirror_min=0.52,
     surface_detail_min=0.72,
+)
+
+
+CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE = CrossTopicContinuityThresholdProfile(
+    version="2026.03.10.2",
+    max_candidate_topics=3,
+    max_topic_keys=3,
+    correlation_cache_ttl_hours=6,
+    life_dimensions_cache_ttl_hours=6,
+    # Cold cache is warmed for all pairwise topic combinations up to this cap.
+    correlation_full_sweep_max_topics=12,
+    cross_context_min_moments=6,
+    cross_context_min_combined_score=0.35,
+    cross_context_recent_activity_days=90,
+    whole_story_min_primary_moments=8,
+    whole_story_min_total_moments=12,
+    whole_story_min_related_moments=6,
+    # Time window: capture current load pressure.
+    dimension_time_window_days=14,
+    # Emotion window: smooth spikes but stay recent.
+    dimension_emotion_window_days=30,
+    # Financial window: lower-frequency but meaningful signals.
+    dimension_financial_window_days=60,
+    dimension_surface_min_topics=2,
+    dimension_surface_min_entries=4,
+    dimension_surface_level_high=0.5,
+    dimension_surface_level_low=0.3,
+    financial_surface_min_level=0.65,
 )

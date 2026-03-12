@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import datetime
 import logging
 import asyncio
@@ -283,11 +284,16 @@ def _build_public_continuity_signal(continuity_pack: Any) -> Dict[str, Any] | No
     if not topic_key:
         return None
     topic_label = str(continuity_pack.get("topic_label") or "").strip() or topic_key
-    return {
+    payload: Dict[str, Any] = {
         "topic_key": topic_key,
         "topic_label": topic_label,
         "deep_reflect": _build_deep_reflect_signal(continuity_pack),
     }
+    for optional_key in ("candidate_topics", "cross_context", "whole_story", "life_dimensions"):
+        optional_value = continuity_pack.get(optional_key)
+        if optional_value not in (None, [], {}, ""):
+            payload[optional_key] = optional_value
+    return payload
 
 
 # NOTE: _load_internal_state now uses the shared deterministic_context_loader module.
@@ -416,6 +422,9 @@ async def _run_post_reply_processing(
     turn_context: Dict,
     emotion_update: Dict,
     experience_ts: str | None = None,
+    turn_id: str | None = None,
+    t_start: float | None = None,
+    has_continuity: bool = False,
 ) -> None:
     """Fire-and-forget post-reply processing. Runs in background after response is sent."""
     # Use caller-supplied experience timestamp when available (e.g. simulation/demo)
@@ -565,12 +574,26 @@ async def _run_post_reply_processing(
 
         logger.info("[turn_v2:bg] post-reply completed user=%s turn_id=%s jobs=%s", user_id, turn_id, queued_jobs)
 
+        # Server-side analytics mirror — ensures turn events land even if client drops
+        try:
+            from sakhi.libs.analytics import capture as analytics_capture
+            _latency = int((time.monotonic() - t_start) * 1000) if t_start is not None else 0
+            analytics_capture(user_id, "turn_completed", {
+                "latency_ms": _latency,
+                "status": 200,
+                "request_id": turn_id,
+                "has_continuity": has_continuity,
+            })
+        except Exception:
+            pass  # Analytics must never affect response
+
     except Exception as exc:
         logger.error("[turn_v2:bg] post-reply processing failed: %s", exc, exc_info=True)
 
 
 @router.post("/turn")
 async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(default=None)):
+    t_start = time.monotonic()
     user_id, person_label, person_key = await resolve_person(request, user)
     logger.info("[turn_v2] entry start user=%s person_id=%s label=%s", user, user_id, person_label)
     logger.info("ACTIVE_DEV_PERSON", extra={"person_id": user_id, "person_label": person_label, "person_key": person_key})
@@ -1943,6 +1966,9 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         turn_context=turn_context,
         emotion_update=emotion_update,
         experience_ts=body.ts,
+        turn_id=turn_id,
+        t_start=t_start,
+        has_continuity=bool(product.get("continuity")),
     ))
 
     logger.info(

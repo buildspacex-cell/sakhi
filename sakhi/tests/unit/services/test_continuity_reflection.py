@@ -10,7 +10,9 @@ from sakhi.apps.api.services.continuity import reflection
 
 
 @pytest.mark.asyncio
-async def test_create_deep_reflection_job_queues_background_work(monkeypatch: pytest.MonkeyPatch):
+async def test_create_deep_reflection_job_queues_background_work(
+    monkeypatch: pytest.MonkeyPatch,
+):
     queued: list[tuple[str, tuple[object, ...]]] = []
     created_tasks: list[object] = []
     mock_log = AsyncMock()
@@ -27,13 +29,51 @@ async def test_create_deep_reflection_job_queues_background_work(monkeypatch: py
     monkeypatch.setattr(reflection.asyncio, "create_task", fake_create_task)
     monkeypatch.setattr(reflection, "log_turn_event", mock_log)
 
-    payload = await reflection.create_deep_reflection_job("person-1", "career", window="180d")
+    payload = await reflection.create_deep_reflection_job(
+        "person-1", "career", window="180d"
+    )
 
     assert payload["status"] == "queued"
     assert payload["topic_key"] == "career"
     assert payload["window"] == "180d"
     assert created_tasks
     assert queued
+    mock_log.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_create_deep_reflection_job_normalizes_whole_story_topics(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    inserts: list[tuple[str, tuple[object, ...]]] = []
+    created_tasks: list[object] = []
+    mock_log = AsyncMock()
+
+    async def fake_dbexec(sql: str, *args):
+        inserts.append((" ".join(sql.split()), args))
+
+    def fake_create_task(coro):
+        created_tasks.append(coro)
+        coro.close()
+        return object()
+
+    monkeypatch.setattr(reflection, "dbexec", fake_dbexec)
+    monkeypatch.setattr(reflection.asyncio, "create_task", fake_create_task)
+    monkeypatch.setattr(reflection, "log_turn_event", mock_log)
+
+    payload = await reflection.create_deep_reflection_job(
+        "person-1",
+        "Sakhi",
+        mode="whole_story",
+        topic_keys=["career", " sakhi ", "family life"],
+        user_query="How should I prioritize this week?",
+    )
+
+    assert payload["mode"] == "whole_story"
+    assert payload["topic_key"] == "sakhi"
+    assert payload["topic_keys"] == ["sakhi", "career", "family_life"]
+    assert inserts
+    assert created_tasks
     mock_log.assert_awaited_once()
 
 
@@ -62,8 +102,59 @@ async def test_get_deep_reflection_status_returns_row(monkeypatch: pytest.Monkey
     assert payload["topic_key"] == "career"
 
 
+def test_dedupe_related_arc_payloads_removes_duplicate_moments():
+    primary_arc_payload = {
+        "included_moments": [
+            {
+                "source_ref": "journal:1",
+                "ts": "2026-03-01T10:00:00+00:00",
+                "snippet": "Primary",
+            },
+        ]
+    }
+    related_arc_payloads = [
+        {
+            "anchor": "career",
+            "included_moments": [
+                {
+                    "source_ref": "journal:1",
+                    "ts": "2026-03-01T10:00:00+00:00",
+                    "snippet": "Duplicate",
+                },
+                {
+                    "source_ref": "journal:2",
+                    "ts": "2026-03-02T10:00:00+00:00",
+                    "snippet": "Unique career",
+                },
+            ],
+        },
+        {
+            "anchor": "family",
+            "included_moments": [
+                {
+                    "source_ref": "journal:2",
+                    "ts": "2026-03-02T10:00:00+00:00",
+                    "snippet": "Duplicate from career",
+                },
+            ],
+        },
+    ]
+
+    deduped = reflection._dedupe_related_arc_payloads(
+        primary_arc_payload=primary_arc_payload,
+        related_arc_payloads=related_arc_payloads,
+    )
+
+    assert len(deduped) == 1
+    assert deduped[0]["anchor"] == "career"
+    assert len(deduped[0]["included_moments"]) == 1
+    assert deduped[0]["included_moments"][0]["source_ref"] == "journal:2"
+
+
 @pytest.mark.asyncio
-async def test_get_deep_reflection_result_returns_done_payload_and_logs(monkeypatch: pytest.MonkeyPatch):
+async def test_get_deep_reflection_result_returns_done_payload_and_logs(
+    monkeypatch: pytest.MonkeyPatch,
+):
     mock_log = AsyncMock()
     monkeypatch.setattr(
         reflection,
@@ -89,7 +180,9 @@ async def test_get_deep_reflection_result_returns_done_payload_and_logs(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_run_deep_reflection_job_persists_compiled_result(monkeypatch: pytest.MonkeyPatch):
+async def test_run_deep_reflection_job_persists_compiled_result(
+    monkeypatch: pytest.MonkeyPatch,
+):
     writes: list[tuple[str, tuple[object, ...]]] = []
 
     async def fake_dbexec(sql: str, *args):
@@ -155,7 +248,9 @@ async def test_run_deep_reflection_job_persists_compiled_result(monkeypatch: pyt
 
 
 @pytest.mark.asyncio
-async def test_run_deep_reflection_job_persists_llm_chat_response(monkeypatch: pytest.MonkeyPatch):
+async def test_run_deep_reflection_job_persists_llm_chat_response(
+    monkeypatch: pytest.MonkeyPatch,
+):
     writes: list[tuple[str, tuple[object, ...]]] = []
 
     async def fake_dbexec(sql: str, *args):
@@ -175,7 +270,12 @@ async def test_run_deep_reflection_job_persists_llm_chat_response(monkeypatch: p
     monkeypatch.setattr(
         reflection,
         "_build_reflection_llm_packet",
-        AsyncMock(return_value={"topic_key": "career", "arc_compact_global": {"current_stage": "build"}}),
+        AsyncMock(
+            return_value={
+                "topic_key": "career",
+                "arc_compact_global": {"current_stage": "build"},
+            }
+        ),
     )
     monkeypatch.setattr(
         reflection,
@@ -207,14 +307,18 @@ async def test_run_deep_reflection_job_persists_llm_chat_response(monkeypatch: p
 
     persisted_result = json.loads(str(writes[1][1][-1]))
     assert persisted_result["chat_response_source"] == "llm"
-    assert persisted_result["chat_response"].startswith("You've moved from validation loops")
+    assert persisted_result["chat_response"].startswith(
+        "You've moved from validation loops"
+    )
     assert persisted_result["deterministic_chat_response"]
     assert persisted_result["llm_reflection"]["enabled"] is True
     assert persisted_result["llm_reflection"]["input_packet"]["topic_key"] == "career"
 
 
 @pytest.mark.asyncio
-async def test_load_recent_topic_episodes_scores_topic_overlap(monkeypatch: pytest.MonkeyPatch):
+async def test_load_recent_topic_episodes_scores_topic_overlap(
+    monkeypatch: pytest.MonkeyPatch,
+):
     async def fake_dbfetch(sql: str, *args, **kwargs):
         assert "memory_episodic" in sql
         return [
@@ -243,24 +347,32 @@ async def test_load_recent_topic_episodes_scores_topic_overlap(monkeypatch: pyte
 
 
 @pytest.mark.asyncio
-async def test_load_latest_turn_context_filters_to_topic_user_turns(monkeypatch: pytest.MonkeyPatch):
+async def test_load_latest_turn_context_filters_to_topic_user_turns(
+    monkeypatch: pytest.MonkeyPatch,
+):
     async def fake_dbfetch(sql: str, *args, **kwargs):
         if "FROM conversation_turns" in sql:
             return [
                 {
                     "role": "assistant",
                     "text": "Generic advice text",
-                    "created_at": reflection.datetime(2026, 3, 6, 10, 0, tzinfo=reflection.UTC),
+                    "created_at": reflection.datetime(
+                        2026, 3, 6, 10, 0, tzinfo=reflection.UTC
+                    ),
                 },
                 {
                     "role": "user",
                     "text": "Career load question",
-                    "created_at": reflection.datetime(2026, 3, 6, 9, 0, tzinfo=reflection.UTC),
+                    "created_at": reflection.datetime(
+                        2026, 3, 6, 9, 0, tzinfo=reflection.UTC
+                    ),
                 },
                 {
                     "role": "user",
                     "text": "Sakhi continuity is getting clearer with deterministic core.",
-                    "created_at": reflection.datetime(2026, 3, 6, 8, 0, tzinfo=reflection.UTC),
+                    "created_at": reflection.datetime(
+                        2026, 3, 6, 8, 0, tzinfo=reflection.UTC
+                    ),
                 },
             ]
         if "FROM personal_model" in sql:
@@ -285,7 +397,9 @@ async def test_load_latest_turn_context_filters_to_topic_user_turns(monkeypatch:
 
 
 @pytest.mark.asyncio
-async def test_build_reflection_llm_packet_skips_turn_context_for_topic_reflection(monkeypatch: pytest.MonkeyPatch):
+async def test_build_reflection_llm_packet_skips_turn_context_for_topic_reflection(
+    monkeypatch: pytest.MonkeyPatch,
+):
     """Topic reflection should NOT call _load_latest_turn_context."""
     turn_context_called = False
     original_load = reflection._load_latest_turn_context
@@ -295,7 +409,9 @@ async def test_build_reflection_llm_packet_skips_turn_context_for_topic_reflecti
         turn_context_called = True
         return await original_load(*args, **kwargs)
 
-    monkeypatch.setattr(reflection, "_load_recent_topic_episodes", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        reflection, "_load_recent_topic_episodes", AsyncMock(return_value=[])
+    )
     monkeypatch.setattr(
         reflection,
         "_build_delta_since_last_reflection",
@@ -309,7 +425,10 @@ async def test_build_reflection_llm_packet_skips_turn_context_for_topic_reflecti
         arc_payload={"included_moments": []},
         deterministic={
             "topic_label": "Sakhi",
-            "window": {"from": "2026-01-01T00:00:00+00:00", "to": "2026-03-01T00:00:00+00:00"},
+            "window": {
+                "from": "2026-01-01T00:00:00+00:00",
+                "to": "2026-03-01T00:00:00+00:00",
+            },
             "surface": {"detail_allowed": False, "mirror_allowed": True},
             "recurring_tensions": [],
             "key_pivots": [],
@@ -321,7 +440,9 @@ async def test_build_reflection_llm_packet_skips_turn_context_for_topic_reflecti
         user_query=None,
     )
 
-    assert not turn_context_called, "_load_latest_turn_context should not be called for topic_reflection"
+    assert (
+        not turn_context_called
+    ), "_load_latest_turn_context should not be called for topic_reflection"
 
     assert packet["surface"]["detail_allowed"] is False
     assert packet["response_contract"]["voice"] == "friend, warm, direct"
@@ -329,8 +450,12 @@ async def test_build_reflection_llm_packet_skips_turn_context_for_topic_reflecti
 
 
 @pytest.mark.asyncio
-async def test_build_reflection_llm_packet_prefers_provided_query(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(reflection, "_load_recent_topic_episodes", AsyncMock(return_value=[]))
+async def test_build_reflection_llm_packet_prefers_provided_query(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(
+        reflection, "_load_recent_topic_episodes", AsyncMock(return_value=[])
+    )
     monkeypatch.setattr(
         reflection,
         "_build_delta_since_last_reflection",
@@ -353,7 +478,10 @@ async def test_build_reflection_llm_packet_prefers_provided_query(monkeypatch: p
         arc_payload={"included_moments": []},
         deterministic={
             "topic_label": "Sakhi",
-            "window": {"from": "2026-01-01T00:00:00+00:00", "to": "2026-03-01T00:00:00+00:00"},
+            "window": {
+                "from": "2026-01-01T00:00:00+00:00",
+                "to": "2026-03-01T00:00:00+00:00",
+            },
             "surface": {"detail_allowed": True, "mirror_allowed": True},
             "recurring_tensions": [],
             "key_pivots": [],
@@ -367,7 +495,9 @@ async def test_build_reflection_llm_packet_prefers_provided_query(monkeypatch: p
 
     assert packet["request_mode"] == "deep_answer"
     assert packet["current_query"]["source"] == "provided"
-    assert packet["current_query"]["text"] == "Should we run MVP pilots before pre-seed?"
+    assert (
+        packet["current_query"]["text"] == "Should we run MVP pilots before pre-seed?"
+    )
     assert packet["latest_turn_context"]["effective_user_query_source"] == "provided"
     assert packet["response_contract"]["length_words"] == "150-250"
     assert packet["response_contract"]["min_words"] == 150
@@ -375,12 +505,161 @@ async def test_build_reflection_llm_packet_prefers_provided_query(monkeypatch: p
     assert "required_sections" not in packet["response_contract"]
 
 
+@pytest.mark.asyncio
+async def test_build_reflection_llm_packet_sets_emotion_policy_from_priority_conflict(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(
+        reflection, "_load_recent_topic_episodes", AsyncMock(return_value=[])
+    )
+    monkeypatch.setattr(
+        reflection,
+        "_build_delta_since_last_reflection",
+        AsyncMock(return_value={"has_previous": False}),
+    )
+    monkeypatch.setattr(
+        reflection,
+        "_load_latest_turn_context",
+        AsyncMock(
+            return_value={
+                "latest_topic_user_message": "",
+                "recent_topic_user_turns": [],
+            }
+        ),
+    )
+
+    with_conflict = await reflection._build_reflection_llm_packet(
+        person_id="person-1",
+        topic_key="career",
+        arc_payload={"included_moments": []},
+        deterministic={
+            "topic_label": "Career",
+            "window": {
+                "from": "2026-01-01T00:00:00+00:00",
+                "to": "2026-03-01T00:00:00+00:00",
+            },
+            "surface": {"detail_allowed": True, "mirror_allowed": True},
+            "recurring_tensions": ["Recurring return to work boundaries."],
+            "key_pivots": [],
+            "open_questions": [
+                "How to handle work and family without dropping presence?"
+            ],
+            "phase_packets": [],
+            "arc_summary": {},
+        },
+        mode="deep_answer",
+        user_query="How do I balance work deadlines and family time without dropping either?",
+    )
+    assert (
+        with_conflict["response_contract"]["emotion_policy"][
+            "priority_conflict_detected"
+        ]
+        is True
+    )
+    assert with_conflict["priority_conflict"]["detected"] is True
+
+    without_conflict = await reflection._build_reflection_llm_packet(
+        person_id="person-1",
+        topic_key="career",
+        arc_payload={"included_moments": []},
+        deterministic={
+            "topic_label": "Career",
+            "window": {
+                "from": "2026-01-01T00:00:00+00:00",
+                "to": "2026-03-01T00:00:00+00:00",
+            },
+            "surface": {"detail_allowed": True, "mirror_allowed": True},
+            "recurring_tensions": ["Recurring return to founder alignment."],
+            "key_pivots": [],
+            "open_questions": [
+                "Whether this thread stays centered on deterministic core."
+            ],
+            "phase_packets": [],
+            "arc_summary": {},
+        },
+        mode="deep_answer",
+        user_query="Should we share this update with pilots this week?",
+    )
+    assert (
+        without_conflict["response_contract"]["emotion_policy"][
+            "priority_conflict_detected"
+        ]
+        is False
+    )
+    assert without_conflict["priority_conflict"]["detected"] is False
+
+
+@pytest.mark.asyncio
+async def test_build_reflection_llm_packet_uses_cross_topic_life_dimensions_service(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(
+        reflection, "_load_recent_topic_episodes", AsyncMock(return_value=[])
+    )
+    monkeypatch.setattr(
+        reflection,
+        "_build_delta_since_last_reflection",
+        AsyncMock(return_value={"has_previous": False}),
+    )
+    monkeypatch.setattr(
+        reflection,
+        "_load_latest_turn_context",
+        AsyncMock(
+            return_value={
+                "latest_topic_user_message": "Should we run pilots?",
+                "recent_topic_user_turns": [],
+            }
+        ),
+    )
+    load_topics_mock = AsyncMock(return_value=[{"anchor": "sakhi"}])
+    get_dimensions_mock = AsyncMock(
+        return_value={
+            "time_availability": {
+                "level": 0.71,
+                "direction": "pressured",
+                "affected_topics": ["sakhi", "career"],
+            }
+        }
+    )
+    monkeypatch.setattr(reflection, "_load_topics_for_window", load_topics_mock)
+    monkeypatch.setattr(reflection, "get_life_dimensions", get_dimensions_mock)
+
+    packet = await reflection._build_reflection_llm_packet(
+        person_id="person-1",
+        topic_key="sakhi",
+        arc_payload={"included_moments": []},
+        deterministic={
+            "topic_label": "Sakhi",
+            "window": {
+                "from": "2026-01-01T00:00:00+00:00",
+                "to": "2026-03-01T00:00:00+00:00",
+            },
+            "surface": {"detail_allowed": True, "mirror_allowed": True},
+            "recurring_tensions": [],
+            "key_pivots": [],
+            "open_questions": [],
+            "phase_packets": [],
+            "arc_summary": {},
+        },
+        mode="whole_story",
+        user_query="Should we run pilots before pre-seed?",
+    )
+
+    assert packet["life_dimensions"] is not None
+    assert packet["life_dimensions"]["time_availability"]["direction"] == "pressured"
+    load_topics_mock.assert_awaited_once()
+    get_dimensions_mock.assert_awaited_once()
+
+
 def test_build_deep_reflection_prompt_messages_uses_language_first_sections():
     packet = {
         "topic_key": "sakhi",
         "topic_label": "Sakhi",
         "request_mode": "deep_answer",
-        "current_query": {"text": "Should continuity be our core offering?", "source": "provided"},
+        "current_query": {
+            "text": "Should continuity be our core offering?",
+            "source": "provided",
+        },
         "surface": {"detail_allowed": True, "mirror_allowed": True},
         "arc_compact_global": {
             "origin_story": "Started around ayurveda engine.",
@@ -395,12 +674,17 @@ def test_build_deep_reflection_prompt_messages_uses_language_first_sections():
             ],
         },
         "evidence_anchors": [{"snippet": "We decided to focus on continuity."}],
-        "recent_episode_compact": [{"summary": "Career and product narrative pressure."}],
+        "recent_episode_compact": [
+            {"summary": "Career and product narrative pressure."}
+        ],
         "latest_turn_context": {
             "latest_topic_user_message": "Should continuity be our core offering?",
             "state_hints": {"emotion_hint": "focused"},
         },
-        "delta_since_last_reflection": {"has_previous": True, "current_stage_changed": False},
+        "delta_since_last_reflection": {
+            "has_previous": True,
+            "current_stage_changed": False,
+        },
         "response_contract": {
             "voice": "friend, warm, direct",
             "length_words": "180-280",
@@ -422,12 +706,123 @@ def test_build_deep_reflection_prompt_messages_uses_language_first_sections():
     assert "What we know about this person on this topic:" in user_prompt
     assert "Current query now:" in user_prompt
     assert "Prioritize answering the current query directly." in user_prompt
-    assert "Use history and person context as grounding, not as a detour." in user_prompt
+    assert (
+        "Use history and person context as grounding, not as a detour." in user_prompt
+    )
     assert "Mode: deep_answer" in user_prompt
     assert "Current query source: provided" in user_prompt
     assert "Response contract:" in user_prompt
     assert "Should continuity be our core offering?" in user_prompt
     assert "PACKET:" not in user_prompt
+
+
+def test_build_deep_reflection_prompt_messages_includes_connected_threads_for_whole_story():
+    packet = {
+        "topic_key": "sakhi",
+        "topic_label": "Sakhi",
+        "request_mode": "whole_story",
+        "current_query": {
+            "text": "Should I run pilots before pre-seed?",
+            "source": "provided",
+        },
+        "surface": {"detail_allowed": True, "mirror_allowed": True},
+        "arc_compact_global": {
+            "origin_story": "Started around ayurveda engine.",
+            "current_stage": "Currently centered on deterministic core.",
+            "key_pivots": ["Shifted from validation toward deterministic core."],
+            "recurring_tensions": ["Recurring return to founder alignment."],
+            "open_questions": ["What to prioritize first."],
+            "phase_compaction": [{"summary": "Started around ayurveda engine."}],
+        },
+        "related_topics_compact": [
+            {
+                "topic_key": "career",
+                "topic_label": "Career",
+                "current_signal": "Currently centered on boundary setting.",
+                "selected_count": 12,
+            }
+        ],
+        "life_dimensions": {
+            "time_availability": {
+                "level": 0.62,
+                "direction": "pressured",
+                "affected_topics": ["sakhi", "career"],
+            }
+        },
+        "evidence_anchors": [
+            {"snippet": "Pilots gave us confidence in product direction."}
+        ],
+        "latest_turn_context": {
+            "latest_topic_user_message": "Should I run pilots before pre-seed?",
+            "state_hints": {},
+        },
+        "delta_since_last_reflection": {"has_previous": False},
+        "response_contract": {
+            "voice": "friend, warm, direct",
+            "length_words": "220-360",
+            "max_questions": 1,
+            "avoid": ["therapy-speak"],
+            "format": "natural prose",
+            "emotion_policy": {
+                "mention_only_with_priority_conflict": True,
+                "priority_conflict_detected": False,
+            },
+        },
+    }
+
+    messages = reflection._build_deep_reflection_prompt_messages(packet)
+    user_prompt = messages[1]["content"]
+    assert "Connected threads around this topic:" in user_prompt
+    assert "Career: Currently centered on boundary setting." in user_prompt
+    assert "cross-cutting dimensions" in user_prompt.lower()
+    assert "Mode: whole_story" in user_prompt
+
+
+def test_build_deep_reflection_prompt_messages_omits_emotion_hint_without_priority_conflict():
+    packet = {
+        "topic_key": "sakhi",
+        "topic_label": "Sakhi",
+        "request_mode": "deep_answer",
+        "current_query": {
+            "text": "Should we ship this sprint update?",
+            "source": "provided",
+        },
+        "surface": {"detail_allowed": True, "mirror_allowed": True},
+        "arc_compact_global": {
+            "origin_story": "Started around ayurveda engine.",
+            "current_stage": "Currently centered on deterministic core.",
+            "key_pivots": [],
+            "recurring_tensions": [],
+            "open_questions": [],
+            "phase_compaction": [],
+        },
+        "evidence_anchors": [{"snippet": "We decided to focus on continuity."}],
+        "latest_turn_context": {
+            "latest_topic_user_message": "Should we ship this sprint update?",
+            "state_hints": {"emotion_hint": "overwhelmed", "load_hint": "high"},
+        },
+        "delta_since_last_reflection": {"has_previous": False},
+        "response_contract": {
+            "voice": "friend, warm, direct",
+            "length_words": "150-250",
+            "max_questions": 1,
+            "avoid": ["therapy-speak"],
+            "format": "single short paragraph",
+            "emotion_policy": {
+                "mention_only_with_priority_conflict": True,
+                "priority_conflict_detected": False,
+                "max_emotion_sentences": 1,
+            },
+        },
+    }
+
+    messages = reflection._build_deep_reflection_prompt_messages(packet)
+    user_prompt = messages[1]["content"]
+    assert "emotion=overwhelmed" not in user_prompt
+    assert (
+        "Emotion mention: omit unless a clear priority conflict is explicitly evidenced."
+        in user_prompt
+    )
 
 
 @pytest.mark.asyncio

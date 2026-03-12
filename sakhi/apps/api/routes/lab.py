@@ -40,6 +40,9 @@ from sakhi.apps.api.services.reflection.narration_foundation import generate_fou
 from sakhi.apps.api.services.reflection_inquiry.answerer import answer_reflection_inquiry
 from sakhi.apps.api.services.personal_intelligence.assembler import assemble_personal_intelligence_snapshot
 from sakhi.apps.api.services.personal_intelligence.renderer import render_personal_intelligence, render_personal_intelligence_narrative
+from sakhi.apps.api.services.continuity.cross_topic import (
+    invalidate_person_cross_topic_cache,
+)
 from sakhi.apps.api.core.llm import call_llm
 
 router = APIRouter(prefix="/lab", tags=["lab"])
@@ -784,6 +787,7 @@ async def lab_cleanup(body: CleanupBody) -> Dict[str, Any]:
     await dbexec("DELETE FROM memory_episodic WHERE user_id = $1", person)
     await dbexec("DELETE FROM memory_context_cache WHERE person_id::text = $1", person)
     await dbexec("DELETE FROM narrative_arc_cache WHERE person_id::text = $1", person)
+    await invalidate_person_cross_topic_cache(person_id=str(person))
 
     return {
         "status": "ok",

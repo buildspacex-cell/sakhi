@@ -170,6 +170,15 @@ async def reset_user_data(request: ResetUserDataRequest) -> Dict[str, Any]:
     except Exception as e:
         errors.append(f"auth_users reset: {str(e)}")
 
+    # Delete person from PostHog so analytics data is purged alongside DB data.
+    # NOTE: When a production account-deletion endpoint is added, call this same
+    # analytics.delete_person() there too (GDPR / right-to-erasure compliance).
+    try:
+        from sakhi.libs.analytics import delete_person as analytics_delete_person
+        analytics_delete_person(person_id)
+    except Exception as ph_exc:
+        logger.warning("[DEV] PostHog person deletion failed: %s", ph_exc)
+
     logger.warning(
         "[DEV] Reset complete for person_id=%s: cleared=%d, errors=%d",
         person_id,

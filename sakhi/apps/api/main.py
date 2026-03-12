@@ -108,6 +108,8 @@ from sakhi.apps.api.routes.system_audit import router as system_audit_router
 from sakhi.apps.api.routes.reflection_daily import router as reflection_daily_router
 from sakhi.apps.api.routes.growth import router as growth_router
 from sakhi.apps.api.routes.focus import router as focus_router
+from sakhi.apps.api.routes.support import router as support_router
+from sakhi.apps.api.routes.support import admin_router as support_admin_router
 # Legacy routes removed - now backed up in _legacy_backup/
 # from sakhi.apps.api.routes.journey import router as journey_router
 # from sakhi.apps.api.routes.insight import router as insight_router
@@ -1621,6 +1623,8 @@ app.include_router(system_audit_router)
 app.include_router(reflection_daily_router)
 app.include_router(growth_router)
 app.include_router(focus_router)
+app.include_router(support_router)
+app.include_router(support_admin_router)
 # Legacy routers removed - now backed up in _legacy_backup/
 # app.include_router(journey_router)
 # app.include_router(brain_router)

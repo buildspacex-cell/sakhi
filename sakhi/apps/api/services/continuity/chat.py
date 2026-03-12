@@ -12,12 +12,17 @@ from sakhi.apps.api.services.continuity.adapters import (
 )
 from sakhi.apps.api.services.continuity.compiler import (
     ClassificationState,
+    build_compiled_topics_index,
     classify_continuity_text,
     compile_journal_continuity,
     parse_continuity_window,
     select_compiled_topic,
 )
+from sakhi.apps.api.services.continuity.cross_topic import compute_cross_topic_signals
 from sakhi.apps.api.services.continuity.service import CONTINUITY_SCOPE
+from sakhi.apps.api.services.continuity.thresholds import (
+    CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE,
+)
 
 _TOKEN_RE = re.compile(r"[a-z0-9']+")
 _TOPIC_STOPWORDS = {
@@ -116,6 +121,21 @@ async def build_continuity_pack(
         detail_allowed=detail_allowed,
         acknowledged_assistant_signals=acknowledged_assistant_signals,
     )
+    topics_index = build_compiled_topics_index(compiled, debug=False)
+    candidate_topics = _build_candidate_topics(
+        user_text=user_text,
+        topics=topics_index,
+        selected_anchor=target_anchor,
+    )
+    cross_context, whole_story, life_dimensions = await compute_cross_topic_signals(
+        person_id=person_id,
+        selected_anchor=target_anchor,
+        selected_topic=topic,
+        topics=topics_index,
+        window_start=from_ts.isoformat(),
+        window_end=now.isoformat(),
+        now=now,
+    )
 
     return {
         "topic_key": target_anchor,
@@ -140,6 +160,10 @@ async def build_continuity_pack(
         },
         "surface": surface,
         "exclusions_applied": bool(policy.get("exclusions")),
+        "candidate_topics": candidate_topics or None,
+        "cross_context": cross_context,
+        "whole_story": whole_story,
+        "life_dimensions": life_dimensions,
     }
 
 
@@ -302,6 +326,70 @@ def _build_history_compact(
             acknowledged_assistant_signals=acknowledged_assistant_signals,
         ),
     }
+
+
+_CANDIDATE_TOPICS_MAX = CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.max_candidate_topics
+
+
+def _build_candidate_topics(
+    *,
+    user_text: str,
+    topics: list[dict[str, Any]],
+    selected_anchor: str,
+) -> list[dict[str, Any]]:
+    if not topics:
+        return []
+
+    query_tokens = set(_tokenize(user_text))
+    if not query_tokens:
+        query_tokens = {"thread"}
+
+    max_selected = max(1, max(int(topic.get("selected_count") or 0) for topic in topics))
+    end_scores = [
+        _iso_sort_value(str(((topic.get("arc") or {}).get("end_ts")) or ""))
+        for topic in topics
+    ]
+    max_recency = max(end_scores) if end_scores else 0.0
+
+    ranked: list[tuple[float, dict[str, Any]]] = []
+    for topic in topics:
+        anchor = canonicalize_anchor(topic.get("anchor"))
+        if not anchor or anchor == "unknown":
+            continue
+        surface = topic.get("surface") or {}
+        detail_allowed = bool(surface.get("detail_allowed"))
+        if not detail_allowed:
+            continue
+        label = str(topic.get("label") or anchor.replace("_", " ").title()).strip()
+        selected_count = max(0, int(topic.get("selected_count") or 0))
+        confidence = float(topic.get("confidence") or 0.0)
+        topic_tokens = set(_tokenize(f"{anchor} {label}"))
+        overlap = len(query_tokens.intersection(topic_tokens))
+        query_score = min(1.0, overlap / max(1, len(query_tokens)))
+        recency_raw = _iso_sort_value(str(((topic.get("arc") or {}).get("end_ts")) or ""))
+        recency_score = (recency_raw / max_recency) if max_recency > 0 else 0.0
+        depth_score = selected_count / max_selected
+        score = (
+            0.45 * query_score
+            + 0.20 * recency_score
+            + 0.20 * depth_score
+            + 0.15 * min(1.0, max(0.0, confidence))
+        )
+        ranked.append(
+            (
+                score,
+                {
+                    "topic_key": anchor,
+                    "topic_label": label,
+                    "score": round(score, 4),
+                    "selected_count": selected_count,
+                    "detail_allowed": detail_allowed,
+                },
+            )
+        )
+
+    ranked.sort(key=lambda item: (-item[0], -item[1]["selected_count"], item[1]["topic_key"]))
+    return [item[1] for item in ranked[:_CANDIDATE_TOPICS_MAX]]
 
 
 def _build_phase_path(phases: list[dict[str, Any]], *, limit: int) -> list[str]:

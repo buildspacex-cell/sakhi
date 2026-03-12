@@ -58,7 +58,8 @@ class ContinuityReflectionRunRequest(BaseModel):
     person_id: str
     topic_key: str
     window: str = "3650d"
-    mode: Literal["topic_reflection", "deep_answer"] = "topic_reflection"
+    mode: Literal["topic_reflection", "deep_answer", "whole_story", "cross_context"] = "topic_reflection"
+    topic_keys: list[str] = Field(default_factory=list)
     user_query: str | None = None
 
 
@@ -178,6 +179,7 @@ async def post_continuity_reflection_run(request: Request, body: ContinuityRefle
             body.topic_key,
             window=body.window,
             mode=body.mode,
+            topic_keys=body.topic_keys,
             user_query=user_query,
         )
     except PermissionError as exc:

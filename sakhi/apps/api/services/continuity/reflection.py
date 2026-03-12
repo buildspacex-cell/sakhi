@@ -6,18 +6,31 @@ import logging
 import os
 import re
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
 from sakhi.apps.api.core.db import exec as dbexec
 from sakhi.apps.api.core.db import q as dbfetch
 from sakhi.apps.api.core.llm import get_router
-from sakhi.apps.api.services.governance.service import log_turn_event
+from sakhi.apps.api.services.continuity.adapters import (
+    canonicalize_anchor,
+    get_continuity_policy,
+    load_journal_entries_for_continuity,
+)
+from sakhi.apps.api.services.continuity.compiler import (
+    build_compiled_topics_index,
+    compile_journal_continuity,
+)
+from sakhi.apps.api.services.continuity.cross_topic import get_life_dimensions
 from sakhi.apps.api.services.continuity.service import (
     CONTINUITY_SCOPE,
     get_continuity_arc,
 )
+from sakhi.apps.api.services.continuity.thresholds import (
+    CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE,
+)
+from sakhi.apps.api.services.governance.service import log_turn_event
 
 LOGGER = logging.getLogger(__name__)
 _TOKEN_RE = re.compile(r"[a-z0-9']+")
@@ -39,11 +52,114 @@ _TOPIC_STOPWORDS = {
     "currently",
     "return",
 }
+_REFLECTION_ALLOWED_MODES = {
+    "topic_reflection",
+    "deep_answer",
+    "whole_story",
+    "cross_context",
+}
+_REFLECTION_MAX_TOPIC_KEYS = CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.max_topic_keys
+_PRIORITY_CONNECTOR_RE = re.compile(
+    r"\b(vs|versus|while|without|between|balance|juggle|trade[- ]?off|conflict|compete)\b"
+)
+_RESOURCE_PRESSURE_RE = re.compile(
+    r"\b(time|deadline|schedule|overcommit|overload|stretched|bandwidth|money|budget|cost|debt|runway|load|energy)\b"
+)
+_STRONG_PRIORITY_CONFLICT_RE = re.compile(
+    r"\b(without dropping|at the same time|can[' ]?t do both|pick one|choose between)\b"
+)
+_PRIORITY_DOMAIN_PATTERNS: dict[str, re.Pattern[str]] = {
+    "work": re.compile(r"\b(work|career|boss|job|meetings?|deadlines?)\b"),
+    "family": re.compile(r"\b(family|dad|mom|parent|daughter|son|kids?|caregiv)\b"),
+    "health": re.compile(r"\b(health|sleep|rest|exercise|body|wellness)\b"),
+    "money": re.compile(r"\b(money|budget|cost|debt|runway|funding|salary)\b"),
+    "product": re.compile(r"\b(sakhi|product|founder|mvp|build|launch)\b"),
+}
 _DEEP_REFLECTION_SYSTEM = """You are Sakhi - a friend who gets this person deeply.
 Speak naturally, warm and direct. Keep it grounded in the packet evidence.
 Do not use therapy-speak or Ayurvedic jargon.
 Do not introduce themes that are not explicitly present in the packet.
 Follow the response contract exactly."""
+
+_MONEY_TERMS = {
+    "money",
+    "budget",
+    "cost",
+    "debt",
+    "expense",
+    "salary",
+    "runway",
+    "funding",
+    "afford",
+}
+
+
+def _normalize_reflection_mode(mode: str) -> str:
+    token = str(mode or "").strip().lower()
+    if token in _REFLECTION_ALLOWED_MODES:
+        return token
+    return "topic_reflection"
+
+
+def _normalize_topic_key(value: str | None) -> str:
+    token = canonicalize_anchor(value)
+    if token and token != "unknown":
+        return token
+    raw = str(value or "").strip().lower().replace(" ", "_")
+    return raw or "unknown"
+
+
+def _normalize_topic_keys(topic_key: str, topic_keys: list[str] | None) -> list[str]:
+    primary = _normalize_topic_key(topic_key)
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for raw in [primary, *(topic_keys or [])]:
+        token = _normalize_topic_key(raw)
+        if not token or token == "unknown" or token in seen:
+            continue
+        seen.add(token)
+        ordered.append(token)
+        if len(ordered) >= _REFLECTION_MAX_TOPIC_KEYS:
+            break
+    if not ordered:
+        return [primary]
+    return ordered
+
+
+def _limit_topic_keys(topic_keys: list[str]) -> list[str]:
+    return list(topic_keys[:_REFLECTION_MAX_TOPIC_KEYS])
+
+
+async def _load_related_topic_arcs(
+    *,
+    person_id: str,
+    primary_topic_key: str,
+    topic_keys: list[str],
+    window: str,
+) -> list[dict[str, Any]]:
+    related: list[dict[str, Any]] = []
+    for key in topic_keys:
+        normalized = _normalize_topic_key(key)
+        if not normalized or normalized in {"unknown", primary_topic_key}:
+            continue
+        try:
+            arc_payload = await get_continuity_arc(
+                person_id,
+                normalized,
+                window=window,
+                debug=True,
+                log_access=False,
+                scope=CONTINUITY_SCOPE,
+            )
+        except Exception as exc:
+            LOGGER.info(
+                "Skipping related arc %s for %s: %s", normalized, person_id, exc
+            )
+            continue
+        related.append(arc_payload)
+        if len(related) >= (_REFLECTION_MAX_TOPIC_KEYS - 1):
+            break
+    return related
 
 
 async def create_deep_reflection_job(
@@ -52,10 +168,15 @@ async def create_deep_reflection_job(
     *,
     window: str = "3650d",
     mode: str = "topic_reflection",
+    topic_keys: list[str] | None = None,
     user_query: str | None = None,
 ) -> dict[str, Any]:
-    normalized_mode = "deep_answer" if str(mode).strip().lower() == "deep_answer" else "topic_reflection"
+    normalized_mode = _normalize_reflection_mode(mode)
     cleaned_query = str(user_query or "").strip() or None
+    normalized_topic_key = _normalize_topic_key(topic_key)
+    cleaned_topic_keys = _normalize_topic_keys(normalized_topic_key, topic_keys)
+    if normalized_mode in {"topic_reflection", "deep_answer"}:
+        cleaned_topic_keys = cleaned_topic_keys[:1]
     reflection_id = str(uuid4())
     await dbexec(
         """
@@ -66,15 +187,16 @@ async def create_deep_reflection_job(
         """,
         reflection_id,
         person_id,
-        topic_key,
+        normalized_topic_key,
     )
     asyncio.create_task(
         _run_deep_reflection_job(
             reflection_id=reflection_id,
             person_id=person_id,
-            topic_key=topic_key,
+            topic_key=normalized_topic_key,
             window=window,
             mode=normalized_mode,
+            topic_keys=cleaned_topic_keys,
             user_query=cleaned_query,
         )
     )
@@ -85,24 +207,28 @@ async def create_deep_reflection_job(
         actor="system",
         data={
             "reflection_id": reflection_id,
-            "topic_key": topic_key,
+            "topic_key": normalized_topic_key,
             "window": window,
             "mode": normalized_mode,
             "user_query_present": bool(cleaned_query),
+            "topic_keys": _limit_topic_keys(cleaned_topic_keys),
         },
         reason="deep reflection queued",
     )
     return {
         "reflection_id": reflection_id,
         "status": "queued",
-        "topic_key": topic_key,
+        "topic_key": normalized_topic_key,
         "window": window,
         "mode": normalized_mode,
         "user_query_present": bool(cleaned_query),
+        "topic_keys": _limit_topic_keys(cleaned_topic_keys),
     }
 
 
-async def get_deep_reflection_status(reflection_id: str, person_id: str) -> dict[str, Any]:
+async def get_deep_reflection_status(
+    reflection_id: str, person_id: str
+) -> dict[str, Any]:
     row = await dbfetch(
         """
         SELECT id, person_id, topic_key, status, error, created_at, updated_at
@@ -127,7 +253,9 @@ async def get_deep_reflection_status(reflection_id: str, person_id: str) -> dict
     }
 
 
-async def get_deep_reflection_result(reflection_id: str, person_id: str) -> dict[str, Any]:
+async def get_deep_reflection_result(
+    reflection_id: str, person_id: str
+) -> dict[str, Any]:
     row = await dbfetch(
         """
         SELECT id, person_id, topic_key, status, result_json, error
@@ -156,7 +284,10 @@ async def get_deep_reflection_result(reflection_id: str, person_id: str) -> dict
         action="deep_reflection_viewed",
         event_type="observed",
         actor="system",
-        data={"reflection_id": reflection_id, "topic_key": str(row.get("topic_key") or "")},
+        data={
+            "reflection_id": reflection_id,
+            "topic_key": str(row.get("topic_key") or ""),
+        },
         reason="deep reflection viewed",
     )
     return {
@@ -174,7 +305,8 @@ async def _run_deep_reflection_job(
     topic_key: str,
     window: str,
     mode: str,
-    user_query: str | None,
+    topic_keys: list[str] | None = None,
+    user_query: str | None = None,
 ) -> None:
     try:
         await dbexec(
@@ -193,9 +325,28 @@ async def _run_deep_reflection_job(
             log_access=False,
             scope=CONTINUITY_SCOPE,
         )
+        normalized_topic_keys = _normalize_topic_keys(topic_key, topic_keys)
+        if mode in {"topic_reflection", "deep_answer"}:
+            normalized_topic_keys = normalized_topic_keys[:1]
+        related_arc_payloads = (
+            await _load_related_topic_arcs(
+                person_id=person_id,
+                primary_topic_key=topic_key,
+                topic_keys=normalized_topic_keys,
+                window=window,
+            )
+            if mode in {"whole_story", "cross_context"}
+            else []
+        )
+        related_arc_payloads = _dedupe_related_arc_payloads(
+            primary_arc_payload=arc_payload,
+            related_arc_payloads=related_arc_payloads,
+        )
         deterministic = _build_reflection_result(
             arc_payload,
             mode=mode,
+            topic_keys=normalized_topic_keys,
+            related_arc_payloads=related_arc_payloads,
             user_query=user_query,
         )
         result = await _enrich_reflection_with_llm(
@@ -204,6 +355,8 @@ async def _run_deep_reflection_job(
             arc_payload=arc_payload,
             deterministic=deterministic,
             mode=mode,
+            topic_keys=normalized_topic_keys,
+            related_arc_payloads=related_arc_payloads,
             user_query=user_query,
         )
         await _persist_deep_reflection_done(reflection_id, result)
@@ -221,7 +374,9 @@ async def _run_deep_reflection_job(
         )
 
 
-async def _persist_deep_reflection_done(reflection_id: str, result: dict[str, Any]) -> None:
+async def _persist_deep_reflection_done(
+    reflection_id: str, result: dict[str, Any]
+) -> None:
     inputs_hash = str((result.get("versions") or {}).get("inputs_hash") or "")
     result_json = json.dumps(result, ensure_ascii=False)
     window = result.get("window") or {}
@@ -276,16 +431,33 @@ def _build_reflection_result(
     arc_payload: dict[str, Any],
     *,
     mode: str,
+    topic_keys: list[str],
+    related_arc_payloads: list[dict[str, Any]],
     user_query: str | None,
 ) -> dict[str, Any]:
     arc = arc_payload.get("arc") or {}
     included = arc_payload.get("included_moments") or []
     phase_packets = _build_phase_packets(arc, included)
     recurring = _recurring_threads(included)
-    start_signal = _phase_signal(phase_packets[0]) if phase_packets else "Started as one continuous thread."
-    current_signal = _current_signal(phase_packets[-1]) if phase_packets else "Current thread remains active."
+    start_signal = (
+        _phase_signal(phase_packets[0])
+        if phase_packets
+        else "Started as one continuous thread."
+    )
+    current_signal = (
+        _current_signal(phase_packets[-1])
+        if phase_packets
+        else "Current thread remains active."
+    )
     pivot_summaries = _pivot_summaries(phase_packets)
     open_questions = _open_questions(phase_packets[-1] if phase_packets else None)
+    related_topics_compact = [
+        _build_topic_compact(related_arc) for related_arc in related_arc_payloads
+    ][:3]
+    topic_labels = [
+        str(arc_payload.get("label") or arc_payload.get("anchor") or "").strip()
+    ] + [str(item.get("topic_label") or "").strip() for item in related_topics_compact]
+    unique_topic_labels = [label for label in topic_labels if label]
 
     return {
         "topic_key": arc_payload.get("anchor"),
@@ -294,10 +466,13 @@ def _build_reflection_result(
         "query_context": {
             "active_query": user_query or "",
             "active_query_source": "provided" if user_query else "derived_or_none",
+            "requested_topics": _limit_topic_keys(topic_keys),
         },
         "window": arc_payload.get("window") or {},
         "versions": arc_payload.get("versions") or {},
         "surface": arc_payload.get("surface") or {},
+        "topic_keys": _limit_topic_keys(topic_keys),
+        "related_topics_compact": related_topics_compact,
         "arc_summary": {
             "span_days": arc.get("span_days"),
             "element_count": arc.get("element_count"),
@@ -316,6 +491,7 @@ def _build_reflection_result(
             current_stage=current_signal,
             recurring_tensions=recurring,
             open_questions=open_questions,
+            related_topics=unique_topic_labels[:3],
             mode=mode,
             user_query=user_query,
         ),
@@ -330,6 +506,8 @@ async def _enrich_reflection_with_llm(
     arc_payload: dict[str, Any],
     deterministic: dict[str, Any],
     mode: str,
+    topic_keys: list[str],
+    related_arc_payloads: list[dict[str, Any]],
     user_query: str | None,
 ) -> dict[str, Any]:
     result = dict(deterministic)
@@ -352,10 +530,14 @@ async def _enrich_reflection_with_llm(
             arc_payload=arc_payload,
             deterministic=deterministic,
             mode=mode,
+            topic_keys=_limit_topic_keys(topic_keys),
+            related_arc_payloads=related_arc_payloads[:3],
             user_query=user_query,
         )
         prompt_messages = _build_deep_reflection_prompt_messages(packet)
-        model = os.getenv("MODEL_DEEP_REFLECTION_CHAT", os.getenv("MODEL_CHAT", "gpt-4o-mini"))
+        model = os.getenv(
+            "MODEL_DEEP_REFLECTION_CHAT", os.getenv("MODEL_CHAT", "gpt-4o-mini")
+        )
         max_tokens = 520
         max_chars = 2800
         llm_response = await router.chat(
@@ -392,7 +574,9 @@ async def _enrich_reflection_with_llm(
             "generated_at": datetime.now(UTC).isoformat(),
         }
     except Exception as exc:
-        LOGGER.warning("Deep reflection LLM synthesis failed for %s: %s", person_id, exc)
+        LOGGER.warning(
+            "Deep reflection LLM synthesis failed for %s: %s", person_id, exc
+        )
         result["llm_reflection"] = {
             "enabled": True,
             "error": str(exc),
@@ -404,7 +588,9 @@ def _get_deep_reflection_router() -> Any | None:
     try:
         return get_router()
     except Exception as exc:
-        LOGGER.info("Deep reflection router unavailable; deterministic fallback: %s", exc)
+        LOGGER.info(
+            "Deep reflection router unavailable; deterministic fallback: %s", exc
+        )
         return None
 
 
@@ -415,13 +601,17 @@ async def _build_reflection_llm_packet(
     arc_payload: dict[str, Any],
     deterministic: dict[str, Any],
     mode: str,
+    topic_keys: list[str] | None = None,
+    related_arc_payloads: list[dict[str, Any]] | None = None,
     user_query: str | None,
 ) -> dict[str, Any]:
-    evidence = _build_evidence_anchors(arc_payload.get("included_moments") or [], limit=8)
-    topic_keywords = _topic_keywords(topic_key, deterministic, evidence)
+    topic_keys_clean = _normalize_topic_keys(topic_key, topic_keys)
+    related_arc_payloads = list(related_arc_payloads or [])
     surface = deterministic.get("surface") or {}
-    detail_allowed = bool(surface.get("detail_allowed"))
-    mirror_allowed = bool(surface.get("mirror_allowed", True))
+    evidence = _build_evidence_anchors(
+        arc_payload.get("included_moments") or [], limit=8
+    )
+    topic_keywords = _topic_keywords(topic_key, deterministic, evidence)
     recent_episodes = await _load_recent_topic_episodes(
         person_id=person_id,
         topic_keywords=topic_keywords,
@@ -448,7 +638,9 @@ async def _build_reflection_llm_packet(
         )
 
     provided_query = str(user_query or "").strip()
-    recovered_query = str(latest_turn_context.get("latest_topic_user_message") or "").strip()
+    recovered_query = str(
+        latest_turn_context.get("latest_topic_user_message") or ""
+    ).strip()
     if provided_query:
         effective_query = provided_query
         effective_source = "provided"
@@ -461,6 +653,27 @@ async def _build_reflection_llm_packet(
     latest_turn_context["effective_user_query"] = effective_query
     latest_turn_context["effective_user_query_source"] = effective_source
     latest_turn_context["provided_user_query"] = provided_query or None
+
+    priority_conflict = _assess_priority_conflict(
+        current_query=effective_query,
+        recurring_tensions=_clean_text_list(
+            deterministic.get("recurring_tensions"), limit=3
+        ),
+        open_questions=_clean_text_list(deterministic.get("open_questions"), limit=2),
+        evidence_anchors=evidence,
+        recent_episodes=recent_episodes,
+    )
+
+    related_topics_compact = [
+        _build_topic_compact(item) for item in related_arc_payloads
+    ][:3]
+    life_dimensions = await _load_life_dimensions_context(
+        person_id=person_id,
+        window=deterministic.get("window") or {},
+        fallback_primary_topic_key=topic_key,
+        fallback_primary_moments=arc_payload.get("included_moments") or [],
+        fallback_related_arc_payloads=related_arc_payloads,
+    )
 
     response_contract: dict[str, Any]
     if mode == "deep_answer":
@@ -476,6 +689,64 @@ async def _build_reflection_llm_packet(
                 "end with one suggestion and one honest question, no section headers"
             ),
             "priority": "current_query_first",
+            "emotion_policy": {
+                "mention_only_with_priority_conflict": True,
+                "priority_conflict_detected": priority_conflict.get("detected", False),
+                "max_emotion_sentences": 1,
+                "priority_conflict_signals": priority_conflict.get("signals") or [],
+                "rule": (
+                    "Only mention emotion when a clear priority conflict is evidenced; "
+                    "otherwise keep the answer tactical."
+                ),
+            },
+        }
+    elif mode == "whole_story":
+        response_contract = {
+            "voice": "friend, warm, direct",
+            "length_words": "220-360",
+            "min_words": 220,
+            "max_words": 360,
+            "max_questions": 1,
+            "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
+            "format": (
+                "natural prose, answer the current query first, then connect 2-3 linked threads "
+                "with concrete evidence anchors, end with one practical next move and one honest question"
+            ),
+            "priority": "current_query_with_cross_context",
+            "emotion_policy": {
+                "mention_only_with_priority_conflict": True,
+                "priority_conflict_detected": priority_conflict.get("detected", False),
+                "max_emotion_sentences": 1,
+                "priority_conflict_signals": priority_conflict.get("signals") or [],
+                "rule": (
+                    "Only mention emotion when a clear priority conflict is evidenced; "
+                    "otherwise keep the response grounded in decisions and constraints."
+                ),
+            },
+        }
+    elif mode == "cross_context":
+        response_contract = {
+            "voice": "friend, warm, direct",
+            "length_words": "160-260",
+            "min_words": 160,
+            "max_words": 260,
+            "max_questions": 1,
+            "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
+            "format": (
+                "natural prose, explain how the main thread and linked threads influence each other, "
+                "name one recurring tradeoff, end with one grounding question"
+            ),
+            "priority": "cross_context_relationship",
+            "emotion_policy": {
+                "mention_only_with_priority_conflict": True,
+                "priority_conflict_detected": priority_conflict.get("detected", False),
+                "max_emotion_sentences": 1,
+                "priority_conflict_signals": priority_conflict.get("signals") or [],
+                "rule": (
+                    "Only mention emotion when a clear priority conflict is evidenced; "
+                    "otherwise keep the reflection tied to observable cross-thread patterns."
+                ),
+            },
         }
     else:
         response_contract = {
@@ -491,15 +762,28 @@ async def _build_reflection_llm_packet(
                 "end with one honest question"
             ),
             "priority": "longitudinal_reflection",
+            "emotion_policy": {
+                "mention_only_with_priority_conflict": True,
+                "priority_conflict_detected": priority_conflict.get("detected", False),
+                "max_emotion_sentences": 1,
+                "priority_conflict_signals": priority_conflict.get("signals") or [],
+                "rule": (
+                    "Only mention emotion when a clear priority conflict is evidenced; "
+                    "otherwise keep the reflection grounded in observable thread shifts."
+                ),
+            },
         }
 
     return {
         "topic_key": topic_key,
         "topic_label": deterministic.get("topic_label"),
         "request_mode": mode,
+        "topic_keys": _limit_topic_keys(topic_keys_clean),
         "window": deterministic.get("window") or {},
         "surface": surface,
         "arc_compact_global": _build_arc_compact_global(deterministic),
+        "related_topics_compact": related_topics_compact,
+        "life_dimensions": life_dimensions,
         "recent_episode_compact": recent_episodes,
         "evidence_anchors": evidence,
         "delta_since_last_reflection": delta_since_last,
@@ -508,6 +792,7 @@ async def _build_reflection_llm_packet(
             "text": effective_query,
             "source": effective_source,
         },
+        "priority_conflict": priority_conflict,
         "response_contract": response_contract,
     }
 
@@ -537,7 +822,339 @@ def _build_arc_compact_global(deterministic: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _build_evidence_anchors(included_moments: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+def _build_topic_compact(arc_payload: dict[str, Any]) -> dict[str, Any]:
+    arc = arc_payload.get("arc") or {}
+    phases = arc.get("phases") or []
+    last_phase = phases[-1] if phases else {}
+    dominant = (
+        ((last_phase.get("stats") or {}).get("dominant_tag") or {})
+        if isinstance(last_phase, dict)
+        else {}
+    )
+    dominant_label = str((dominant or {}).get("label") or "").strip()
+    return {
+        "topic_key": _normalize_topic_key(str(arc_payload.get("anchor") or "")),
+        "topic_label": str(
+            arc_payload.get("label") or arc_payload.get("anchor") or ""
+        ).strip(),
+        "selected_count": int(
+            arc.get("element_count") or len(arc_payload.get("included_moments") or [])
+        ),
+        "span_days": float(arc.get("span_days") or 0.0),
+        "direction": str(((arc.get("features") or {}).get("direction")) or "").strip()
+        or "steady",
+        "current_signal": (
+            f"Currently centered on {dominant_label}."
+            if dominant_label
+            else "Current thread remains active."
+        ),
+    }
+
+
+def _dedupe_related_arc_payloads(
+    *,
+    primary_arc_payload: dict[str, Any],
+    related_arc_payloads: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    for moment in primary_arc_payload.get("included_moments") or []:
+        seen.add(_moment_identity(moment))
+
+    deduped: list[dict[str, Any]] = []
+    for payload in related_arc_payloads:
+        kept_moments: list[dict[str, Any]] = []
+        for moment in payload.get("included_moments") or []:
+            identity = _moment_identity(moment)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            kept_moments.append(moment)
+        if not kept_moments:
+            continue
+        merged = dict(payload)
+        merged["included_moments"] = kept_moments
+        deduped.append(merged)
+    return deduped
+
+
+async def _load_life_dimensions_context(
+    *,
+    person_id: str,
+    window: dict[str, Any],
+    fallback_primary_topic_key: str,
+    fallback_primary_moments: list[dict[str, Any]],
+    fallback_related_arc_payloads: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]] | None:
+    now = datetime.now(UTC)
+    topics_index = await _load_topics_for_window(
+        person_id=person_id,
+        window=window,
+        now=now,
+    )
+    if topics_index:
+        try:
+            dimensions = await get_life_dimensions(
+                person_id=person_id,
+                topics=topics_index,
+                now=now,
+            )
+            if dimensions:
+                return dimensions
+        except Exception as exc:
+            LOGGER.info(
+                "Life dimensions cache service fallback for %s: %s", person_id, exc
+            )
+
+    return _build_life_dimensions_context(
+        primary_topic_key=fallback_primary_topic_key,
+        primary_moments=fallback_primary_moments,
+        related_arc_payloads=fallback_related_arc_payloads,
+    )
+
+
+async def _load_topics_for_window(
+    *,
+    person_id: str,
+    window: dict[str, Any],
+    now: datetime,
+) -> list[dict[str, Any]]:
+    try:
+        policy = await get_continuity_policy(person_id, CONTINUITY_SCOPE)
+    except Exception as exc:
+        LOGGER.info(
+            "Continuity policy unavailable for life dimensions %s: %s", person_id, exc
+        )
+        return []
+    if not bool(policy.get("enabled")):
+        return []
+
+    from_ts = _coerce_ts(window.get("from"))
+    to_ts = _coerce_ts(window.get("to")) or now
+    if from_ts is None or from_ts >= to_ts:
+        from_ts = to_ts - timedelta(days=3650)
+
+    try:
+        journal_rows = await load_journal_entries_for_continuity(
+            person_id,
+            from_ts=from_ts,
+            to_ts=to_ts,
+            exclusions=policy.get("exclusions") or [],
+        )
+    except Exception as exc:
+        LOGGER.info(
+            "Journal continuity load unavailable for life dimensions %s: %s",
+            person_id,
+            exc,
+        )
+        return []
+
+    try:
+        compiled = compile_journal_continuity(
+            person_id=person_id,
+            journal_rows=journal_rows,
+        )
+        return build_compiled_topics_index(compiled, debug=False)
+    except Exception as exc:
+        LOGGER.info(
+            "Continuity compile unavailable for life dimensions %s: %s", person_id, exc
+        )
+        return []
+
+
+def _build_life_dimensions_context(
+    *,
+    primary_topic_key: str,
+    primary_moments: list[dict[str, Any]],
+    related_arc_payloads: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]] | None:
+    now = datetime.now(UTC)
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def _append_rows(topic_key: str, moments: list[dict[str, Any]]) -> None:
+        for moment in moments:
+            identity = _moment_identity(moment)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            rows.append(
+                {
+                    "topic_key": topic_key,
+                    "ts": _coerce_ts(moment.get("ts")),
+                    "facet": str(moment.get("facet") or ""),
+                    "stance": str(moment.get("stance") or "").lower().strip(),
+                    "snippet": str(
+                        moment.get("short_snippet") or moment.get("snippet") or ""
+                    ).strip(),
+                }
+            )
+
+    _append_rows(primary_topic_key, primary_moments)
+    for related in related_arc_payloads:
+        related_key = _normalize_topic_key(str(related.get("anchor") or ""))
+        _append_rows(related_key, related.get("included_moments") or [])
+
+    if not rows:
+        return None
+
+    def _recent(days: int) -> list[dict[str, Any]]:
+        cutoff = now.timestamp() - (days * 86400)
+        return [
+            item
+            for item in rows
+            if isinstance(item.get("ts"), datetime) and item["ts"].timestamp() >= cutoff
+        ]
+
+    def _surface_standard(level: float, topic_count: int, entry_count: int) -> bool:
+        return bool(
+            (
+                level
+                >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_level_high
+                or level
+                <= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_level_low
+            )
+            and topic_count
+            >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_min_topics
+            and entry_count
+            >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_min_entries
+        )
+
+    recent_14 = _recent(
+        CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_time_window_days
+    )
+    recent_30 = _recent(
+        CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_emotion_window_days
+    )
+    recent_60 = _recent(
+        CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_financial_window_days
+    )
+
+    time_topics = sorted(
+        {item["topic_key"] for item in recent_14 if item.get("topic_key")}
+    )
+    time_level = min(
+        1.0, (len(time_topics) / 4.0) * 0.6 + (len(recent_14) / 20.0) * 0.4
+    )
+    time_direction = (
+        "pressured"
+        if time_level
+        >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_level_high
+        else (
+            "resourced"
+            if time_level
+            <= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_level_low
+            else "neutral"
+        )
+    )
+    time_signal = (
+        {
+            "level": round(time_level, 4),
+            "direction": time_direction,
+            "affected_topics": time_topics[:3],
+            "evidence_summary": (
+                f"Recent activity is spread across {len(time_topics)} threads in the last "
+                f"{CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_time_window_days} days."
+            ),
+        }
+        if _surface_standard(time_level, len(time_topics), len(recent_14))
+        else None
+    )
+
+    money_rows = [
+        item
+        for item in recent_60
+        if set(
+            _tokenize(f"{item.get('facet', '')} {item.get('snippet', '')}")
+        ).intersection(_MONEY_TERMS)
+    ]
+    money_topics = sorted(
+        {item["topic_key"] for item in money_rows if item.get("topic_key")}
+    )
+    money_level = min(1.0, len(money_rows) / 8.0)
+    money_signal = (
+        {
+            "level": round(money_level, 4),
+            "direction": (
+                "pressured"
+                if money_level
+                >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.financial_surface_min_level
+                else "neutral"
+            ),
+            "affected_topics": money_topics[:3],
+            "evidence_summary": (
+                f"Money or tradeoff language appeared across {len(money_topics)} active threads."
+            ),
+        }
+        if (
+            money_level
+            >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.financial_surface_min_level
+            and len(money_topics)
+            >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_min_topics
+            and len(money_rows)
+            >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_min_entries
+        )
+        else None
+    )
+
+    stance_rows = [
+        item for item in recent_30 if item.get("stance") in {"toward", "away"}
+    ]
+    away_count = sum(1 for item in stance_rows if item.get("stance") == "away")
+    toward_count = sum(1 for item in stance_rows if item.get("stance") == "toward")
+    emotional_level = (away_count / len(stance_rows)) if stance_rows else 0.0
+    emotional_topics = sorted(
+        {item["topic_key"] for item in stance_rows if item.get("topic_key")}
+    )
+    if (
+        emotional_level
+        >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_level_high
+    ):
+        emotional_direction = "pressured"
+    elif (
+        toward_count > away_count
+        and emotional_level
+        <= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.dimension_surface_level_low
+    ):
+        emotional_direction = "resourced"
+    else:
+        emotional_direction = "neutral"
+    emotional_signal = (
+        {
+            "level": round(emotional_level, 4),
+            "direction": emotional_direction,
+            "affected_topics": emotional_topics[:3],
+            "evidence_summary": (
+                "Recent stance signals show how emotionally stretched or resourced the thread set is."
+            ),
+        }
+        if _surface_standard(emotional_level, len(emotional_topics), len(stance_rows))
+        else None
+    )
+
+    if not any([time_signal, money_signal, emotional_signal]):
+        return None
+
+    return {
+        "time_availability": time_signal,
+        "financial_pressure": money_signal,
+        "emotional_bandwidth": emotional_signal,
+    }
+
+
+def _moment_identity(moment: dict[str, Any]) -> str:
+    source_ref = str(moment.get("source_ref") or "").strip()
+    ts = str(moment.get("ts") or "").strip()
+    if source_ref:
+        return f"{source_ref}|{ts}"
+    snippet = (
+        str(moment.get("short_snippet") or moment.get("snippet") or "").strip().lower()
+    )
+    return f"{ts}|{snippet[:80]}"
+
+
+def _build_evidence_anchors(
+    included_moments: list[dict[str, Any]], *, limit: int
+) -> list[dict[str, Any]]:
     if not included_moments:
         return []
     ordered = sorted(
@@ -549,8 +1166,8 @@ def _build_evidence_anchors(included_moments: list[dict[str, Any]], *, limit: in
     )
     total = len(ordered)
     early = ordered[: min(3, total)]
-    middle = ordered[max(0, (total // 2) - 1): max(0, (total // 2) + 2)]
-    late = ordered[max(0, total - 6):]
+    middle = ordered[max(0, (total // 2) - 1) : max(0, (total // 2) + 2)]
+    late = ordered[max(0, total - 6) :]
 
     selected: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -650,7 +1267,12 @@ async def _build_delta_since_last_reflection(
             one=True,
         )
     except Exception as exc:
-        LOGGER.info("Delta lookup unavailable for deep reflection %s/%s: %s", person_id, topic_key, exc)
+        LOGGER.info(
+            "Delta lookup unavailable for deep reflection %s/%s: %s",
+            person_id,
+            topic_key,
+            exc,
+        )
         return {"has_previous": False, "error": str(exc)}
 
     if not row:
@@ -658,21 +1280,41 @@ async def _build_delta_since_last_reflection(
 
     previous = _parse_json_object(row.get("result_json"))
     prev_current = str(previous.get("current_stage") or "").strip()
-    prev_recurring = [str(x).strip() for x in (previous.get("recurring_tensions") or []) if str(x).strip()]
-    prev_pivots = [str(x).strip() for x in (previous.get("key_pivots") or []) if str(x).strip()]
+    prev_recurring = [
+        str(x).strip()
+        for x in (previous.get("recurring_tensions") or [])
+        if str(x).strip()
+    ]
+    prev_pivots = [
+        str(x).strip() for x in (previous.get("key_pivots") or []) if str(x).strip()
+    ]
 
     curr_current = str(deterministic.get("current_stage") or "").strip()
-    curr_recurring = [str(x).strip() for x in (deterministic.get("recurring_tensions") or []) if str(x).strip()]
-    curr_pivots = [str(x).strip() for x in (deterministic.get("key_pivots") or []) if str(x).strip()]
+    curr_recurring = [
+        str(x).strip()
+        for x in (deterministic.get("recurring_tensions") or [])
+        if str(x).strip()
+    ]
+    curr_pivots = [
+        str(x).strip()
+        for x in (deterministic.get("key_pivots") or [])
+        if str(x).strip()
+    ]
 
     return {
         "has_previous": True,
         "previous_reflection_at": _iso(row.get("created_at")),
-        "current_stage_changed": bool(prev_current and curr_current and prev_current != curr_current),
+        "current_stage_changed": bool(
+            prev_current and curr_current and prev_current != curr_current
+        ),
         "previous_current_stage": prev_current or None,
         "current_current_stage": curr_current or None,
-        "new_recurring_tensions": [item for item in curr_recurring if item not in prev_recurring][:3],
-        "persisting_recurring_tensions": [item for item in curr_recurring if item in prev_recurring][:3],
+        "new_recurring_tensions": [
+            item for item in curr_recurring if item not in prev_recurring
+        ][:3],
+        "persisting_recurring_tensions": [
+            item for item in curr_recurring if item in prev_recurring
+        ][:3],
         "pivot_count_delta": len(curr_pivots) - len(prev_pivots),
     }
 
@@ -729,13 +1371,25 @@ async def _load_latest_turn_context(
             emotion_state = _parse_json_object(state_row.get("emotion_state"))
             rhythm_state = _parse_json_object(state_row.get("rhythm_state"))
             longitudinal_state = _parse_json_object(state_row.get("longitudinal_state"))
-            identity_state = _parse_json_object(state_row.get("identity_momentum_state"))
+            identity_state = _parse_json_object(
+                state_row.get("identity_momentum_state")
+            )
             state_hints = {
-                "emotion_hint": _extract_signal(emotion_state, ("emotion", "mood", "state", "dominant_emotion")),
-                "companion_mode": _extract_signal(longitudinal_state, ("mode", "companion_mode", "state")),
-                "load_hint": _extract_signal(longitudinal_state, ("load", "load_level", "cognitive_load")),
-                "energy_hint": _extract_signal(rhythm_state, ("energy", "energy_level", "energy_mode")),
-                "identity_phase": _extract_signal(identity_state, ("phase", "momentum", "direction")),
+                "emotion_hint": _extract_signal(
+                    emotion_state, ("emotion", "mood", "state", "dominant_emotion")
+                ),
+                "companion_mode": _extract_signal(
+                    longitudinal_state, ("mode", "companion_mode", "state")
+                ),
+                "load_hint": _extract_signal(
+                    longitudinal_state, ("load", "load_level", "cognitive_load")
+                ),
+                "energy_hint": _extract_signal(
+                    rhythm_state, ("energy", "energy_level", "energy_mode")
+                ),
+                "identity_phase": _extract_signal(
+                    identity_state, ("phase", "momentum", "direction")
+                ),
             }
     except Exception as exc:
         LOGGER.info("State hints unavailable for %s: %s", person_id, exc)
@@ -752,14 +1406,24 @@ async def _load_latest_turn_context(
     }
 
 
-def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[str, str]]:
+def _build_deep_reflection_prompt_messages(
+    packet: dict[str, Any]
+) -> list[dict[str, str]]:
     arc = packet.get("arc_compact_global") or {}
     latest = packet.get("latest_turn_context") or {}
     query_info = packet.get("current_query") or {}
-    request_mode = str(packet.get("request_mode") or "topic_reflection").strip() or "topic_reflection"
+    request_mode = (
+        str(packet.get("request_mode") or "topic_reflection").strip()
+        or "topic_reflection"
+    )
     delta = packet.get("delta_since_last_reflection") or {}
     contract = packet.get("response_contract") or {}
-    surface = packet.get("surface") or {}
+    emotion_policy = (
+        contract.get("emotion_policy")
+        if isinstance(contract.get("emotion_policy"), dict)
+        else {}
+    )
+    allow_emotion_reference = bool(emotion_policy.get("priority_conflict_detected"))
 
     key_pivots = _clean_text_list(arc.get("key_pivots"), limit=3)
     recurring = _clean_text_list(arc.get("recurring_tensions"), limit=3)
@@ -779,6 +1443,17 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
         for item in (packet.get("recent_episode_compact") or [])
         if isinstance(item, dict) and str(item.get("summary") or "").strip()
     ][:3]
+    related_topics = [
+        item
+        for item in (packet.get("related_topics_compact") or [])
+        if isinstance(item, dict)
+        and str(item.get("topic_label") or item.get("topic_key") or "").strip()
+    ][:3]
+    life_dimensions = (
+        packet.get("life_dimensions")
+        if isinstance(packet.get("life_dimensions"), dict)
+        else {}
+    )
 
     history_lines: list[str] = [
         f"- Topic: {str(packet.get('topic_label') or packet.get('topic_key') or 'unknown').strip()}",
@@ -807,6 +1482,17 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
             "- Evidence anchors: "
             + " | ".join(str(item.get("snippet") or "").strip() for item in evidence)
         )
+    if related_topics:
+        history_lines.append(
+            "- Linked threads: "
+            + " | ".join(
+                (
+                    f"{str(item.get('topic_label') or item.get('topic_key') or '').strip()} "
+                    f"({int(item.get('selected_count') or 0)} moments)"
+                ).strip()
+                for item in related_topics
+            )
+        )
 
     state_hints = latest.get("state_hints") or {}
     person_lines: list[str] = []
@@ -816,7 +1502,6 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
         person_lines.append(f"- Ongoing tension to hold: {open_questions[0]}")
     hint_parts = []
     for key, label in (
-        ("emotion_hint", "emotion"),
         ("load_hint", "load"),
         ("energy_hint", "energy"),
         ("identity_phase", "identity phase"),
@@ -825,6 +1510,9 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
         if value in (None, "", [], {}):
             continue
         hint_parts.append(f"{label}={value}")
+    emotion_hint = state_hints.get("emotion_hint")
+    if allow_emotion_reference and emotion_hint not in (None, "", [], {}):
+        hint_parts.append(f"emotion={emotion_hint}")
     if hint_parts:
         person_lines.append(f"- Current state hints: {', '.join(hint_parts)}")
     if delta.get("has_previous"):
@@ -839,16 +1527,47 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
         new_tensions = _clean_text_list(delta.get("new_recurring_tensions"), limit=2)
         if new_tensions:
             person_lines.append(f"- New recurring tensions: {'; '.join(new_tensions)}")
+
+    dimension_lines: list[str] = []
+    for key, label in (
+        ("time_availability", "time"),
+        ("financial_pressure", "money"),
+        ("emotional_bandwidth", "emotional bandwidth"),
+    ):
+        payload = life_dimensions.get(key)
+        if not isinstance(payload, dict):
+            continue
+        direction = str(payload.get("direction") or "neutral").strip()
+        level = float(payload.get("level") or 0.0)
+        topics = _clean_text_list(payload.get("affected_topics"), limit=3)
+        if not topics:
+            continue
+        dimension_lines.append(
+            f"- {label}: {direction} ({level:.0%}) across {', '.join(topics)}"
+        )
+    if dimension_lines:
+        person_lines.append("- Cross-cutting dimensions:")
+        person_lines.extend(dimension_lines)
     if not person_lines:
         person_lines.append("- No extra person-level signals beyond the topic history.")
 
-    if request_mode == "topic_reflection":
-        # Topic reflection is purely longitudinal — no current query
-        current_query = "Reflect on this topic's full arc."
-        query_source = "longitudinal"
+    if request_mode in {"topic_reflection", "cross_context"}:
+        # Longitudinal modes do not require a current user query.
+        if request_mode == "cross_context":
+            current_query = "Explain how this thread interacts with nearby threads and what that reveals."
+            query_source = "cross_context_longitudinal"
+        else:
+            current_query = "Reflect on this topic's full arc."
+            query_source = "longitudinal"
     else:
-        current_query = str(query_info.get("text") or latest.get("effective_user_query") or "").strip()
-        query_source = str(query_info.get("source") or latest.get("effective_user_query_source") or "none").strip()
+        current_query = str(
+            query_info.get("text") or latest.get("effective_user_query") or ""
+        ).strip()
+        query_source = str(
+            query_info.get("source")
+            or latest.get("effective_user_query_source")
+            or "none"
+        ).strip()
         if not current_query:
             current_query = "(No active question was provided; answer as a concise decision reflection grounded in topic history.)"
 
@@ -861,10 +1580,39 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
     ]
     if avoid:
         response_lines.append(f"- Avoid: {', '.join(avoid)}")
+    if emotion_policy.get("mention_only_with_priority_conflict"):
+        if allow_emotion_reference:
+            signals = _clean_text_list(
+                emotion_policy.get("priority_conflict_signals"), limit=3
+            )
+            if signals:
+                response_lines.append(
+                    f"- Emotion mention: allowed but brief (max {emotion_policy.get('max_emotion_sentences', 1)} sentence) because priority conflict evidence is present: {', '.join(signals)}."
+                )
+            else:
+                response_lines.append(
+                    f"- Emotion mention: allowed but brief (max {emotion_policy.get('max_emotion_sentences', 1)} sentence) because priority conflict evidence is present."
+                )
+        else:
+            response_lines.append(
+                "- Emotion mention: omit unless a clear priority conflict is explicitly evidenced."
+            )
     if request_mode == "deep_answer":
-        response_lines.append("- Value add: answer current query first, weave in 2-3 past moments naturally, end with one suggestion and one honest question.")
+        response_lines.append(
+            "- Value add: answer current query first, weave in 2-3 past moments naturally, end with one suggestion and one honest question."
+        )
+    elif request_mode == "whole_story":
+        response_lines.append(
+            "- Value add: answer the current query first, then connect at least two linked threads with concrete evidence."
+        )
+    elif request_mode == "cross_context":
+        response_lines.append(
+            "- Value add: explain thread interplay, name one recurring tradeoff, and keep advice lightweight."
+        )
     else:
-        response_lines.append("- Value add: highlight what changed, what repeats, and one question to carry forward.")
+        response_lines.append(
+            "- Value add: highlight what changed, what repeats, and one question to carry forward."
+        )
 
     if request_mode == "topic_reflection":
         preamble = (
@@ -874,22 +1622,67 @@ def _build_deep_reflection_prompt_messages(packet: dict[str, Any]) -> list[dict[
             "Do not import concerns from unrelated topics or turns.\n\n"
             f"Mode: {request_mode}\n\n"
         )
+    elif request_mode == "cross_context":
+        preamble = (
+            "Write one cross-context reflection for the user.\n"
+            "Describe how this thread interacts with the linked threads below.\n"
+            "No current query to solve; focus on interplay, recurring tradeoffs, and what matters now.\n"
+            "Keep it grounded in evidence and avoid generic motivation.\n\n"
+            f"Mode: {request_mode}\n"
+            f"Current query source: {query_source or 'none'}\n\n"
+        )
+    elif request_mode == "whole_story":
+        preamble = (
+            "Write one whole-story deep reflection reply for the user.\n"
+            "Prioritize answering the current query directly.\n"
+            "Use linked threads and life-dimension context only when directly relevant.\n"
+            "Keep tradeoffs concrete and evidence-backed.\n"
+            "Only mention emotions when clear priority-conflict evidence is present.\n\n"
+            f"Mode: {request_mode}\n"
+            f"Current query source: {query_source or 'none'}\n\n"
+        )
     else:
         preamble = (
             "Write one deep reflection reply for the user.\n"
             "Stay strictly within the topic context below.\n"
             "Prioritize answering the current query directly.\n"
             "Use history and person context as grounding, not as a detour.\n"
+            "Only mention emotions when clear priority-conflict evidence is present.\n"
             "Do not import concerns from unrelated topics or turns.\n\n"
             f"Mode: {request_mode}\n"
             f"Current query source: {query_source or 'none'}\n\n"
         )
+    connected_lines: list[str] = []
+    if related_topics:
+        for item in related_topics:
+            topic_label = str(
+                item.get("topic_label") or item.get("topic_key") or ""
+            ).strip()
+            topic_signal = str(item.get("current_signal") or "").strip()
+            topic_direction = str(item.get("direction") or "steady").strip()
+            if not topic_label:
+                continue
+            connected_lines.append(
+                f"- {topic_label}: {topic_signal or f'direction={topic_direction}'}"
+            )
+    if not connected_lines:
+        connected_lines.append(
+            "- No additional linked threads were included for this run."
+        )
+
+    connected_block = ""
+    if request_mode in {"whole_story", "cross_context"}:
+        connected_block = "\n\nConnected threads around this topic:\n" + "\n".join(
+            connected_lines
+        )
+
     user_prompt = (
-        preamble +
-        "History on this topic:\n"
+        preamble
+        + "History on this topic:\n"
         + "\n".join(history_lines)
         + "\n\nWhat we know about this person on this topic:\n"
         + "\n".join(person_lines)
+        + connected_block
         + "\n\nCurrent query now:\n"
         + current_query
         + "\n\nResponse contract:\n"
@@ -930,14 +1723,71 @@ def _topic_keywords(
     evidence: list[dict[str, Any]],
 ) -> set[str]:
     raw_parts: list[str] = [topic_key, str(deterministic.get("topic_label") or "")]
-    raw_parts.extend(str(item.get("facet") or "") for item in evidence if item.get("facet"))
-    raw_parts.extend(str(item) for item in (deterministic.get("recurring_tensions") or []))
+    raw_parts.extend(
+        str(item.get("facet") or "") for item in evidence if item.get("facet")
+    )
+    raw_parts.extend(
+        str(item) for item in (deterministic.get("recurring_tensions") or [])
+    )
     tokens = {
         token
         for token in _tokenize(" ".join(raw_parts))
         if len(token) > 2 and token not in _TOPIC_STOPWORDS
     }
     return tokens
+
+
+def _assess_priority_conflict(
+    *,
+    current_query: str,
+    recurring_tensions: list[str],
+    open_questions: list[str],
+    evidence_anchors: list[dict[str, Any]],
+    recent_episodes: list[dict[str, Any]],
+) -> dict[str, Any]:
+    corpus_parts: list[str] = []
+    if current_query:
+        corpus_parts.append(current_query)
+    corpus_parts.extend(recurring_tensions[:2])
+    corpus_parts.extend(open_questions[:1])
+    corpus_parts.extend(
+        str(item.get("snippet") or "").strip() for item in evidence_anchors[:2]
+    )
+    corpus_parts.extend(
+        str(item.get("summary") or "").strip() for item in recent_episodes[:1]
+    )
+    corpus = " ".join(part for part in corpus_parts if part).lower()
+    query = str(current_query or "").strip().lower()
+    scan_text = query or corpus
+
+    connectors = bool(_PRIORITY_CONNECTOR_RE.search(scan_text))
+    pressure = bool(_RESOURCE_PRESSURE_RE.search(scan_text))
+    strong_phrase = bool(_STRONG_PRIORITY_CONFLICT_RE.search(scan_text))
+
+    domains: set[str] = set()
+    for key, pattern in _PRIORITY_DOMAIN_PATTERNS.items():
+        if pattern.search(corpus):
+            domains.add(key)
+
+    conflict_detected = bool(
+        strong_phrase or (connectors and pressure and len(domains) >= 2)
+    )
+
+    signals: list[str] = []
+    if strong_phrase:
+        signals.append("tradeoff_phrase")
+    if connectors:
+        signals.append("priority_connector")
+    if pressure:
+        signals.append("resource_pressure")
+    if len(domains) >= 2:
+        signals.append(f"multi_domain({','.join(sorted(domains)[:3])})")
+
+    return {
+        "detected": conflict_detected,
+        "signals": signals[:4],
+        "domain_count": len(domains),
+    }
 
 
 def _matched_keywords(text: str, keywords: set[str]) -> list[str]:
@@ -956,7 +1806,6 @@ def _normalize_llm_text(text: str, *, max_chars: int = 700) -> str:
     if not value:
         return ""
     return _truncate(value, max_chars)
-
 
 
 def _truncate(text: str, max_chars: int) -> str:
@@ -986,7 +1835,9 @@ def _extract_signal(state: dict[str, Any], keys: tuple[str, ...]) -> Any:
     return None
 
 
-def _build_phase_packets(arc: dict[str, Any], included_moments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _build_phase_packets(
+    arc: dict[str, Any], included_moments: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     packets: list[dict[str, Any]] = []
     for phase in arc.get("phases") or []:
         start_ts = _coerce_ts(phase.get("start_ts"))
@@ -1032,7 +1883,11 @@ def _build_phase_packets(arc: dict[str, Any], included_moments: list[dict[str, A
 def _phase_signal(phase: dict[str, Any]) -> str:
     label = str(phase.get("label") or phase.get("dominant_tag") or "").strip()
     if label:
-        return f"Started around {label}." if int(phase.get("index") or 0) == 0 else f"Centered on {label}."
+        return (
+            f"Started around {label}."
+            if int(phase.get("index") or 0) == 0
+            else f"Centered on {label}."
+        )
     density = _phase_density(phase)
     if density >= 0.12:
         descriptor = "dense"
@@ -1061,7 +1916,9 @@ def _pivot_summaries(phase_packets: list[dict[str, Any]]) -> list[str]:
         prev_label = str(prev.get("dominant_tag") or "").strip()
         current_label = str(current.get("dominant_tag") or "").strip()
         if prev_label and current_label and prev_label != current_label:
-            summaries.append(f"Phase {current['index'] + 1} shifted from {prev_label} toward {current_label}.")
+            summaries.append(
+                f"Phase {current['index'] + 1} shifted from {prev_label} toward {current_label}."
+            )
         else:
             summaries.append(f"Phase {current['index'] + 1} reorganized the thread.")
     return summaries
@@ -1077,7 +1934,9 @@ def _recurring_threads(included_moments: list[dict[str, Any]]) -> list[str]:
     recurring = [facet for facet, count in counts.items() if count >= 2]
     if not recurring:
         return ["No recurring sub-thread cleared the current threshold."]
-    return [f"Recurring return to {facet.replace('_', ' ')}." for facet in recurring[:3]]
+    return [
+        f"Recurring return to {facet.replace('_', ' ')}." for facet in recurring[:3]
+    ]
 
 
 def _open_questions(phase: dict[str, Any] | None) -> list[str]:
@@ -1096,25 +1955,58 @@ def _compose_chat_response(
     current_stage: str,
     recurring_tensions: list[str],
     open_questions: list[str],
+    related_topics: list[str],
     mode: str,
     user_query: str | None,
 ) -> str:
-    if mode == "deep_answer" and str(user_query or "").strip():
+    if mode in {"deep_answer", "whole_story"} and str(user_query or "").strip():
         fallback_lines = [
             origin_story.strip(),
             key_pivots[0].strip() if key_pivots else "",
             current_stage.strip(),
+            (
+                f"Across {', '.join(related_topics[:2])}, the same tradeoff keeps resurfacing."
+                if mode == "whole_story" and len(related_topics) >= 2
+                else ""
+            ),
             "One path worth trying: commit to a single direction for the next week and define one measurable checkpoint.",
-            (open_questions[0].strip() if open_questions else "Set one check-in question for day seven."),
+            (
+                open_questions[0].strip()
+                if open_questions
+                else "Set one check-in question for day seven."
+            ),
         ]
         return " ".join(line for line in fallback_lines if line.strip())
+
+    if mode == "cross_context":
+        parts = [
+            origin_story.strip(),
+            key_pivots[0].strip() if key_pivots else "",
+            current_stage.strip(),
+            (
+                f"Linked thread pressure is visible in {', '.join(related_topics[:2])}."
+                if related_topics
+                else ""
+            ),
+            recurring_tensions[0].strip() if recurring_tensions else "",
+            (
+                f"One question to hold: {open_questions[0].strip()}"
+                if open_questions
+                else ""
+            ),
+        ]
+        return " ".join(part for part in parts if part)
 
     parts = [
         origin_story.strip(),
         key_pivots[0].strip() if key_pivots else "",
         current_stage.strip(),
         recurring_tensions[0].strip() if recurring_tensions else "",
-        f"One question to sit with: {open_questions[0].strip()}" if open_questions else "",
+        (
+            f"One question to sit with: {open_questions[0].strip()}"
+            if open_questions
+            else ""
+        ),
     ]
     return " ".join(part for part in parts if part)
 

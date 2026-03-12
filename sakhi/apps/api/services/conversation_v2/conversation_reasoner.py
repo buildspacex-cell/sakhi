@@ -245,6 +245,60 @@ Use this to improve coherence and avoid repeating already-resolved points.
 Do NOT quote, summarize, or mention specific past entries unless the user explicitly asks for history or evidence.
 """
 
+    # --- Cross-topic context (optional enrichment) ---
+    cross_topic_section = ""
+    if continuity_pack:
+        cross_context = continuity_pack.get("cross_context") or {}
+        life_dimensions = continuity_pack.get("life_dimensions") or {}
+        cross_topic_parts: list[str] = []
+
+        if cross_context.get("ready"):
+            correlated_label = str(
+                cross_context.get("correlated_topic_label")
+                or cross_context.get("correlated_topic_key")
+                or ""
+            ).strip()
+            if correlated_label:
+                correlation_type = str(cross_context.get("correlation_type") or "").strip()
+                type_note = {
+                    "temporal": "active at the same time",
+                    "semantic": "sharing common themes",
+                    "facet": "sharing common patterns",
+                    "directional": "moving together emotionally",
+                }.get(correlation_type, "appearing connected")
+                cross_topic_parts.append(
+                    f"This topic appears connected to: {correlated_label} ({type_note})."
+                )
+
+        dim_notes: list[str] = []
+        for dim_key, dim_label in (
+            ("time_availability", "time availability"),
+            ("financial_pressure", "financial pressure"),
+            ("emotional_bandwidth", "emotional bandwidth"),
+        ):
+            dim = life_dimensions.get(dim_key) if isinstance(life_dimensions, dict) else None
+            if not isinstance(dim, dict):
+                continue
+            direction = str(dim.get("direction") or "neutral").strip()
+            affected = [str(t) for t in (dim.get("affected_topics") or []) if str(t).strip()]
+            if direction == "pressured" and affected:
+                dim_notes.append(
+                    f"{dim_label} is compressed (affects: {', '.join(affected[:2])})"
+                )
+            elif direction == "resourced":
+                dim_notes.append(f"{dim_label} is good right now")
+        if dim_notes:
+            cross_topic_parts.append("Life context: " + "; ".join(dim_notes) + ".")
+
+        if cross_topic_parts:
+            cross_topic_section = (
+                "\n[CROSS-TOPIC CONTEXT — Hidden Context]\n"
+                + "\n".join(cross_topic_parts)
+                + "\nGuidance: You may notice these connections naturally if relevant."
+                " One light mention at most — never prescriptive, never lecture."
+                " Only surface if it genuinely helps the person see their situation.\n"
+            )
+
     return f"""
 You are Sakhi — a friend who really gets this person.
 
@@ -262,6 +316,7 @@ Recent conversation:
 {st_block}
 
 {continuity_section}
+{cross_topic_section}
 {governance_section}
 User message:
 {user_text.strip()}

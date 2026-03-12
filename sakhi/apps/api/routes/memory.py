@@ -6,32 +6,39 @@ import uuid
 
 from fastapi import APIRouter, Query, Request
 
-from sakhi.apps.api.services.memory.recall import recall_advanced
+from sakhi.apps.api.core.db import exec as dbexec
+from sakhi.apps.api.core.db import q
+from sakhi.apps.api.services.continuity.cross_topic import (
+    invalidate_person_cross_topic_cache,
+)
+from sakhi.apps.api.services.memory.memory_episodic import (
+    build_episodic_from_journals_v2,
+)
 from sakhi.apps.api.services.memory.memory_ingest import ingest_journal_entry
-from sakhi.apps.api.services.memory.memory_episodic import build_episodic_from_journals_v2
 from sakhi.apps.api.services.memory.product_matching import (
+    get_preference_summary_for_category,
     score_product,
     score_products_batch,
-    get_preference_summary_for_category,
 )
+from sakhi.apps.api.services.memory.recall import recall_advanced
 from sakhi.apps.api.services.memory.sensory_preferences import get_sensory_profile
 from sakhi.apps.api.services.memory.synthesis import (
     fetch_monthly_recaps,
     fetch_weekly_summaries,
     run_memory_synthesis,
 )
-from sakhi.apps.worker.tasks.weekly_rhythm_rollup_worker import run_weekly_rhythm_rollup
-from sakhi.apps.worker.tasks.weekly_signals_worker import run_weekly_signals_worker
+from sakhi.apps.api.utils.person_resolver import resolve_person
+
 # NOTE: Using stubs for archived workers (v2 refactor)
 from sakhi.apps.worker.tasks._stubs import (
-    run_weekly_planner_pressure,
-    run_turn_personal_model_update,
-    generate_weekly_reflection,
     _fetch_weekly_signals,
+    generate_weekly_reflection,
+    run_turn_personal_model_update,
+    run_weekly_planner_pressure,
 )
+from sakhi.apps.worker.tasks.weekly_rhythm_rollup_worker import run_weekly_rhythm_rollup
+from sakhi.apps.worker.tasks.weekly_signals_worker import run_weekly_signals_worker
 from sakhi.libs.schemas.settings import get_settings
-from sakhi.apps.api.core.db import q, exec as dbexec
-from sakhi.apps.api.utils.person_resolver import resolve_person
 from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
 router = APIRouter(tags=["memory"])
@@ -386,6 +393,7 @@ async def reset_weekly_flow_dev(request: Request):
         )
 
     await dbexec("UPDATE personal_model SET longitudinal_state = '{}'::jsonb WHERE person_id = $1", target_person)
+    await invalidate_person_cross_topic_cache(person_id=str(target_person))
 
     return {
         "status": "ok",

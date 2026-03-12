@@ -63,3 +63,40 @@ def test_build_public_continuity_signal_prioritizes_surface_blocks():
     assert deep_reflect["reason"] == "mirror_blocked"
     assert deep_reflect["mirror_allowed"] is False
     assert deep_reflect["detail_allowed"] is False
+
+
+def test_build_public_continuity_signal_passthroughs_cross_context_fields():
+    payload = turn_v2._build_public_continuity_signal(
+        {
+            "topic_key": "sakhi",
+            "topic_label": "Sakhi",
+            "surface": {"mirror_allowed": True, "detail_allowed": True},
+            "history_compact": {"element_count": 12},
+            "whole_story": {
+                "ready": True,
+                "reason": "ready",
+                "selected_topics": ["sakhi", "career"],
+                "selected_count_total": 18,
+                "correlation_score": 0.61,
+            },
+            "cross_context": {
+                "ready": True,
+                "reason": "ready",
+                "correlated_topic_key": "career",
+                "correlation_score": 0.61,
+            },
+            "candidate_topics": [
+                {"topic_key": "sakhi", "score": 0.9},
+                {"topic_key": "career", "score": 0.7},
+            ],
+            "life_dimensions": {
+                "time_availability": {"level": 0.56, "direction": "pressured"},
+            },
+        }
+    )
+
+    assert payload is not None
+    assert payload["whole_story"]["ready"] is True
+    assert payload["cross_context"]["correlated_topic_key"] == "career"
+    assert len(payload["candidate_topics"]) == 2
+    assert payload["life_dimensions"]["time_availability"]["direction"] == "pressured"
