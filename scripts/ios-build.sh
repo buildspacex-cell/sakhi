@@ -63,8 +63,7 @@ fi
 
 echo -e "${YELLOW}Loading env vars from apps/mobile/.env.local...${NC}"
 set -a
-# Strip comments and blank lines before sourcing
-source <(grep -v '^\s*#' "$ENV_FILE" | grep -v '^\s*$')
+source "$ENV_FILE"
 set +a
 
 # Confirm PostHog key is set
