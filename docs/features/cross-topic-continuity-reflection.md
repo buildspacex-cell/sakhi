@@ -1,6 +1,6 @@
 # Cross-Topic Continuity Reflection — Implementation Plan
 
-> **Status**: Planning — Architecture review applied
+> **Status**: In Progress — Phase 4 partial (cache/service foundation + chat wiring + Reflection `Me Story` entrypoint)
 > **Last Updated**: 2026-03-10
 > **Scope**: Upgrade deep reflect from single-thread synthesis to cross-thread pattern intelligence
 
@@ -26,7 +26,7 @@ Almost everything needed already exists. This is mostly a new service layer and 
 |---------------|-------------|-------|
 | Per-topic moment data with timestamps | `journal_entries.ts` + `continuity_labels.anchor` | DB |
 | Topic arcs with phases | Compiled in-memory by `compiler.py` | `services/continuity/compiler.py` |
-| Semantic overlap detection | `memory_episodic.vector_vec` (1536-dim) | DB |
+| Semantic overlap detection | `journal_embeddings.embedding_vec` / `embedding` (1536-dim), lexical fallback | DB |
 | Shared facet tracking | `continuity_labels.facets[]` per anchor | DB |
 | Stance / direction per moment | `entry_tags.stance`, `decision_state` (compiled output) | `compiler.py` output |
 | Previous reflections for delta | `deep_reflections.result_json` | DB |
@@ -35,14 +35,27 @@ Almost everything needed already exists. This is mostly a new service layer and 
 | Surface policy exclusions | `continuity_surface_policy.exclusions[]` | DB |
 | LLM routing layer | `router.chat()` | `reflection.py` |
 
-**What doesn't exist yet:**
-- Cross-topic correlation detection logic and cache table
-- Cross-cutting life dimension signals (time, money, emotion) computed globally across all topics
-- Two new synthesis modes: `cross_context` (longitudinal, no query) and `whole_story` (query-grounded)
-- `cross_context` / `whole_story` / `life_dimensions` fields in the per-turn signal
-- LLM prompts for both new modes (including dimension context)
-- Simulation page
-- Mobile UX
+**Pending items (non-blocking):**
+- [ ] Dedicated refresh worker for proactive correlation/life-dimension recompute (current path is lazy read-through cache)
+- [ ] Simulation page for inspecting cross-topic packet internals
+
+**Implemented in current pass:**
+- Reflection run contract now supports `mode=whole_story|cross_context` plus `topic_keys[]` for linked threads
+- `/v2/turn` non-debug continuity signal now passes optional `candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`
+- Added cache tables: `continuity_topic_correlations` and `continuity_life_dimensions` (`sakhi/infra/scripts/migrations/0015_continuity_cross_topic.sql`)
+- Added `services/continuity/cross_topic.py` as the source-of-truth service for correlation scoring + life-dimension cache reads/writes
+- Correlation scoring now uses a 4-signal composite (temporal + semantic + facet + directional) and persists indexed per-pair scores
+- Correlation cache hardening now does bounded all-pairs warm compute per request (up to profile cap), profile-driven cache TTL checks, resilient `entry_tags` lookups across key-format drift, and a sorted-window temporal overlap scan
+- Semantic overlap now prefers journal embedding cosine centroids (`journal_embeddings`) and automatically falls back to lexical overlap when vectors are unavailable
+- Cross-topic thresholds and topic cap are centralized in `thresholds.py` (`CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE`) and consumed by chat/reflection
+- Deep reflection now reuses the same cross-topic life-dimensions cache service path used by turn-time continuity signals (single source for surfaced dimensions)
+- Related-arc moments are deduplicated before deep packet composition to avoid repeated evidence across linked topics
+- Deep reflection prompt composer now supports mode-specific contracts for `topic_reflection`, `deep_answer`, `whole_story`, and `cross_context`
+- Chat Deep Reflect (mobile + web converse) now runs `mode=whole_story` only, gated dynamically by `continuity.whole_story` readiness with linked topic keys
+- Profile Reflection now includes a separate `Me Story` action that runs `mode=cross_context`, while `<topic> Story` stays `mode=topic_reflection`
+- Simulation Ask-Sakhi debug now includes a cross-topic gate panel that shows live go/no-go readiness from `continuity_pack` signals and can run all deep modes for validation
+- Emotion mention guardrail is enforced across deep modes: only when explicit priority-conflict evidence is present
+- Journal-delete flows now invalidate cross-topic caches immediately (`/memory/dev/reset`, `/lab/cleanup`) so deleted evidence cannot survive until TTL expiry
 
 ---
 
@@ -77,9 +90,9 @@ Four correlation types, each grounded in specific existing data:
 **Score:** `(co-occurring moment pairs) / (min(count_A, count_B))` — normalized 0–1
 
 ### 2. Semantic Overlap
-**Source:** `memory_episodic.vector_vec` (existing 1536-dim embeddings)
-**Definition:** Episodic memory records whose embeddings score high cosine similarity to BOTH topic keyword sets (from `taxonomy.py` anchor rules)
-**Score:** fraction of episodes that match both topics above similarity threshold 0.6
+**Source:** `journal_embeddings.embedding_vec` / `journal_embeddings.embedding` (existing 1536-dim embeddings)
+**Definition:** Cosine similarity between topic centroids built from per-moment journal embeddings for each topic pair
+**Score:** normalized cosine `(cos + 1) / 2` when embeddings exist; lexical Jaccard fallback when vectors are unavailable
 
 ### 3. Shared Facets
 **Source:** `continuity_labels.facets[]` — array of facet labels per journal entry per anchor
@@ -102,7 +115,7 @@ combined_score = (
 )
 ```
 
-Temporal co-occurrence is the strongest signal and simplest to compute. Start with temporal only in Phase 0; add semantic and facet in a follow-up iteration.
+Temporal co-occurrence remains the strongest signal, but the current implementation uses all four signals in the persisted composite score.
 
 ---
 
@@ -126,6 +139,7 @@ A dimension is surfaced **only when** all three gates pass:
 3. ≥ 4 journal entries carrying the relevant signals in the last 60 days
 
 Financial pressure is held to a higher threshold (level ≥ 0.65) given sensitivity. It is also omitted from `cross_context` synthesis by default unless explicitly included.
+Emotional bandwidth is treated as a secondary signal: it is mentioned only when there is explicit priority-conflict evidence (time/money/commitment tradeoff), and even then is capped to one brief sentence.
 
 ### New Table
 
@@ -136,7 +150,7 @@ Financial pressure is held to a higher threshold (level ≥ 0.65) given sensitiv
 -- affected_topics: topic_keys where this dimension is most visible (≥ 2 required to surface)
 CREATE TABLE IF NOT EXISTS continuity_life_dimensions (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    person_id        TEXT NOT NULL,
+    person_id        UUID NOT NULL,
     dimension        TEXT NOT NULL,         -- 'time_availability' | 'financial_pressure' | 'emotional_bandwidth'
     signal_level     FLOAT NOT NULL,        -- 0-1
     signal_direction TEXT NOT NULL,         -- 'pressured' | 'neutral' | 'resourced'
@@ -151,51 +165,32 @@ CREATE INDEX IF NOT EXISTS life_dimensions_person_idx
     ON continuity_life_dimensions(person_id);
 ```
 
-### Service Contract: `compute_life_dimensions()`
+### Service Contract: `compute_cross_topic_signals()`
 
-Added to `services/continuity/cross_topic.py`:
+Implemented in `services/continuity/cross_topic.py`:
 
 ```python
-async def compute_life_dimensions(
+async def compute_cross_topic_signals(
+    *,
     person_id: str,
-    compiled_topics: list[dict],   # all compiled topics with their moments
-    force_recompute: bool = False,
-) -> dict[str, dict]:
+    selected_anchor: str,
+    selected_topic: dict[str, Any],
+    topics: list[dict[str, Any]],
+    window_start: str,
+    window_end: str,
+    now: datetime,
+) -> tuple[cross_context | None, whole_story | None, life_dimensions | None]:
     """
-    Compute all three life dimensions in one pass over journal data.
-    Uses NO new tables — reads from:
-      - journal_entries.ts + continuity_labels.anchor  → activity density per topic per week
-      - entry_tags.stance (from compiler.py output)   → emotional bandwidth aggregate
-      - continuity_labels.facets[]                    → financial + time facet detection
-      - personal_model.current_state                  → energy/mood as secondary signal
-
-    Time availability:
-      - Count distinct topics with ≥ 1 moment in last 14 days
-      - Cross-weight by number of moments and `entry_tags` urgency facets
-      - High density across ≥ 3 topics in a short window → time pressure elevated
-
-    Financial pressure:
-      - Scan continuity_labels.facets[] for financial anchors: cost, budget, salary, money, debt, afford
-      - Count distinct topics carrying financial facets in last 60 days
-      - Weight by stance (away=pressure, toward=opportunity)
-
-    Emotional bandwidth:
-      - Aggregate entry_tags.stance across ALL topics, last 30 days
-      - away_ratio = away_count / total_tagged_entries
-      - > 0.60 → bandwidth compressed; < 0.30 → bandwidth resourced
-      - Also read personal_model.current_state.energy (secondary signal)
-
-    Upsert all three rows into continuity_life_dimensions.
-    Returns: {
-      "time_availability":    { level, direction, affected_topics, evidence_summary, surface },
-      "financial_pressure":   { level, direction, affected_topics, evidence_summary, surface },
-      "emotional_bandwidth":  { level, direction, affected_topics, evidence_summary, surface },
-    }
-    Where `surface` = True when surfacing gates pass (level thresholds + ≥ 2 affected topics + ≥ 4 entries).
+    Read-through cache contract:
+      1) Try indexed read from continuity_topic_correlations for all eligible
+         topic pairs (bounded by profile sweep cap)
+      2) Recompute missing/stale pairs using 4-signal composite score:
+         temporal + semantic + facet + directional
+      3) Upsert pair cache rows, then project selected-anchor rows for turn payload
+      4) Build cross_context + whole_story readiness payloads from selected rows
+      5) Read-through life dimensions from continuity_life_dimensions;
+         recompute + upsert when stale/missing
     """
-
-async def get_life_dimensions(person_id: str) -> dict[str, dict]:
-    """Single indexed read from continuity_life_dimensions cache."""
 ```
 
 ### Dimension Surfacing in Synthesis
@@ -214,6 +209,7 @@ If either of these environmental pressures is visible in the relationship you're
 name it once — briefly and specifically. Do not advise on it. Do not over-weight it.
 Example: "And across both threads, time is running thin — that's the water both threads are swimming in."
 If these dimensions are not directly relevant to the thread relationship, omit them entirely.
+Never lead with emotion. Mention emotional bandwidth only when priority conflict is explicitly evidenced by the packet.
 ```
 
 **For `whole_story` mode:** Append the same block after the "How these threads connect" section, with identical instructions.
@@ -956,6 +952,7 @@ apps/mobile/app/
 | Life dimension dominates synthesis — model over-explains time/emotion pressure | Dimension block is after evidence, instruction says "omit if not directly relevant"; simulation validates model follows it |
 | Financial dimension surfaces sensitive data | Higher threshold (0.65), omitted from synthesis by default, explicit `surface=True` flag |
 | Dimension computed from sparse data — false signal | ≥ 4 journal entries required in 60-day window; below threshold → `surface=False` → never in prompt |
+| Emotional framing overused in tactical questions | Emotion is secondary-only; mention only when priority-conflict evidence is present, max one sentence |
 
 ---
 

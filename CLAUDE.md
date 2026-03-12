@@ -2,7 +2,7 @@
 
 > **This file provides instructions for Claude and other LLMs working on this codebase.**
 >
-> Last Updated: 2026-03-05
+> Last Updated: 2026-03-11
 
 ---
 
@@ -15,8 +15,8 @@ sakhi-monorepo/
 │   └── mobile/                # React Native (Expo)
 ├── sakhi/                     # Python backend (CANONICAL)
 │   ├── apps/api/              # FastAPI API
-│   │   ├── routes/            # 80+ API route modules
-│   │   └── services/          # Business logic (230+ modules)
+│   │   ├── routes/            # 81 API route modules
+│   │   └── services/          # Business logic (233 modules)
 │   ├── apps/engine/           # 34 computational engines
 │   ├── apps/worker/           # RQ background workers
 │   ├── libs/                  # Shared Python libraries
@@ -287,6 +287,7 @@ async def my_function():
 - No template env files are maintained; keep `.env.local`/`.env` updated directly
 - Access via `os.environ['VAR_NAME']` or `from dotenv import load_dotenv`
 - Production alerting supports optional external sinks via `SAKHI_MONITORING_ENABLED`, `SAKHI_SENTRY_DSN`, and `SAKHI_ALERT_WEBHOOK_URL`
+- Support Console debug controls use `SAKHI_SUPPORT_REPORT_TTL_HOURS` and `SAKHI_SUPPORT_SESSION_TTL_MINUTES` for consent/breadcrumb expiry windows
 
 ---
 

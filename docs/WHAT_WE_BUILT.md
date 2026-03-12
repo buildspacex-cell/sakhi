@@ -8,7 +8,7 @@
 
 ## One Paragraph
 
-Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 80 API route modules and 114 worker modules, a Next.js web app with 76 pages, a React Native mobile app with 31 screens, and a pure-computation governance kernel with 552 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, inject policy-gated continuity context when available, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
+Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 81 API route modules and 114 worker modules, a Next.js web app with 76 pages, a React Native mobile app with 34 screens, and a pure-computation governance kernel with 552 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, inject policy-gated continuity context when available, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
 
 ---
 
@@ -16,11 +16,11 @@ Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversat
 
 | What | Count |
 |---|---|
-| Python backend (sakhi/) | ~146K lines across 80 route modules, 232 service modules, 86 worker task modules |
+| Python backend (sakhi/) | ~146K lines across 81 route modules, 233 service modules, 86 worker task modules |
 | Engine modules (sakhi/apps/engine/) | 34 computational engines |
 | Governance kernel (kala/) | ~11K lines, 49 source files, 552 tests |
 | Web app (apps/web/) | ~42K lines TypeScript, 76 pages, 117 API proxy routes |
-| Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 31 screens |
+| Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 34 screens |
 | Database tables | 179 |
 | Background workers | 86 task files + 114 worker modules |
 | Context modules | 13 (11 primary + 2 ritual caches) |
@@ -104,9 +104,14 @@ User message arrives (POST /v2/turn)
 - Continuity policy/exclusions (`/continuity/policy`)
 - Topic + arc retrieval (`/continuity/topics`, `/continuity/arc`)
 - Turn-level hidden continuity pack injection for prompt coherence (`turn_v2` metadata), including compact thread stats, sampled phase path, anchor moments, deterministic qualitative arc summary, and a chronological decision ledger (including acknowledged Sakhi suggestions) for stronger longitudinal grounding
-- Turn-level product continuity signal in `/v2/turn` responses (`continuity.topic_key`, `continuity.topic_label`, `continuity.deep_reflect`) so clients can trigger deep-answer flows with an explicit readiness contract (surface gates + depth threshold) without enabling debug payloads
-- Deep reflection async flow (`/continuity/reflection/run|status|result`) with compact LLM synthesis packet + deterministic fallback (`chat_response_source`, `llm_reflection` debug payload) for direct chat rendering, including surface-policy carry-through (`detail_allowed`/`mirror_allowed`) to keep blocked-detail reflections mirror-only, language-first prompt framing (`history`, `person context`, `current query`) instead of raw packet JSON dumps, explicit run modes (`deep_answer` with active query vs `topic_reflection` longitudinal check-in), and deep-answer quality gating (long-form contract + one-pass regen if contract checks fail)
-- Simulation Ask-Sakhi debug inspector exposes `turn_debug` (continuity pack + prompt payload) and includes deep reflection run/status/result controls with unavailable-state messaging, cache-busted polling, and result probing so completed reflections surface immediately in `apps/web/app/lab/simulation/client.tsx`
+- Turn-level product continuity signal in `/v2/turn` responses (`continuity.topic_key`, `continuity.topic_label`, `continuity.deep_reflect`, plus optional `candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`) so clients can trigger both topic-depth and cross-topic deep flows without debug payloads
+- Cross-topic continuity cache layer (`continuity_topic_correlations`, `continuity_life_dimensions`) with lazy read-through recompute and indexed lookup for pairwise thread correlation + cross-cutting dimension signals (time, financial, emotional)
+- Cross-topic cache hardening now includes bounded all-pairs warm compute, profile-driven cache TTL policy, resilient `entry_tags` resolution for compiler key-format drift, embedding-cosine semantic scoring when journal vectors are present (lexical fallback otherwise), and shared life-dimension cache usage between `/v2/turn` and deep-reflection packet assembly
+- Deep reflection async flow (`/continuity/reflection/run|status|result`) with compact LLM synthesis packet + deterministic fallback (`chat_response_source`, `llm_reflection` debug payload) for direct chat rendering, including surface-policy carry-through (`detail_allowed`/`mirror_allowed`) to keep blocked-detail reflections mirror-only, language-first prompt framing (`history`, `person context`, `current query`), explicit run modes (`topic_reflection`, `deep_answer`, `whole_story`, `cross_context`), linked-thread injection via `topic_keys`, and emotion mention guardrails (only when explicit priority conflict evidence is present)
+- Chat Deep Reflect now uses dynamic cross-context readiness (`continuity.whole_story`) and runs `mode=whole_story` in both mobile and web converse flows; normal chat responses stay topic-centric and unchanged
+- Mobile Reflection now splits story surfaces cleanly: `<topic> Story` remains topic-centric (`mode=topic_reflection`) while `Me Story` runs cross-context synthesis (`mode=cross_context`) across active linked threads
+- Mobile account header now uses a single account hub action (Profile, Settings, Support Console, Sign out), and Support Console now persists user-consented support bundles through backend APIs (`/support/report`, `/support/report/revoke`) with time-limited codes, metadata-only diagnostics snapshots, and a user-controlled live debug timeline session (`/support/session/start|event|stop`) that captures screen/action/API telemetry without journal/chat text
+- Simulation Ask-Sakhi debug inspector exposes `turn_debug` (continuity pack + prompt payload), includes a cross-topic gate validator (`candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`) for cohort go/no-go checks, and now supports all deep reflection run modes (`deep_answer`, `topic_reflection`, `whole_story`, `cross_context`) with cache-busted polling/result probing in `apps/web/app/lab/simulation/client.tsx`
 - Simulation "Add Journal" composer now uses the same chat flow pattern as "Continue the Conversation" (time segmented buttons, Cmd/Ctrl+Enter submit, aligned submit row behavior) to keep local testing interactions consistent.
 
 **Production hardening controls**:
@@ -120,6 +125,7 @@ User message arrives (POST /v2/turn)
 - Build/CI now fail fast on missing config using profile-based env contract validation (`make check-env`, `make verify`, CI `check_env.py --profile ci`).
 - Journal writes now include per-user encrypted payloads (`journal_entries.raw_encrypted`) across API insert paths, derived from required `SAKHI_JOURNAL_MASTER_KEY` (32+ chars) with `SAKHI_JOURNAL_WRITE_MODE=encrypted_only` as the default runtime posture (`dual_write` only for temporary migration windows).
 - Deep reflection status/result endpoints now require matching `person_id` ownership in addition to reflection id, closing UUID-only read access.
+- Support diagnostics access is consent-bound and revocable: only user-generated support codes can unlock support bundles, operator retrieval lives behind `/admin/support/*` break-glass controls, and support bundles can include short-lived timeline telemetry (screen/action/API events) with strict metadata-only redaction (no journal/message text).
 
 ---
 
@@ -173,7 +179,7 @@ See [docs/kala/](kala/) for complete kala documentation.
 
 ## Backend Inventory
 
-### API Routes (80 files)
+### API Routes (81 files)
 
 **Core conversation:**
 - `turn_v2.py` — Main conversation turn orchestrator
@@ -216,6 +222,7 @@ See [docs/kala/](kala/) for complete kala documentation.
 - `calendar.py`, `scheduling.py` — Calendar integration
 - `agent.py`, `agentic.py` — Desktop agent coordination
 - `mesh.py` — Inter-Sakhi coordination
+- `support.py` — User-consented support diagnostics bundles + break-glass operator lookup
 
 **Analytics:**
 - `analytics/breath.py`, `analytics/patterns.py`, `analytics/summary.py`, `analytics/themes.py`, `analytics/timeseries.py`

@@ -2,7 +2,7 @@
 
 > Living document tracking all planned work. Update checkboxes as items are completed.
 >
-> Last Updated: 2026-03-07
+> Last Updated: 2026-03-11
 >
 > **Coverage**: 100% — All demo capabilities have paths to become REAL (not just simulated)
 >
@@ -102,10 +102,10 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 |--------|------|-------------|-------|
 | ✅ | Continuity policy + exclusions | Per-person policy + explicit source exclusion control | `sakhi/apps/api/routes/continuity.py`, `sakhi/apps/api/services/continuity/service.py` |
 | ✅ | Deterministic topic/arc APIs | Windowed topic compilation and anchor arc retrieval | `sakhi/apps/api/services/continuity/compiler.py`, `sakhi/apps/api/services/continuity/service.py` |
-| ✅ | Deep reflection job flow | Async run/status/result for continuity reflections with compact LLM synthesis packet, surface-policy carry-through (mirror-only when detail is blocked), deterministic fallback response, split run modes (`deep_answer` with current query vs `topic_reflection` without query), and deep-answer quality gate (long-form sectioned contract + one-pass regen) | `sakhi/apps/api/services/continuity/reflection.py`, `sakhi/infra/scripts/migrations/0014_continuity_deep_reflection.sql` |
+| ✅ | Deep reflection job flow | Async run/status/result for continuity reflections with compact LLM synthesis packet, surface-policy carry-through (mirror-only when detail is blocked), deterministic fallback response, split run modes (`deep_answer`, `topic_reflection`, `whole_story`, `cross_context`), linked-topic support via `topic_keys[]`, and deep-answer quality gate (long-form sectioned contract + one-pass regen) | `sakhi/apps/api/services/continuity/reflection.py`, `sakhi/infra/scripts/migrations/0014_continuity_deep_reflection.sql` |
 | ✅ | Turn-level continuity pack | Continuity evidence injected into `turn_v2` metadata + prompt, now with compact history stats/phase path/anchor moments, deterministic qualitative arc summary, and a chronological decision ledger for richer normal-chat continuity | `sakhi/apps/api/routes/turn_v2.py`, `sakhi/apps/api/services/conversation_v2/conversation_reasoner.py` |
 | ✅ | Web continuity controls | Chat continuity toggle + deep reflection actions + proxy routes | `apps/web/app/experience/converse/page.tsx`, `apps/web/app/api/continuity/**/route.ts` |
-| ✅ | Simulation Ask-Sakhi debug inspector | `/demo/simulation/add-journal` returns `turn_debug` (`debug_data`) and simulation UI renders continuity evidence + prompt payload plus deep reflection run/status/result controls (disabled reason when topic missing, cache-busted polling, and chat-response surfacing) for rapid product iteration | `sakhi/apps/api/services/demo/simulation_profile_updater.py`, `apps/web/app/lab/simulation/client.tsx` |
+| ✅ | Simulation Ask-Sakhi debug inspector | `/demo/simulation/add-journal` returns `turn_debug` (`debug_data`) and simulation UI renders continuity evidence + prompt payload, a cross-topic gate validator (`candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`), and deep reflection run/status/result controls across all modes for rapid product iteration | `sakhi/apps/api/services/demo/simulation_profile_updater.py`, `apps/web/app/lab/simulation/client.tsx` |
 | ✅ | Simulation continuity mirror | Precompiled continuity arcs and explainability views in demo UI | `sakhi/apps/api/services/demo/simulation_continuity.py`, `apps/web/app/lab/simulation/` |
 
 Feature detail: `docs/features/continuity-arc-surface.md`
@@ -1022,7 +1022,8 @@ From the Feb 2026 turn-v2 conversation audit. Items already fixed are in E.4; th
 | Status | Item | Description | Files | Test Criteria |
 |--------|------|-------------|-------|---------------|
 | ⬜ | Privacy Dashboard | See what data Sakhi has | `apps/web/app/settings/privacy/page.tsx` | Full transparency |
-| ⬜ | Data Deletion | Delete specific data | `services/privacy/delete.py` | Permanent deletion |
+| ⬜ | Journal Entry Deletion | User-facing "remove from my story" — cascades to embeddings, episodic memory, continuity cache | `services/privacy/delete.py`, `services/continuity/cross_topic.py` | Entry gone from all surfaces; continuity cache invalidated immediately |
+| ⬜ | Data Deletion (bulk) | Delete all data (GDPR right to erasure) | `services/privacy/delete.py` | Full wipe confirmed |
 | ⬜ | Sharing Controls | Control what's shared in Mesh | `services/privacy/sharing.py` | Granular controls |
 | ⬜ | Retention Settings | How long data is kept | `services/privacy/retention.py` | User sets retention |
 
@@ -1547,7 +1548,7 @@ Phase J.4 → User custom skills + marketplace (long-term)
 | ✅ | Error Monitoring | External on-call sink wiring (Sentry optional + webhook relay) with API unhandled-exception capture, worker job-failure hooks, crash reporting, and dedupe window controls | `sakhi/apps/api/core/monitoring.py`, `sakhi/apps/api/main.py`, `sakhi/apps/worker/main.py` | Unhandled API/worker exceptions emit external alerts when monitoring env vars are configured |
 | ✅ | Performance Metrics | Prometheus metrics endpoint + request telemetry persistence | `sakhi/apps/api/main.py`, `sakhi/apps/api/middleware/telemetry.py` | `/metrics` scrapes and request logs record duration/path/status |
 | ✅ | Env Contract Gates | Profile-based env validation (`local`, `prod_api`, `prod_web`, `ci`) wired into `make verify` and CI smoke checks | `sakhi/infra/scripts/check_env.py`, `Makefile`, `.github/workflows/ci.yml` | Build workflow fails fast on missing required config |
-| ⏳ | Known-user trust hardening | Break-glass access controls, log redaction, retention/deletion policy, and beta trust copy for users who know the team. Step 1 complete: per-user encrypted journal writes (`raw_encrypted`) with rollout flags. | `docs/guides/privacy-trust-mvp.md`, `docs/guides/TODO_DEPLOY.md`, `sakhi/libs/security/journal_crypto.py` | Trust gate checklist completed before each beta cohort |
+| ⏳ | Known-user trust hardening | Break-glass access controls, log redaction, retention/deletion policy, and beta trust copy for users who know the team. Steps complete: per-user encrypted journal writes (`raw_encrypted`), consent-bound Support Console bundles with revocable codes + metadata-only diagnostics (`/support/report`, `/admin/support/report/{support_code}`), and user-controlled live debug timeline telemetry (`/support/session/start|event|stop`) that captures only screen/action/API metadata. | `docs/guides/privacy-trust-mvp.md`, `docs/guides/TODO_DEPLOY.md`, `sakhi/libs/security/journal_crypto.py`, `sakhi/apps/api/routes/support.py`, `apps/mobile/lib/support/debugTelemetry.ts` | Trust gate checklist completed before each beta cohort |
 | ⬜ | Windows Agent | Electron agent for Windows | `desktop-agent/` | Works on Windows |
 
 ---

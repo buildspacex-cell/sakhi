@@ -1,6 +1,6 @@
 # MVP Privacy & Trust Hardening (Known-User Beta)
 
-> Last Updated: 2026-03-08  
+> Last Updated: 2026-03-11  
 > Scope: Early real users who personally know the Sakhi team
 
 ## Goal
@@ -47,6 +47,8 @@ Primary trust risks:
 - [x] Ensure no plaintext journal text in API logs, worker logs, alert payloads, or error traces (observability redaction wired for telemetry + monitoring + formatted logs).
 - [x] Redact prompt payloads by default in production observability.
 - [x] Review simulation/dev routes are blocked in production (route guardrails now include `/lab`, `/dev`, `/demo`, `/admin`, `/debug`, `/memory/dev`, `/system/audit`).
+- [x] Support debugging now requires user-consented support bundles (`/support/report`) with revocable time-limited codes and metadata-only payloads (no journal/message text).
+- [x] Support debugging now supports user-controlled live timeline sessions (`/support/session/start|event|stop`) with metadata-only event types (`screen_view`, `action`, `api_start`, `api_end`, `ui_error`) and redacted payload fields.
 
 ### Day 2-3: Encryption & Key Handling
 
@@ -83,6 +85,8 @@ Primary trust risks:
   - break-glass policy summary
   - retention/deletion policy
   - last updated date
+- [x] Ship in-app Support Console consent flow with explicit diagnostics toggles and one-tap revoke.
+- [x] Ship in-app live debug controls (start/stop timeline capture) with expiry and explicit metadata-only language.
 - [ ] Add concise onboarding copy for known users:
   - no routine human reading
   - audited exceptional access only
@@ -124,6 +128,9 @@ Manual gate:
 - [ ] Attempted internal-route access in production is blocked.
 - [ ] Prompt/journal text does not appear in log sinks.
 - [ ] Break-glass access path is tested and audited.
+- [ ] Revoked support codes cannot be resolved via operator support lookup.
+- [ ] Stopped/expired/revoked support sessions reject timeline event ingest (`/support/session/event`).
+- [ ] Operator payload review confirms timeline shows ordered screen/action/API metadata without journal/chat content.
 
 ## User Copy Template (Known-User MVP)
 

@@ -1,6 +1,6 @@
 # Deployment Checklist
 
-> Last Updated: 2026-03-08
+> Last Updated: 2026-03-11
 
 ## Environment Variables
 
@@ -31,6 +31,8 @@ Source-of-truth:
 | `SAKHI_OPERATOR_ACCESS_TOKEN` | Optional | Required if `SAKHI_ENABLE_INTERNAL_ROUTES_IN_PROD=1` | Break-glass token for operator-only internal route access |
 | `SAKHI_JOURNAL_MASTER_KEY` | Set (32+ chars) | Set (32+ chars) | Required master secret for per-user journal encryption key derivation |
 | `SAKHI_JOURNAL_WRITE_MODE` | `encrypted_only` | `encrypted_only` (default) | Strict journal encryption mode (`dual_write` only for temporary migration windows) |
+| `SAKHI_SUPPORT_REPORT_TTL_HOURS` | Optional (`72`) | Optional (`72`) | Expiry for consented support bundles (`/support/report`) |
+| `SAKHI_SUPPORT_SESSION_TTL_MINUTES` | Optional (`30`) | Optional (`30`) | Default TTL for consented live debug timeline sessions (`/support/session/start`) |
 | `SAKHI_RELEASE` | Optional | Set | Release tag for incident correlation |
 
 ## Pre-Deploy Checklist
@@ -68,6 +70,9 @@ Source-of-truth:
 - [ ] If internal routes are explicitly enabled in prod, set `SAKHI_OPERATOR_ACCESS_TOKEN` and require headers (`x-sakhi-operator-token`, `x-sakhi-operator-id`, `x-sakhi-approval-ref`, `x-sakhi-breakglass-reason`)
 - [ ] Negative auth check: authenticated user cannot fetch another person's data via mismatched `?user=<uuid>` or cross-user deep-reflection `id`
 - [ ] Redaction gate: prompt/journal free-text does not appear in request telemetry rows, API/worker logs, or monitoring sink payloads
+- [ ] Support console gate: revoked support codes are rejected on `/admin/support/report/{support_code}` (no stale diagnostics access)
+- [ ] Support timeline gate: stopped/expired/revoked sessions reject `/support/session/event` writes
+- [ ] Support timeline privacy gate: timeline payloads include only screen/action/API metadata (no journal/chat text)
 
 ## Post-Deploy Smoke + Alerting
 
@@ -90,6 +95,8 @@ Before onboarding users who personally know the team, complete:
 - [ ] Break-glass access policy documented (approval + audit trail)
 - [ ] Incident response runbook reviewed for current on-call rotation + SLA (`docs/guides/incident-response-runbook.md`)
 - [ ] Privacy/trust copy shared with beta users
+- [ ] Support Console flow tested end-to-end: create bundle (`/support/report`) -> operator lookup (with break-glass) -> revoke (`/support/report/revoke`) -> lookup denied
+- [ ] Support timeline flow tested end-to-end: start session (`/support/session/start`) -> reproduce issue -> operator sees ordered event timeline -> stop session (`/support/session/stop`) -> event ingest denied
 
 Reference guide: [`privacy-trust-mvp.md`](./privacy-trust-mvp.md)
 

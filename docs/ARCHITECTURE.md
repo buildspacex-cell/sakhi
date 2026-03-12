@@ -51,8 +51,8 @@ sakhi-monorepo/
 │   └── mobile/                # React Native (Expo)
 ├── sakhi/                     # Python backend (CANONICAL)
 │   ├── apps/api/              # FastAPI API
-│   │   ├── routes/            # 80+ API route modules
-│   │   └── services/          # Business logic (230+ modules)
+│   │   ├── routes/            # 81 API route modules
+│   │   └── services/          # Business logic (233 modules)
 │   ├── apps/engine/           # 34 computational engines
 │   ├── apps/worker/           # Background job workers
 │   │   ├── pipelines/         # Worker orchestration
@@ -108,11 +108,13 @@ User Message
 | Turn endpoint | `sakhi/apps/api/routes/turn_v2.py` |
 | Context router | `sakhi/apps/api/services/context_router.py` |
 | Continuity pack builder | `sakhi/apps/api/services/continuity/chat.py` |
+| Cross-topic continuity scoring/cache | `sakhi/apps/api/services/continuity/cross_topic.py` |
 | Prompt builder | `sakhi/apps/api/services/conversation_v2/conversation_reasoner.py` |
 | Context loader | `sakhi/apps/api/services/turn/deterministic_context_loader.py` |
 | Worker runner | `sakhi/apps/worker/pipelines/turn_updates/runner.py` |
 
 Turn-level continuity now injects compact history structure (`history_compact` with sampled phase path, anchor moments, qualitative arc summary, and decision ledger) in addition to start/pivot/current arc signals, and frames prompt input in language-first sections: history + person understanding + current query.
+Cross-topic correlation cache now warms bounded all-pairs topic combinations (not only selected-anchor pairs), uses embedding cosine for semantic score when journal vectors are available (with lexical fallback), and shares one life-dimensions read-through cache path between turn-time signals and deep-reflection packet composition.
 Turn-level rhythm planner alignment loading is deferred by default and only enabled when `SAKHI_ENABLE_RHYTHM_PLANNER_ALIGNMENT=1`.
 
 ---
@@ -188,7 +190,7 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 ### Core Conversation
 | Route | Purpose |
 |-------|---------|
-| `POST /v2/turn` | Main conversation endpoint (includes non-debug continuity signal when a continuity pack is active: `continuity.topic_key/topic_label` plus `continuity.deep_reflect` readiness metadata for dynamic client unlocks) |
+| `POST /v2/turn` | Main conversation endpoint (includes non-debug continuity signal when a continuity pack is active: `continuity.topic_key/topic_label`, `continuity.deep_reflect` readiness, and optional cross-topic signals: `candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`) |
 | `GET /v2/conversation/history` | Conversation history |
 
 ### System Health
@@ -198,6 +200,17 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 | `GET /health` | Readiness + dependency checks (DB required, Redis optional) |
 | `GET /health/ready` | Alias readiness endpoint (same payload/contract as `/health`) |
 
+### Support & Trust
+| Route | Purpose |
+|-------|---------|
+| `POST /support/report` | Create a user-consented, time-limited support bundle with metadata-only diagnostics (no journal or conversation text) |
+| `GET /support/report` | User checks status/expiry of their support bundle using `person_id + support_code` |
+| `POST /support/report/revoke` | User revokes support bundle access immediately |
+| `POST /support/session/start` | User starts a short-lived live debug session tied to their support code (metadata-only timeline capture) |
+| `POST /support/session/event` | Mobile app appends ordered screen/action/API timeline events for the active debug session (sanitized + redacted metadata only) |
+| `POST /support/session/stop` | User ends live debug session immediately |
+| `GET /admin/support/report/{support_code}` | Break-glass operator lookup of the consented support bundle (blocked by default in prod unless internal routes are explicitly enabled) |
+
 ### Continuity Intelligence
 | Route | Purpose |
 |-------|---------|
@@ -205,7 +218,7 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 | `PUT /continuity/policy` | Update continuity surface policy + exclusions |
 | `GET /continuity/topics` | Compile and list continuity topics for a window |
 | `GET /continuity/arc` | Return a deterministic continuity arc for an anchor |
-| `POST /continuity/reflection/run` | Queue deep reflection job for a topic (`mode=deep_answer` with `user_query` and long-form contract gate, or `mode=topic_reflection`) |
+| `POST /continuity/reflection/run` | Queue deep reflection job for a topic (`mode=topic_reflection`, `deep_answer`, `whole_story`, or `cross_context`; `whole_story`/`cross_context` accept `topic_keys[]` to include linked threads, and query-driven modes accept `user_query`) |
 | `GET /continuity/reflection/status` | Poll deep reflection job status |
 | `GET /continuity/reflection/result` | Fetch deep reflection result payload (LLM `chat_response` when router available, deterministic fallback + source/debug metadata, and surface-policy-aware mirror-only gating when detail is blocked) |
 

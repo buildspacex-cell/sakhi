@@ -112,6 +112,43 @@ These items are real gaps, but they are not current investor-demo blockers.
 - The planner path is safe to demo without bypassing Kala controls.
 - Mainline chat remains stable when the agent layer is disabled.
 
+## 3. User-Facing Journal Entry Deletion
+
+### Status
+
+- No user-facing deletion exists in mobile or web.
+- Deletion is currently only possible via dev endpoints (`POST /memory/dev/reset`, `POST /dev/reset-user-data`).
+- Cache invalidation on deletion is already implemented in `invalidate_person_cross_topic_cache()` — it just has no user-facing trigger yet.
+
+### Current Impact
+
+- Users cannot remove a journal entry they regret sharing.
+- This creates a trust and self-censorship risk: users may share less honestly if they know they cannot undo it.
+- GDPR right to erasure requires deletion capability before any EU user exposure.
+
+### Why This Is Deferred
+
+- Not a demo blocker — current users are internal (co-founders, TestFlight QA).
+- Single-thread design makes deletion more consequential than in a typical chat app; the UX framing needs care.
+- Backend cascade infrastructure (embeddings, episodic memory, continuity cache) is already correct and tested.
+
+### Fix Path
+
+1. Add a backend route: `DELETE /journal/entries/{entry_id}` scoped to `person_id`.
+   - Cascade: `journal_embeddings`, `memory_episodic` (rows referencing the entry), call `invalidate_person_cross_topic_cache()`.
+   - Return `204 No Content`.
+2. Mobile UI: long-press on a message bubble → "Remove from my story" → confirm sheet → call route.
+3. Web UI: hover menu on message → same flow.
+4. Frame as "remove from story" not "delete message" — sets correct expectation that Sakhi's memory is updated, not that a chat log is being edited.
+5. Add unit test for cascade correctness; integration test for the route.
+
+### Acceptance Criteria
+
+- User can remove a journal entry from mobile and web.
+- Embeddings, episodic memory rows, and continuity cache are cleaned up atomically.
+- Confirmation UI makes clear what "remove from story" means.
+- No entry surfaces again in continuity, memory recall, or cross-topic signals after removal.
+
 ## Current Demo Guidance
 
 - Keep both items deferred for the investor demo.

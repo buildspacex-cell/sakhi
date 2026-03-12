@@ -1,6 +1,6 @@
 # Test Status Tracking
 
-> Last Updated: 2026-03-09
+> Last Updated: 2026-03-11
 >
 > Run `make test-coverage` to regenerate this report.
 
@@ -11,7 +11,7 @@
 | Category | Total | Tested | Coverage |
 |----------|-------|--------|----------|
 | Workers | 86 task files | 48 | ~56% |
-| Routes | 80 | 47 | ~59% |
+| Routes | 81 | 48 | ~59% |
 | Kala (governance) | 49 source files | 552 tests | 100% |
 | Services | TBD | TBD | TBD |
 
@@ -156,12 +156,14 @@ sakhi/tests/
 
 ---
 
-## Recent Additions (2026-03-09)
+## Recent Additions (2026-03-11)
 
 | Area | Status | Test Files | Notes |
 |------|--------|------------|-------|
-| Turn v2 continuity product signal | ✅ | `unit/routes/test_turn_v2_continuity_signal.py` | Verifies non-debug `/v2/turn` continuity payload includes `deep_reflect` readiness contract (`ready`, `reason`, `mirror_allowed`, `detail_allowed`, `selected_count`, `min_moments`) |
-| Continuity service | ✅ | `unit/services/test_continuity_service.py`, `unit/services/test_continuity_chat.py`, `unit/services/test_continuity_reflection.py` | Policy gating, arc payload shaping, continuity pack generation (including compact history stats/phase path/anchors, qualitative arc summary with mirror-only mode, and decision ledger with acknowledged Sakhi suggestions), deep reflection job lifecycle, deterministic+LLM response persistence contract, window-write fallback persistence, topic-drift filtering, surface-policy mirror-only packet contract, deep-answer mode query preference over reconstructed turn context, and deep-answer quality-gate regeneration coverage |
+| Support console privacy + route/session guards | ✅ | `unit/routes/test_support_console.py` | Validates support code normalization, metadata sanitization caps, active/expired status logic, create-flow diagnostics opt-out behavior, session timeline event-type guardrails + redaction, session reuse/event ingest behavior, operator inactive-code denial, and public bundle payload shape (metadata-only contract) |
+| Turn v2 continuity product signal | ✅ | `unit/routes/test_turn_v2_continuity_signal.py` | Verifies non-debug `/v2/turn` continuity payload includes `deep_reflect` readiness plus optional cross-topic passthrough fields (`candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`) |
+| Continuity service | ✅ | `unit/services/test_continuity_service.py`, `unit/services/test_continuity_chat.py`, `unit/services/test_continuity_reflection.py` | Policy gating, arc payload shaping, continuity pack generation (including compact history stats/phase path/anchors, qualitative arc summary with mirror-only mode, decision ledger, and cross-topic readiness signals), deep reflection job lifecycle, deterministic+LLM response persistence, `whole_story/cross_context` mode normalization with `topic_keys`, related-arc evidence dedupe, priority-conflict emotion guardrails, topic-drift filtering, surface-policy carry-through, and prompt composition checks |
+| Cross-topic continuity cache service | ✅ | `unit/services/test_continuity_cross_topic.py` | Verifies cached correlation normalization preserves related-topic depth for whole-story gating, confirms all-pairs cache warm compute (not selected-anchor only), validates resilient entry-tag lookup across key-format variants, checks semantic vector fallback behavior, confirms profile-driven cache TTL handling, and covers delete-triggered cache invalidation behavior |
 | Monitoring / on-call sink | ✅ | `unit/services/test_monitoring.py` | Webhook alert payload shaping, dedupe window behavior, disabled no-op behavior, sync exception-report bridge, burst-threshold alerts (auth failures, crash loops, export/delete spikes), and normalized break-glass alert events |
 | Observability redaction | ✅ | `unit/services/test_observability_redaction.py`, `unit/services/test_monitoring.py` | Redacts sensitive free-text keys in telemetry/monitoring payloads and strips inline secret/token data from formatted log/alert strings |
 | Env contract checker | ✅ | `unit/services/test_check_env.py` | Profile-based env contract validation (`local`, `prod_api`, `prod_web`, `ci`), alias handling, queue-mode Redis gating, and monitoring sink requirement checks |

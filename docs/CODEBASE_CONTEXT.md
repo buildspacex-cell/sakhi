@@ -1,6 +1,6 @@
 # Codebase Context (Working Baseline)
 
-> Last audited: 2026-03-08  
+> Last audited: 2026-03-11  
 > Source of truth refresh command: `./scripts/context-audit.sh`
 
 ## Purpose
@@ -25,23 +25,23 @@ Use this first before substantial code edits.
    - `docs/TEST_STATUS.md`
    - `CHANGELOG.md` (`[Unreleased]`)
 
-## Current Snapshot (2026-03-08)
+## Current Snapshot (2026-03-11)
 
 ### Repository Shape
 
 | Metric | Value |
 |---|---:|
-| Tracked files | 1390 |
-| Python files | 857 |
-| TypeScript files (`.ts`, `.tsx`) | 371 |
-| API route modules (`sakhi/apps/api/routes`, excluding `__init__`/`.bak`) | 80 |
-| API service modules (`sakhi/apps/api/services`, excluding `__init__`) | 232 |
+| Tracked files | 1408 |
+| Python files | 862 |
+| TypeScript files (`.ts`, `.tsx`) | 375 |
+| API route modules (`sakhi/apps/api/routes`, excluding `__init__`/`.bak`) | 81 |
+| API service modules (`sakhi/apps/api/services`, excluding `__init__`) | 233 |
 | Worker modules (`sakhi/apps/worker`, excluding `__init__`) | 114 |
 | Worker task modules (`sakhi/apps/worker/tasks`, excluding `__init__`, `_stubs.py`) | 86 |
 | Engine modules (`sakhi/apps/engine`, excluding `__init__`) | 34 |
 | Web pages (`apps/web/app/**/page.tsx`) | 76 |
 | Web API routes (`apps/web/app/api/**/route.ts`) | 117 |
-| Mobile screens (`apps/mobile/app/**/*.tsx`) | 31 |
+| Mobile screens (`apps/mobile/app/**/*.tsx`) | 34 |
 | Kala source modules | 49 |
 | Kala test functions | 552 |
 
@@ -49,7 +49,7 @@ Use this first before substantial code edits.
 
 | Signal | Value |
 |---|---:|
-| `include_router(...)` calls in `sakhi/apps/api/main.py` | 97 |
+| `include_router(...)` calls in `sakhi/apps/api/main.py` | 99 |
 | Duplicate `focus_path_router` imports | 2 |
 | Duplicate `micro_momentum_router` imports | 2 |
 | Duplicate `app.include_router(person_router.router)` | 2 |
@@ -88,11 +88,11 @@ Use this first before substantial code edits.
 
 ## Simulation Data Health (Verified)
 
-Source: `./scripts/context-audit.sh` on 2026-03-08.
+Source: `./scripts/context-audit.sh` on 2026-03-11.
 
 | File | Days | Entries | Coherence | Alignment | Identity | Themes | Patterns | Worker failures |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
-| `vidhya.json` | 114 | 65 | 115 | 115 | 115 | 101 | 0 | none |
+| `vidhya.json` | 116 | 67 | 117 | 117 | 117 | 103 | 0 | none |
 | `diya.json` | 30 | 30 | 31 | 31 | 31 | 25 | 18 | none |
 | `bigd.json` | 30 | 30 | 31 | 31 | 31 | 25 | 18 | none |
 | `anxious_achiever.json` | 1 | 2 | 2 | 2 | 2 | 1 | 0 | `weekly.weekly_rhythm_rollup: relation "rhythm_daily_curve" does not exist` |
@@ -104,7 +104,7 @@ Current read:
 - `anxious_achiever` still shows a deferred rhythm rollup schema gap from legacy snapshot runs.
 - `hormonal_harmony` and `stuck_creative` remain legacy/low-fidelity for deep-state outputs.
 
-## Test Reality (2026-03-08 Context Audit)
+## Test Reality (2026-03-11 Context Audit)
 
 ### Harness Signals
 
@@ -114,12 +114,12 @@ Current read:
 
 ### Audit Counts
 
-- `sakhi/tests` path-prefix count: `66`
-- `test_*.py` pattern count under `sakhi/tests`: `69`
+- `sakhi/tests` path-prefix count: `69`
+- `test_*.py` pattern count under `sakhi/tests`: `72`
 - Integration test files: `9`
-- Unit test files: `54`
+- Unit test files: `57`
 
-## Observability Signals (2026-03-08 Context Audit)
+## Observability Signals (2026-03-11 Context Audit)
 
 - `metrics_endpoint=present`
 - `health_readiness=present`
