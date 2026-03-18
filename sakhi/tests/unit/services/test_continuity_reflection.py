@@ -241,6 +241,8 @@ async def test_run_deep_reflection_job_persists_compiled_result(
     assert len(writes) == 2
     assert "SET status = 'running'" in writes[0][0]
     assert "SET status = 'done'" in writes[1][0]
+    assert isinstance(writes[1][1][1], reflection.datetime)
+    assert isinstance(writes[1][1][2], reflection.datetime)
     persisted_result = json.loads(str(writes[1][1][-1]))
     assert persisted_result["chat_response_source"] == "deterministic"
     assert isinstance(persisted_result.get("chat_response"), str)
@@ -776,6 +778,158 @@ def test_build_deep_reflection_prompt_messages_includes_connected_threads_for_wh
     assert "Career: Currently centered on boundary setting." in user_prompt
     assert "cross-cutting dimensions" in user_prompt.lower()
     assert "Mode: whole_story" in user_prompt
+
+
+def test_build_reflection_result_cross_context_names_related_threads():
+    result = reflection._build_reflection_result(
+        {
+            "anchor": "sakhi",
+            "label": "Sakhi",
+            "window": {
+                "from": "2026-01-01T00:00:00+00:00",
+                "to": "2026-03-01T00:00:00+00:00",
+            },
+            "versions": {"inputs_hash": "hash-1"},
+            "surface": {"coherence_score": 0.74},
+            "arc": {
+                "span_days": 60.0,
+                "element_count": 4,
+                "phase_count": 2,
+                "features": {"direction": "rising"},
+                "phases": [
+                    {
+                        "index": 0,
+                        "start_ts": "2026-01-01T00:00:00+00:00",
+                        "end_ts": "2026-01-15T00:00:00+00:00",
+                        "element_count": 2,
+                        "stats": {"dominant_tag": {"label": "ayurveda engine"}},
+                    },
+                    {
+                        "index": 1,
+                        "start_ts": "2026-02-15T00:00:00+00:00",
+                        "end_ts": "2026-03-01T00:00:00+00:00",
+                        "element_count": 2,
+                        "stats": {"dominant_tag": {"label": "deterministic core"}},
+                    },
+                ],
+            },
+            "included_moments": [
+                {
+                    "source_ref": "journal:a",
+                    "ts": "2026-01-10T00:00:00+00:00",
+                    "short_snippet": "Thinking about founder alignment",
+                    "facet": "founder_alignment",
+                }
+            ],
+        },
+        mode="cross_context",
+        topic_keys=["sakhi", "family", "career"],
+        related_arc_payloads=[
+            {
+                "anchor": "family",
+                "label": "Family",
+                "arc": {
+                    "span_days": 10.0,
+                    "element_count": 3,
+                    "phase_count": 1,
+                    "features": {"direction": "rising"},
+                    "phases": [
+                        {
+                            "index": 0,
+                            "start_ts": "2026-02-10T00:00:00+00:00",
+                            "end_ts": "2026-02-20T00:00:00+00:00",
+                            "element_count": 3,
+                            "stats": {"dominant_tag": {"label": "family pull"}},
+                        }
+                    ],
+                },
+                "included_moments": [],
+            },
+            {
+                "anchor": "career",
+                "label": "Career",
+                "arc": {
+                    "span_days": 12.0,
+                    "element_count": 3,
+                    "phase_count": 1,
+                    "features": {"direction": "rising"},
+                    "phases": [
+                        {
+                            "index": 0,
+                            "start_ts": "2026-02-18T00:00:00+00:00",
+                            "end_ts": "2026-03-01T00:00:00+00:00",
+                            "element_count": 3,
+                            "stats": {"dominant_tag": {"label": "workload"}},
+                        }
+                    ],
+                },
+                "included_moments": [],
+            },
+        ],
+        user_query=None,
+    )
+
+    assert result["topic_keys"] == ["sakhi", "family", "career"]
+    assert result["chat_response"].count("Sakhi") == 0
+    assert "Family, Career" in result["chat_response"]
+
+
+def test_build_deep_reflection_prompt_messages_cross_context_requires_multiple_threads_when_available():
+    packet = {
+        "topic_key": "sakhi",
+        "topic_label": "Sakhi",
+        "request_mode": "cross_context",
+        "current_query": {
+            "text": "",
+            "source": "cross_context_longitudinal",
+        },
+        "surface": {"detail_allowed": True, "mirror_allowed": True},
+        "arc_compact_global": {
+            "origin_story": "Started around ayurveda engine.",
+            "current_stage": "Currently centered on deterministic core.",
+            "key_pivots": ["Shifted from validation toward deterministic core."],
+            "recurring_tensions": ["Recurring return to founder alignment."],
+            "open_questions": ["What to prioritize first."],
+            "phase_compaction": [{"summary": "Started around ayurveda engine."}],
+        },
+        "related_topics_compact": [
+            {
+                "topic_key": "family",
+                "topic_label": "Family",
+                "current_signal": "Currently centered on family pull.",
+                "selected_count": 6,
+            },
+            {
+                "topic_key": "career",
+                "topic_label": "Career",
+                "current_signal": "Currently centered on workload.",
+                "selected_count": 5,
+            },
+        ],
+        "life_dimensions": None,
+        "evidence_anchors": [],
+        "latest_turn_context": {
+            "latest_topic_user_message": "",
+            "state_hints": {},
+        },
+        "delta_since_last_reflection": {"has_previous": False},
+        "response_contract": {
+            "voice": "friend, warm, direct",
+            "length_words": "160-260",
+            "max_questions": 1,
+            "avoid": ["therapy-speak"],
+            "format": "natural prose, explain how the main thread and linked threads influence each other, explicitly reference at least two linked threads when available, name one recurring tradeoff, end with one grounding question",
+            "emotion_policy": {
+                "mention_only_with_priority_conflict": True,
+                "priority_conflict_detected": False,
+            },
+        },
+    }
+
+    messages = reflection._build_deep_reflection_prompt_messages(packet)
+    user_prompt = messages[1]["content"]
+    assert "If two or more linked threads are present, explicitly name at least two." in user_prompt
+    assert "explicitly connect at least two linked threads when available" in user_prompt
 
 
 def test_build_deep_reflection_prompt_messages_omits_emotion_hint_without_priority_conflict():

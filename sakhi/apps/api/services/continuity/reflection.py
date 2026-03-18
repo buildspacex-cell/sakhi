@@ -397,8 +397,8 @@ async def _persist_deep_reflection_done(
                 WHERE id = $1::uuid
                 """,
                 reflection_id,
-                window_start.isoformat(),
-                window_end.isoformat(),
+                window_start,
+                window_end,
                 inputs_hash,
                 result_json,
             )
@@ -453,10 +453,11 @@ def _build_reflection_result(
     related_topics_compact = [
         _build_topic_compact(related_arc) for related_arc in related_arc_payloads
     ][:3]
-    topic_labels = [
-        str(arc_payload.get("label") or arc_payload.get("anchor") or "").strip()
-    ] + [str(item.get("topic_label") or "").strip() for item in related_topics_compact]
-    unique_topic_labels = [label for label in topic_labels if label]
+    related_topic_labels = [
+        str(item.get("topic_label") or item.get("topic_key") or "").strip()
+        for item in related_topics_compact
+        if str(item.get("topic_label") or item.get("topic_key") or "").strip()
+    ]
 
     return {
         "topic_key": arc_payload.get("anchor"),
@@ -490,7 +491,7 @@ def _build_reflection_result(
             current_stage=current_signal,
             recurring_tensions=recurring,
             open_questions=open_questions,
-            related_topics=unique_topic_labels[:3],
+            related_topics=related_topic_labels[:3],
             mode=mode,
             user_query=user_query,
         ),
@@ -717,6 +718,7 @@ async def _build_reflection_llm_packet(
             "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
             "format": (
                 "natural prose, explain how the main thread and linked threads influence each other, "
+                "explicitly reference at least two linked threads when available, "
                 "name one recurring tradeoff, end with one grounding question"
             ),
             "priority": "cross_context_relationship",
@@ -1629,7 +1631,7 @@ def _build_deep_reflection_prompt_messages(
         )
     elif request_mode == "cross_context":
         response_lines.append(
-            "- Value add: explain thread interplay, name one recurring tradeoff, and keep advice lightweight."
+            "- Value add: explicitly connect at least two linked threads when available, name one recurring tradeoff, and keep advice lightweight."
         )
     else:
         response_lines.append(
@@ -1648,6 +1650,7 @@ def _build_deep_reflection_prompt_messages(
         preamble = (
             "Write one cross-context reflection for the user.\n"
             "Describe how this thread interacts with the linked threads below.\n"
+            "If two or more linked threads are present, explicitly name at least two.\n"
             "No current query to solve; focus on interplay, recurring tradeoffs, and what matters now.\n"
             "Keep it grounded in evidence and avoid generic motivation.\n\n"
             f"Mode: {request_mode}\n"

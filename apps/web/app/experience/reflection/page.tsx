@@ -71,7 +71,7 @@ const REFLECT_POLL_INTERVAL_MS = 2000;
 const REFLECT_POLL_MAX_ATTEMPTS = 70;
 const MIN_TOPIC_STORY_MOMENTS = 3;  // <Topic> Story: matches backend min_len=3
 const MIN_CROSS_CONTEXT_MOMENTS = 6;
-const MIN_RELATED_TOPIC_MOMENTS = 6; // My Story: matches backend cross_context_min_moments=6
+const MIN_RELATED_TOPIC_MOMENTS = MIN_TOPIC_STORY_MOMENTS; // Allow lighter supporting threads once the anchor is deep enough.
 const MAX_CROSS_CONTEXT_TOPICS = 3;
 const MOMENT_CARD_WIDTH = 246;
 const MOMENT_CARD_GAP = 12;
