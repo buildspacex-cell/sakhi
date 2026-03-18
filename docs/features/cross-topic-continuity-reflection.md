@@ -1,7 +1,7 @@
 # Cross-Topic Continuity Reflection — Implementation Plan
 
 > **Status**: Shipped (2026-03-15)
-> **Last Updated**: 2026-03-15
+> **Last Updated**: 2026-03-18
 > **Scope**: Upgrade deep reflect from single-thread synthesis to cross-thread pattern intelligence
 
 ---
@@ -51,6 +51,8 @@ Almost everything needed already exists. This is mostly a new service layer and 
 - Deep reflection now reuses the same cross-topic life-dimensions cache service path used by turn-time continuity signals (single source for surfaced dimensions)
 - Related-arc moments are deduplicated before deep packet composition to avoid repeated evidence across linked topics
 - Deep reflection prompt composer now supports mode-specific contracts for `topic_reflection`, `deep_answer`, `whole_story`, and `cross_context`
+- Continuity compilation now preserves bounded `related_anchors` per moment so one journal entry can be represented in both its primary thread and one linked thread without flattening the overlap away
+- Whole-story gating now allows dominant mirror-safe primary threads to unlock linked synthesis, and supporting threads can qualify at 5+ moments when they are meaningfully active
 - Chat Deep Reflect (mobile + web converse) now runs `mode=whole_story` only, gated dynamically by `continuity.whole_story` readiness with linked topic keys
 - Profile Reflection now includes a separate `Me Story` action that runs `mode=cross_context`, while `<topic> Story` stays `mode=topic_reflection`
 - Simulation Ask-Sakhi debug now includes a cross-topic gate panel that shows live go/no-go readiness from `continuity_pack` signals and can run all deep modes for validation
@@ -285,7 +287,8 @@ async def compute_topic_correlations(
     force_recompute: bool = False,
 ) -> list[dict]:
     """
-    For each pair of topics where BOTH have >= 6 moments and detail_allowed=True:
+    For each pair of topics where the primary thread is either detail-safe or
+    dominant+mirror-safe, and the supporting thread has >= 5 meaningful moments:
       1. temporal_score: count co-occurring moment pairs (journal_entries.ts within 7 days)
          Source: journal_entries JOIN continuity_labels WHERE anchor IN (key_a, key_b)
       2. semantic_score: memory_episodic records matching both topic keyword sets
@@ -358,7 +361,8 @@ def is_cross_context_ready(
 ) -> tuple[bool, str]:
     """
     Gates — aligned with thresholds.py conventions:
-    - Both topics: selected_count >= 6 AND detail_allowed=True
+    - Primary topic: detail_allowed=True with >= 6 moments, OR mirror_allowed=True with >= 8 moments and dominant depth vs the next thread
+    - Supporting topic: >= 5 moments and at least mirror_allowed=True
     - combined_score >= 0.35
     - At least one topic has a moment in the last 90 days
     Returns (ready, reason):
@@ -372,8 +376,8 @@ def is_whole_story_ready(
 ) -> tuple[bool, str]:
     """
     Gates for query-grounded whole story:
-    - primary_topic: selected_count >= 8 AND detail_allowed=True (existing single-topic gate)
-    - At least 1 related topic: selected_count >= 6 AND detail_allowed=True
+    - primary_topic: selected_count >= 8 AND either detail_allowed=True OR dominant+mirror_allowed=True
+    - At least 1 related topic: selected_count >= 5 and meaningfully active (detail-safe or mirror-safe support thread)
     - At least 1 correlation with combined_score >= 0.35
     - combined topic count <= 3 (token budget)
     Returns (ready, reason)
@@ -389,7 +393,8 @@ New thresholds belong in `thresholds.py` alongside existing ones:
 cross_context_min_moments_per_topic: int = 6     # vs 8 for single-topic
 cross_context_min_combined_score: float = 0.35
 cross_context_recent_activity_days: int = 90
-whole_story_min_related_moments: int = 6
+whole_story_min_related_moments: int = 5
+whole_story_primary_dominance_ratio: float = 1.5
 whole_story_max_topics: int = 3
 whole_story_min_link_score: float = 0.35
 ```

@@ -21,7 +21,6 @@ from enum import Enum
 from typing import Any
 
 from kala.arc import build_arcs, extract_arc_features, segment_arc, summarize_arc_structure
-from sakhi.apps.api.services.continuity.adapters import canonicalize_anchor
 from sakhi.apps.api.services.continuity.taxonomy import SIMULATION_CONTINUITY_TAXONOMY
 from sakhi.apps.api.services.continuity.thresholds import (
     SIMULATION_CONTINUITY_THRESHOLD_PROFILE,
@@ -41,7 +40,11 @@ VALID_STANCES = {"toward", "away", "unclear"}
 _TAXONOMY = SIMULATION_CONTINUITY_TAXONOMY
 _THRESHOLDS = SIMULATION_CONTINUITY_THRESHOLD_PROFILE
 _ALIAS_BOOST = 0.85
-COMPILER_VERSION = "2026.03.03.1"
+COMPILER_VERSION = "2026.03.18.1"
+
+
+def _canonicalize_anchor(anchor: str) -> str:
+    return re.sub(r"\s+", "_", (anchor or "").strip().lower())
 
 
 class ClassificationState(str, Enum):
@@ -178,6 +181,8 @@ def _normalize_items(
                 "facet_terms": facet_terms,
                 "matched_terms": matched_terms,
                 "trace": trace,
+                "membership_role": str(entry.get("membership_role") or "primary"),
+                "source_anchor": str(entry.get("source_anchor") or anchor),
                 "source_type": source_type,
                 "source_id": source_id,
                 "source_ref": source_ref,
@@ -196,7 +201,7 @@ def build_simulation_continuity_arc(
     max_gap_days: int = 21,
     min_len: int = 3,
 ) -> dict[str, Any]:
-    normalized_anchor = canonicalize_anchor(anchor)
+    normalized_anchor = _canonicalize_anchor(anchor)
     if not normalized_anchor:
         raise ValueError("Anchor is required")
     if max_gap_days <= 0:
@@ -256,6 +261,8 @@ def build_simulation_continuity_arc(
             "source_type": item.get("source_type"),
             "source_id": item.get("source_id"),
             "source_ref": item.get("source_ref"),
+            "membership_role": item.get("membership_role"),
+            "source_anchor": item.get("source_anchor"),
             "facet": item["facet"],
             "anchor_state": item.get("anchor_state"),
             "facet_state": item.get("facet_state"),
@@ -287,9 +294,10 @@ def compile_simulation_continuity(
     inferred = [_classify_entry(entry) for entry in ordered_entries]
     grouped: dict[str, list[dict[str, Any]]] = {}
     for item in inferred:
-        anchor = str(item.get("anchor") or "").strip()
-        if anchor and anchor not in {"unknown", "life"}:
-            grouped.setdefault(anchor, []).append(item)
+        for membership in _topic_memberships_for_entry(item):
+            anchor = str(membership.get("anchor") or "").strip()
+            if anchor and anchor not in {"unknown", "life"}:
+                grouped.setdefault(anchor, []).append(membership)
 
     topics: list[dict[str, Any]] = []
     for anchor, anchor_entries in grouped.items():
@@ -408,6 +416,9 @@ def _build_compiled_topic(
             "confidence": item["confidence"],
             "facet_terms": item.get("facet_terms") or [],
             "matched_terms": item.get("matched_terms") or [],
+            "membership_role": item.get("membership_role") or "primary",
+            "source_anchor": item.get("source_anchor"),
+            "related_anchors": item.get("related_anchors") or [],
             "trace": item.get("trace") or {},
         }
         for item in annotated_entries
@@ -440,17 +451,31 @@ def _build_compiled_topic(
             "stance": item["stance"],
             "scalar": item["scalar"],
             "confidence": item["confidence"],
+            "membership_role": item.get("membership_role") or "primary",
+            "source_anchor": item.get("source_anchor"),
+            "related_anchors": item.get("related_anchors") or [],
             "matched_terms": list(item.get("matched_terms") or []),
             "trace": item.get("trace") or {},
         }
         for item in annotated_entries
         if _compiled_entry_key(item["day"], item["timestamp"]) in visible_keys
     }
+    primary_selected_count = sum(
+        1
+        for item in annotated_entries
+        if (
+            _compiled_entry_key(item["day"], item["timestamp"]) in visible_keys
+            and str(item.get("membership_role") or "primary") == "primary"
+        )
+    )
+    related_selected_count = max(len(visible_days) - primary_selected_count, 0)
     topic = {
         "anchor": anchor,
         "label": _TAXONOMY.label_for(anchor),
         "confidence": round(sum(confidence_values) / len(confidence_values), 4) if confidence_values else 0.0,
         "selected_count": len(visible_days),
+        "primary_selected_count": primary_selected_count,
+        "related_selected_count": related_selected_count,
         "entry_days": visible_days,
         "entry_tags": entry_tags,
         "arc": built["arc"],
@@ -474,6 +499,7 @@ def classify_simulation_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "anchor_state": inferred["anchor_state"],
         "facet_state": inferred["facet_state"],
         "anchor_candidates": list(inferred.get("anchor_candidates") or []),
+        "related_anchors": list(inferred.get("related_anchors") or []),
         "confidence": inferred["confidence"],
         "anchor_hits": list(inferred.get("anchor_hits") or []),
         "facet_hits": list(inferred.get("facet_hits") or []),
@@ -528,6 +554,10 @@ def _classify_entry(entry: dict[str, Any]) -> dict[str, Any]:
             for candidate in anchor_trace.candidates
             if candidate.score >= _anchor_threshold(candidate.key)
         ],
+        "related_anchors": _secondary_anchor_candidates(
+            anchor_trace=anchor_trace,
+            primary_anchor=anchor,
+        ),
         "anchor_score": float(anchor_trace.winner.score) if anchor_trace.winner else 0.0,
         "anchor_hits": anchor_hits,
         "facet_hits": facet_hits,
@@ -537,6 +567,67 @@ def _classify_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "confidence": confidence,
         "text": text,
     }
+
+
+def _secondary_anchor_candidates(
+    *,
+    anchor_trace: ClassificationTrace,
+    primary_anchor: str,
+) -> list[dict[str, Any]]:
+    if not primary_anchor or primary_anchor in {"unknown", "life"}:
+        return []
+
+    winner_score = float(anchor_trace.winner.score) if anchor_trace.winner else 0.0
+    if winner_score <= 0:
+        return []
+
+    related: list[dict[str, Any]] = []
+    for candidate in anchor_trace.candidates:
+        candidate_key = str(candidate.key or "").strip()
+        if not candidate_key or candidate_key in {primary_anchor, "unknown", "life"}:
+            continue
+        if candidate.score < _anchor_threshold(candidate_key):
+            continue
+        if (candidate.score / winner_score) < _THRESHOLDS.related_anchor_min_score_ratio:
+            continue
+        related.append(
+            {
+                "anchor": candidate_key,
+                "score": round(float(candidate.score), 4),
+                "hits": list(candidate.hits),
+            }
+        )
+        if len(related) >= _THRESHOLDS.max_related_anchors_per_entry:
+            break
+    return related
+
+
+def _topic_memberships_for_entry(item: dict[str, Any]) -> list[dict[str, Any]]:
+    anchor = str(item.get("anchor") or "").strip()
+    if not anchor or anchor in {"unknown", "life"}:
+        return []
+
+    memberships: list[dict[str, Any]] = [
+        {
+            **item,
+            "anchor": anchor,
+            "source_anchor": anchor,
+            "membership_role": "primary",
+        }
+    ]
+    for related in item.get("related_anchors") or []:
+        related_anchor = str((related or {}).get("anchor") or "").strip()
+        if not related_anchor or related_anchor in {anchor, "unknown", "life"}:
+            continue
+        memberships.append(
+            {
+                **item,
+                "anchor": related_anchor,
+                "source_anchor": anchor,
+                "membership_role": "related",
+            }
+        )
+    return memberships
 
 
 def _classify_anchor(text: str) -> tuple[str, ClassificationState, ClassificationTrace]:
@@ -760,7 +851,16 @@ def _aggregate_classification_score(entry_tags: dict[str, dict[str, Any]]) -> fl
         confidence = float(tag.get("confidence") or 0.0)
         anchor_weight = state_weight.get(str(tag.get("anchor_state") or ClassificationState.UNKNOWN.value), 0.42)
         facet_weight = state_weight.get(str(tag.get("facet_state") or ClassificationState.UNKNOWN.value), 0.42)
-        scores.append(confidence * ((anchor_weight * 0.6) + (facet_weight * 0.4)))
+        membership_weight = (
+            _THRESHOLDS.related_anchor_membership_weight
+            if str(tag.get("membership_role") or "primary") == "related"
+            else 1.0
+        )
+        scores.append(
+            confidence
+            * ((anchor_weight * 0.6) + (facet_weight * 0.4))
+            * membership_weight
+        )
     return round(sum(scores) / len(scores), 4)
 
 
@@ -897,6 +997,9 @@ def _annotate_topic_entries(
                 "scalar": scalar,
                 "confidence": confidence,
                 "facet_terms": list(dict.fromkeys(facet_hits)),
+                "membership_role": str(info.get("membership_role") or "primary"),
+                "source_anchor": str(info.get("source_anchor") or anchor),
+                "related_anchors": list(info.get("related_anchors") or []),
                 "matched_terms": list(dict.fromkeys([*(info.get("anchor_hits") or []), *facet_hits])),
                 "trace": {
                     "anchor": info.get("anchor_trace") or {},
@@ -914,6 +1017,9 @@ def _annotate_topic_entries(
                             ]
                         )
                     ),
+                    "membership_role": str(info.get("membership_role") or "primary"),
+                    "source_anchor": str(info.get("source_anchor") or anchor),
+                    "related_anchors": list(info.get("related_anchors") or []),
                 },
             }
         )

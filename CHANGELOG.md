@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded Next.js to 14.2.35 (patched CVE-2025-55184 and CVE-2025-67779)
 
 ### Fixed
+- **Overlap-aware continuity story gating** — continuity compilation now preserves bounded related-anchor evidence so shared moments can appear in both relevant story threads, while cross-topic `whole_story` readiness now allows dominant mirror-safe umbrella topics (for example Sakhi) to unlock Deep Reflect with meaningful supporting threads without lowering topic-detail safety globally
 - **Governance seeder race condition** — ON CONFLICT guards for concurrent seed requests
 - **JSONB parsing** — asyncpg returns JSONB as strings; added `_parse_json()` helpers in coherence/alignment engines
 - **Alignment engine wrong SQL** — was querying `long_term->>'emotion_state'` instead of direct `emotion_state` column

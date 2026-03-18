@@ -203,8 +203,8 @@ def test_compile_simulation_continuity_derives_topics_from_entry_text():
 
     assert compiled["version"] == 2
     assert compiled["taxonomy_version"] == "2026.03.03"
-    assert compiled["compiler_version"] == "2026.03.03.1"
-    assert compiled["threshold_profile_version"] == "2026.03.03.1"
+    assert compiled["compiler_version"] == "2026.03.18.1"
+    assert compiled["threshold_profile_version"] == "2026.03.18.1"
     assert isinstance(compiled["inputs_hash"], str)
     anchors = [topic["anchor"] for topic in compiled["topics"]]
     assert "career" in anchors
@@ -212,10 +212,16 @@ def test_compile_simulation_continuity_derives_topics_from_entry_text():
 
     career_topic = next(topic for topic in compiled["topics"] if topic["anchor"] == "career")
     assert career_topic["selected_count"] == 3
+    assert career_topic["primary_selected_count"] == 3
+    assert career_topic["related_selected_count"] == 0
     assert career_topic["entry_days"] == [1, 5, 9]
     assert career_topic["arc"]["features"]["direction"] in {"rising", "flat"}
-    assert career_topic["entry_tags"]["9"]["decision_state"] in {"resolved", "committed"}
-    assert career_topic["entry_tags"]["9"]["anchor_state"] == "CONFIDENT"
+    career_key = "9|2026-01-09T08:00:00+00:00"
+    assert career_topic["entry_tags"][career_key]["decision_state"] in {
+        "resolved",
+        "committed",
+    }
+    assert career_topic["entry_tags"][career_key]["anchor_state"] == "CONFIDENT"
     assert career_topic["arc"]["phases"][0]["stats"]["dominant_facet"] in {
         "promotion",
         "workload",
@@ -227,7 +233,11 @@ def test_compile_simulation_continuity_derives_topics_from_entry_text():
 
     caregiving_topic = next(topic for topic in compiled["topics"] if topic["anchor"] == "caregiving")
     assert caregiving_topic["entry_days"] == [12, 17, 22]
-    assert caregiving_topic["entry_tags"]["12"]["facet"] in {"grief", "caregiving"}
+    caregiving_key = "12|2026-01-12T08:00:00+00:00"
+    assert caregiving_topic["entry_tags"][caregiving_key]["facet"] in {
+        "grief",
+        "caregiving",
+    }
 
 
 def test_compile_simulation_continuity_skips_sparse_topic_groups_without_failing():
@@ -339,3 +349,50 @@ def test_compile_simulation_continuity_blocks_surfacing_for_low_signal_fallback(
     assert compiled["topics"][0]["anchor"] == "life"
     assert compiled["topics"][0]["surface"]["mirror_allowed"] is False
     assert compiled["topics"][0]["surface"]["detail_allowed"] is False
+
+
+def test_compile_simulation_continuity_projects_shared_moments_into_related_topics():
+    compiled = compile_simulation_continuity(
+        persona_id="vidhya",
+        entries=[
+            {
+                "day": 1,
+                "timestamp": "2026-01-01T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "Mom needed me again, and that family pressure cut into Sakhi founder time.",
+            },
+            {
+                "day": 5,
+                "timestamp": "2026-01-05T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "Dad and family demands keep cutting into Sakhi founder time.",
+            },
+            {
+                "day": 9,
+                "timestamp": "2026-01-09T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "Mom and family pressure are shaping Sakhi founder work this week.",
+            },
+        ],
+    )
+
+    anchors = {topic["anchor"] for topic in compiled["topics"]}
+    assert "family" in anchors
+    assert "sakhi" in anchors
+
+    sakhi_topic = next(topic for topic in compiled["topics"] if topic["anchor"] == "sakhi")
+    family_topic = next(topic for topic in compiled["topics"] if topic["anchor"] == "family")
+
+    assert sakhi_topic["primary_selected_count"] == 3
+    assert sakhi_topic["related_selected_count"] == 0
+    assert family_topic["primary_selected_count"] == 0
+    assert family_topic["related_selected_count"] == 3
+
+    first_key = "1|2026-01-01T08:00:00+00:00"
+    assert sakhi_topic["entry_tags"][first_key]["membership_role"] == "primary"
+    assert family_topic["entry_tags"][first_key]["membership_role"] == "related"
+    assert family_topic["entry_tags"][first_key]["source_anchor"] == "sakhi"
+    assert any(
+        item["anchor"] == "family"
+        for item in sakhi_topic["entry_tags"][first_key]["related_anchors"]
+    )

@@ -18,6 +18,9 @@ class ContinuityThresholdProfile:
     facet_min_score: float
     facet_margin_min: float
     max_facets_per_entry: int
+    max_related_anchors_per_entry: int
+    related_anchor_min_score_ratio: float
+    related_anchor_membership_weight: float
     unknown_if_ambiguous: bool
     coherence_min: float
     surface_mirror_min: float
@@ -38,6 +41,7 @@ class CrossTopicContinuityThresholdProfile:
     whole_story_min_primary_moments: int
     whole_story_min_total_moments: int
     whole_story_min_related_moments: int
+    whole_story_primary_dominance_ratio: float
     dimension_time_window_days: int
     dimension_emotion_window_days: int
     dimension_financial_window_days: int
@@ -49,12 +53,15 @@ class CrossTopicContinuityThresholdProfile:
 
 
 SIMULATION_CONTINUITY_THRESHOLD_PROFILE = ContinuityThresholdProfile(
-    version="2026.03.03.1",
+    version="2026.03.18.1",
     anchor_min_score=1.0,
     anchor_margin_min=0.55,
     facet_min_score=0.7,
     facet_margin_min=0.35,
     max_facets_per_entry=1,
+    max_related_anchors_per_entry=1,
+    related_anchor_min_score_ratio=0.55,
+    related_anchor_membership_weight=0.72,
     unknown_if_ambiguous=True,
     coherence_min=0.5,
     surface_mirror_min=0.52,
@@ -63,7 +70,7 @@ SIMULATION_CONTINUITY_THRESHOLD_PROFILE = ContinuityThresholdProfile(
 
 
 CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE = CrossTopicContinuityThresholdProfile(
-    version="2026.03.10.2",
+    version="2026.03.18.1",
     max_candidate_topics=3,
     max_topic_keys=3,
     correlation_cache_ttl_hours=6,
@@ -75,7 +82,8 @@ CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE = CrossTopicContinuityThresholdProfile(
     cross_context_recent_activity_days=90,
     whole_story_min_primary_moments=8,
     whole_story_min_total_moments=12,
-    whole_story_min_related_moments=6,
+    whole_story_min_related_moments=5,
+    whole_story_primary_dominance_ratio=1.5,
     # Time window: capture current load pressure.
     dimension_time_window_days=14,
     # Emotion window: smooth spikes but stay recent.

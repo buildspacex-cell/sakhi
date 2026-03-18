@@ -18,6 +18,7 @@ interface ContinuityTopicSummary {
   label: string;
   confidence: number;
   selected_count: number;
+  primary_selected_count?: number;
   span_days: number;
   direction: string;
   surface?: {
@@ -457,7 +458,9 @@ function ReflectionPageContent() {
         if (mirrorAllowed === false) {
           return false;
         }
-        return toFiniteNumber(topic.selected_count, 0) >= MIN_RELATED_TOPIC_MOMENTS;
+        // Mirror backend _topic_story_count(): prefer primary_selected_count when present
+        const gatingCount = topic.primary_selected_count ?? topic.selected_count;
+        return toFiniteNumber(gatingCount, 0) >= MIN_RELATED_TOPIC_MOMENTS;
       }),
     [topics],
   );
@@ -465,9 +468,12 @@ function ReflectionPageContent() {
   const selectedAnchorEligibleForMyStory = useMemo(
     () =>
       myStoryEligibleTopics.some(
-        (topic) =>
-          topic.anchor === selectedAnchor
-          && toFiniteNumber(topic.selected_count, 0) >= MIN_CROSS_CONTEXT_MOMENTS,
+        (topic) => {
+          // Mirror backend _topic_story_count(): prefer primary_selected_count when present
+          const gatingCount = topic.primary_selected_count ?? topic.selected_count;
+          return topic.anchor === selectedAnchor
+            && toFiniteNumber(gatingCount, 0) >= MIN_CROSS_CONTEXT_MOMENTS;
+        },
       ),
     [myStoryEligibleTopics, selectedAnchor],
   );

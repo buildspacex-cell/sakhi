@@ -100,7 +100,7 @@ from sakhi.apps.api.services.vision.context import (
 from sakhi.apps.api.services.context_router import (
     ALL_MODULES,
     map_triage_to_intents,
-    load_recent_intent_evolution,
+    # load_recent_intent_evolution parked for continuity MVP — restore with intent evolution
 )
 from sakhi.apps.api.services.email.integration import (
     get_email_context_for_conversation,
@@ -878,11 +878,9 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     if triage_label and emotion.get("emotion") == "neutral":
         emotion = {"emotion": triage_label}
 
-    try:
-        det_ctx = await load_deterministic_context(user_id, user_text=body.text)
-    except Exception as det_exc:
-        logger.warning("[turn_v2] deterministic context load failed: %s", det_exc)
-        det_ctx = DeterministicContext()
+    # deterministic context skipped for continuity MVP — restore when rebuilding
+    # recommendations / causal / moment / body modules over the continuity foundation
+    det_ctx = DeterministicContext()
     internal_state = det_ctx.internal_state
 
     # Build brain_state dict from det_ctx (single personal_model query, no duplicate)
@@ -898,24 +896,20 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
 
     agent_task_enabled = _agent_task_execution_enabled()
 
-    # --- Parallel fetch: pending agent task + intent evolution ---
+    # --- Parallel fetch: pending agent task ---
+    # intent evolution parked for continuity MVP (1 DB read from intent_evolution table,
+    # fed combined_intents → metadata, but build_prompt() never used it). Restore when
+    # rebuilding intent-driven tone/metadata shaping over the continuity foundation.
+    evolution_intents: list = []
     try:
         if agent_task_enabled:
-            pending_agent_task, evolution_intents = await asyncio.gather(
-                get_pending_agent_task(user_id),
-                load_recent_intent_evolution(user_id),
-                return_exceptions=True,
-            )
+            pending_agent_task = await get_pending_agent_task(user_id)
             if isinstance(pending_agent_task, Exception):
                 pending_agent_task = None
-            if isinstance(evolution_intents, Exception):
-                evolution_intents = []
         else:
             pending_agent_task = None
-            evolution_intents = await load_recent_intent_evolution(user_id)
     except Exception:
         pending_agent_task = None
-        evolution_intents = []
 
     # Build intent hints from triage (already computed above, zero cost)
     triage_intents = map_triage_to_intents(triage_local)
@@ -923,60 +917,17 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     # Combine all intent sources for the prompt's enriched_context
     combined_intents = stored_intents + triage_intents + evolution_intents
 
-    # --- Load ALL modules unconditionally ---
-    # Every turn gets full context; conversation LLM decides what's relevant.
-    # Future: replace with local model selection from MODULE_REGISTRY.
-    active_modules = ALL_MODULES
-    logger.info("[turn_v2] All modules active (unconditional load), intents=%s", len(combined_intents))
+    # --- MVP: continuity-only routing ---
+    # All non-continuity modules parked while showcasing continuity.
+    # Restore intent-based routing when building out scheduling/recommendations/causal/agent.
+    active_modules: set[str] = {"continuity"}
+    logger.info("[turn_v2] Continuity-only modules active (MVP), intents=%s", len(combined_intents))
 
-    # --- Tier 1: Always-compute (cheap, feeds 360° context scan) ---
-    fast_narrative = compute_fast_narrative([], brain_state.get("soul_state") or {})
-    alignment = compute_alignment(
-        None,
-        brain_state.get("soul_state") or {},
-        brain_state.get("goals_state") or {},
-    )
-    fast_rhythm_soul = compute_fast_rhythm_soul_frame(
-        [],
-        brain_state.get("rhythm_state") or {},
-        brain_state.get("soul_state") or {},
-    )
-    fast_esr = compute_fast_esr_frame(
-        brain_state.get("emotion_state") or {},
-        brain_state.get("soul_state") or {},
-        brain_state.get("rhythm_state") or {},
-    )
-    fast_identity_momentum = compute_fast_identity_momentum(
-        [],
-        brain_state.get("soul_state") or {},
-        brain_state.get("emotion_state") or {},
-        brain_state.get("rhythm_state") or {},
-    )
-    fast_identity_timeline = compute_fast_identity_timeline_frame(
-        [],
-        brain_state.get("soul_state") or {},
-        brain_state.get("emotion_state") or {},
-        brain_state.get("rhythm_state") or {},
-        brain_state.get("identity_momentum_state") or {},
-    )
-    # --- Tier 2 gating: emotional_depth (inner_dialogue + nudge_state are LLM/DB calls) ---
-    # Disabled by default for MVP latency — enable via SAKHI_ENABLE_INNER_DIALOGUE=1
-    _enable_inner_dialogue = os.getenv("SAKHI_ENABLE_INNER_DIALOGUE", "0") == "1"
-    if _enable_inner_dialogue and "emotional_depth" in active_modules:
-        try:
-            inner_dialogue = await inner_dialogue_engine.compute_inner_dialogue(
-                user_id, body.text, {"triage": triage_local, "behavior_profile": behavior_profile}
-            )
-        except Exception:
-            inner_dialogue = {}
-        try:
-            nudge_row = await q("SELECT nudge_state FROM personal_model WHERE person_id = $1", user_id, one=True) or {}
-            nudge_state = nudge_row.get("nudge_state") or {}
-        except Exception:
-            nudge_state = {}
-    else:
-        inner_dialogue = {}
-        nudge_state = {}
+    # --- Tier 1 fast compute + inner dialogue: parked for continuity MVP ---
+    # Restore when building soul/alignment/rhythm features.
+    fast_narrative: dict = {}
+    inner_dialogue: dict = {}
+    nudge_state: dict = {}
 
     # Fire-and-forget: personal-model side-effect writes.
     # Results are available next turn from DB; not needed for this turn's LLM
@@ -995,14 +946,9 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     tone_state: dict = {}
     empathy_state: dict = {}
 
+    # micro_goals + scaffolds: parked for continuity MVP
     micro_goals_meta = None
     text_lower = (body.text or "").lower()
-    trigger_phrases = [
-        "i want", "i need to", "i should", "i must", "i plan to", "i wish i could",
-        "buy", "fix", "join", "start", "learn", "upgrade", "clean", "improve", "reduce", "increase",
-    ]
-    if any(p in text_lower for p in trigger_phrases):
-        asyncio.create_task(micro_goals_service.create_micro_goals(user_id, body.text))
 
     # --- Deterministic context extraction (loaded in parallel above) ---
     continuity_state = det_ctx.continuity_state
@@ -1016,90 +962,11 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     mini_flow_guard = det_ctx.guards.get("mini_flow", "")
     micro_journey_guard = det_ctx.guards.get("micro_journey", "")
 
-    # Brain states for moment_model (loaded by deterministic context)
-    state_row = {
-        "forecast_state": det_ctx.forecast_state,
-        "coherence_state": det_ctx.coherence_state,
-        "alignment_state": det_ctx.alignment_state,
-    }
-
-    # On-demand scaffold generation (overwrites cached values when triggered)
-    text_lower_scaffolds = (body.text or "").lower()
-    if "micro_flow" in active_modules:
-        focus_patterns = ["help me focus", "where do i start", "work on", "help me begin", "focus on"]
-        if any(p in text_lower_scaffolds for p in focus_patterns):
-            try:
-                path = await generate_focus_path(user_id, intent_text=body.text)
-                await persist_focus_path(user_id, path)
-                focus_path = path
-            except Exception:
-                pass
-        flow_patterns = ["short routine", "start flow", "10 minute", "focus for 10", "give me a short routine"]
-        if any(p in text_lower_scaffolds for p in flow_patterns):
-            try:
-                flow = await generate_mini_flow(user_id)
-                await persist_mini_flow(user_id, flow)
-                mini_flow = flow
-            except Exception:
-                pass
-
-    # Gap reason for moment_model restart detection
-    restart_phrases = ["restart", "where were we", "how do i restart", "let's continue", "resume"]
-    gap_reason = any(p in (body.text or "").lower() for p in restart_phrases)
-
-    try:
-        moment_model = compute_moment_model(
-            emotion_state=brain_state.get("emotion_state") or {},
-            coherence_state=state_row.get("coherence_state") or {},
-            alignment_state=state_row.get("alignment_state") or {},
-            mind_state={"cognitive_load": internal_state.get("cognitive_load")},
-            forecast_state=state_row.get("forecast_state") or {},
-            continuity_state=continuity_state or {},
-            gap_hours=gap_hours,
-            restart=gap_reason,
-            active_scaffolds={
-                "focus_path": bool(focus_path),
-                "mini_flow": bool(mini_flow),
-                "micro_journey": bool(micro_journey),
-            },
-        )
-    except Exception:
-        moment_model = {}
-    # --- Tier 2 gating: moment (evidence_pack + deliberation are expensive) ---
-    if "moment" in active_modules:
-        try:
-            evidence_pack = await select_evidence_anchors(user_id)
-        except Exception:
-            evidence_pack = {}
-        try:
-            deliberation_scaffold = compute_deliberation_scaffold(
-                moment_model=moment_model,
-                evidence_pack=evidence_pack,
-                conflict_state=state_row.get("conflict_state") or {},
-                alignment_state=state_row.get("alignment_state") or {},
-                identity_state=state_row.get("identity_state") or {},
-                forecast_state=state_row.get("forecast_state") or {},
-                continuity_state=continuity_state or {},
-            )
-        except Exception:
-            deliberation_scaffold = None
-        # Reflection trace (has DB side effects — only when evidence_pack computed)
-        try:
-            reflection_trace_payload = build_reflection_trace(
-                person_id=user_id,
-                turn_id=turn_id,
-                session_id=str(session_id) if session_id else None,
-                moment_model=moment_model or {},
-                evidence_pack=evidence_pack or {},
-                deliberation_scaffold=deliberation_scaffold,
-            )
-            await persist_reflection_trace(dbexec, reflection_trace_payload)
-        except Exception:
-            reflection_trace_payload = None
-    else:
-        evidence_pack = {}
-        deliberation_scaffold = None
-        reflection_trace_payload = None
+    # moment_model / evidence_pack / deliberation / reflection_trace: parked for continuity MVP
+    moment_model: dict = {}
+    evidence_pack: dict = {}
+    deliberation_scaffold = None
+    reflection_trace_payload = None
 
     # ==========================================================================
     # Personalized Recommendations Integration
@@ -1108,427 +975,36 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     personalized_recommendations = {}
     recommendation_trigger = None  # Why recommendations are being surfaced
 
-    # Friction state already computed by deterministic loader (no duplicate vikriti query)
-    drift_percentage = det_ctx.drift_percentage
-    friction_state_computed = {
-        "state": det_ctx.friction_state or "balanced",
-        "description": det_ctx.friction_info.get("description"),
-        "drift_percentage": drift_percentage,
-        "drift_direction": det_ctx.drift_direction,
-        "primary_contributor": det_ctx.primary_contributor,
-    }
-
-    try:
-        # Determine if recommendations should be proactively surfaced
-        # Triggers:
-        # 1. REACTIVE: User explicitly asks (detected via patterns)
-        # 2. PROACTIVE: High friction drift (>25%)
-        # 3. CONTEXTUAL: Morning (before 10am) or evening (after 7pm)
-        # 4. NUDGE: Moderate drift (15-25%) with relevant patterns
-
-        text_lower = (body.text or "").lower()
-        recommendation_patterns = [
-            "what should i", "recommend", "suggestion", "help me",
-            "what can i do", "how can i", "what would help",
-            "feeling off", "out of balance", "what do you suggest",
-        ]
-        is_reactive_request = any(p in text_lower for p in recommendation_patterns)
-
-        current_hour = datetime.datetime.utcnow().hour
-        is_morning = current_hour < 10
-        is_evening = current_hour >= 19
-
-        # MVP: trigger recommendations only when user explicitly asks or mentions symptoms.
-        # Proactive/contextual/nudge triggers removed — they inflate latency on every morning
-        # and evening turn and drift>25% turns without clear user intent.
-        if is_reactive_request:
-            recommendation_trigger = "reactive"  # User asked
-        elif "body" in active_modules:
-            recommendation_trigger = "reactive"  # Symptom/body mention
-
-        # Generate recommendations if triggered AND router allows (or high drift/body overrides)
-        if recommendation_trigger and ("recommendations" in active_modules or drift_percentage > 25 or "body" in active_modules):
-            try:
-                rec_context = await build_recommendation_context(user_id)
-                recs = await generate_personalized_recommendations(
-                    context=rec_context,
-                    max_foods=3,
-                    max_practices=3,
-                )
-                personalized_recommendations = {
-                    "friction_state": recs.friction_state,
-                    "urgency_level": recs.urgency_level,
-                    "personalization_confidence": recs.personalization_confidence,
-                    "why_this_state": recs.why_this_state,
-                    "personal_insight": recs.personal_insight,
-                    "immediate_actions": [r.model_dump() for r in recs.immediate_actions[:2]],
-                    "foods": [r.model_dump() for r in recs.foods[:3]],
-                    "practices": [r.model_dump() for r in recs.practices[:2]],
-                    "watch_for": recs.watch_for,
-                    "trigger": recommendation_trigger,
-                    "trigger_reason": {
-                        "reactive": "You asked for suggestions",
-                        "proactive": f"Your friction drift is {drift_percentage:.0f}% - let me suggest some rebalancing",
-                        "contextual": "Morning check-in" if is_morning else "Evening wind-down time",
-                        "nudge": "A gentle suggestion based on your patterns",
-                    }.get(recommendation_trigger),
-                }
-                logger.info(
-                    "[turn_v2] Recommendations surfaced: trigger=%s drift=%.1f%%",
-                    recommendation_trigger,
-                    drift_percentage,
-                )
-            except Exception as rec_exc:
-                logger.warning("[turn_v2] Recommendation generation failed: %s", rec_exc)
-                personalized_recommendations = {}
-    except Exception as rec_outer_exc:
-        logger.warning("[turn_v2] Recommendation pipeline failed: %s", rec_outer_exc)
-
-    recommendation_guard = (
-        "Recommendations are personalized based on Ayurvedic principles and personal patterns. "
-        "Surface them naturally when relevant. For proactive triggers, weave them in gently. "
-        "For reactive requests, be direct and helpful. Never force recommendations."
-    )
+    # Friction state parked for continuity MVP — det_ctx is empty stub, so no real
+    # friction data is available. Send empty to avoid fabricating "balanced/0%" state
+    # in the prompt. Restore when rebuilding friction/body over the continuity foundation.
+    friction_state_computed: dict = {}
 
     # ==========================================================================
-    # Email & Signal Context Integration (OpenClaw approach — reactive only)
-    # Email friction feeds internal state silently; email context only surfaces
-    # when the user asks about email/inbox.
+    # Recommendations / causal / body / email: parked for continuity MVP
+    # Re-enable when building these features over the continuity foundation.
     # ==========================================================================
-
-    # Email friction enrichment skipped from sync path — minor signal, not worth the latency.
-
-    # --- Tier 2 gating: causal reasoning (LLM call) ---
+    recommendation_trigger = None
+    recommendation_guard = ""
     causal_explanation = None
-    has_friction_drift = drift_percentage > 15 and friction_state_computed.get("state", "Balanced") != "Balanced"
-    if "causal" in active_modules or "body" in active_modules or has_friction_drift:
-        try:
-            if has_friction_drift:
-                explanation = await explain_friction(
-                    person_id=user_id,
-                    friction_state=friction_state_computed.get("state", ""),
-                )
-                causal_explanation = {
-                    "symptom": explanation.symptom,
-                    "dosha_context": explanation.dosha_context,
-                    "primary_causes": [c.model_dump() for c in explanation.primary_causes[:2]],
-                    "contributing_factors": [c.model_dump() for c in explanation.contributing_factors[:2]],
-                    "seasonal_influence": explanation.seasonal_influence,
-                    "explanation_text": explanation.explanation_text,
-                }
-            elif "body" in active_modules:
-                # Body module active but no friction drift — use symptom-based causal reasoning
-                from sakhi.apps.api.services.ayurveda.causal_reasoning import (
-                    map_symptom_to_dosha,
-                    explain_symptom,
-                )
-                _symptom_keys = [
-                    "headache", "migraine", "dizzy", "fever", "nausea", "pain",
-                    "fatigue", "insomnia", "burning", "throbbing", "stiff",
-                    "cramp", "ache", "exhausted", "tired", "anxiety", "restless",
-                ]
-                user_text_lower = (body.text or "").lower()
-                matched_symptom = None
-                for sk in _symptom_keys:
-                    if sk in user_text_lower:
-                        matched_symptom = sk
-                        break
-                if matched_symptom:
-                    explanation = await explain_symptom(
-                        person_id=user_id,
-                        symptom=matched_symptom,
-                    )
-                    causal_explanation = {
-                        "symptom": explanation.symptom,
-                        "dosha_context": explanation.dosha_context,
-                        "primary_causes": [c.model_dump() for c in explanation.primary_causes[:2]],
-                        "contributing_factors": [c.model_dump() for c in explanation.contributing_factors[:2]],
-                        "seasonal_influence": explanation.seasonal_influence,
-                        "explanation_text": explanation.explanation_text,
-                    }
-        except Exception as causal_exc:
-            logger.warning("[turn_v2] Causal reasoning failed: %s", causal_exc)
-
-    # Body state already loaded by deterministic context (no duplicate query)
     body_state = det_ctx.body_state_full or {}
-
-    # --- Tier 2 gating: health trends (only when body module active) ---
-    health_trends = {}
-    if "body" in active_modules:
-        try:
-            from sakhi.apps.api.services.body.health_trends import compute_health_trends
-            health_trends = await compute_health_trends(user_id, window_days=14)
-        except Exception:
-            pass
-
-    # --- Tier 2 gating: email context (DB reads) ---
+    health_trends: dict = {}
     email_context = None
     contact_prefs_context = None
-    if "email" in active_modules:
-        try:
-            email_context = await get_email_context_for_conversation(
-                user_id, include_details=True,
-            )
-        except Exception:
-            pass
-        try:
-            prefs = await get_contact_preferences(user_id)
-            if prefs:
-                contact_prefs_context = format_preferences_for_llm(prefs)
-        except Exception:
-            pass
 
     # ==========================================================================
-    # Scheduling Integration (gated by router)
-    # Surfaces scheduling suggestions based on: explicit requests, journal hints,
-    # relationship nudges, and calendar queries. User ALWAYS confirms before action.
+    # Scheduling: parked for continuity MVP
+    # Re-enable when building scheduling over the continuity foundation.
     # ==========================================================================
     scheduling_context = {}
     scheduling_intent_detected = None
-    relationship_nudges = []
-    today_calendar = []
-    week_summary = {}
-    scheduling_confirmation_result = None  # Set if user confirmed a pending request
+    relationship_nudges: list = []
+    today_calendar: list = []
+    week_summary: dict = {}
+    scheduling_confirmation_result = None
+    scheduling_guard = ""
 
-    try:
-        if "scheduling" not in active_modules:
-            raise _SkipModule("scheduling")
-        text_lower = (body.text or "").lower()
-
-        # 0. CHECK FOR CONFIRMATION: Did user confirm a pending scheduling request?
-        confirmation_check = detect_confirmation(body.text)
-        if confirmation_check:
-            is_confirmation, option_number = confirmation_check
-            pending_request = await get_pending_request(user_id)
-
-            if pending_request:
-                # User is confirming a pending scheduling request
-                confirmation_result = await execute_pending_confirmation(
-                    person_id=user_id,
-                    request_id=str(pending_request["id"]),
-                    option_number=option_number or 1,
-                )
-                scheduling_confirmation_result = confirmation_result
-                scheduling_context["confirmation"] = {
-                    "status": confirmation_result.status,
-                    "message": confirmation_result.message,
-                    "created_event": confirmation_result.created_event,
-                }
-                scheduling_intent_detected = "confirmed"
-                logger.info(
-                    "[turn_v2] Scheduling confirmation executed: status=%s",
-                    confirmation_result.status,
-                )
-
-        # 1. EXPLICIT SCHEDULING: Detect scheduling intent in user message
-        if not scheduling_confirmation_result:
-            scheduling_intent_detected = detect_scheduling_intent(body.text)
-
-        if (
-            scheduling_intent_detected
-            and scheduling_intent_detected != SchedulingIntent.QUERY
-            and scheduling_intent_detected != "confirmed"
-            and not scheduling_confirmation_result
-        ):
-            # Parse the scheduling request for details
-            parsed_request = await parse_scheduling_request(user_id, body.text, scheduling_intent_detected)
-            scheduling_context["intent"] = scheduling_intent_detected.value
-            scheduling_context["parsed_request"] = {
-                "event_type": parsed_request.event_type,
-                "participants": parsed_request.participants,
-                "timeframe": parsed_request.timeframe,
-                "duration_minutes": parsed_request.duration_minutes,
-                "location_hint": parsed_request.location_hint,
-                "missing_slots": parsed_request.missing_slots,
-            }
-
-            # Find best times for the request
-            if parsed_request.participants:
-                # Look up relationship for participant context
-                for participant in parsed_request.participants[:2]:  # Limit to 2
-                    relationship = await get_relationship_for_scheduling(user_id, participant)
-                    if relationship:
-                        # usual_activities comes as JSON from the query
-                        usual_activities = relationship.get("usual_activities") or []
-                        if isinstance(usual_activities, str):
-                            import json as json_mod
-                            try:
-                                usual_activities = json_mod.loads(usual_activities)
-                            except Exception:
-                                usual_activities = []
-                        scheduling_context.setdefault("participant_context", []).append({
-                            "name": participant,
-                            "last_seen": str(relationship.get("last_seen_at")) if relationship.get("last_seen_at") else None,
-                            "relationship_type": relationship.get("relationship_type"),
-                            "usual_activities": usual_activities if isinstance(usual_activities, list) else [],
-                        })
-
-                    # ==========================================================
-                    # SAKHI MESH CHECK: Does participant have Sakhi?
-                    # ==========================================================
-                    # Check if participant has a Sakhi profile (Sakhi-to-Sakhi coordination)
-                    try:
-                        # Try to find participant's Sakhi profile by name or handle
-                        participant_handle = participant.lower().replace(" ", "_")
-                        mesh_profile = await find_by_handle(participant_handle)
-
-                        if mesh_profile:
-                            # They have Sakhi! Check if connected
-                            mesh_connected = await are_connected(user_id, mesh_profile.person_id)
-
-                            if mesh_connected:
-                                # Full Sakhi-to-Sakhi coordination available
-                                trust = await get_trust_level(user_id, mesh_profile.person_id)
-                                scheduling_context.setdefault("mesh_coordination", {})
-                                scheduling_context["mesh_coordination"][participant] = {
-                                    "has_sakhi": True,
-                                    "connected": True,
-                                    "trust_level": trust.value if trust else "friend",
-                                    "sakhi_handle": mesh_profile.sakhi_handle,
-                                    "shares_availability": mesh_profile.share_availability,
-                                    "can_auto_coordinate": True,
-                                    "message": f"@{mesh_profile.sakhi_handle} is on Sakhi! I can coordinate directly with their Sakhi.",
-                                }
-                                logger.info(
-                                    "[turn_v2] Sakhi mesh detected: participant=%s handle=%s trust=%s",
-                                    participant,
-                                    mesh_profile.sakhi_handle,
-                                    trust.value if trust else "friend",
-                                )
-                            else:
-                                # Has Sakhi but not connected - suggest connecting
-                                scheduling_context.setdefault("mesh_coordination", {})
-                                scheduling_context["mesh_coordination"][participant] = {
-                                    "has_sakhi": True,
-                                    "connected": False,
-                                    "can_auto_coordinate": False,
-                                    "sakhi_handle": mesh_profile.sakhi_handle,
-                                    "message": f"@{mesh_profile.sakhi_handle} is on Sakhi but you're not connected yet. Would you like to send a connection request?",
-                                }
-                    except Exception as mesh_exc:
-                        logger.debug("[turn_v2] Mesh check failed for %s: %s", participant, mesh_exc)
-
-            # Get availability suggestions
-            try:
-                best_times = await find_best_times(
-                    person_id=user_id,
-                    event_type=parsed_request.event_type or "meeting",
-                    duration_minutes=parsed_request.duration_minutes or 60,
-                    days_ahead=7,
-                    max_suggestions=3,
-                )
-                scheduling_context["suggested_times"] = [
-                    {
-                        "start": str(t.get("start")),
-                        "end": str(t.get("end")),
-                        "quality": t.get("quality"),
-                        "quality_reason": t.get("quality_reason"),
-                    }
-                    for t in best_times[:3]
-                ]
-
-                # Save pending request so we can confirm on next turn
-                if best_times:
-                    try:
-                        pending_id = await save_pending_request(
-                            person_id=user_id,
-                            original_request=body.text,
-                            parsed=parsed_request,
-                            proposed_times=best_times[:3],
-                        )
-                        scheduling_context["pending_request_id"] = pending_id
-                        logger.info("[turn_v2] Saved pending scheduling request: %s", pending_id)
-                    except Exception as save_exc:
-                        logger.warning("[turn_v2] Failed to save pending request: %s", save_exc)
-
-            except Exception as avail_exc:
-                logger.warning("[turn_v2] Availability lookup failed: %s", avail_exc)
-
-        # 2. CALENDAR QUERY: "What's my week look like?"
-        elif scheduling_intent_detected == SchedulingIntent.QUERY:
-            scheduling_context["intent"] = "query"
-            try:
-                week_summary = await get_week_summary(user_id)
-                scheduling_context["week_summary"] = week_summary
-            except Exception:
-                pass
-            try:
-                today_calendar = await get_events_for_day(user_id)
-                scheduling_context["today_events"] = [
-                    {
-                        "title": e.title,
-                        "start": str(e.start_time),
-                        "end": str(e.end_time),
-                        "event_type": e.event_type,
-                        "relationship_note": e.relationship_note,
-                    }
-                    for e in today_calendar[:5]
-                ]
-            except Exception:
-                pass
-
-        # 3. PROACTIVE JOURNAL HINTS: Detect scheduling-related wishes in journal
-        journal_scheduling_patterns = [
-            "should visit", "should see", "need to catch up with",
-            "want to meet", "thinking about visiting", "miss seeing",
-            "haven't seen", "been a while since", "should call",
-        ]
-        detected_hints = [p for p in journal_scheduling_patterns if p in text_lower]
-        if detected_hints and not scheduling_intent_detected:
-            scheduling_context["journal_hint"] = {
-                "detected_patterns": detected_hints,
-                "suggestion_type": "proactive",
-            }
-            scheduling_intent_detected = "journal_hint"
-
-        # 4. RELATIONSHIP NUDGES: People you haven't connected with recently
-        # Only surface if no explicit scheduling intent (don't overwhelm)
-        if not scheduling_context.get("intent"):
-            try:
-                nudge_relationships = await get_relationships_needing_attention(
-                    user_id, limit=2
-                )
-                if nudge_relationships:
-                    relationship_nudges = [
-                        {
-                            "name": r.get("name"),
-                            "last_seen": str(r.get("last_seen_at")) if r.get("last_seen_at") else None,
-                            "days_since": r.get("days_since_contact"),
-                            "relationship_type": r.get("relationship_type"),
-                            "frequency_target": r.get("frequency_target"),
-                        }
-                        for r in nudge_relationships
-                    ]
-                    scheduling_context["relationship_nudges"] = relationship_nudges
-            except Exception as nudge_exc:
-                logger.warning("[turn_v2] Relationship nudge lookup failed: %s", nudge_exc)
-
-        if scheduling_context:
-            logger.info(
-                "[turn_v2] Scheduling context loaded: intent=%s nudges=%d",
-                scheduling_intent_detected,
-                len(relationship_nudges),
-            )
-
-    except _SkipModule:
-        pass  # Router skipped this module
-    except Exception as sched_exc:
-        logger.warning("[turn_v2] Scheduling context loading failed: %s", sched_exc)
-        scheduling_context = {}
-
-    scheduling_guard = (
-        "CRITICAL: User is the FINAL decision maker for all scheduling. "
-        "Sakhi SUGGESTS and OFFERS options, never acts without explicit confirmation. "
-        "For explicit scheduling requests: present 2-3 time options with quality context, "
-        "then ask 'Would you like me to block one of these?' "
-        "For journal hints: gently offer 'Would you like me to help schedule that?' "
-        "For relationship nudges: only mention if natural, e.g., 'By the way, you mentioned wanting to see Alex...' "
-        "For calendar queries: summarize with relationship/energy context. "
-        "SAKHI MESH: If mesh_coordination shows has_sakhi=True and connected=True, mention "
-        "'Their Sakhi can help find times that work for both of you' and offer to coordinate. "
-        "If has_sakhi=True but connected=False, suggest 'They're on Sakhi - connect to coordinate easier.' "
-        "NEVER create calendar events without explicit 'yes' or 'confirm' from user."
-    )
+    # scheduling logic removed — restore from git when re-enabling
 
     # ==========================================================================
     # Agent Task Integration
@@ -1760,72 +1236,13 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     except Exception as continuity_exc:
         logger.warning("[turn_v2] Continuity pack build failed (non-fatal): %s", continuity_exc)
 
-    # ── GOVERNANCE GATE ──────────────────────────────────────────────────
-    # Evaluate constraints, drift, contradictions via kala GovernanceGate.
-    # Non-fatal: if governance fails the turn proceeds normally.
+    # ── GOVERNANCE GATE: parked for continuity MVP ───────────────────────
+    # Loads constraints + objectives + 14-day event ledger (3 DB reads) then
+    # runs Kala gate.evaluate(). For the MVP showcase the user has no constraints
+    # set up so every turn returns action="allow" and governance_guard="".
+    # Restore when onboarding surfaces constraint/objective setup.
     governance_decision = None
     governance_guard = ""
-    action_type = "conversation_turn"
-    try:
-        from sakhi.apps.api.services.governance.service import (
-            classify_action_type,
-            evaluate_turn,
-            build_governance_guard,
-            log_turn_event,
-        )
-
-        action_type = classify_action_type(
-            body.text,
-            friction_state_computed.get("state"),
-        )
-
-        # Use IST for demo (person timezone when available)
-        import pytz
-        _person_tz = pytz.timezone("Asia/Kolkata")
-        local_now = datetime.datetime.now(_person_tz)
-        proposed_hour = local_now.hour
-
-        gov_action_context = {
-            "entity_id": user_id,
-            "proposed_action": action_type,
-            "proposed_hour": proposed_hour,
-            "user_text": body.text,
-            "friction_state": friction_state_computed.get("state", "balanced"),
-            "drift_percentage": drift_percentage or 0,
-        }
-
-        # Log PROPOSED event (before gate evaluation)
-        await log_turn_event(
-            person_id=user_id,
-            action=action_type,
-            event_type="proposed",
-            actor="llm",
-            data=gov_action_context,
-        )
-
-        gov_drift_data = {
-            "drift_percentage": drift_percentage or 0,
-            "severity": friction_state_computed.get("state", "balanced"),
-        } if drift_percentage else None
-
-        governance_decision = await evaluate_turn(
-            person_id=user_id,
-            action_context=gov_action_context,
-            drift_data=gov_drift_data,
-        )
-        governance_guard = build_governance_guard(governance_decision)
-        metadata_payload["governance_decision"] = governance_decision
-        metadata_payload["governance_guard"] = governance_guard
-
-        logger.info(
-            "[turn_v2] governance: action=%s decision=%s violations=%d",
-            action_type,
-            governance_decision.get("action", "allow"),
-            len(governance_decision.get("violations", [])),
-        )
-
-    except Exception as gov_exc:
-        logger.warning("[turn_v2] Governance evaluation failed (non-fatal): %s", gov_exc)
 
     # background task routing refresh when new task intent might be present
     try:

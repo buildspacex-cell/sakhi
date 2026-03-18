@@ -41,8 +41,18 @@ def test_whole_story_uses_related_depth_from_correlation_payload():
     selected_topic = {
         "anchor": "sakhi",
         "selected_count": 10,
+        "primary_selected_count": 10,
         "surface": {"detail_allowed": True},
         "arc": {"end_ts": "2026-03-10T11:00:00+00:00"},
+        "entry_tags": {},
+    }
+    related_topic = {
+        "anchor": "career",
+        "selected_count": 7,
+        "primary_selected_count": 7,
+        "surface": {"detail_allowed": True},
+        "arc": {"end_ts": "2026-03-10T10:00:00+00:00"},
+        "entry_tags": {},
     }
     correlations = [
         {
@@ -63,12 +73,14 @@ def test_whole_story_uses_related_depth_from_correlation_payload():
     cross_context = cross_topic._build_cross_context_signal(
         selected_topic=selected_topic,
         selected_anchor="sakhi",
+        topics_map={"sakhi": selected_topic, "career": related_topic},
         correlations=correlations,
         now=now,
     )
     whole_story = cross_topic._build_whole_story_signal(
         selected_topic=selected_topic,
         cross_context=cross_context,
+        topics_map={"sakhi": selected_topic, "career": related_topic},
     )
 
     assert cross_context["ready"] is True
@@ -662,15 +674,25 @@ def test_direction_for_level_neutral():
 # ---------------------------------------------------------------------------
 
 
-def test_build_cross_context_signal_blocks_when_detail_not_allowed():
+def test_build_cross_context_signal_blocks_when_primary_is_not_dominant():
     selected_topic = {
-        "surface": {"detail_allowed": False},
+        "surface": {"detail_allowed": False, "mirror_allowed": True},
         "selected_count": 20,
+        "primary_selected_count": 20,
         "arc": {"end_ts": "2026-03-10T12:00:00+00:00"},
     }
     signal = cross_topic._build_cross_context_signal(
         selected_topic=selected_topic,
         selected_anchor="sakhi",
+        topics_map={
+            "sakhi": selected_topic,
+            "career": {
+                "surface": {"detail_allowed": True, "mirror_allowed": True},
+                "selected_count": 16,
+                "primary_selected_count": 16,
+                "arc": {"end_ts": "2026-03-09T12:00:00+00:00"},
+            },
+        },
         correlations=[],
         now=datetime(2026, 3, 10, 12, 0, tzinfo=UTC),
     )
@@ -703,6 +725,7 @@ def test_build_cross_context_signal_threads_inactive_when_stale():
     signal = cross_topic._build_cross_context_signal(
         selected_topic=selected_topic,
         selected_anchor="sakhi",
+        topics_map={"sakhi": selected_topic, "career": {"selected_count": 8}},
         correlations=correlations,
         now=now,
     )
@@ -735,11 +758,54 @@ def test_build_cross_context_signal_insufficient_overlap_score():
     signal = cross_topic._build_cross_context_signal(
         selected_topic=selected_topic,
         selected_anchor="sakhi",
+        topics_map={"sakhi": selected_topic, "career": {"selected_count": 8}},
         correlations=correlations,
         now=now,
     )
     assert signal["ready"] is False
     assert signal["reason"] == "insufficient_overlap"
+
+
+def test_build_cross_context_signal_allows_dominant_mirror_safe_primary():
+    now = datetime(2026, 3, 10, 12, 0, tzinfo=UTC)
+    selected_topic = {
+        "surface": {"detail_allowed": False, "mirror_allowed": True},
+        "selected_count": 18,
+        "primary_selected_count": 18,
+        "arc": {"end_ts": "2026-03-09T00:00:00+00:00"},
+    }
+    related_topic = {
+        "surface": {"detail_allowed": True, "mirror_allowed": True},
+        "selected_count": 7,
+        "primary_selected_count": 7,
+        "arc": {"end_ts": "2026-03-08T00:00:00+00:00"},
+    }
+    correlations = [
+        {
+            "related_topic_key": "career",
+            "related_topic_label": "Career",
+            "related_selected_count": 7,
+            "related_end_ts": "2026-03-08T00:00:00+00:00",
+            "combined_score": 0.52,
+            "temporal_score": 0.61,
+            "semantic_score": 0.42,
+            "facet_score": 0.31,
+            "directional_score": 0.3,
+            "correlation_types": ["temporal"],
+            "overlap_pairs": 4,
+        }
+    ]
+
+    signal = cross_topic._build_cross_context_signal(
+        selected_topic=selected_topic,
+        selected_anchor="sakhi",
+        topics_map={"sakhi": selected_topic, "career": related_topic},
+        correlations=correlations,
+        now=now,
+    )
+
+    assert signal["ready"] is True
+    assert signal["correlated_topic_key"] == "career"
 
 
 # ---------------------------------------------------------------------------
@@ -757,7 +823,9 @@ def test_build_whole_story_signal_not_ready_propagates_cross_context_reason():
         "correlation_score": 0.2,
     }
     ws = cross_topic._build_whole_story_signal(
-        selected_topic=selected_topic, cross_context=cross_ctx
+        selected_topic=selected_topic,
+        cross_context=cross_ctx,
+        topics_map={"sakhi": selected_topic, "career": {"selected_count": 8}},
     )
     assert ws is not None
     assert ws["ready"] is False
@@ -765,7 +833,7 @@ def test_build_whole_story_signal_not_ready_propagates_cross_context_reason():
 
 
 def test_build_whole_story_signal_insufficient_primary_depth():
-    selected_topic = {"anchor": "sakhi", "selected_count": 4}  # below min 8
+    selected_topic = {"anchor": "sakhi", "selected_count": 4, "primary_selected_count": 4}
     cross_ctx = {
         "ready": True,
         "reason": "ready",
@@ -774,7 +842,9 @@ def test_build_whole_story_signal_insufficient_primary_depth():
         "correlation_score": 0.55,
     }
     ws = cross_topic._build_whole_story_signal(
-        selected_topic=selected_topic, cross_context=cross_ctx
+        selected_topic=selected_topic,
+        cross_context=cross_ctx,
+        topics_map={"sakhi": selected_topic, "career": {"selected_count": 8}},
     )
     assert ws is not None
     assert ws["ready"] is False
@@ -782,20 +852,108 @@ def test_build_whole_story_signal_insufficient_primary_depth():
 
 
 def test_build_whole_story_signal_insufficient_related_depth():
-    selected_topic = {"anchor": "sakhi", "selected_count": 12}
+    selected_topic = {"anchor": "sakhi", "selected_count": 12, "primary_selected_count": 12}
     cross_ctx = {
         "ready": True,
         "reason": "ready",
         "correlated_topic_key": "career",
-        "correlated_selected_count": 3,  # below min 6
+        "correlated_selected_count": 3,  # below min 5
         "correlation_score": 0.55,
     }
     ws = cross_topic._build_whole_story_signal(
-        selected_topic=selected_topic, cross_context=cross_ctx
+        selected_topic=selected_topic,
+        cross_context=cross_ctx,
+        topics_map={"sakhi": selected_topic, "career": {"selected_count": 3}},
     )
     assert ws is not None
     assert ws["ready"] is False
     assert ws["reason"] == "insufficient_depth"
+
+
+def test_build_whole_story_signal_dedupes_shared_moments_across_topics():
+    shared_ref = "journal:11111111-1111-4111-8111-111111111111"
+    selected_topic = {
+        "anchor": "sakhi",
+        "selected_count": 12,
+        "primary_selected_count": 12,
+        "arc": {
+            "event_refs": [
+                {
+                    "day": 1,
+                    "ts": "2026-03-01T10:00:00+00:00",
+                    "source_ref": shared_ref,
+                    "excerpt": "Family pressure spilled into Sakhi work.",
+                },
+                {
+                    "day": 2,
+                    "ts": "2026-03-02T10:00:00+00:00",
+                    "source_ref": "journal:22222222-2222-4222-8222-222222222222",
+                    "excerpt": "Investor planning.",
+                },
+            ]
+        },
+        "entry_tags": {
+            "1|2026-03-01T10:00:00+00:00": {
+                "source_ref": shared_ref,
+                "facet": "focus",
+                "stance": "toward",
+            },
+            "2|2026-03-02T10:00:00+00:00": {
+                "source_ref": "journal:22222222-2222-4222-8222-222222222222",
+                "facet": "focus",
+                "stance": "toward",
+            },
+        },
+    }
+    related_topic = {
+        "anchor": "family",
+        "selected_count": 5,
+        "primary_selected_count": 5,
+        "arc": {
+            "event_refs": [
+                {
+                    "day": 1,
+                    "ts": "2026-03-01T10:00:00+00:00",
+                    "source_ref": shared_ref,
+                    "excerpt": "Family pressure spilled into Sakhi work.",
+                },
+                {
+                    "day": 3,
+                    "ts": "2026-03-03T10:00:00+00:00",
+                    "source_ref": "journal:33333333-3333-4333-8333-333333333333",
+                    "excerpt": "Care conversation.",
+                },
+            ]
+        },
+        "entry_tags": {
+            "1|2026-03-01T10:00:00+00:00": {
+                "source_ref": shared_ref,
+                "facet": "caregiving",
+                "stance": "away",
+            },
+            "3|2026-03-03T10:00:00+00:00": {
+                "source_ref": "journal:33333333-3333-4333-8333-333333333333",
+                "facet": "caregiving",
+                "stance": "toward",
+            },
+        },
+    }
+    cross_ctx = {
+        "ready": True,
+        "reason": "ready",
+        "correlated_topic_key": "family",
+        "correlated_selected_count": 5,
+        "correlation_score": 0.61,
+    }
+
+    ws = cross_topic._build_whole_story_signal(
+        selected_topic=selected_topic,
+        cross_context=cross_ctx,
+        topics_map={"sakhi": selected_topic, "family": related_topic},
+    )
+
+    assert ws is not None
+    assert ws["selected_count_total"] == 3
 
 
 # ---------------------------------------------------------------------------

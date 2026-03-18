@@ -95,12 +95,14 @@ async def compute_cross_topic_signals(
     cross_context = _build_cross_context_signal(
         selected_topic=selected,
         selected_anchor=selected_anchor,
+        topics_map=topics_map,
         correlations=correlations,
         now=now,
     )
     whole_story = _build_whole_story_signal(
-        selected_topic=selected_topic,
+        selected_topic=selected,
         cross_context=cross_context,
+        topics_map=topics_map,
     )
     life_dimensions = await get_life_dimensions(
         person_id=person_id,
@@ -301,21 +303,25 @@ async def _load_or_compute_correlations(
     window_end: str,
     now: datetime,
 ) -> list[dict[str, Any]]:
-    selected_count = int(selected_topic.get("selected_count") or 0)
-    selected_surface = selected_topic.get("surface") or {}
-    if (
-        not bool(selected_surface.get("detail_allowed"))
-        or selected_count
-        < CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.cross_context_min_moments
+    if not _primary_topic_allows_linked_story(
+        selected_anchor=selected_anchor,
+        selected_topic=selected_topic,
+        topics_map=topics_map,
     ):
         return []
 
     eligible_topics = {
         anchor: topic
         for anchor, topic in topics_map.items()
-        if bool((topic.get("surface") or {}).get("detail_allowed"))
-        and int(topic.get("selected_count") or 0)
-        >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.cross_context_min_moments
+        if (
+            _primary_topic_allows_linked_story(
+                selected_anchor=anchor,
+                selected_topic=topic,
+                topics_map=topics_map,
+            )
+            if anchor == selected_anchor
+            else _related_topic_allows_linked_story(topic)
+        )
     }
     if selected_anchor not in eligible_topics:
         return []
@@ -428,7 +434,7 @@ def _normalize_correlation_row(
     return {
         "related_topic_key": related_anchor,
         "related_topic_label": related_label,
-        "related_selected_count": int(related_topic.get("selected_count") or 0),
+        "related_selected_count": _topic_story_count(related_topic),
         "related_end_ts": str(((related_topic.get("arc") or {}).get("end_ts")) or ""),
         "combined_score": float(row.get("combined_score") or 0.0),
         "temporal_score": float(row.get("temporal_score") or 0.0),
@@ -514,7 +520,7 @@ def _compute_correlation_metrics(
     related_topic_label = str(
         topic_b.get("label") or anchor_b.replace("_", " ").title()
     ).strip()
-    related_selected_count = int(topic_b.get("selected_count") or 0)
+    related_selected_count = _topic_story_count(topic_b)
     related_end_ts = str(((topic_b.get("arc") or {}).get("end_ts")) or "")
 
     return {
@@ -617,15 +623,14 @@ def _build_cross_context_signal(
     *,
     selected_topic: dict[str, Any],
     selected_anchor: str,
+    topics_map: dict[str, dict[str, Any]],
     correlations: list[dict[str, Any]],
     now: datetime,
 ) -> dict[str, Any]:
-    selected_surface = selected_topic.get("surface") or {}
-    selected_count = int(selected_topic.get("selected_count") or 0)
-    if (
-        not bool(selected_surface.get("detail_allowed"))
-        or selected_count
-        < CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.cross_context_min_moments
+    if not _primary_topic_allows_linked_story(
+        selected_anchor=selected_anchor,
+        selected_topic=selected_topic,
+        topics_map=topics_map,
     ):
         return {
             "ready": False,
@@ -688,14 +693,19 @@ def _build_whole_story_signal(
     *,
     selected_topic: dict[str, Any],
     cross_context: dict[str, Any] | None,
+    topics_map: dict[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if not cross_context:
         return None
     primary_anchor = canonicalize_anchor(selected_topic.get("anchor"))
     related_anchor = str(cross_context.get("correlated_topic_key") or "").strip()
-    primary_count = int(selected_topic.get("selected_count") or 0)
+    primary_count = _topic_story_count(selected_topic)
     related_count = int(cross_context.get("correlated_selected_count") or 0)
-    total = max(0, primary_count + related_count)
+    related_topic = topics_map.get(related_anchor) or {}
+    total = _whole_story_unique_moment_count(
+        primary_topic=selected_topic,
+        related_topic=related_topic,
+    )
 
     if not cross_context.get("ready"):
         reason = str(cross_context.get("reason") or "insufficient_overlap")
@@ -723,6 +733,94 @@ def _build_whole_story_signal(
             float(cross_context.get("correlation_score") or 0.0), 4
         ),
     }
+
+
+def _topic_story_count(topic: dict[str, Any]) -> int:
+    if "primary_selected_count" in topic:
+        return int(topic.get("primary_selected_count") or 0)
+    return int(topic.get("selected_count") or 0)
+
+
+def _primary_topic_allows_linked_story(
+    *,
+    selected_anchor: str,
+    selected_topic: dict[str, Any],
+    topics_map: dict[str, dict[str, Any]],
+) -> bool:
+    surface = selected_topic.get("surface") or {}
+    selected_count = _topic_story_count(selected_topic)
+    if (
+        bool(surface.get("detail_allowed"))
+        and selected_count
+        >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.cross_context_min_moments
+    ):
+        return True
+    if not bool(surface.get("mirror_allowed")):
+        return False
+    if (
+        selected_count
+        < CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.whole_story_min_primary_moments
+    ):
+        return False
+    return _primary_topic_is_dominant(
+        selected_anchor=selected_anchor,
+        selected_topic=selected_topic,
+        topics_map=topics_map,
+    )
+
+
+def _related_topic_allows_linked_story(topic: dict[str, Any]) -> bool:
+    surface = topic.get("surface") or {}
+    count = _topic_story_count(topic)
+    if bool(surface.get("detail_allowed")):
+        return (
+            count
+            >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.whole_story_min_related_moments
+        )
+    if not bool(surface.get("mirror_allowed")):
+        return False
+    return (
+        count
+        >= CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.whole_story_min_related_moments
+    )
+
+
+def _primary_topic_is_dominant(
+    *,
+    selected_anchor: str,
+    selected_topic: dict[str, Any],
+    topics_map: dict[str, dict[str, Any]],
+) -> bool:
+    selected_count = _topic_story_count(selected_topic)
+    runner_up = max(
+        (
+            _topic_story_count(topic)
+            for anchor, topic in topics_map.items()
+            if anchor != selected_anchor
+        ),
+        default=0,
+    )
+    if runner_up <= 0:
+        return False
+    return selected_count >= math.ceil(
+        runner_up
+        * CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.whole_story_primary_dominance_ratio
+    )
+
+
+def _whole_story_unique_moment_count(
+    *,
+    primary_topic: dict[str, Any],
+    related_topic: dict[str, Any],
+) -> int:
+    identities = {
+        _moment_identity(moment)
+        for moment in _included_moments(primary_topic) + _included_moments(related_topic)
+    }
+    identities.discard("")
+    if identities:
+        return len(identities)
+    return max(0, _topic_story_count(primary_topic) + _topic_story_count(related_topic))
 
 
 async def _load_cached_life_dimensions(

@@ -139,7 +139,7 @@ export default function ConversationScreen() {
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isRunningDeepAnswer, setIsRunningDeepAnswer] = useState(false);
-  const [deepReflectionStatus, setDeepReflectionStatus] = useState("");
+  const [, setDeepReflectionStatus] = useState("");
   const [activeContinuitySignal, setActiveContinuitySignal] = useState<ContinuitySignal | null>(null);
   const [latestUserMessage, setLatestUserMessage] = useState("");
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
@@ -184,26 +184,8 @@ export default function ConversationScreen() {
     }
   }, [messages]);
 
-  const prevDeepReadyRef = useRef(false);
-  useEffect(() => {
-    if (deepAnswerReady && !prevDeepReadyRef.current) {
-      Analytics.deepButtonShown({ mode: "whole_story" });
-    }
-    prevDeepReadyRef.current = deepAnswerReady;
-  }, [deepAnswerReady]);
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
-  };
-
-  const displayName = user?.fullName?.split(" ")[0] || "";
   const wholeStorySignal = activeContinuitySignal?.whole_story;
-  const deepThreadLabel =
-    activeContinuitySignal?.topic_label || activeContinuitySignal?.topic_key || "this thread";
-  const wholeStoryTopics = useMemo(
+const wholeStoryTopics = useMemo(
     () => wholeStorySignal?.selected_topics || [],
     [wholeStorySignal?.selected_topics],
   );
@@ -224,39 +206,23 @@ export default function ConversationScreen() {
   const deepAnswerReady = Boolean(
     activeContinuitySignal?.topic_key && hasDeepQuery && wholeStoryReady,
   );
-  const deepStatusHint = (() => {
-    if (!activeContinuitySignal?.topic_key) {
-      return "Deep Reflect will appear when this chat forms a clear thread.";
+
+  const prevDeepReadyRef = useRef(false);
+  useEffect(() => {
+    if (deepAnswerReady && !prevDeepReadyRef.current) {
+      Analytics.deepButtonShown({ mode: "whole_story" });
     }
-    if (!hasDeepQuery) {
-      return "Send one message to set your current question.";
-    }
-    if (wholeStoryReady) {
-      const primary = deepThreadLabel;
-      const linked = wholeStorySelectedTopics
-        .filter((topic) => topic !== activeContinuitySignal.topic_key)
-        .slice(0, 2)
-        .join(", ");
-      if (linked) {
-        return `Deep Reflect is ready across ${primary} and ${linked}.`;
-      }
-      return `Deep Reflect is ready with whole-story context for ${primary}.`;
-    }
-    if (wholeStorySignal && !wholeStorySignal.ready) {
-      const reason = wholeStorySignal.reason || "insufficient_depth";
-      if (reason === "insufficient_overlap") {
-        return "Deep Reflect is waiting for clearer links across your active threads.";
-      }
-      if (reason === "threads_inactive") {
-        return "Deep Reflect will unlock after more recent activity across related threads.";
-      }
-      if (reason === "insufficient_depth") {
-        return "Deep Reflect unlocks once this thread has deeper linked history.";
-      }
-      return "Deep Reflect unlocks once this thread has enough linked history.";
-    }
-    return "Deep Reflect unlocks once a second thread clearly links to this one.";
-  })();
+    prevDeepReadyRef.current = deepAnswerReady;
+  }, [deepAnswerReady]);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const displayName = user?.fullName?.split(" ")[0] || "";
 
   const ensureContinuityPolicyEnabled = useCallback(async () => {
     if (!personId) return;
@@ -738,43 +704,30 @@ export default function ConversationScreen() {
                   <ActivityIndicator size="small" color={palette.muted} />
                 </View>
               )}
+              {deepAnswerReady && !isSending && (
+                <Pressable
+                  style={[styles.deepInlineCard, isRunningDeepAnswer && styles.deepInlineCardRunning]}
+                  onPress={() => void handleRunDeepAnswer()}
+                  disabled={isRunningDeepAnswer}
+                >
+                  {isRunningDeepAnswer ? (
+                    <View style={styles.deepInlineContent}>
+                      <ActivityIndicator size="small" color="#f5dcb2" />
+                      <Text style={styles.deepInlineText}>Reading across your threads...</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.deepInlineContent}>
+                      <Ionicons name="sparkles" size={13} color="#ffe6bf" />
+                      <Text style={styles.deepInlineText}>Run Deep</Text>
+                    </View>
+                  )}
+                </Pressable>
+              )}
             </>
           )}
         </ScrollView>
 
         <View style={styles.inputArea}>
-          {hasMessages ? (
-            <>
-              <View style={styles.deepActionRow}>
-                <View style={[styles.deepInfoPill, deepAnswerReady && styles.deepInfoPillReady]}>
-                  <Text style={styles.deepInfoText}>{deepStatusHint}</Text>
-                </View>
-                <Pressable
-                  style={[
-                    styles.deepRunButton,
-                    (!deepAnswerReady || isRunningDeepAnswer) && styles.deepRunButtonDisabled,
-                  ]}
-                  onPress={() => void handleRunDeepAnswer()}
-                  disabled={!deepAnswerReady || isRunningDeepAnswer}
-                >
-                  {isRunningDeepAnswer ? (
-                    <View style={styles.deepRunButtonContent}>
-                      <ActivityIndicator size="small" color="#f5dcb2" />
-                      <Text style={styles.deepRunButtonText}>Reading...</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.deepRunButtonContent}>
-                      <Ionicons name="sparkles" size={14} color="#ffe6bf" />
-                      <Text style={styles.deepRunButtonText}>Run Deep</Text>
-                    </View>
-                  )}
-                </Pressable>
-              </View>
-              {deepReflectionStatus ? (
-                <Text style={styles.deepStatusText}>Deep Reflect status: {deepReflectionStatus}</Text>
-              ) : null}
-            </>
-          ) : null}
           <View style={styles.inputRow}>
             <TextInput
               style={styles.textInput}
@@ -1061,6 +1014,36 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(78, 56, 24, 0.58)",
     borderColor: "rgba(233, 193, 128, 0.4)",
     borderBottomLeftRadius: 8,
+  },
+  deepInlineCard: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(243, 214, 164, 0.55)",
+    backgroundColor: "rgba(117, 86, 42, 0.55)",
+    shadowColor: "#c98f45",
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  deepInlineCardRunning: {
+    opacity: 0.75,
+  },
+  deepInlineContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  deepInlineText: {
+    color: "#fce7c3",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   deepBadge: {
     color: "#f0d5a6",

@@ -65,6 +65,7 @@ Commit observed: `02ede6a`
   - `sakhi/apps/api/routes/turn_v2.py:1643`
   - `sakhi/apps/api/routes/turn_v2.py:1645`.
 - Net: routing is improved by triage/evolution intents, but intent-driven tone and trigger-specific shaping remain underpowered.
+- **2026-03-19 update:** Moot for continuity MVP. The tone/metadata fields this was underpowering (microreg, empathy) are now backgrounded and no longer on the hot path. Continuity pack drives response quality, not intent-derived tone shaping. Revisit when rebuilding tone/empathy modules over the continuity foundation.
 
 ### P1: Deterministic context is integrated but still partially duplicated
 - Turn loads brain state directly:
@@ -77,11 +78,13 @@ Commit observed: `02ede6a`
   - friction recompute `sakhi/apps/api/routes/turn_v2.py:1035`
   - body state recompute `sakhi/apps/api/routes/turn_v2.py:1200`.
 - Impact: avoidable DB/compute overhead and potential drift between similar fields.
+- **2026-03-19 update:** Fully resolved. `load_deterministic_context()` replaced with `DeterministicContext()` empty stub — zero DB reads, zero duplication. All consuming modules (moment_model, Tier 1 fast compute, friction/body) were parked for the continuity MVP, making the entire loader dead weight.
 
 ### P2: Post-reply persistence remains non-durable
 - Critical post-reply work is launched with `asyncio.create_task`:
   - `sakhi/apps/api/routes/turn_v2.py:1801`.
 - Process restarts or cancellation can drop updates (unless jobs were already enqueued to durable workers).
+- **2026-03-19 update:** Accepted for continuity MVP. The post-reply tasks (microreg, tone, empathy refresh) are low-stakes state updates — losing one on a process restart doesn't break continuity or corrupt user data. The continuity pack reads from `conversation_turns` which is persisted synchronously via `append_turn` before the fire-and-forget block. Address when moving to production hardening.
 
 ### P2: Coverage still misses route-level contract failures
 - Unit tests for router/reasoner are good and currently passing.
@@ -89,6 +92,7 @@ Commit observed: `02ede6a`
   - reflection trace path validity,
   - session compression enqueue path,
   - metadata contract from `turn_v2` to `build_prompt`.
+- **2026-03-19 update:** Accepted for continuity MVP. Reflection trace is parked. Session compression enqueue is the one live gap — worth a smoke test before investor demo to confirm sessions accumulate and compress correctly after 16 turns. Full route-level contract tests are post-MVP work.
 
 ## Test/Check Result Snapshot
 - `pytest` status: passing for selected service suites.
@@ -112,3 +116,35 @@ Overall: **strongly improved architecture fit, but not production-clean until th
    - Use one source for brain/friction/body in the route to avoid duplicated computation and drift.
 4. Hardening:
    - Move critical post-reply writes to guaranteed durable queue handoff.
+
+---
+
+## MVP Pipeline Simplification (2026-03-19)
+
+To focus the pipeline on continuity for the investor MVP, the following modules were parked in `turn_v2.py`. All code is preserved in git — restore from history when building these features over the continuity foundation.
+
+### Parked (stubbed to empty, no runtime cost)
+
+| Module | What it did | Where to restore |
+|---|---|---|
+| `ALL_MODULES` routing | Every turn ran all modules unconditionally | `active_modules = ALL_MODULES` at line ~929 |
+| Tier 1 fast compute | `compute_fast_narrative`, `compute_alignment`, `compute_fast_rhythm_soul_frame`, `compute_fast_esr_frame`, `compute_fast_identity_momentum`, `compute_fast_identity_timeline_frame` — wrote to DB each turn | Restore block after `active_modules` assignment |
+| Inner dialogue + nudge state | `inner_dialogue_engine.compute_inner_dialogue` + nudge_state DB read | Gated by `SAKHI_ENABLE_INNER_DIALOGUE=1` flag |
+| Micro goals | Background task triggered by intent phrases ("I want", "I need to", etc.) | Restore `asyncio.create_task(micro_goals_service.create_micro_goals(...))` |
+| Moment model + evidence pack | `compute_moment_model`, `select_evidence_anchors` (DB query), `compute_deliberation_scaffold`, reflection trace persistence | Restore `"moment" in active_modules` block |
+| Recommendations | `build_recommendation_context` + `generate_personalized_recommendations` (LLM call when reactive) | Restore recommendations block |
+| Causal reasoning | `explain_friction` (LLM call when drift > 15%), `explain_symptom` (LLM call on symptom keywords) | Restore `"causal" in active_modules` block |
+| Health trends | `compute_health_trends` (14-day DB query, body module) | Restore `"body" in active_modules` block |
+| Email context | `get_email_context_for_conversation`, `get_contact_preferences` | Restore `"email" in active_modules` block |
+| Scheduling | Full scheduling pipeline: confirmation detection, intent parsing, availability lookup, mesh coordination, relationship nudges, calendar query | Restore from git — largest block, search `# scheduling logic removed` |
+
+| `load_deterministic_context()` | 5 DB reads: personal_model row, memory_context_cache check, get_full_friction_state + memory_episodic.state_vector, session_continuity, conversation_turns gap-hours | All output fed parked modules — replaced with `DeterministicContext()` empty stub |
+| Governance gate | 3 DB reads (constraints, objectives, 14-day event ledger) + Kala `gate.evaluate()` — produces constraint/contradiction/objective guard injected into prompt | MVP user has no constraints set up → always returns `action="allow"`, `governance_guard=""` — stubbed to empty. Restore when onboarding surfaces constraint/objective setup |
+| `load_recent_intent_evolution()` | 1 DB read from `intent_evolution` table — returns recent intent evolution records, merged into `combined_intents` → metadata payload | `build_prompt()` never consumed `combined_intents` → dead weight on every turn. Stubbed to `evolution_intents = []`. Restore when rebuilding intent-driven tone/metadata shaping over the continuity foundation |
+
+### Still active (continuity MVP path)
+
+- Session + conversation history load
+- Continuity pack (`build_continuity_pack` — topic arc, anchors, phase path, decision ledger)
+- Recall + patterns (when no topic active)
+- Post-reply fire-and-forget (microreg, tone, empathy refresh)
