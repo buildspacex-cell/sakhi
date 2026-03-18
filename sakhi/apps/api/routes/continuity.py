@@ -58,7 +58,7 @@ class ContinuityReflectionRunRequest(BaseModel):
     person_id: str
     topic_key: str
     window: str = "3650d"
-    mode: Literal["topic_reflection", "deep_answer", "whole_story", "cross_context"] = "topic_reflection"
+    mode: Literal["topic_reflection", "whole_story", "cross_context"] = "topic_reflection"
     topic_keys: list[str] = Field(default_factory=list)
     user_query: str | None = None
 

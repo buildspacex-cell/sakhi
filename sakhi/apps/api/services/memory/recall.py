@@ -297,16 +297,14 @@ async def recall_advanced(
     k: int = 8,
     vector_weight: float = 0.7,
     keyword_weight: float = 0.3,
-    use_hybrid: bool = True,
+    use_hybrid: bool = False,
 ) -> List[Dict[str, Any]]:
     """
-    Advanced memory recall with hybrid search (vector + BM25 keyword).
+    Advanced memory recall — vector-first with recency + diversity weighting.
 
-    Hybrid search borrowed from OpenClaw:
-    - vector_weight (0.7): Semantic similarity dominates
-    - keyword_weight (0.3): Exact keyword matches get boost
-
-    This ensures "Manali cabin" finds the exact mention, not just similar concepts.
+    BM25 hybrid is available but off by default for normal chat. Enable via
+    use_hybrid=True for explicit memory-retrieval queries (proper nouns, exact
+    recall intent detected by the router).
     """
     from sakhi.apps.api.services.memory.bm25 import bm25_search_all, merge_hybrid_scores
 
@@ -408,32 +406,13 @@ async def recall_advanced(
 
 
 async def build_recall_context(person_id: str, text: str) -> str:
-    top_items = await recall_advanced(person_id, text, k=5)
+    """Vector-only recall for normal chat (no BM25, no LLM summarisation)."""
+    top_items = await recall_advanced(person_id, text, k=5, use_hybrid=False)
     if not top_items:
-        return "Relevant memory: none."
+        return ""
 
-    bullets = [f"- [{item['type']}] {item['text']} (s={item['score']:.2f})" for item in top_items]
-    long_context = "Relevant memory:\n" + "\n".join(bullets)
-
-    if len(long_context) < 800:
-        return long_context
-
-    from sakhi.apps.api.core.llm import call_llm
-
-    response = await call_llm(
-        messages=[
-            {"role": "system", "content": "Summarize the recall data into concise memory hints."},
-            {"role": "user", "content": long_context},
-        ],
-        model="gpt-4o-mini",
-        person_id=person_id,
-    )
-
-    if isinstance(response, dict):
-        summary = response.get("reply") or response.get("text") or ""
-    else:
-        summary = str(response)
-    return summary[:1000]
+    bullets = [f"- [{item['type']}] {item['text']}" for item in top_items]
+    return ("Relevant memory:\n" + "\n".join(bullets))[:800]
 
 
 async def memory_recall(person_id: str, query: str, limit: int = 10) -> List[Dict[str, Any]]:

@@ -1,101 +1,33 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type React from "react";
 import type { Route } from "next";
-import DebugPanel from "./DebugPanel";
-import { useVoice, type VoiceState } from "@/lib/hooks/useVoice";
 
 export const dynamic = "force-dynamic";
 
 const palette = {
-  bg: "#0e0f12",
-  fg: "#f4f4f5",
-  muted: "#a1a1aa",
-  accent: "#6366f1",
-  accentHover: "#818cf8",
-  cardBg: "#18191d",
-  border: "#27272a",
-  userBubble: "#27272a",
-  sakhiBubble: "#1e1e24",
-  success: "#22c55e",
-  pulse: "rgba(99, 102, 241, 0.4)",
+  bg: "#060a13",
+  fg: "#f5f7fb",
+  muted: "#a7b0c0",
+  border: "rgba(231, 239, 255, 0.16)",
+  glass: "rgba(20, 28, 40, 0.72)",
+  userBubble: "rgba(62, 87, 132, 0.58)",
+  sakhiBubble: "rgba(27, 36, 54, 0.9)",
+  deepBubble: "rgba(72, 57, 36, 0.9)",
+  systemBubble: "rgba(32, 38, 48, 0.74)",
+  accent: "#d08b4e",
+  accentDim: "rgba(208, 139, 78, 0.28)",
 };
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface MessageInsight {
-  reasoning?: string;
-  memories?: Array<{ text: string; type?: string; score?: number }>;
-  stateContext?: {
-    friction_state?: string;
-    drift_percentage?: number;
-    why_this_advice?: string;
-  };
-}
 
 interface Message {
   id: string;
   role: "user" | "sakhi";
   content: string;
   timestamp: Date;
-  source?: "text" | "voice";
-  // Agent task related
-  isTaskPlan?: boolean;
-  taskPlan?: TaskPlan;
-  isApprovalRequest?: boolean;
-  approvalRequest?: ApprovalRequest;
-  // Insight data for transparency
-  insight?: MessageInsight;
-}
-
-interface TaskPlan {
-  task_id: string;
-  task_type: string;
-  steps: TaskStep[];
-  estimated_duration: number;
-  formatted_plan: string;
-}
-
-interface TaskStep {
-  step_number: number;
-  action: string;
-  description: string;
-  requires_approval?: boolean;
-}
-
-interface ApprovalRequest {
-  request_id: string;
-  action_type: string;
-  action_description: string;
-  risk_level: string;
-  context_summary: string;
-  options: { label: string; value: string }[];
-}
-
-interface AgentTaskContext {
-  new_task?: TaskPlan;
-  awaiting_confirmation?: boolean;
-  execution?: {
-    task_id: string;
-    status: string;
-    current_step: number;
-    total_steps: number;
-    message: string;
-    pending_approval?: {
-      step: number;
-      action: string;
-      description: string;
-      request_id: string;
-    };
-  };
-  confirmed?: boolean;
-  rejected?: boolean;
-  message?: string;
+  kind?: "normal" | "deep" | "system";
 }
 
 interface AuthUser {
@@ -104,38 +36,106 @@ interface AuthUser {
   email: string;
 }
 
-interface FrictionState {
-  friction_state: string | null;
-  friction_name: string | null;
-  drift_percentage: number | null;
-  severity: string | null;
+interface DeepReflectSignal {
+  ready: boolean;
+  reason: string;
+  mirror_allowed: boolean;
+  detail_allowed: boolean;
+  selected_count: number;
+  min_moments: number;
 }
 
-interface ContinuityPolicyState {
-  enabled: boolean;
-  exclusions: Array<{ source?: string; id?: string }>;
+interface WholeStorySignal {
+  ready: boolean;
+  reason: string;
+  selected_topics: string[];
+  selected_count_total: number;
+  correlation_score: number;
 }
 
-interface ContinuityPackDebug {
+interface ContinuitySignal {
   topic_key: string;
   topic_label?: string;
-  arc_compact?: {
-    start_signal?: string;
-    pivots_signal?: string;
-    current_signal?: string;
-  };
-  whole_story?: {
-    ready?: boolean;
-    reason?: string;
-    selected_topics?: string[];
+  deep_reflect?: DeepReflectSignal;
+  whole_story?: WholeStorySignal;
+}
+
+const DEEP_POLL_INTERVAL_MS = 2000;
+const DEEP_POLL_MAX_ATTEMPTS = 70;
+
+function toNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function toContinuitySignal(raw: unknown): ContinuitySignal | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+  const topicKey = String(data.topic_key || "").trim();
+  if (!topicKey) return null;
+
+  const deepRaw = data.deep_reflect;
+  const deep = deepRaw && typeof deepRaw === "object" ? (deepRaw as Record<string, unknown>) : null;
+  const wholeRaw = data.whole_story;
+  const whole = wholeRaw && typeof wholeRaw === "object" ? (wholeRaw as Record<string, unknown>) : null;
+
+  const selectedTopics = Array.isArray(whole?.selected_topics)
+    ? whole.selected_topics
+        .map((item) => String(item || "").trim().toLowerCase().replace(/\s+/g, "_"))
+        .filter(Boolean)
+    : [];
+
+  return {
+    topic_key: topicKey,
+    topic_label: String(data.topic_label || "").trim() || undefined,
+    deep_reflect: deep
+      ? {
+          ready: Boolean(deep.ready),
+          reason: String(deep.reason || "unknown").trim() || "unknown",
+          mirror_allowed: Boolean(deep.mirror_allowed),
+          detail_allowed: Boolean(deep.detail_allowed),
+          selected_count: toNumber(deep.selected_count, 0),
+          min_moments: Math.max(1, toNumber(deep.min_moments, 8)),
+        }
+      : undefined,
+    whole_story: whole
+      ? {
+          ready: Boolean(whole.ready),
+          reason: String(whole.reason || "unknown").trim() || "unknown",
+          selected_topics: selectedTopics,
+          selected_count_total: Math.max(0, toNumber(whole.selected_count_total, 0)),
+          correlation_score: toNumber(whole.correlation_score, 0),
+        }
+      : undefined,
   };
 }
 
-type DeepReflectionRunMode = "whole_story";
+function formatDeepReflectionResult(payload: Record<string, unknown>): string {
+  const result = (payload.result as Record<string, unknown> | undefined) || {};
+  const chatResponse = String(result.chat_response || "").trim();
+  if (chatResponse) {
+    return chatResponse;
+  }
 
-// =============================================================================
-// COMPONENT
-// =============================================================================
+  const topicLabel = String(result.topic_label || payload.topic_key || "this thread");
+  const lines: string[] = [`Whole story on ${topicLabel}:`];
+
+  const originStory = String(result.origin_story || "").trim();
+  const keyPivots = Array.isArray(result.key_pivots) ? result.key_pivots : [];
+  const currentStage = String(result.current_stage || "").trim();
+
+  if (originStory) lines.push(`Start: ${originStory}`);
+  if (typeof keyPivots[0] === "string" && keyPivots[0].trim()) {
+    lines.push(`Shift: ${keyPivots[0].trim()}`);
+  }
+  if (currentStage) lines.push(`Now: ${currentStage}`);
+
+  return lines.join("\n");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export default function ConversePage() {
   return (
@@ -147,95 +147,24 @@ export default function ConversePage() {
 
 function ConverseContent() {
   const router = useRouter();
-  const search = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auth state
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-
-  // Conversation state
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [showTextInput, setShowTextInput] = useState(false);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState<string>("");
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
-  // FAB state
-  const [fabOpen, setFabOpen] = useState(false);
+  const [isRunningDeepAnswer, setIsRunningDeepAnswer] = useState(false);
+  const [deepReflectionStatus, setDeepReflectionStatus] = useState("");
+  const [activeContinuitySignal, setActiveContinuitySignal] = useState<ContinuitySignal | null>(null);
+  const [latestUserMessage, setLatestUserMessage] = useState("");
 
-  // Expanded insights state (tracks which messages have insights panel open)
-  const [expandedInsights, setExpandedInsights] = useState<Set<string>>(new Set());
-
-  // Debug panel state
-  const [showDebug, setShowDebug] = useState(false);
-  const [lastResponseDebug, setLastResponseDebug] = useState<Record<string, unknown> | null>(null);
-
-  // Friction state for UX indicator
-  const [frictionState, setFrictionState] = useState<FrictionState | null>(null);
-  const [continuityPolicy, setContinuityPolicy] = useState<ContinuityPolicyState | null>(null);
-  const [isUpdatingContinuity, setIsUpdatingContinuity] = useState(false);
-  const [activeContinuityPack, setActiveContinuityPack] = useState<ContinuityPackDebug | null>(null);
-  const [isRunningDeepReflection, setIsRunningDeepReflection] = useState(false);
-  const [deepReflectionStatus, setDeepReflectionStatus] = useState<string>("");
-  const [deepReflectionMode, setDeepReflectionMode] = useState<DeepReflectionRunMode | null>(null);
-
-  // Agent task state
-  const [activeTask, setActiveTask] = useState<AgentTaskContext | null>(null);
-  const [isPollingApprovals, setIsPollingApprovals] = useState(false);
-
-  // Voice hook - add messages from voice interactions
-  const addVoiceMessage = useCallback((role: "user" | "sakhi", content: string) => {
-    const message: Message = {
-      id: `voice-${Date.now()}-${role}`,
-      role,
-      content,
-      timestamp: new Date(),
-      source: "voice",
-    };
-    setMessages((prev) => [...prev, message]);
-  }, []);
-
-  const voice = useVoice({
-    personId: authUser?.person_id || "",
-    autoPlayResponse: true,
-    onTranscript: (transcript) => {
-      if (transcript.isFinal && transcript.text) {
-        addVoiceMessage("user", transcript.text);
-      }
-    },
-    onResponse: (response) => {
-      if (response.text) {
-        addVoiceMessage("sakhi", response.text);
-        setLastResponseDebug((prev) => ({
-          ...prev,
-          voice_response: response.text,
-        }));
-      }
-    },
-    onStateChange: (state) => {
-      const statusMap: Record<VoiceState, string> = {
-        idle: "",
-        recording: "Listening...",
-        processing: "Thinking...",
-        speaking: "Speaking...",
-        error: "Error occurred",
-      };
-      setVoiceStatus(statusMap[state]);
-    },
-    onError: (error) => {
-      console.error("Voice error:", error);
-      setVoiceStatus(`Error: ${error.message}`);
-      setTimeout(() => setVoiceStatus(""), 3000);
-    },
-  });
-
-  // Load auth user
   useEffect(() => {
     const loadAuth = async () => {
       try {
-        const res = await fetch("/api/auth/me");
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           setAuthUser({
@@ -243,820 +172,83 @@ function ConverseContent() {
             full_name: data.full_name,
             email: data.email,
           });
+        } else if (res.status === 401) {
+          router.replace("/auth/login?redirect=/experience/converse" as Route);
         }
       } catch (err) {
-        console.error("Auth error:", err);
+        console.error("Auth load failed:", err);
       } finally {
         setAuthLoading(false);
       }
     };
-    loadAuth();
-  }, []);
+    void loadAuth();
+  }, [router]);
 
-  const latestUserMessage = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      const item = messages[i];
-      if (item.role === "user") {
-        const text = String(item.content || "").trim();
-        if (text) return text;
-      }
-    }
-    return "";
-  }, [messages]);
-  const wholeStorySignal = activeContinuityPack?.whole_story;
-  const wholeStoryTopicKeys = useMemo(() => {
-    const raw = Array.isArray(wholeStorySignal?.selected_topics)
-      ? wholeStorySignal.selected_topics
-      : [];
-    const normalized = raw
-      .map((topic) => String(topic || "").trim())
-      .filter(Boolean);
-    const primary = String(activeContinuityPack?.topic_key || "").trim();
-    if (primary && !normalized.includes(primary)) {
-      normalized.unshift(primary);
-    }
-    return normalized.slice(0, 3);
-  }, [activeContinuityPack?.topic_key, wholeStorySignal?.selected_topics]);
-  const wholeStoryReady = Boolean(
-    wholeStorySignal?.ready && wholeStoryTopicKeys.length >= 2,
-  );
-  const deepReflectionReady = Boolean(
-    activeContinuityPack?.topic_key && latestUserMessage && wholeStoryReady,
-  );
-  const deepReflectionHint = (() => {
-    if (!latestUserMessage) {
-      return "Send one message first.";
-    }
-    if (wholeStoryReady) {
-      return "Deep Reflect is ready with linked-thread context.";
-    }
-    const reason = String(wholeStorySignal?.reason || "insufficient_depth").trim();
-    if (reason === "insufficient_overlap") {
-      return "Waiting for a clearer second thread link.";
-    }
-    if (reason === "threads_inactive") {
-      return "Waiting for more recent activity across linked threads.";
-    }
-    return "Deep Reflect unlocks once linked history is deeper.";
-  })();
-
-  const loadContinuityPolicy = useCallback(async () => {
-    if (!authUser?.person_id) return;
-    try {
-      const res = await fetch(
-        `/api/continuity/policy?person_id=${encodeURIComponent(authUser.person_id)}`,
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-      setContinuityPolicy({
-        enabled: !!data.enabled,
-        exclusions: Array.isArray(data.exclusions) ? data.exclusions : [],
-      });
-    } catch (err) {
-      console.error("Continuity policy load error:", err);
-    }
-  }, [authUser?.person_id]);
-
-  useEffect(() => {
-    if (!authUser?.person_id) return;
-    void loadContinuityPolicy();
-  }, [authUser?.person_id, loadContinuityPolicy]);
-
-  // Track previous friction state for change notifications
-  const prevFrictionStateRef = useRef<string | null>(null);
-
-  // Load friction state for indicator
-  useEffect(() => {
-    if (!authUser?.person_id) return;
-
-    const loadFrictionState = async () => {
-      try {
-        const res = await fetch("/api/friction/state");
-        if (res.ok) {
-          const data = await res.json();
-          const newState = data.friction_state;
-          const prevState = prevFrictionStateRef.current;
-
-          // Check for significant state change
-          if (prevState && newState && prevState !== newState && prevState !== "balanced") {
-            // State changed - add a notification message
-            const stateMessages: Record<string, string> = {
-              chaos: "I notice you seem more scattered than usual. Would you like some grounding suggestions?",
-              intensity: "Your energy seems heightened right now. Might be a good time for some cooling practices.",
-              stagnation: "I sense some heaviness today. How about we get things moving?",
-              balanced: "You're looking more balanced now. Nice work taking care of yourself.",
-            };
-
-            const notificationMessage: Message = {
-              id: `state-change-${Date.now()}`,
-              role: "sakhi",
-              content: stateMessages[newState] || `Your state has shifted to ${data.friction_name || newState}.`,
-              timestamp: new Date(),
-              source: "text",
-              insight: {
-                stateContext: {
-                  friction_state: newState,
-                  drift_percentage: data.drift_percentage,
-                },
-              },
-            };
-
-            setMessages((prev) => {
-              // Don't add if we already have a recent state change message
-              const recentStateMsg = prev.find(
-                (m) => m.id.startsWith("state-change-") &&
-                       Date.now() - m.timestamp.getTime() < 5 * 60 * 1000
-              );
-              if (recentStateMsg) return prev;
-              return [...prev, notificationMessage];
-            });
-          }
-
-          prevFrictionStateRef.current = newState;
-          setFrictionState({
-            friction_state: newState,
-            friction_name: data.friction_name,
-            drift_percentage: data.drift_percentage,
-            severity: data.severity,
-          });
-        }
-      } catch (err) {
-        console.error("Friction state error:", err);
-      }
-    };
-
-    loadFrictionState();
-
-    // Refresh friction state every 5 minutes
-    const interval = setInterval(loadFrictionState, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [authUser?.person_id]);
-
-  // Load conversation history when auth is ready
-  useEffect(() => {
-    if (!authUser?.person_id || historyLoaded) return;
-
-    const loadHistory = async () => {
-      try {
-        const res = await fetch(
-          `/api/conversation/history?user=${encodeURIComponent(authUser.person_id)}&limit=20`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (data.messages && data.messages.length > 0) {
-            const loadedMessages: Message[] = data.messages.map(
-              (msg: { role: string; content: string; source?: string }, idx: number) => ({
-                id: `history-${idx}`,
-                // Map 'assistant' or 'sakhi' to 'sakhi' for display, everything else is 'user'
-                role: (msg.role === "sakhi" || msg.role === "assistant") ? "sakhi" : "user",
-                content: msg.content,
-                timestamp: new Date(), // Loaded messages don't have exact timestamps
-                source: (msg.source as "text" | "voice") || "text",
-              })
-            );
-            setMessages(loadedMessages);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading conversation history:", err);
-      } finally {
-        setHistoryLoaded(true);
-      }
-    };
-    loadHistory();
-  }, [authUser?.person_id, historyLoaded]);
-
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Poll for approval requests during task execution
-  useEffect(() => {
-    if (!isPollingApprovals || !authUser?.person_id) return;
+  const personId = authUser?.person_id || "";
+  const hasMessages = messages.length > 0;
 
-    const pollApprovals = async () => {
-      try {
-        const res = await fetch(
-          `/api/agent/approvals/pending?user=${encodeURIComponent(authUser.person_id)}`
-        );
-        if (res.ok) {
-          const data = await res.json();
+  const wholeStorySignal = activeContinuitySignal?.whole_story;
+  const deepThreadLabel =
+    activeContinuitySignal?.topic_label || activeContinuitySignal?.topic_key || "this thread";
 
-          // Check active tasks for status updates (failed, completed)
-          if (data.active_tasks && data.active_tasks.length > 0) {
-            const task = data.active_tasks[0];
-
-            // Handle failed status
-            if (task.status === "failed") {
-              const failedMessage: Message = {
-                id: `task-failed-${task.task_id}`,
-                role: "sakhi",
-                content: `I ran into an issue: ${task.error || "Task could not be completed"}. Would you like me to try again?`,
-                timestamp: new Date(),
-                source: "text",
-              };
-              setMessages((prev) => {
-                if (prev.some((m) => m.id === failedMessage.id)) return prev;
-                return [...prev, failedMessage];
-              });
-              setActiveTask(null);
-              setIsPollingApprovals(false);
-              return;
-            }
-
-            // Handle completed status
-            if (task.status === "completed") {
-              const completedMessage: Message = {
-                id: `task-completed-${task.task_id}`,
-                role: "sakhi",
-                content: `Done! Completed all ${task.total_steps} steps successfully.`,
-                timestamp: new Date(),
-                source: "text",
-              };
-              setMessages((prev) => {
-                if (prev.some((m) => m.id === completedMessage.id)) return prev;
-                return [...prev, completedMessage];
-              });
-              setActiveTask(null);
-              setIsPollingApprovals(false);
-              return;
-            }
-          }
-
-          // Check for pending approvals
-          if (data.pending && data.pending.length > 0) {
-            const approval = data.pending[0];
-            // Add approval message if not already shown
-            const approvalMessage: Message = {
-              id: `approval-${approval.request_id}`,
-              role: "sakhi",
-              content: `**${approval.context_summary}**\n\n${approval.action_description}\n\nShould I proceed?`,
-              timestamp: new Date(),
-              source: "text",
-              isApprovalRequest: true,
-              approvalRequest: approval,
-            };
-            setMessages((prev) => {
-              // Check if we already have this approval message
-              if (prev.some((m) => m.id === approvalMessage.id)) return prev;
-              return [...prev, approvalMessage];
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Error polling approvals:", err);
-      }
-    };
-
-    // Poll every 2 seconds
-    const interval = setInterval(pollApprovals, 2000);
-    pollApprovals(); // Initial poll
-
-    return () => clearInterval(interval);
-  }, [isPollingApprovals, authUser?.person_id]);
-
-  // Handle approval response
-  const handleApprovalResponse = useCallback(
-    async (requestId: string, approved: boolean) => {
-      if (!authUser?.person_id) return;
-
-      try {
-        const res = await fetch(
-          `/api/agent/approvals/${requestId}/respond?user=${encodeURIComponent(authUser.person_id)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ approved }),
-          }
-        );
-
-        if (res.ok) {
-          const data = await res.json();
-
-          // Add response message
-          const responseMessage: Message = {
-            id: Date.now().toString(),
-            role: "sakhi",
-            content: approved
-              ? "Got it! Proceeding with the action..."
-              : "No problem, I'll skip this step.",
-            timestamp: new Date(),
-            source: "text",
-          };
-          setMessages((prev) => [...prev, responseMessage]);
-
-          // Continue polling or stop
-          if (data.task_completed) {
-            setIsPollingApprovals(false);
-            setActiveTask(null);
-          }
-        }
-      } catch (err) {
-        console.error("Error responding to approval:", err);
-      }
-    },
-    [authUser?.person_id]
+  const wholeStoryTopics = useMemo(
+    () => wholeStorySignal?.selected_topics || [],
+    [wholeStorySignal?.selected_topics],
   );
 
-  const formatDeepReflectionResult = useCallback((payload: Record<string, unknown>) => {
-    const result = (payload.result as Record<string, unknown> | undefined) || {};
-    const chatResponse = String(result.chat_response || "").trim();
-    if (chatResponse) {
-      return chatResponse;
+  const wholeStorySelectedTopics = useMemo(() => {
+    const primary = activeContinuitySignal?.topic_key || "";
+    const normalized = wholeStoryTopics
+      .map((topic) => String(topic || "").trim())
+      .filter(Boolean);
+    if (primary && !normalized.includes(primary)) {
+      normalized.unshift(primary);
     }
-    const topicLabel = String(result.topic_label || payload.topic_key || "this thread");
-    const lines = [`Deep reflection on ${topicLabel}:`];
+    return normalized.slice(0, 3);
+  }, [activeContinuitySignal?.topic_key, wholeStoryTopics]);
 
-    const originStory = String(result.origin_story || "").trim();
-    const keyPivots = Array.isArray(result.key_pivots) ? result.key_pivots : [];
-    const currentStage = String(result.current_stage || "").trim();
-    const recurringTensions = Array.isArray(result.recurring_tensions)
-      ? result.recurring_tensions
-      : [];
+  const wholeStoryReady = Boolean(wholeStorySignal?.ready && wholeStorySelectedTopics.length >= 2);
+  const hasDeepQuery = latestUserMessage.trim().length > 0;
+  const deepAnswerReady = Boolean(activeContinuitySignal?.topic_key && hasDeepQuery && wholeStoryReady);
 
-    if (originStory) lines.push(`Start: ${originStory}`);
-    if (typeof keyPivots[0] === "string" && keyPivots[0].trim()) {
-      lines.push(`Pivot: ${keyPivots[0].trim()}`);
+  const deepStatusHint = (() => {
+    if (!activeContinuitySignal?.topic_key) {
+      return "Deep Reflect will appear when this chat forms a clear thread.";
     }
-    if (currentStage) lines.push(`Current: ${currentStage}`);
-    if (typeof recurringTensions[0] === "string" && recurringTensions[0].trim()) {
-      lines.push(`Recurring: ${recurringTensions[0].trim()}`);
+    if (!hasDeepQuery) {
+      return "Send one message to set your current question.";
     }
-
-    return lines.join("\n");
-  }, []);
-
-  const pollDeepReflection = useCallback(
-    async (reflectionId: string, personId: string) => {
-      const fetchResult = async () => {
-        const nonce = Date.now();
-        const params = new URLSearchParams({
-          id: reflectionId,
-          person_id: personId,
-          t: String(nonce),
-        });
-        const resultRes = await fetch(
-          `/api/continuity/reflection/result?${params.toString()}`,
-          { cache: "no-store" },
-        );
-        if (!resultRes.ok) return null;
-        return (await resultRes.json()) as Record<string, unknown>;
-      };
-
-      for (let attempt = 0; attempt < 60; attempt += 1) {
-        try {
-          const statusNonce = Date.now();
-          const params = new URLSearchParams({
-            id: reflectionId,
-            person_id: personId,
-            t: String(statusNonce),
-          });
-          const statusRes = await fetch(
-            `/api/continuity/reflection/status?${params.toString()}`,
-            { cache: "no-store" },
-          );
-          if (!statusRes.ok) break;
-          const statusData = await statusRes.json();
-          const status = String(statusData.status || "queued");
-          setDeepReflectionStatus(status);
-
-          if (status === "done") {
-            const resultData = await fetchResult();
-            if (resultData) {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `reflection-${Date.now()}`,
-                  role: "sakhi",
-                  content: formatDeepReflectionResult(resultData),
-                  timestamp: new Date(),
-                  source: "text",
-                },
-              ]);
-            }
-            setIsRunningDeepReflection(false);
-            setDeepReflectionStatus("");
-            return;
-          }
-
-          if (status === "failed") {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `reflection-failed-${Date.now()}`,
-                role: "sakhi",
-                content: "Deep reflection could not complete for this thread.",
-                timestamp: new Date(),
-                source: "text",
-              },
-            ]);
-            setIsRunningDeepReflection(false);
-            setDeepReflectionStatus("");
-            return;
-          }
-
-          if (attempt % 3 === 0) {
-            const resultData = await fetchResult();
-            const resultStatus = String(resultData?.status || "queued");
-            if (resultData && resultStatus === "done") {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `reflection-${Date.now()}`,
-                  role: "sakhi",
-                  content: formatDeepReflectionResult(resultData),
-                  timestamp: new Date(),
-                  source: "text",
-                },
-              ]);
-              setIsRunningDeepReflection(false);
-              setDeepReflectionStatus("");
-              return;
-            }
-          }
-        } catch (err) {
-          console.error("Deep reflection poll error:", err);
-          break;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+    if (wholeStoryReady) {
+      const primary = deepThreadLabel;
+      const linked = wholeStorySelectedTopics
+        .filter((topic) => topic !== activeContinuitySignal.topic_key)
+        .slice(0, 2)
+        .join(", ");
+      if (linked) {
+        return `Deep Reflect is ready across ${primary} and ${linked}.`;
       }
-
-      const finalResult = await fetchResult().catch(() => null);
-      if (finalResult && String(finalResult.status || "queued") === "done") {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `reflection-${Date.now()}`,
-            role: "sakhi",
-            content: formatDeepReflectionResult(finalResult),
-            timestamp: new Date(),
-            source: "text",
-          },
-        ]);
-      }
-
-      setIsRunningDeepReflection(false);
-      setDeepReflectionStatus("");
-    },
-    [formatDeepReflectionResult]
-  );
-
-  const handleRunDeepReflection = useCallback(async () => {
-    if (
-      !authUser?.person_id
-      || !activeContinuityPack?.topic_key
-      || !deepReflectionReady
-      || isRunningDeepReflection
-    ) {
-      return;
+      return `Deep Reflect is ready with whole-story context for ${primary}.`;
     }
-    const queryText = latestUserMessage.trim();
-    if (!queryText) return;
-
-    setIsRunningDeepReflection(true);
-    setDeepReflectionStatus("queued");
-    setDeepReflectionMode("whole_story");
-
-    try {
-      const res = await fetch("/api/continuity/reflection/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          person_id: authUser.person_id,
-          topic_key: activeContinuityPack.topic_key,
-          window: "3650d",
-          mode: "whole_story",
-          topic_keys: wholeStoryTopicKeys,
-          user_query: queryText,
-        }),
-      });
-      if (!res.ok) {
-        throw new Error(`Reflection request failed (${res.status})`);
+    if (wholeStorySignal && !wholeStorySignal.ready) {
+      const reason = wholeStorySignal.reason || "insufficient_depth";
+      if (reason === "insufficient_overlap") {
+        return "Deep Reflect is waiting for clearer links across your active threads.";
       }
-      const data = await res.json();
-      setDeepReflectionStatus(String(data.status || "queued"));
-      void pollDeepReflection(String(data.reflection_id || ""), authUser.person_id);
-    } catch (err) {
-      console.error("Deep reflection run error:", err);
-      setIsRunningDeepReflection(false);
-      setDeepReflectionStatus("");
-      setDeepReflectionMode(null);
+      if (reason === "threads_inactive") {
+        return "Deep Reflect will unlock after more recent activity across related threads.";
+      }
+      if (reason === "insufficient_depth") {
+        return "Deep Reflect unlocks once this thread has deeper linked history.";
+      }
+      return "Deep Reflect unlocks once this thread has enough linked history.";
     }
-  }, [
-    activeContinuityPack?.topic_key,
-    authUser?.person_id,
-    deepReflectionReady,
-    isRunningDeepReflection,
-    latestUserMessage,
-    pollDeepReflection,
-    wholeStoryTopicKeys,
-  ]);
+    return "Deep Reflect unlocks once a second thread clearly links to this one.";
+  })();
 
-  const handleContinuityToggle = useCallback(async () => {
-    if (!authUser?.person_id || isUpdatingContinuity) return;
-
-    setIsUpdatingContinuity(true);
-    try {
-      const nextEnabled = !Boolean(continuityPolicy?.enabled);
-      const res = await fetch("/api/continuity/policy", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          person_id: authUser.person_id,
-          enabled: nextEnabled,
-          exclusions: continuityPolicy?.exclusions || [],
-        }),
-      });
-      if (!res.ok) {
-        throw new Error(`Continuity update failed (${res.status})`);
-      }
-      const data = await res.json();
-      setContinuityPolicy({
-        enabled: !!data.enabled,
-        exclusions: Array.isArray(data.exclusions) ? data.exclusions : [],
-      });
-      if (!data.enabled) {
-        setActiveContinuityPack(null);
-      }
-    } catch (err) {
-      console.error("Continuity update error:", err);
-    } finally {
-      setIsUpdatingContinuity(false);
-    }
-  }, [
-    authUser?.person_id,
-    continuityPolicy?.enabled,
-    continuityPolicy?.exclusions,
-    isUpdatingContinuity,
-  ]);
-
-  // Send message to API
-  const sendMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim() || !authUser?.person_id) return;
-
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        role: "user",
-        content: text.trim(),
-        timestamp: new Date(),
-        source: "text",
-      };
-
-      setMessages((prev) => [...prev, userMessage]);
-      setInputText("");
-      setIsSending(true);
-
-      try {
-        const res = await fetch(
-          `/api/turn-v2?user=${encodeURIComponent(authUser.person_id)}&debug=1`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: text.trim(), source: "text" }),
-          }
-        );
-
-        if (res.ok) {
-          const data = await res.json();
-          // Store the full response for debug panel, normalizing backend shape
-          // Backend puts debug info in debug_data; DebugPanel reads from debug
-          const debugData = data.debug_data || {};
-          const internalState = debugData.internal_state || {};
-          const engineDebug = debugData.conversation_engine_debug || {};
-          const continuityPack = (debugData.continuity_pack ||
-            engineDebug.metadata?.continuity_pack ||
-            null) as ContinuityPackDebug | null;
-
-          // Parse recall_context string into structured memory_recall array
-          // Format: "- [type] text (s=0.85)\n"
-          const recallStr = engineDebug.recall_context || "";
-          const parsedRecalls = recallStr
-            .split("\n")
-            .filter((line: string) => line.startsWith("- ["))
-            .map((line: string) => {
-              const typeMatch = line.match(/\[(\w+)\]/);
-              const scoreMatch = line.match(/\(s=([\d.]+)\)/);
-              const textMatch = line.match(/\]\s*(.+?)(?:\s*\(s=|$)/);
-              return {
-                type: typeMatch?.[1] || "unknown",
-                text: textMatch?.[1]?.trim() || line,
-                score: scoreMatch ? parseFloat(scoreMatch[1]) : 0,
-              };
-            });
-
-          setLastResponseDebug({
-            ...data,
-            input_text: text.trim(),
-            // Map internal_state fields to top level for DebugPanel
-            operating_system: internalState.operating_system || data.operating_system,
-            dosha_baseline: internalState.dosha_baseline || data.dosha_baseline,
-            life_context: internalState.life_context || data.life_context,
-            decision_profile: internalState.decision_profile || data.decision_profile,
-            // Engine states live in debug_data, DebugPanel reads from top level
-            behavior_profile: engineDebug.metadata?.behavior_profile || data.behavior_profile,
-            tone_state: debugData.tone_state || data.tone_state,
-            continuity: engineDebug.metadata?.continuity || data.continuity,
-            continuity_pack: continuityPack,
-            // Parse recall data from engine debug string into structured format
-            memory_recall: parsedRecalls.length > 0 ? parsedRecalls : data.memory_recall,
-            // Map debug_data to debug key that DebugPanel expects
-            debug: {
-              conversation_engine_debug: engineDebug,
-              adaptive_response: data.adaptive_response,
-              adaptive_error: engineDebug.adaptive_error,
-              used_fallback: engineDebug.used_fallback,
-            },
-          });
-
-          setActiveContinuityPack(
-            continuityPack && continuityPack.topic_key ? continuityPack : null,
-          );
-
-          // Handle agent task context
-          const taskContext = data.agent_task_context as AgentTaskContext | null;
-          if (taskContext) {
-            setActiveTask(taskContext);
-
-            // If there's a new task plan, show it as a special message
-            if (taskContext.new_task) {
-              const planMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: "sakhi",
-                content: taskContext.new_task.formatted_plan,
-                timestamp: new Date(),
-                source: "text",
-                isTaskPlan: true,
-                taskPlan: taskContext.new_task,
-              };
-              setMessages((prev) => [...prev, planMessage]);
-              return; // Don't add the regular reply
-            }
-
-            // If task is executing and waiting for approval
-            if (taskContext.execution?.status === "waiting_approval") {
-              const approvalMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: "sakhi",
-                content: taskContext.execution.message,
-                timestamp: new Date(),
-                source: "text",
-                isApprovalRequest: true,
-              };
-              setMessages((prev) => [...prev, approvalMessage]);
-              setIsPollingApprovals(true);
-              return;
-            }
-
-            // If task was rejected
-            if (taskContext.rejected) {
-              const cancelMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: "sakhi",
-                content: taskContext.message || "No problem, I've cancelled that.",
-                timestamp: new Date(),
-                source: "text",
-              };
-              setMessages((prev) => [...prev, cancelMessage]);
-              setActiveTask(null);
-              return;
-            }
-
-            // If task was confirmed and started
-            if (taskContext.confirmed && taskContext.execution) {
-              const startMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: "sakhi",
-                content: taskContext.execution.message,
-                timestamp: new Date(),
-                source: "text",
-              };
-              setMessages((prev) => [...prev, startMessage]);
-
-              // Handle no_agent status - agent not connected
-              if (taskContext.execution.status === "no_agent") {
-                setActiveTask(null);
-                return;
-              }
-
-              // Handle failed status
-              if (taskContext.execution.status === "failed") {
-                setActiveTask(null);
-                return;
-              }
-
-              // Start polling if execution is in progress
-              if (taskContext.execution.status === "running" ||
-                  taskContext.execution.status === "waiting_approval") {
-                setIsPollingApprovals(true);
-              }
-              return;
-            }
-          }
-
-          if (data.reply) {
-            // Extract insight data for transparency
-            const insight: MessageInsight = {};
-
-            // Get reasoning from adaptive response or reasoning field
-            const adaptiveReasoning = data.adaptive_response?.strategy?.reasoning;
-            const debugData = data.debug_data as Record<string, any> | undefined;
-            const directReasoning = data.reasoning?.summary || data.reasoning?.explanation
-              || debugData?.reasoning?.summary || debugData?.reasoning?.explanation;
-            if (adaptiveReasoning || directReasoning) {
-              insight.reasoning = adaptiveReasoning || directReasoning;
-            }
-
-            // Get memories used
-            if (data.memory_recall && Array.isArray(data.memory_recall) && data.memory_recall.length > 0) {
-              insight.memories = data.memory_recall.slice(0, 3).map((m: { text?: string; content?: string; type?: string; score?: number }) => ({
-                text: m.text || m.content || "",
-                type: m.type,
-                score: m.score,
-              })).filter((m: { text: string }) => m.text);
-            }
-
-            // Get state context if available
-            if (data.adaptive_response?.context) {
-              insight.stateContext = {
-                friction_state: data.adaptive_response.context.friction_state,
-                drift_percentage: data.adaptive_response.context.drift_percentage,
-                why_this_advice: data.adaptive_response.strategy?.why,
-              };
-            }
-
-            const sakhiMessage: Message = {
-              id: (Date.now() + 1).toString(),
-              role: "sakhi",
-              content: data.reply,
-              timestamp: new Date(),
-              source: "text",
-              insight: Object.keys(insight).length > 0 ? insight : undefined,
-            };
-            setMessages((prev) => [...prev, sakhiMessage]);
-          }
-        }
-      } catch (err) {
-        console.error("Send error:", err);
-      } finally {
-        setIsSending(false);
-      }
-    },
-    [authUser?.person_id]
-  );
-
-  // Handle task confirmation (must be after sendMessage)
-  const handleTaskConfirmation = useCallback(
-    async (confirmed: boolean) => {
-      if (!authUser?.person_id) return;
-
-      // Send confirmation as a message
-      const confirmText = confirmed ? "Yes, go ahead" : "No, cancel";
-      await sendMessage(confirmText);
-      setActiveTask(null);
-    },
-    [authUser?.person_id, sendMessage]
-  );
-
-  // Handle voice recording
-  const toggleVoice = useCallback(async () => {
-    if (voice.isRecording) {
-      await voice.stopRecording();
-    } else if (voice.isSpeaking) {
-      voice.stopPlayback();
-    } else if (!voice.isProcessing) {
-      await voice.startRecording();
-    }
-  }, [voice]);
-
-  // Handle text submit
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      sendMessage(inputText);
-    },
-    [inputText, sendMessage]
-  );
-
-  // FAB navigation
-  const navigateTo = useCallback(
-    (path: string) => {
-      setFabOpen(false);
-      const userId = authUser?.person_id || "";
-      router.push(`${path}?user=${encodeURIComponent(userId)}` as Route);
-    },
-    [router, authUser?.person_id]
-  );
-
-  const handleSignOut = useCallback(async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.replace("/experience" as Route);
-  }, [router]);
-
-  // Get greeting based on time
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -1066,897 +258,627 @@ function ConverseContent() {
 
   const displayName = authUser?.full_name?.split(" ")[0] || "";
 
-  // =============================================================================
-  // STYLES
-  // =============================================================================
+  const sendMessage = useCallback(async () => {
+    const text = inputText.trim();
+    if (!text || !personId || isSending) return;
 
-  const containerStyle: React.CSSProperties = {
-    height: "100vh",
-    background: palette.bg,
-    color: palette.fg,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif',
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-  };
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: text,
+      timestamp: new Date(),
+      kind: "normal",
+    };
 
-  const headerStyle: React.CSSProperties = {
-    padding: "20px 24px 16px",
-    borderBottom: `1px solid ${palette.border}`,
-    position: "sticky",
-    top: 0,
-    background: palette.bg,
-    zIndex: 10,
-  };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputText("");
+    setIsSending(true);
+    setLatestUserMessage(text);
 
-  const brandStyle: React.CSSProperties = {
-    fontSize: "14px",
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    color: palette.muted,
-    marginBottom: "4px",
-  };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-  const greetingStyle: React.CSSProperties = {
-    fontSize: "18px",
-    color: palette.fg,
-    fontWeight: 500,
-  };
+    try {
+      const url = `/api/turn-v2?user=${encodeURIComponent(personId)}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, source: "text" }),
+        signal: controller.signal,
+      });
 
-  // Friction state indicator styles
-  const getFrictionColors = () => {
-    if (!frictionState?.friction_state) {
-      return { bg: palette.border, text: palette.muted, dot: palette.muted };
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const data = await res.json();
+        setActiveContinuitySignal(toContinuitySignal(data.continuity));
+
+        if (data.reply) {
+          const sakhiMessage: Message = {
+            id: `sakhi-${Date.now()}`,
+            role: "sakhi",
+            content: data.reply,
+            timestamp: new Date(),
+            kind: "normal",
+          };
+          setMessages((prev) => [...prev, sakhiMessage]);
+        }
+      } else {
+        const sakhiMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: "sakhi",
+          content: `Something went wrong (${res.status}). Try again.`,
+          timestamp: new Date(),
+          kind: "system",
+        };
+        setMessages((prev) => [...prev, sakhiMessage]);
+      }
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      const isTimeout = err instanceof Error && err.name === "AbortError";
+      const errorMsg = isTimeout
+        ? "That took too long. Try again — sometimes the first message is slower."
+        : `Connection issue: ${err instanceof Error ? err.message : "unknown"}`;
+      const sakhiMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: "sakhi",
+        content: errorMsg,
+        timestamp: new Date(),
+        kind: "system",
+      };
+      setMessages((prev) => [...prev, sakhiMessage]);
+    } finally {
+      setIsSending(false);
     }
-    switch (frictionState.friction_state) {
-      case "chaos":
-        return { bg: "#3b1f5e", text: "#c084fc", dot: "#a855f7" }; // Purple for Vata
-      case "intensity":
-        return { bg: "#5e1f2e", text: "#f87171", dot: "#ef4444" }; // Red for Pitta
-      case "stagnation":
-        return { bg: "#1f3d5e", text: "#60a5fa", dot: "#3b82f6" }; // Blue for Kapha
-      case "balanced":
-        return { bg: "#1f5e3d", text: "#4ade80", dot: "#22c55e" }; // Green for balanced
-      default:
-        return { bg: palette.border, text: palette.muted, dot: palette.muted };
+  }, [inputText, isSending, personId]);
+
+  const pollDeepAnswer = useCallback(async (reflectionId: string, person: string): Promise<string | null> => {
+    const fetchResult = async (): Promise<string | null> => {
+      const params = new URLSearchParams({ id: reflectionId, person_id: person, t: String(Date.now()) });
+      const resultRes = await fetch(`/api/continuity/reflection/result?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!resultRes.ok) return null;
+      const resultData = (await resultRes.json()) as Record<string, unknown>;
+      if (String(resultData.status || "queued") !== "done") return null;
+      return formatDeepReflectionResult(resultData);
+    };
+
+    for (let attempt = 0; attempt < DEEP_POLL_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const statusParams = new URLSearchParams({
+          id: reflectionId,
+          person_id: person,
+          t: String(Date.now()),
+        });
+        const statusRes = await fetch(`/api/continuity/reflection/status?${statusParams.toString()}`, {
+          cache: "no-store",
+        });
+        if (!statusRes.ok) break;
+        const statusData = (await statusRes.json()) as Record<string, unknown>;
+        const status = String(statusData.status || "queued");
+        setDeepReflectionStatus(status);
+
+        if (status === "done") {
+          return await fetchResult();
+        }
+        if (status === "failed") {
+          return null;
+        }
+
+        if (attempt % 3 === 0) {
+          const optimistic = await fetchResult();
+          if (optimistic) return optimistic;
+        }
+      } catch (err) {
+        console.error("[deep-answer] poll error", err);
+        break;
+      }
+
+      await sleep(DEEP_POLL_INTERVAL_MS);
     }
-  };
 
-  const frictionColors = getFrictionColors();
-
-  const frictionIndicatorStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "6px 12px",
-    borderRadius: "16px",
-    background: frictionColors.bg,
-    fontSize: "12px",
-    color: frictionColors.text,
-    marginTop: "8px",
-    width: "fit-content",
-    cursor: "pointer",
-    transition: "all 200ms ease",
-  };
-
-  const frictionDotStyle: React.CSSProperties = {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    background: frictionColors.dot,
-  };
-
-  const messagesContainerStyle: React.CSSProperties = {
-    flex: 1,
-    padding: "24px",
-    overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  };
-
-  const emptyStateStyle: React.CSSProperties = {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    padding: "48px 24px",
-    gap: "20px",
-  };
-
-  const emptyPromptStyle: React.CSSProperties = {
-    fontSize: "16px",
-    color: palette.muted,
-    lineHeight: 1.6,
-    maxWidth: "280px",
-  };
-
-  const messageStyle = (role: "user" | "sakhi"): React.CSSProperties => ({
-    maxWidth: "85%",
-    padding: "14px 18px",
-    borderRadius: "18px",
-    fontSize: "15px",
-    lineHeight: 1.6,
-    alignSelf: role === "user" ? "flex-end" : "flex-start",
-    background: role === "user" ? palette.userBubble : palette.sakhiBubble,
-    color: palette.fg,
-  });
-
-  const inputAreaStyle: React.CSSProperties = {
-    padding: "16px 24px 32px",
-    borderTop: `1px solid ${palette.border}`,
-    background: palette.bg,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "16px",
-  };
-
-  // Voice button colors based on state
-  const getVoiceButtonColors = () => {
-    if (voice.isRecording) {
-      return { border: "#ef4444", bg: "#ef4444", color: "#fff" }; // Red for recording
+    try {
+      return await fetchResult();
+    } catch {
+      return null;
     }
-    if (voice.isProcessing) {
-      return { border: "#f59e0b", bg: "#f59e0b", color: "#fff" }; // Amber for processing
+  }, []);
+
+  const handleRunDeepAnswer = useCallback(async () => {
+    if (
+      !personId
+      || !activeContinuitySignal?.topic_key
+      || !hasDeepQuery
+      || !wholeStoryReady
+      || isRunningDeepAnswer
+    ) {
+      return;
     }
-    if (voice.isSpeaking) {
-      return { border: "#22c55e", bg: "#22c55e", color: "#fff" }; // Green for speaking
+
+    const selectedTopics = wholeStorySelectedTopics;
+    const pendingId = `deep-pending-${Date.now()}`;
+
+    setIsRunningDeepAnswer(true);
+    setDeepReflectionStatus("queued");
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: pendingId,
+        role: "sakhi",
+        content: "Deep Reflect is reading your whole story across linked threads...",
+        timestamp: new Date(),
+        kind: "system",
+      },
+    ]);
+
+    const removePending = () => {
+      setMessages((prev) => prev.filter((msg) => msg.id !== pendingId));
+    };
+
+    try {
+      const res = await fetch(`/api/continuity/reflection/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: personId,
+          topic_key: activeContinuitySignal.topic_key,
+          window: "3650d",
+          mode: "whole_story",
+          topic_keys: selectedTopics,
+          user_query: latestUserMessage.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Deep answer request failed (${res.status})`);
+      }
+
+      const data = (await res.json()) as Record<string, unknown>;
+      const reflectionId = String(data.reflection_id || "");
+      if (!reflectionId) {
+        throw new Error("Deep answer response missing reflection id");
+      }
+
+      const deepReply = await pollDeepAnswer(reflectionId, personId);
+      removePending();
+
+      if (deepReply) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `deep-${Date.now()}`,
+            role: "sakhi",
+            content: deepReply,
+            timestamp: new Date(),
+            kind: "deep",
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `deep-fail-${Date.now()}`,
+            role: "sakhi",
+            content: "Deep Reflect did not complete this time. Please try again.",
+            timestamp: new Date(),
+            kind: "system",
+          },
+        ]);
+      }
+    } catch (err) {
+      removePending();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `deep-error-${Date.now()}`,
+          role: "sakhi",
+          content: "Could not run Deep Reflect right now.",
+          timestamp: new Date(),
+          kind: "system",
+        },
+      ]);
+      console.error("[deep-answer] run error", err);
+    } finally {
+      setIsRunningDeepAnswer(false);
+      setDeepReflectionStatus("");
     }
-    return { border: palette.muted, bg: "transparent", color: palette.fg }; // Default
-  };
+  }, [
+    activeContinuitySignal?.topic_key,
+    hasDeepQuery,
+    isRunningDeepAnswer,
+    latestUserMessage,
+    personId,
+    pollDeepAnswer,
+    wholeStoryReady,
+    wholeStorySelectedTopics,
+  ]);
 
-  const voiceColors = getVoiceButtonColors();
-  const isVoiceActive = voice.isRecording || voice.isProcessing || voice.isSpeaking;
+  const openAccountRoute = useCallback(
+    (path: string) => {
+      setAccountMenuOpen(false);
+      const query = personId ? `?user=${encodeURIComponent(personId)}` : "";
+      router.push(`${path}${query}` as Route);
+    },
+    [personId, router],
+  );
 
-  const micButtonStyle: React.CSSProperties = {
-    width: "64px",
-    height: "64px",
-    borderRadius: "50%",
-    border: `2px solid ${voiceColors.border}`,
-    background: voiceColors.bg,
-    color: voiceColors.color,
-    cursor: voice.isProcessing ? "wait" : "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 200ms ease",
-    position: "relative",
-  };
+  const handleSignOut = useCallback(async () => {
+    setAccountMenuOpen(false);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/experience" as Route);
+  }, [router]);
 
-  const pulseStyle: React.CSSProperties = {
-    position: "absolute",
-    width: "80px",
-    height: "80px",
-    borderRadius: "50%",
-    background: voice.isRecording
-      ? "rgba(239, 68, 68, 0.4)" // Red pulse for recording
-      : voice.isSpeaking
-      ? "rgba(34, 197, 94, 0.4)" // Green pulse for speaking
-      : palette.pulse,
-    animation: isVoiceActive ? "pulse 1.5s ease-in-out infinite" : "none",
-    pointerEvents: "none",
-  };
-
-  const textToggleStyle: React.CSSProperties = {
-    fontSize: "13px",
-    color: palette.muted,
-    cursor: "pointer",
-    textDecoration: "underline",
-  };
-
-  const textInputContainerStyle: React.CSSProperties = {
-    width: "100%",
-    display: "flex",
-    gap: "12px",
-  };
-
-  const textInputStyle: React.CSSProperties = {
-    flex: 1,
-    padding: "14px 18px",
-    borderRadius: "24px",
-    border: `1px solid ${palette.border}`,
-    background: palette.cardBg,
-    color: palette.fg,
-    fontSize: "15px",
-    outline: "none",
-  };
-
-  const sendButtonStyle: React.CSSProperties = {
-    padding: "14px 24px",
-    borderRadius: "24px",
-    border: "none",
-    background: palette.accent,
-    color: "#fff",
-    fontSize: "15px",
-    cursor: "pointer",
-    opacity: inputText.trim() ? 1 : 0.5,
-  };
-
-  // FAB styles
-  const fabContainerStyle: React.CSSProperties = {
-    position: "fixed",
-    bottom: "200px",
-    right: "24px",
-    zIndex: 100,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: "12px",
-  };
-
-  const fabButtonStyle: React.CSSProperties = {
-    width: "56px",
-    height: "56px",
-    borderRadius: "50%",
-    border: "none",
-    background: palette.cardBg,
-    color: palette.fg,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-    transition: "all 200ms ease",
-  };
-
-  const fabOptionStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    borderRadius: "12px",
-    background: palette.cardBg,
-    color: palette.fg,
-    cursor: "pointer",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-    fontSize: "14px",
-    whiteSpace: "nowrap",
-    transition: "all 200ms ease",
-    transform: fabOpen ? "translateX(0) scale(1)" : "translateX(20px) scale(0.9)",
-    opacity: fabOpen ? 1 : 0,
-    pointerEvents: fabOpen ? "auto" : "none",
-  };
-
-  // =============================================================================
-  // RENDER
-  // =============================================================================
-
-  if (authLoading || (!historyLoaded && authUser?.person_id)) {
+  if (authLoading) {
     return (
-      <div style={{ ...containerStyle, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: palette.muted }}>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div style={containerStyle}>
-      <style>{`
-        @keyframes pulse {
-          0% { transform: scale(0.9); opacity: 0.7; }
-          50% { transform: scale(1.1); opacity: 0.3; }
-          100% { transform: scale(0.9); opacity: 0.7; }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+    <div style={styles.container}>
+      <div style={styles.auroraA} />
+      <div style={styles.auroraB} />
 
-      {/* Header */}
-      <header style={headerStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={brandStyle}>Sakhi</div>
-              <button
-                onClick={handleSignOut}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: palette.muted,
-                  fontSize: "12px",
-                  cursor: "pointer",
-                  padding: "2px 0",
-                  opacity: 0.6,
-                }}
-              >
-                Sign out
-              </button>
-            </div>
-            <div style={greetingStyle}>
-              {getGreeting()}
-              {displayName && `, ${displayName}`}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "8px",
-                marginTop: "10px",
-              }}
-            >
-              <button
-                onClick={() => {
-                  void handleContinuityToggle();
-                }}
-                disabled={!authUser?.person_id || isUpdatingContinuity}
-                style={{
-                  background: continuityPolicy?.enabled ? "rgba(34, 197, 94, 0.12)" : palette.cardBg,
-                  border: `1px solid ${continuityPolicy?.enabled ? "rgba(34, 197, 94, 0.35)" : palette.border}`,
-                  color: continuityPolicy?.enabled ? palette.success : palette.muted,
-                  fontSize: "12px",
-                  cursor: authUser?.person_id && !isUpdatingContinuity ? "pointer" : "default",
-                  padding: "6px 10px",
-                  borderRadius: "999px",
-                }}
-              >
-                {isUpdatingContinuity
-                  ? "Updating continuity..."
-                  : `Continuity ${continuityPolicy?.enabled ? "On" : "Off"}`}
-              </button>
-
-              {continuityPolicy?.enabled && activeContinuityPack?.topic_key && (
-                <>
-                  <span
-                    style={{
-                      background: "rgba(99, 102, 241, 0.12)",
-                      border: `1px solid rgba(99, 102, 241, 0.3)`,
-                      color: palette.fg,
-                      fontSize: "12px",
-                      padding: "6px 10px",
-                      borderRadius: "999px",
-                    }}
-                  >
-                    Using continuity: {activeContinuityPack.topic_label || activeContinuityPack.topic_key}
-                  </span>
-                  <button
-                    onClick={() => {
-                      void handleRunDeepReflection();
-                    }}
-                    disabled={isRunningDeepReflection || !deepReflectionReady}
-                    style={{
-                      background: palette.cardBg,
-                      border: `1px solid ${palette.border}`,
-                      color: palette.fg,
-                      fontSize: "12px",
-                      cursor: isRunningDeepReflection || !deepReflectionReady ? "default" : "pointer",
-                      padding: "6px 10px",
-                      borderRadius: "999px",
-                      opacity: isRunningDeepReflection || !deepReflectionReady ? 0.7 : 1,
-                    }}
-                    title={deepReflectionHint}
-                  >
-                    {isRunningDeepReflection && deepReflectionMode === "whole_story"
-                      ? `Deep Reflect: ${deepReflectionStatus || "running"}`
-                      : "Run Deep Reflect"}
-                  </button>
-                  <span
-                    style={{
-                      color: palette.muted,
-                      fontSize: "11px",
-                    }}
-                  >
-                    {deepReflectionHint}
-                  </span>
-                </>
-              )}
-            </div>
+      <header style={styles.header}>
+        <div style={styles.headerLeft}>
+          <div style={styles.brand}>Sakhi</div>
+          <div style={styles.greeting}>
+            {getGreeting()}
+            {displayName ? `, ${displayName}` : ""}
           </div>
-          {/* Friction State Indicator */}
-          {frictionState && (
-            <div
-              style={frictionIndicatorStyle}
-              onClick={() => navigateTo("/experience/me")}
-              title={`${frictionState.friction_name || "Your State"}: ${frictionState.drift_percentage?.toFixed(0) || 0}% drift from baseline. Click to see more.`}
-            >
-              <div style={frictionDotStyle} />
-              <span>
-                {frictionState.friction_state === "balanced"
-                  ? "Balanced"
-                  : frictionState.friction_name?.replace(" Friction", "") || "Loading..."}
-              </span>
-              {frictionState.drift_percentage != null && frictionState.drift_percentage > 10 && (
-                <span style={{ opacity: 0.7, fontSize: "11px" }}>
-                  {frictionState.drift_percentage.toFixed(0)}%
-                </span>
-              )}
+        </div>
+
+        <div style={{ position: "relative" }}>
+          <button style={styles.accountTrigger} onClick={() => setAccountMenuOpen((prev) => !prev)}>
+            <span style={{ fontSize: 14 }}>✦</span>
+            <span>Profile</span>
+          </button>
+
+          {accountMenuOpen ? (
+            <div style={styles.accountMenu}>
+              <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/reflection")}>Reflection</button>
+              <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/settings")}>Settings</button>
+              <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/support")}>Support Console</button>
+              <button style={{ ...styles.accountItem, color: "#f0b8c0" }} onClick={() => void handleSignOut()}>Sign out</button>
             </div>
-          )}
+          ) : null}
         </div>
       </header>
 
-      {/* Messages */}
-      <div style={messagesContainerStyle}>
-        {messages.length === 0 ? (
-          <div style={emptyStateStyle}>
-              <p style={emptyPromptStyle}>
-                This is a quiet space to unload your mind.
-                <br />
-                <br />
-                Say whatever is present — you don&apos;t need to sort it.
-              </p>
-            </div>
+      <main style={styles.messagesArea}>
+        {!hasMessages ? (
+          <div style={styles.emptyState}>
+            <p style={styles.emptyPrompt}>A clear space to think out loud.</p>
+            <p style={styles.emptyHint}>Start anywhere. Sakhi keeps context as you talk.</p>
+            <p style={styles.emptyHint}>Deep Reflect unlocks once your story runs long enough to draw from.</p>
+          </div>
         ) : (
           <>
-            {messages.map((msg) => (
-              <div key={msg.id} style={messageStyle(msg.role)}>
-                {msg.source === "voice" && (
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke={palette.muted}
-                    strokeWidth="1.5"
-                    style={{
-                      width: 12,
-                      height: 12,
-                      marginRight: 6,
-                      display: "inline",
-                      verticalAlign: "middle",
-                      opacity: 0.6,
-                    }}
-                  >
-                    <rect x="9" y="3" width="6" height="11" rx="3" />
-                    <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
-                  </svg>
-                )}
-                {/* Task Plan Icon */}
-                {msg.isTaskPlan && (
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke={palette.accent}
-                    strokeWidth="1.5"
-                    style={{
-                      width: 14,
-                      height: 14,
-                      marginRight: 8,
-                      display: "inline",
-                      verticalAlign: "middle",
-                    }}
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <path d="M7 8h10M7 12h6M7 16h8" strokeLinecap="round" />
-                  </svg>
-                )}
-                {/* State Change Notification Icon */}
-                {msg.id.startsWith("state-change-") && (
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke={palette.accent}
-                    strokeWidth="1.5"
-                    style={{
-                      width: 14,
-                      height: 14,
-                      marginRight: 8,
-                      display: "inline",
-                      verticalAlign: "middle",
-                    }}
-                  >
-                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
-                  </svg>
-                )}
-                {/* Approval Icon */}
-                {msg.isApprovalRequest && (
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#f59e0b"
-                    strokeWidth="1.5"
-                    style={{
-                      width: 14,
-                      height: 14,
-                      marginRight: 8,
-                      display: "inline",
-                      verticalAlign: "middle",
-                    }}
-                  >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
-                  </svg>
-                )}
-                <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
-
-                {/* State Change - Quick Link to Me Page */}
-                {msg.id.startsWith("state-change-") && (
-                  <button
-                    onClick={() => navigateTo("/experience/me")}
-                    style={{
-                      display: "block",
-                      marginTop: "10px",
-                      background: "transparent",
-                      border: `1px solid ${palette.accent}`,
-                      color: palette.accent,
-                      fontSize: "12px",
-                      padding: "6px 12px",
-                      borderRadius: "16px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    View your wellness profile
-                  </button>
-                )}
-
-                {/* Insight Section - Why this response? */}
-                {msg.role === "sakhi" && msg.insight && (msg.insight.reasoning || msg.insight.memories?.length) && (
-                  <div style={{ marginTop: "12px" }}>
-                    <button
-                      onClick={() => {
-                        setExpandedInsights((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(msg.id)) {
-                            next.delete(msg.id);
-                          } else {
-                            next.add(msg.id);
-                          }
-                          return next;
-                        });
-                      }}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: palette.muted,
-                        fontSize: "11px",
-                        cursor: "pointer",
-                        padding: "4px 0",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                      }}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        style={{
-                          width: 12,
-                          height: 12,
-                          transform: expandedInsights.has(msg.id) ? "rotate(90deg)" : "none",
-                          transition: "transform 150ms ease",
-                        }}
-                      >
-                        <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Why this response?
-                    </button>
-
-                    {expandedInsights.has(msg.id) && (
-                      <div
-                        style={{
-                          marginTop: "8px",
-                          padding: "12px",
-                          background: "rgba(99, 102, 241, 0.08)",
-                          borderRadius: "8px",
-                          fontSize: "12px",
-                          lineHeight: "1.5",
-                        }}
-                      >
-                        {/* Reasoning */}
-                        {msg.insight.reasoning && (
-                          <div style={{ marginBottom: msg.insight.memories?.length ? "10px" : 0 }}>
-                            <div style={{ color: palette.accent, fontWeight: 500, marginBottom: "4px", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                              Reasoning
-                            </div>
-                            <div style={{ color: palette.fg, opacity: 0.9 }}>
-                              {msg.insight.reasoning}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Memories Used */}
-                        {msg.insight.memories && msg.insight.memories.length > 0 && (
-                          <div>
-                            <div style={{ color: palette.accent, fontWeight: 500, marginBottom: "4px", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                              I remembered...
-                            </div>
-                            <ul style={{ margin: 0, paddingLeft: "16px", color: palette.fg, opacity: 0.9 }}>
-                              {msg.insight.memories.map((mem, idx) => (
-                                <li key={idx} style={{ marginBottom: "4px" }}>
-                                  {mem.text.length > 100 ? `${mem.text.slice(0, 100)}...` : mem.text}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* State Context */}
-                        {msg.insight.stateContext?.friction_state && (
-                          <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${palette.border}` }}>
-                            <div style={{ color: palette.muted, fontSize: "11px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span>
-                                Your current state: <span style={{ color: palette.fg }}>{msg.insight.stateContext.friction_state}</span>
-                                {msg.insight.stateContext.drift_percentage != null && msg.insight.stateContext.drift_percentage > 10 && (
-                                  <span> ({msg.insight.stateContext.drift_percentage.toFixed(0)}% drift)</span>
-                                )}
-                              </span>
-                              <button
-                                onClick={() => navigateTo("/experience/me")}
-                                style={{
-                                  background: "transparent",
-                                  border: "none",
-                                  color: palette.accent,
-                                  fontSize: "11px",
-                                  cursor: "pointer",
-                                  textDecoration: "underline",
-                                }}
-                              >
-                                See full profile
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Task Plan Confirmation Buttons */}
-                {msg.isTaskPlan && msg.taskPlan && (
-                  <div style={{
-                    display: "flex",
-                    gap: "10px",
-                    marginTop: "16px",
-                    paddingTop: "12px",
-                    borderTop: `1px solid ${palette.border}`,
-                  }}>
-                    <button
-                      onClick={() => handleTaskConfirmation(true)}
-                      style={{
-                        padding: "10px 20px",
-                        borderRadius: "20px",
-                        border: "none",
-                        background: palette.accent,
-                        color: "#fff",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        fontWeight: 500,
-                      }}
-                    >
-                      Yes, proceed
-                    </button>
-                    <button
-                      onClick={() => handleTaskConfirmation(false)}
-                      style={{
-                        padding: "10px 20px",
-                        borderRadius: "20px",
-                        border: `1px solid ${palette.border}`,
-                        background: "transparent",
-                        color: palette.fg,
-                        fontSize: "14px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-
-                {/* Approval Request Buttons */}
-                {msg.isApprovalRequest && msg.approvalRequest && (
-                  <div style={{
-                    display: "flex",
-                    gap: "10px",
-                    marginTop: "16px",
-                    paddingTop: "12px",
-                    borderTop: `1px solid ${palette.border}`,
-                  }}>
-                    {msg.approvalRequest.options.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => handleApprovalResponse(
-                          msg.approvalRequest!.request_id,
-                          opt.value === "approve"
-                        )}
-                        style={{
-                          padding: "10px 16px",
-                          borderRadius: "20px",
-                          border: opt.value === "approve" ? "none" : `1px solid ${palette.border}`,
-                          background: opt.value === "approve" ? palette.accent : "transparent",
-                          color: opt.value === "approve" ? "#fff" : palette.fg,
-                          fontSize: "13px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            {messages.map((msg) => {
+              const isUser = msg.role === "user";
+              const isSystem = msg.kind === "system";
+              const isDeep = msg.kind === "deep";
+              return (
+                <div
+                  key={msg.id}
+                  style={{
+                    ...styles.bubble,
+                    ...(isUser
+                      ? styles.userBubble
+                      : isSystem
+                        ? styles.systemBubble
+                        : isDeep
+                          ? styles.deepBubble
+                          : styles.sakhiBubble),
+                  }}
+                >
+                  {isDeep ? <div style={styles.deepBadge}>Whole Story</div> : null}
+                  <div style={styles.bubbleText}>{msg.content}</div>
+                </div>
+              );
+            })}
+            {isSending ? (
+              <div style={{ ...styles.bubble, ...styles.systemBubble, opacity: 0.7 }}>
+                <span style={{ color: palette.muted }}>...</span>
               </div>
-            ))}
-            {isSending && (
-              <div style={{ ...messageStyle("sakhi"), opacity: 0.6 }}>
-                <span style={{ display: "inline-block", animation: "pulse 1s infinite" }}>
-                  ...
-                </span>
-              </div>
-            )}
+            ) : null}
           </>
         )}
         <div ref={messagesEndRef} />
-      </div>
+      </main>
 
-      {/* Input Area */}
-      <div style={inputAreaStyle}>
-        {showTextInput ? (
-          <form onSubmit={handleSubmit} style={textInputContainerStyle}>
-            <input
-              type="text"
-              style={textInputStyle}
-              placeholder="What's on your mind?"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              autoFocus
-            />
-            <button type="submit" style={sendButtonStyle} disabled={!inputText.trim()}>
-              Send
-            </button>
-          </form>
-        ) : (
-          <>
+      <section style={styles.inputArea}>
+        {hasMessages ? (
+          <div style={styles.deepActionRow}>
+            <div style={{
+              ...styles.deepInfoPill,
+              ...(deepAnswerReady ? styles.deepInfoPillReady : {}),
+            }}>
+              <span style={styles.deepInfoText}>{deepStatusHint}</span>
+            </div>
             <button
-              style={micButtonStyle}
-              onClick={toggleVoice}
-              disabled={voice.isProcessing}
+              style={{
+                ...styles.deepRunButton,
+                ...((!deepAnswerReady || isRunningDeepAnswer) ? styles.deepRunButtonDisabled : {}),
+              }}
+              onClick={() => void handleRunDeepAnswer()}
+              disabled={!deepAnswerReady || isRunningDeepAnswer}
+              title={deepReflectionStatus || undefined}
             >
-              {isVoiceActive && <div style={pulseStyle} />}
-              {voice.isProcessing ? (
-                // Spinner for processing
-                <svg
-                  viewBox="0 0 24 24"
-                  style={{
-                    width: 24,
-                    height: 24,
-                    position: "relative",
-                    zIndex: 1,
-                    animation: "spin 1s linear infinite",
-                  }}
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    fill="none"
-                    strokeDasharray="31.4 31.4"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              ) : voice.isSpeaking ? (
-                // Sound waves for speaking
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  style={{ width: 24, height: 24, position: "relative", zIndex: 1 }}
-                >
-                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                </svg>
-              ) : (
-                // Microphone for idle/recording
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ width: 24, height: 24, position: "relative", zIndex: 1 }}
-                >
-                  <rect x="9" y="3" width="6" height="11" rx="3" />
-                  <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="22" />
-                </svg>
-              )}
+              {isRunningDeepAnswer ? "Reading..." : "Run Deep"}
             </button>
-            <span style={{ fontSize: "13px", color: palette.muted }}>
-              {voiceStatus || (voice.isRecording ? "Tap to stop" : "Tap to speak")}
-            </span>
-          </>
-        )}
+          </div>
+        ) : null}
 
-        <div
-          style={textToggleStyle}
-          onClick={() => setShowTextInput(!showTextInput)}
-        >
-          {showTextInput ? "Use voice instead" : "Type instead"}
-        </div>
-      </div>
-
-      {/* Floating Action Button */}
-      <div style={fabContainerStyle}>
-        {/* FAB Options */}
-        <div
-          style={{ ...fabOptionStyle, transitionDelay: "200ms" }}
-          onClick={() => {
-            setFabOpen(false);
-            setShowDebug(true);
+        <form
+          style={styles.textInputRow}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void sendMessage();
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="2" y="2" width="14" height="14" rx="2" stroke="#f59e0b" strokeWidth="1.5" />
-            <path d="M5 6h8M5 9h6M5 12h4" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          Debug Panel
-        </div>
-
-        <div
-          style={{ ...fabOptionStyle, transitionDelay: "150ms" }}
-          onClick={() => navigateTo("/experience/state")}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="9" cy="9" r="7" stroke={palette.accent} strokeWidth="1.5" />
-            <path d="M9 5v4l3 2" stroke={palette.accent} strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          Today&apos;s State
-        </div>
-
-        <div
-          style={{ ...fabOptionStyle, transitionDelay: "100ms" }}
-          onClick={() => navigateTo("/experience/onboarding/result")}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="9" cy="9" r="7" stroke={palette.success} strokeWidth="1.5" />
-            <path d="M6 9l2 2 4-4" stroke={palette.success} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          My Operating System
-        </div>
-
-        <div
-          style={{ ...fabOptionStyle, transitionDelay: "50ms" }}
-          onClick={() => navigateTo("/experience/me")}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="9" cy="6" r="3" stroke={palette.accent} strokeWidth="1.5" />
-            <path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke={palette.accent} strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          Me
-        </div>
-
-        <div
-          style={{ ...fabOptionStyle, transitionDelay: "0ms" }}
-          onClick={() => navigateTo("/experience/settings")}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="9" cy="9" r="3" stroke={palette.muted} strokeWidth="1.5" />
-            <path d="M9 1v2M9 15v2M1 9h2M15 9h2M3 3l1.5 1.5M13.5 13.5L15 15M15 3l-1.5 1.5M4.5 13.5L3 15" stroke={palette.muted} strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          Settings
-        </div>
-
-        {/* Main FAB Button */}
-        <button
-          style={{
-            ...fabButtonStyle,
-            background: fabOpen ? palette.accent : palette.cardBg,
-            transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)",
-          }}
-          onClick={() => setFabOpen(!fabOpen)}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <line x1="12" y1="5" x2="12" y2="19" stroke={palette.fg} strokeWidth="2" strokeLinecap="round" />
-            <line x1="5" y1="12" x2="19" y2="12" stroke={palette.fg} strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Debug Panel */}
-      <DebugPanel
-        data={lastResponseDebug || {}}
-        isOpen={showDebug}
-        onClose={() => setShowDebug(false)}
-        personId={authUser?.person_id}
-      />
+          <input
+            type="text"
+            value={inputText}
+            placeholder="What's on your mind?"
+            onChange={(event) => setInputText(event.target.value)}
+            style={styles.textInput}
+          />
+          <button
+            type="submit"
+            disabled={!inputText.trim() || isSending}
+            style={{
+              ...styles.sendButton,
+              ...((!inputText.trim() || isSending) ? styles.sendButtonDisabled : {}),
+            }}
+          >
+            Send
+          </button>
+        </form>
+      </section>
     </div>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    minHeight: "100vh",
+    background: palette.bg,
+    color: palette.fg,
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif',
+    display: "flex",
+    flexDirection: "column",
+    position: "relative",
+    overflow: "hidden",
+  },
+  auroraA: {
+    position: "absolute",
+    top: -130,
+    right: -120,
+    width: 340,
+    height: 340,
+    borderRadius: "50%",
+    background: "rgba(114, 206, 239, 0.14)",
+    pointerEvents: "none",
+  },
+  auroraB: {
+    position: "absolute",
+    bottom: 100,
+    left: -100,
+    width: 280,
+    height: 280,
+    borderRadius: "50%",
+    background: "rgba(255, 190, 124, 0.11)",
+    pointerEvents: "none",
+  },
+  header: {
+    position: "relative",
+    zIndex: 2,
+    borderBottom: `1px solid ${palette.border}`,
+    padding: "20px 24px 14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  headerLeft: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+  brand: {
+    textTransform: "uppercase",
+    letterSpacing: "0.18em",
+    fontSize: 13,
+    color: palette.muted,
+  },
+  greeting: {
+    fontSize: 40,
+    lineHeight: 1.1,
+    fontWeight: 560,
+    color: palette.fg,
+  },
+  accountTrigger: {
+    borderRadius: 999,
+    border: `1px solid ${palette.border}`,
+    background: "rgba(255,255,255,0.08)",
+    color: palette.fg,
+    padding: "8px 14px",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 15,
+    cursor: "pointer",
+  },
+  accountMenu: {
+    position: "absolute",
+    right: 0,
+    top: "calc(100% + 10px)",
+    minWidth: 200,
+    borderRadius: 16,
+    border: `1px solid ${palette.border}`,
+    background: "rgba(14, 20, 31, 0.97)",
+    backdropFilter: "blur(8px)",
+    boxShadow: "0 12px 28px rgba(0,0,0,0.35)",
+    padding: 8,
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    zIndex: 5,
+  },
+  accountItem: {
+    border: "none",
+    background: "transparent",
+    color: palette.fg,
+    fontSize: 14,
+    textAlign: "left",
+    borderRadius: 10,
+    padding: "10px 12px",
+    cursor: "pointer",
+  },
+  messagesArea: {
+    position: "relative",
+    zIndex: 1,
+    flex: 1,
+    overflowY: "auto",
+    padding: "22px 24px 12px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+  },
+  emptyState: {
+    margin: "auto",
+    textAlign: "center",
+    maxWidth: 620,
+  },
+  emptyPrompt: {
+    fontSize: 52,
+    lineHeight: 1.08,
+    letterSpacing: "-0.03em",
+    margin: 0,
+    color: palette.fg,
+    fontWeight: 520,
+  },
+  emptyHint: {
+    margin: "18px auto 0",
+    fontSize: 26,
+    lineHeight: 1.25,
+    color: palette.muted,
+    maxWidth: 700,
+  },
+  bubble: {
+    maxWidth: "78%",
+    borderRadius: 22,
+    border: `1px solid ${palette.border}`,
+    padding: "14px 16px",
+    whiteSpace: "pre-wrap",
+  },
+  userBubble: {
+    alignSelf: "flex-end",
+    background: palette.userBubble,
+  },
+  sakhiBubble: {
+    alignSelf: "flex-start",
+    background: palette.sakhiBubble,
+  },
+  deepBubble: {
+    alignSelf: "flex-start",
+    background: palette.deepBubble,
+    borderColor: "rgba(225, 186, 130, 0.3)",
+  },
+  systemBubble: {
+    alignSelf: "center",
+    background: palette.systemBubble,
+  },
+  bubbleText: {
+    fontSize: 17,
+    lineHeight: 1.55,
+    color: palette.fg,
+  },
+  deepBadge: {
+    display: "inline-block",
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    fontSize: 11,
+    marginBottom: 8,
+    color: "#f5dcb2",
+    fontWeight: 600,
+  },
+  inputArea: {
+    position: "relative",
+    zIndex: 2,
+    borderTop: `1px solid ${palette.border}`,
+    padding: "12px 24px 20px",
+    background: "rgba(8, 12, 18, 0.95)",
+    backdropFilter: "blur(8px)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  deepActionRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+  deepInfoPill: {
+    flex: 1,
+    borderRadius: 999,
+    border: `1px solid rgba(183, 198, 230, 0.24)`,
+    background: "rgba(8, 18, 39, 0.62)",
+    padding: "9px 14px",
+  },
+  deepInfoPillReady: {
+    borderColor: "rgba(208, 139, 78, 0.52)",
+    background: "rgba(61, 45, 24, 0.5)",
+  },
+  deepInfoText: {
+    color: palette.muted,
+    fontSize: 14,
+  },
+  deepRunButton: {
+    borderRadius: 999,
+    border: `1px solid rgba(215, 175, 118, 0.6)`,
+    background: "rgba(74, 58, 36, 0.75)",
+    color: "#f5dcb2",
+    padding: "10px 18px",
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  deepRunButtonDisabled: {
+    opacity: 0.58,
+    cursor: "default",
+  },
+  textInputRow: {
+    display: "flex",
+    gap: 10,
+  },
+  textInput: {
+    flex: 1,
+    borderRadius: 26,
+    border: `1px solid ${palette.border}`,
+    background: "rgba(6, 16, 34, 0.8)",
+    color: palette.fg,
+    fontSize: 22,
+    padding: "14px 18px",
+    outline: "none",
+  },
+  sendButton: {
+    borderRadius: 999,
+    border: "none",
+    background: palette.accent,
+    color: "#fff",
+    padding: "0 22px",
+    fontSize: 18,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  sendButtonDisabled: {
+    opacity: 0.55,
+    cursor: "default",
+  },
+};

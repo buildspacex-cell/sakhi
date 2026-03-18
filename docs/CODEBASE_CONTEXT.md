@@ -1,6 +1,6 @@
 # Codebase Context (Working Baseline)
 
-> Last audited: 2026-03-11  
+> Last audited: 2026-03-12  
 > Source of truth refresh command: `./scripts/context-audit.sh`
 
 ## Purpose
@@ -25,22 +25,22 @@ Use this first before substantial code edits.
    - `docs/TEST_STATUS.md`
    - `CHANGELOG.md` (`[Unreleased]`)
 
-## Current Snapshot (2026-03-11)
+## Current Snapshot (2026-03-12)
 
 ### Repository Shape
 
 | Metric | Value |
 |---|---:|
-| Tracked files | 1408 |
-| Python files | 862 |
-| TypeScript files (`.ts`, `.tsx`) | 375 |
+| Tracked files | 1419 |
+| Python files | 863 |
+| TypeScript files (`.ts`, `.tsx`) | 381 |
 | API route modules (`sakhi/apps/api/routes`, excluding `__init__`/`.bak`) | 81 |
 | API service modules (`sakhi/apps/api/services`, excluding `__init__`) | 233 |
 | Worker modules (`sakhi/apps/worker`, excluding `__init__`) | 114 |
 | Worker task modules (`sakhi/apps/worker/tasks`, excluding `__init__`, `_stubs.py`) | 86 |
 | Engine modules (`sakhi/apps/engine`, excluding `__init__`) | 34 |
-| Web pages (`apps/web/app/**/page.tsx`) | 76 |
-| Web API routes (`apps/web/app/api/**/route.ts`) | 117 |
+| Web pages (`apps/web/app/**/page.tsx`) | 78 |
+| Web API routes (`apps/web/app/api/**/route.ts`) | 119 |
 | Mobile screens (`apps/mobile/app/**/*.tsx`) | 34 |
 | Kala source modules | 49 |
 | Kala test functions | 552 |
@@ -88,7 +88,7 @@ Use this first before substantial code edits.
 
 ## Simulation Data Health (Verified)
 
-Source: `./scripts/context-audit.sh` on 2026-03-11.
+Source: `./scripts/context-audit.sh` on 2026-03-12.
 
 | File | Days | Entries | Coherence | Alignment | Identity | Themes | Patterns | Worker failures |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
@@ -104,7 +104,7 @@ Current read:
 - `anxious_achiever` still shows a deferred rhythm rollup schema gap from legacy snapshot runs.
 - `hormonal_harmony` and `stuck_creative` remain legacy/low-fidelity for deep-state outputs.
 
-## Test Reality (2026-03-11 Context Audit)
+## Test Reality (2026-03-12 Context Audit)
 
 ### Harness Signals
 
@@ -119,7 +119,7 @@ Current read:
 - Integration test files: `9`
 - Unit test files: `57`
 
-## Observability Signals (2026-03-11 Context Audit)
+## Observability Signals (2026-03-12 Context Audit)
 
 - `metrics_endpoint=present`
 - `health_readiness=present`

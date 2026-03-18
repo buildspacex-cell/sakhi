@@ -22,6 +22,7 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: "com.buildspacex.sakhi",
       buildNumber: "13",
+      appleTeamId: "47HYXW7V93",
       usesAppleSignIn: true,
       infoPlist: {
         CFBundleURLTypes: [

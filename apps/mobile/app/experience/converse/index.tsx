@@ -489,15 +489,17 @@ export default function ConversationScreen() {
       !personId
       || !activeContinuitySignal?.topic_key
       || !hasDeepQuery
-      || !wholeStoryReady
+      || !deepAnswerReady
       || isRunningDeepAnswer
     ) {
       return;
     }
+    const mode = "whole_story";
     const selectedTopics = wholeStorySelectedTopics;
+    const pendingMessage = "Deep Reflect is reading your whole story across linked threads...";
 
     const pendingId = `deep-pending-${Date.now()}`;
-    Analytics.deepStarted({ mode: "whole_story" });
+    Analytics.deepStarted({ mode });
     emitDebugEvent({
       type: "action",
       name: "run_deep_pressed",
@@ -505,6 +507,7 @@ export default function ConversationScreen() {
       route: "/continuity/reflection/run",
       method: "POST",
       metadata: {
+        mode,
         selected_topics: selectedTopics.length,
       },
     });
@@ -515,7 +518,7 @@ export default function ConversationScreen() {
       {
         id: pendingId,
         role: "sakhi",
-        content: "Deep Reflect is reading your whole story across linked threads...",
+        content: pendingMessage,
         timestamp: new Date(),
         kind: "system",
       },
@@ -544,7 +547,7 @@ export default function ConversationScreen() {
           person_id: personId,
           topic_key: activeContinuitySignal.topic_key,
           window: "3650d",
-          mode: "whole_story",
+          mode,
           topic_keys: selectedTopics,
           user_query: latestUserMessage.trim(),
         }),

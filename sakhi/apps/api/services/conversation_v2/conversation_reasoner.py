@@ -107,13 +107,6 @@ def build_prompt(
     Cut blocks still flow to metadata_payload for debug panel — just not injected into the LLM prompt.
     """
 
-    # --- Recent conversation (cross-topic awareness) ---
-    short_term = context.get("short_term") or {}
-    texts: List[str] = []
-    if isinstance(short_term.get("texts"), list):
-        texts = [str(t) for t in short_term["texts"] if isinstance(t, str)]
-    st_block = "\n".join(f"- {line}" for line in texts[-3:]) or "- (no recent context)"
-
     # --- Tone ---
     tone_style = tone.get("style", "warm and reflective")
     pace = tone.get("pace", "balanced")
@@ -312,9 +305,6 @@ Emotion state: {last_emotion}
 Energy level: {energy_level}
 Mirroring: {mirroring.get("strategy", "mirror emotion before guiding forward")}
 {context_scan}
-Recent conversation:
-{st_block}
-
 {continuity_section}
 {cross_topic_section}
 {governance_section}

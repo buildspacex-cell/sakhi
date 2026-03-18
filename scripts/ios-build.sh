@@ -2,7 +2,8 @@
 # =============================================================================
 # Sakhi iOS Build — TestFlight
 # =============================================================================
-# Runs expo prebuild (bakes env vars) then fastlane beta (build + upload).
+# Loads env vars, installs deps, then runs fastlane beta from apps/mobile/ios.
+# EXPO_PUBLIC_* vars are passed through the shell to Metro at bundle time.
 #
 # Usage: ./scripts/ios-build.sh
 #
@@ -10,7 +11,7 @@
 #   - Xcode + Xcode Command Line Tools
 #   - fastlane (gem install fastlane)
 #   - apps/mobile/.env.local with EXPO_PUBLIC_* vars set
-#   - apps/mobile/ios/fastlane/keys/AuthKey_BWGN9F87AQ.p8 present
+#   - Apple Distribution cert + provisioning profile in your Keychain
 # =============================================================================
 
 set -e
@@ -41,32 +42,19 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-AUTH_KEY="$MOBILE_DIR/ios/fastlane/keys/AuthKey_BWGN9F87AQ.p8"
-if [ ! -f "$AUTH_KEY" ]; then
-    echo -e "${RED}Error: App Store Connect API key not found at:${NC}"
-    echo "  $AUTH_KEY"
-    exit 1
-fi
-
 if ! command -v fastlane &> /dev/null; then
     echo -e "${RED}Error: fastlane not found${NC}"
     echo "Install: gem install fastlane"
     exit 1
 fi
 
-if ! command -v npx &> /dev/null; then
-    echo -e "${RED}Error: npx not found${NC}"
-    exit 1
-fi
-
-# ── Load env vars so they're available during prebuild ───────────────────────
+# ── Load env vars (passed through shell → xcodebuild → Metro at bundle time) ─
 
 echo -e "${YELLOW}Loading env vars from apps/mobile/.env.local...${NC}"
 set -a
 source "$ENV_FILE"
 set +a
 
-# Confirm PostHog key is set
 if [ -z "$EXPO_PUBLIC_POSTHOG_KEY" ]; then
     echo -e "${YELLOW}Warning: EXPO_PUBLIC_POSTHOG_KEY is not set — analytics will be disabled in this build${NC}"
 else
@@ -76,32 +64,25 @@ fi
 # ── Step 1: Install JS deps ───────────────────────────────────────────────────
 
 echo ""
-echo -e "${GREEN}[1/4] Installing JS dependencies...${NC}"
+echo -e "${GREEN}[1/3] Installing JS dependencies...${NC}"
 cd "$PROJECT_ROOT"
 if command -v pnpm &> /dev/null; then
-    pnpm install --frozen-lockfile 2>&1
+    pnpm install --no-frozen-lockfile 2>&1
 else
     npm install 2>&1
 fi
 
-# ── Step 2: Expo prebuild ─────────────────────────────────────────────────────
+# ── Step 2: Install CocoaPods ─────────────────────────────────────────────────
 
 echo ""
-echo -e "${GREEN}[2/4] Running expo prebuild (bakes env vars into native)...${NC}"
-cd "$MOBILE_DIR"
-npx expo prebuild --platform ios --clean 2>&1
-
-# ── Step 3: Install CocoaPods ─────────────────────────────────────────────────
-
-echo ""
-echo -e "${GREEN}[3/4] Installing CocoaPods...${NC}"
+echo -e "${GREEN}[2/3] Installing CocoaPods...${NC}"
 cd "$MOBILE_DIR/ios"
 pod install 2>&1
 
-# ── Step 4: Fastlane build + upload ──────────────────────────────────────────
+# ── Step 3: Fastlane build + upload ──────────────────────────────────────────
 
 echo ""
-echo -e "${GREEN}[4/4] Building and uploading to TestFlight (fastlane beta)...${NC}"
+echo -e "${GREEN}[3/3] Building and uploading to TestFlight (fastlane beta)...${NC}"
 cd "$MOBILE_DIR/ios"
 fastlane beta 2>&1
 

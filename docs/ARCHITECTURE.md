@@ -222,6 +222,11 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 | `GET /continuity/reflection/status` | Poll deep reflection job status |
 | `GET /continuity/reflection/result` | Fetch deep reflection result payload (LLM `chat_response` when router available, deterministic fallback + source/debug metadata, and surface-policy-aware mirror-only gating when detail is blocked) |
 
+Web `/experience` continuity UX now mirrors mobile for user-facing parity:
+- `converse` uses dynamic in-chat Deep Reflect gating from the non-debug continuity signal.
+- `reflection` provides topic bubbles, topic story, and cross-topic My Story actions.
+- account hub actions (Reflection, Settings, Support Console, Sign out) are available from chat without exposing the old debug panel in default flow.
+
 ### Voice
 | Route | Purpose |
 |-------|---------|

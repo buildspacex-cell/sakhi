@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type React from "react";
 import type { Route } from "next";
@@ -145,6 +145,14 @@ function buildMomentObservation(moment: ContinuityMoment): string {
 }
 
 export default function ReflectionPage() {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <ReflectionPageContent />
+    </Suspense>
+  );
+}
+
+function ReflectionPageContent() {
   const router = useRouter();
   const search = useSearchParams();
 
@@ -825,6 +833,14 @@ export default function ReflectionPage() {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function PageFallback() {
+  return (
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: palette.bg, color: palette.muted }}>
+      Loading...
     </div>
   );
 }

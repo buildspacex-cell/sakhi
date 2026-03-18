@@ -63,6 +63,9 @@ set +a
 # Ensure sakhi package is importable from any CWD
 export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}"
 
+# Fix macOS fork() safety issue that crashes RQ workers
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
 # Force queue mode (not inline)
 export SAKHI_DISABLE_QUEUE=0
 

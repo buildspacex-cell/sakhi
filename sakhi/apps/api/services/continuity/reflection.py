@@ -53,10 +53,9 @@ _TOPIC_STOPWORDS = {
     "return",
 }
 _REFLECTION_ALLOWED_MODES = {
-    "topic_reflection",
-    "deep_answer",
-    "whole_story",
-    "cross_context",
+    "topic_reflection",  # Soul screen: <Topic> Story — no query, single arc trace
+    "whole_story",       # Chat: Deep Reflect — query-driven, cross-thread synthesis
+    "cross_context",     # Soul screen: My Story — no query, all-topic interplay
 }
 _REFLECTION_MAX_TOPIC_KEYS = CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.max_topic_keys
 _PRIORITY_CONNECTOR_RE = re.compile(
@@ -175,7 +174,7 @@ async def create_deep_reflection_job(
     cleaned_query = str(user_query or "").strip() or None
     normalized_topic_key = _normalize_topic_key(topic_key)
     cleaned_topic_keys = _normalize_topic_keys(normalized_topic_key, topic_keys)
-    if normalized_mode in {"topic_reflection", "deep_answer"}:
+    if normalized_mode == "topic_reflection":
         cleaned_topic_keys = cleaned_topic_keys[:1]
     reflection_id = str(uuid4())
     await dbexec(
@@ -326,7 +325,7 @@ async def _run_deep_reflection_job(
             scope=CONTINUITY_SCOPE,
         )
         normalized_topic_keys = _normalize_topic_keys(topic_key, topic_keys)
-        if mode in {"topic_reflection", "deep_answer"}:
+        if mode == "topic_reflection":
             normalized_topic_keys = normalized_topic_keys[:1]
         related_arc_payloads = (
             await _load_related_topic_arcs(
@@ -631,10 +630,18 @@ async def _build_reflection_llm_packet(
             "effective_user_query_source": "none",
             "provided_user_query": None,
         }
+        recent_verbatim_turns: list[dict[str, Any]] = []
     else:
         latest_turn_context = await _load_latest_turn_context(
             person_id=person_id,
             topic_keywords=topic_keywords,
+        )
+        # whole_story only: load last 4 verbatim turns (user + assistant) so
+        # the synthesis is grounded in the immediate conversation that prompted the query.
+        recent_verbatim_turns = (
+            await _load_recent_verbatim_turns(person_id=person_id, limit=4)
+            if mode == "whole_story"
+            else []
         )
 
     provided_query = str(user_query or "").strip()
@@ -676,31 +683,7 @@ async def _build_reflection_llm_packet(
     )
 
     response_contract: dict[str, Any]
-    if mode == "deep_answer":
-        response_contract = {
-            "voice": "friend, warm, direct",
-            "length_words": "150-250",
-            "min_words": 150,
-            "max_words": 250,
-            "max_questions": 1,
-            "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
-            "format": (
-                "natural prose, weave 2-3 past moments naturally, "
-                "end with one suggestion and one honest question, no section headers"
-            ),
-            "priority": "current_query_first",
-            "emotion_policy": {
-                "mention_only_with_priority_conflict": True,
-                "priority_conflict_detected": priority_conflict.get("detected", False),
-                "max_emotion_sentences": 1,
-                "priority_conflict_signals": priority_conflict.get("signals") or [],
-                "rule": (
-                    "Only mention emotion when a clear priority conflict is evidenced; "
-                    "otherwise keep the answer tactical."
-                ),
-            },
-        }
-    elif mode == "whole_story":
+    if mode == "whole_story":
         response_contract = {
             "voice": "friend, warm, direct",
             "length_words": "220-360",
@@ -788,6 +771,7 @@ async def _build_reflection_llm_packet(
         "evidence_anchors": evidence,
         "delta_since_last_reflection": delta_since_last,
         "latest_turn_context": latest_turn_context,
+        "recent_verbatim_turns": recent_verbatim_turns,
         "current_query": {
             "text": effective_query,
             "source": effective_source,
@@ -1319,6 +1303,48 @@ async def _build_delta_since_last_reflection(
     }
 
 
+async def _load_recent_verbatim_turns(
+    person_id: str,
+    *,
+    limit: int = 4,
+) -> list[dict[str, Any]]:
+    """Load the last `limit` conversation turns (user + assistant) verbatim.
+
+    No topic filtering — captures the immediate conversational context
+    that shaped the user's Deep Reflect query, regardless of topic keywords.
+    Only used for whole_story mode.
+    """
+    try:
+        rows = await dbfetch(
+            """
+            SELECT role, text, created_at
+            FROM conversation_turns
+            WHERE user_id = $1::uuid OR person_id = $1::uuid
+            ORDER BY created_at DESC
+            LIMIT $2
+            """,
+            person_id,
+            limit,
+        )
+        turns = []
+        for row in reversed(rows or []):
+            role = str(row.get("role") or "").lower()
+            text = str(row.get("text") or "").strip()
+            if role not in ("user", "assistant") or not text:
+                continue
+            turns.append(
+                {
+                    "role": role,
+                    "ts": _iso(row.get("created_at")),
+                    "text": _truncate(text, 300),
+                }
+            )
+        return turns
+    except Exception as exc:
+        LOGGER.info("Recent verbatim turns unavailable for %s: %s", person_id, exc)
+        return []
+
+
 async def _load_latest_turn_context(
     person_id: str,
     *,
@@ -1597,11 +1623,7 @@ def _build_deep_reflection_prompt_messages(
             response_lines.append(
                 "- Emotion mention: omit unless a clear priority conflict is explicitly evidenced."
             )
-    if request_mode == "deep_answer":
-        response_lines.append(
-            "- Value add: answer current query first, weave in 2-3 past moments naturally, end with one suggestion and one honest question."
-        )
-    elif request_mode == "whole_story":
+    if request_mode == "whole_story":
         response_lines.append(
             "- Value add: answer the current query first, then connect at least two linked threads with concrete evidence."
         )
@@ -1676,6 +1698,23 @@ def _build_deep_reflection_prompt_messages(
             connected_lines
         )
 
+    # For whole_story: include recent verbatim turns as immediate conversational context
+    recent_verbatim_turns = [
+        item
+        for item in (packet.get("recent_verbatim_turns") or [])
+        if isinstance(item, dict) and str(item.get("text") or "").strip()
+    ]
+    verbatim_block = ""
+    if recent_verbatim_turns and request_mode == "whole_story":
+        turn_lines = [
+            f"  {str(item.get('role') or 'user').capitalize()}: {str(item.get('text') or '').strip()}"
+            for item in recent_verbatim_turns
+        ]
+        verbatim_block = (
+            "\n\nRecent conversation (immediate context before this query):\n"
+            + "\n".join(turn_lines)
+        )
+
     user_prompt = (
         preamble
         + "History on this topic:\n"
@@ -1683,6 +1722,7 @@ def _build_deep_reflection_prompt_messages(
         + "\n\nWhat we know about this person on this topic:\n"
         + "\n".join(person_lines)
         + connected_block
+        + verbatim_block
         + "\n\nCurrent query now:\n"
         + current_query
         + "\n\nResponse contract:\n"
@@ -1959,7 +1999,7 @@ def _compose_chat_response(
     mode: str,
     user_query: str | None,
 ) -> str:
-    if mode in {"deep_answer", "whole_story"} and str(user_query or "").strip():
+    if mode == "whole_story" and str(user_query or "").strip():
         fallback_lines = [
             origin_story.strip(),
             key_pivots[0].strip() if key_pivots else "",

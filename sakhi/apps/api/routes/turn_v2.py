@@ -960,7 +960,9 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         brain_state.get("identity_momentum_state") or {},
     )
     # --- Tier 2 gating: emotional_depth (inner_dialogue + nudge_state are LLM/DB calls) ---
-    if "emotional_depth" in active_modules:
+    # Disabled by default for MVP latency — enable via SAKHI_ENABLE_INNER_DIALOGUE=1
+    _enable_inner_dialogue = os.getenv("SAKHI_ENABLE_INNER_DIALOGUE", "0") == "1"
+    if _enable_inner_dialogue and "emotional_depth" in active_modules:
         try:
             inner_dialogue = await inner_dialogue_engine.compute_inner_dialogue(
                 user_id, body.text, {"triage": triage_local, "behavior_profile": behavior_profile}
@@ -976,17 +978,22 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         inner_dialogue = {}
         nudge_state = {}
 
-    # Always compute — DB side effects (writes to personal_model)
-    # Run all 3 in parallel (independent of each other)
-    microreg_result, tone_result, empathy_result = await asyncio.gather(
-        compute_microreg(user_id, body.text),
-        compute_tone(user_id),
-        compute_empathy(user_id, body.text),
-        return_exceptions=True,
-    )
-    microreg_state = {} if isinstance(microreg_result, Exception) else microreg_result
-    tone_state = {} if isinstance(tone_result, Exception) else tone_result
-    empathy_state = {} if isinstance(empathy_result, Exception) else empathy_result
+    # Fire-and-forget: personal-model side-effect writes.
+    # Results are available next turn from DB; not needed for this turn's LLM
+    # (continuity pack + brain_state already cover core reply context).
+    _user_id_cap = user_id
+    _text_cap = body.text
+    async def _refresh_person_state() -> None:
+        await asyncio.gather(
+            compute_microreg(_user_id_cap, _text_cap),
+            compute_tone(_user_id_cap),
+            compute_empathy(_user_id_cap, _text_cap),
+            return_exceptions=True,
+        )
+    asyncio.create_task(_refresh_person_state())
+    microreg_state: dict = {}
+    tone_state: dict = {}
+    empathy_state: dict = {}
 
     micro_goals_meta = None
     text_lower = (body.text or "").lower()
@@ -995,10 +1002,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "buy", "fix", "join", "start", "learn", "upgrade", "clean", "improve", "reduce", "increase",
     ]
     if any(p in text_lower for p in trigger_phrases):
-        try:
-            micro_goals_meta = await micro_goals_service.create_micro_goals(user_id, body.text)
-        except Exception:
-            micro_goals_meta = None
+        asyncio.create_task(micro_goals_service.create_micro_goals(user_id, body.text))
 
     # --- Deterministic context extraction (loaded in parallel above) ---
     continuity_state = det_ctx.continuity_state
@@ -1134,19 +1138,13 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         is_morning = current_hour < 10
         is_evening = current_hour >= 19
 
-        # Determine trigger reason
+        # MVP: trigger recommendations only when user explicitly asks or mentions symptoms.
+        # Proactive/contextual/nudge triggers removed — they inflate latency on every morning
+        # and evening turn and drift>25% turns without clear user intent.
         if is_reactive_request:
             recommendation_trigger = "reactive"  # User asked
-        elif drift_percentage > 25:
-            recommendation_trigger = "proactive"  # High friction
-        elif is_morning or is_evening:
-            recommendation_trigger = "contextual"  # Scheduled moment
-        elif 15 <= drift_percentage <= 25:
-            recommendation_trigger = "nudge"  # Gentle suggestion
-
-        # When body module is active (user mentions symptoms), ensure recommendations can flow
-        if "body" in active_modules and not recommendation_trigger:
-            recommendation_trigger = "reactive"
+        elif "body" in active_modules:
+            recommendation_trigger = "reactive"  # Symptom/body mention
 
         # Generate recommendations if triggered AND router allows (or high drift/body overrides)
         if recommendation_trigger and ("recommendations" in active_modules or drift_percentage > 25 or "body" in active_modules):
@@ -1198,13 +1196,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     # when the user asks about email/inbox.
     # ==========================================================================
 
-    # 1. Merge email friction into friction state (silent — enriches recommendations)
-    try:
-        email_friction = await get_email_friction_contribution(user_id)
-        if email_friction and friction_state_computed:
-            friction_state_computed["email_contribution"] = email_friction
-    except Exception:
-        pass
+    # Email friction enrichment skipped from sync path — minor signal, not worth the latency.
 
     # --- Tier 2 gating: causal reasoning (LLM call) ---
     causal_explanation = None
@@ -1705,11 +1697,6 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         "life_context": internal_state.get("life_context"),
         "decision_profile": internal_state.get("decision_profile"),
         "narrative_trace": fast_narrative,
-        "alignment_frame": alignment,
-        "rhythm_soul_frame": fast_rhythm_soul,
-        "emotion_soul_rhythm_frame": fast_esr,
-        "identity_momentum_frame": fast_identity_momentum,
-        "identity_timeline_frame": fast_identity_timeline,
         "inner_dialogue": inner_dialogue,
         "tone_state": tone_state,
         "nudge_state": nudge_state,

@@ -8,7 +8,7 @@
 
 ## One Paragraph
 
-Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 81 API route modules and 114 worker modules, a Next.js web app with 76 pages, a React Native mobile app with 34 screens, and a pure-computation governance kernel with 552 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, inject policy-gated continuity context when available, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
+Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversations with a person, tracks their state over time (doshas, energy, emotions, patterns, rhythms), detects drift from their baseline, and governs its own behavior through a deterministic kernel called kala. The system runs a FastAPI backend with 81 API route modules and 114 worker modules, a Next.js web app with 78 pages, a React Native mobile app with 34 screens, and a pure-computation governance kernel with 552 tests. It processes every conversation turn through a multi-stage pipeline: load context from memory, route through 13 context modules, inject policy-gated continuity context when available, generate an Ayurvedically-informed response, then fan out to background workers that update memory, consolidate episodes, learn patterns, and refresh state.
 
 ---
 
@@ -19,7 +19,7 @@ Sakhi is a personal wellness AI grounded in Ayurveda. It holds ongoing conversat
 | Python backend (sakhi/) | ~146K lines across 81 route modules, 233 service modules, 86 worker task modules |
 | Engine modules (sakhi/apps/engine/) | 34 computational engines |
 | Governance kernel (kala/) | ~11K lines, 49 source files, 552 tests |
-| Web app (apps/web/) | ~42K lines TypeScript, 76 pages, 117 API proxy routes |
+| Web app (apps/web/) | ~42K lines TypeScript, 78 pages, 119 API proxy routes |
 | Mobile app (apps/mobile/) | ~7.9K lines TypeScript, 34 screens |
 | Database tables | 179 |
 | Background workers | 86 task files + 114 worker modules |
@@ -111,6 +111,7 @@ User message arrives (POST /v2/turn)
 - Chat Deep Reflect now uses dynamic cross-context readiness (`continuity.whole_story`) and runs `mode=whole_story` in both mobile and web converse flows; normal chat responses stay topic-centric and unchanged
 - Mobile Reflection now splits story surfaces cleanly: `<topic> Story` remains topic-centric (`mode=topic_reflection`) while `Me Story` runs cross-context synthesis (`mode=cross_context`) across active linked threads
 - Mobile account header now uses a single account hub action (Profile, Settings, Support Console, Sign out), and Support Console now persists user-consented support bundles through backend APIs (`/support/report`, `/support/report/revoke`) with time-limited codes, metadata-only diagnostics snapshots, and a user-controlled live debug timeline session (`/support/session/start|event|stop`) that captures screen/action/API telemetry without journal/chat text
+- Web experience now mirrors the mobile continuity flow: text-first chat with dynamic in-chat Deep Reflect gating, account hub menu (Reflection, Settings, Support Console, Sign out), and continuity-backed Reflection/My Story surfaces without exposing the chat debug panel in the default user flow
 - Simulation Ask-Sakhi debug inspector exposes `turn_debug` (continuity pack + prompt payload), includes a cross-topic gate validator (`candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`) for cohort go/no-go checks, and now supports all deep reflection run modes (`deep_answer`, `topic_reflection`, `whole_story`, `cross_context`) with cache-busted polling/result probing in `apps/web/app/lab/simulation/client.tsx`
 - Simulation "Add Journal" composer now uses the same chat flow pattern as "Continue the Conversation" (time segmented buttons, Cmd/Ctrl+Enter submit, aligned submit row behavior) to keep local testing interactions consistent.
 
@@ -290,7 +291,7 @@ Standalone computational engines at `sakhi/apps/engine/`, each producing determi
 
 ## Frontend Inventory
 
-### Web App (Next.js 14, 76 pages)
+### Web App (Next.js 14, 78 pages)
 
 **Tech:** Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Framer Motion, Supabase Auth, SWR
 
@@ -317,7 +318,7 @@ Standalone computational engines at `sakhi/apps/engine/`, each producing determi
 - `/lab/simulation` — Full-brain simulation harness
 - 15+ detail pages for debugging memory, persona, rhythm, patterns, etc.
 
-**117 API proxy routes** forwarding to the Python backend.
+**119 API proxy routes** forwarding to the Python backend.
 
 ### Mobile App (React Native / Expo, 30 screens)
 
