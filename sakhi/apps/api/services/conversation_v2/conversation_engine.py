@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+import time
 from typing import Any, Dict
 
 from sakhi.apps.api.core.db import exec as dbexec
@@ -19,6 +21,11 @@ from .conversation_reasoner import build_prompt
 from .conversation_tone import decide_tone
 
 logger = logging.getLogger(__name__)
+
+# Per-user patterns context cache: {person_id: (cached_result, computed_at_monotonic)}
+# TTL = 5 minutes — patterns change on long timescales, not per-turn.
+_PATTERNS_CACHE: dict[str, tuple[str, float]] = {}
+_PATTERNS_TTL_SECONDS = 300
 
 
 async def generate_reply(
@@ -107,8 +114,14 @@ async def generate_reply(
     use_adaptive = os.getenv("SAKHI_USE_ADAPTIVE_RESPONSE", "0") == "1"
 
     # Run adaptive pipeline, recall, and patterns IN PARALLEL
-    # These are independent operations that each involve embedding/DB calls
+    # These are independent operations that each involve embedding/DB calls.
+    # When a continuity topic is active, recall and patterns are skipped entirely —
+    # the continuity pack already covers topic memory and their results are discarded anyway.
     import asyncio
+
+    _topic_active_early = bool(
+        (metadata_payload.get("continuity_pack") or {}).get("topic_key")
+    )
 
     async def _run_adaptive():
         if not (use_adaptive and should_use_adaptive_pipeline(user_text)):
@@ -116,10 +129,33 @@ async def generate_reply(
         return await run_adaptive_pipeline(person_id, user_text, session_id=session_id)
 
     async def _run_recall():
+        if _topic_active_early:
+            return ""
         return await build_recall_context(person_id, user_text)
 
-    async def _run_patterns():
-        return await build_patterns_context(person_id)
+    async def _run_patterns() -> str:
+        """Return cached patterns if fresh; refresh cache in background when stale."""
+        if _topic_active_early:
+            return ""
+        cached_entry = _PATTERNS_CACHE.get(person_id)
+        now = time.monotonic()
+        if cached_entry is not None:
+            cached_result, computed_at = cached_entry
+            if now - computed_at < _PATTERNS_TTL_SECONDS:
+                return cached_result  # Cache hit — no DB call this turn
+            # Stale: serve cached value but kick off background refresh
+            async def _bg_refresh() -> None:
+                try:
+                    fresh = await build_patterns_context(person_id)
+                    _PATTERNS_CACHE[person_id] = (fresh or "", time.monotonic())
+                except Exception:
+                    pass
+            asyncio.create_task(_bg_refresh())
+            return cached_result
+        # Cache miss — compute synchronously and populate cache
+        result = await build_patterns_context(person_id)
+        _PATTERNS_CACHE[person_id] = (result or "", now)
+        return result or ""
 
     adaptive_result, recall_result, pattern_result = await asyncio.gather(
         _run_adaptive(),
@@ -163,7 +199,18 @@ async def generate_reply(
 
     # Build prompts
     base_prompt = build_prompt(user_text, context, tone, metadata=metadata_payload)
-    system_ctx = f"{recall_ctx}\n\nPatterns:\n{pattern_ctx}"
+
+    # When a continuity topic is active, the continuity pack evidence already covers
+    # topic memory — skip the recall system message to avoid duplication and reduce
+    # prompt noise. Only inject recall when no topic is detected.
+    continuity_pack = metadata_payload.get("continuity_pack") or {}
+    topic_active = bool(continuity_pack.get("topic_key"))
+    if topic_active:
+        system_ctx = ""
+    else:
+        system_ctx = recall_ctx or ""
+        if pattern_ctx:
+            system_ctx = f"{system_ctx}\n\nPatterns:\n{pattern_ctx}".strip()
 
     # Build message history for LLM context continuity
     conversation_history = metadata_payload.get("conversation_history") or []
@@ -174,15 +221,13 @@ async def generate_reply(
     # so the LLM treats it as the governing system prompt. The recall/pattern
     # context is supplementary data that enriches it.
     if adaptive_prompt:
-        messages = [
-            {"role": "system", "content": adaptive_prompt},
-            {"role": "system", "content": f"[SUPPLEMENTARY MEMORY CONTEXT — use this data to personalize your response per the instructions above]\n{system_ctx}"},
-        ]
+        messages = [{"role": "system", "content": adaptive_prompt}]
+        if system_ctx:
+            messages.append({"role": "system", "content": f"[SUPPLEMENTARY MEMORY CONTEXT — use this data to personalize your response per the instructions above]\n{system_ctx}"})
     else:
-        messages = [
-            {"role": "system", "content": base_prompt},
-            {"role": "system", "content": system_ctx},
-        ]
+        messages = [{"role": "system", "content": base_prompt}]
+        if system_ctx:
+            messages.append({"role": "system", "content": system_ctx})
 
     # Add session summary as compressed older context (if available)
     # This gives the LLM awareness of earlier parts of the conversation

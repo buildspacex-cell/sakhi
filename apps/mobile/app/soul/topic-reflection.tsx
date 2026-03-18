@@ -63,9 +63,9 @@ interface ContinuityArcResponse {
 const BACKEND_URL = config.backendUrl || "https://sakhi-production-930f.up.railway.app";
 const REFLECT_POLL_INTERVAL_MS = 2000;
 const REFLECT_POLL_MAX_ATTEMPTS = 70;
-const MIN_DEEP_MOMENTS = 8;
+const MIN_TOPIC_STORY_MOMENTS = 3;  // <Topic> Story: matches backend min_len=3
 const MIN_CROSS_CONTEXT_MOMENTS = 6;
-const MIN_RELATED_TOPIC_MOMENTS = 1;
+const MIN_RELATED_TOPIC_MOMENTS = 6; // My Story: matches backend cross_context_min_moments=6
 const MAX_CROSS_CONTEXT_TOPICS = 3;
 const MOMENT_CARD_WIDTH = 246;
 const MOMENT_CARD_GAP = 12;
@@ -684,8 +684,8 @@ export default function TopicReflectionScreen() {
     setActiveMomentMonth(monthYearLabel(moments[0]?.ts));
   }, [momentDensity, monthGroups, moments]);
 
-  const deepReflectReady = useMemo(() => {
-    return depthMomentCount >= MIN_DEEP_MOMENTS;
+  const topicStoryReady = useMemo(() => {
+    return depthMomentCount >= MIN_TOPIC_STORY_MOMENTS;
   }, [depthMomentCount]);
   const myStoryEligibleTopics = useMemo(
     () =>
@@ -1087,10 +1087,10 @@ export default function TopicReflectionScreen() {
                 <Pressable
                   style={[
                     styles.deepReflectButton,
-                    (!deepReflectReady || deepReflectLoading) && styles.deepReflectButtonDisabled,
+                    (!topicStoryReady || deepReflectLoading) && styles.deepReflectButtonDisabled,
                   ]}
                   onPress={() => void runDeepReflect()}
-                  disabled={!deepReflectReady || deepReflectLoading}
+                  disabled={!topicStoryReady || deepReflectLoading}
                 >
                   {deepReflectLoading ? (
                     <View style={styles.deepReflectButtonContent}>
@@ -1104,7 +1104,7 @@ export default function TopicReflectionScreen() {
                     </View>
                   )}
                 </Pressable>
-                {!deepReflectReady ? (
+                {!topicStoryReady ? (
                   <Text style={styles.depthHint}>{`${threadLabel} needs more depth for a story...`}</Text>
                 ) : null}
                 {deepReflectError ? <Text style={styles.errorText}>{deepReflectError}</Text> : null}
