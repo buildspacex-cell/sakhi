@@ -184,8 +184,6 @@ Workers run in background. Faster responses, requires Redis.
 | `EXPO_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
 | `EXPO_PUBLIC_DEV_BYPASS_PERSON_ID` | Optional (dev only) | Bypass mobile login in `__DEV__` and force a specific `person_id` for end-to-end profile testing (works with backend dev mode / `SAKHI_ENFORCE_USER_BINDING=0`) |
-| `EXPO_PUBLIC_RELEASE_BYPASS_ENABLED` | Optional (internal TestFlight only) | Enables release fixed-profile bypass in non-dev builds (Fastlane/EAS) |
-| `EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID` | Optional (internal TestFlight only) | Fixed `person_id` used by release bypass |
 
 ### Python API (`.env` in root)
 

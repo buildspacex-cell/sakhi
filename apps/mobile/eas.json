@@ -28,17 +28,6 @@
       "ios": {
         "simulator": false
       }
-    },
-    "testflight-vidhya": {
-      "distribution": "store",
-      "ios": {
-        "simulator": false
-      },
-      "env": {
-        "EXPO_PUBLIC_RELEASE_BYPASS_ENABLED": "1",
-        "EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID": "a1b2c3d4-1111-4000-8000-000000000001",
-        "EAS_BUILD_PROFILE": "testflight-vidhya"
-      }
     }
   },
   "submit": {

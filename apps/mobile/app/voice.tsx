@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useVoice, VoiceState, PermissionState } from "../hooks/useVoice";
+import { useAuth } from "../lib/auth/AuthContext";
 
 // =============================================================================
 // CONFIG
@@ -24,7 +25,6 @@ import { useVoice, VoiceState, PermissionState } from "../hooks/useVoice";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8080";
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
-const DEMO_PERSON_ID = "6b5b2fbc-9efb-4ba4-be0a-9ec527e23f90";
 
 // =============================================================================
 // PALETTE
@@ -64,9 +64,12 @@ export default function VoiceScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [textInput, setTextInput] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
+  const { user } = useAuth();
+  const personId = user?.personId || "";
+  const isAuthReady = !!personId;
 
   const voice = useVoice({
-    personId: DEMO_PERSON_ID,
+    personId,
     backendUrl: BACKEND_URL,
     openaiApiKey: OPENAI_API_KEY,
     autoPlayResponse: true,
@@ -84,7 +87,8 @@ export default function VoiceScreen() {
 
   // Add messages when voice interaction completes
   useEffect(() => {
-    if (voice.transcript && voice.response) {
+    const replyText = voice.response;
+    if (voice.transcript && replyText) {
       const userExists = messages.some(
         (m) => m.type === "user" && m.text === voice.transcript
       );
@@ -100,7 +104,7 @@ export default function VoiceScreen() {
           {
             id: `sakhi-${Date.now()}`,
             type: "sakhi",
-            text: voice.response,
+            text: replyText,
             timestamp: new Date(),
           },
         ]);
@@ -118,6 +122,10 @@ export default function VoiceScreen() {
   }, [messages]);
 
   const handleVoiceButton = async () => {
+    if (!isAuthReady) {
+      return;
+    }
+
     // If permission denied, open settings
     if (voice.permissionState === "denied") {
       await voice.openSettings();
@@ -143,7 +151,7 @@ export default function VoiceScreen() {
   };
 
   const handleTextSubmit = () => {
-    if (textInput.trim()) {
+    if (textInput.trim() && isAuthReady) {
       // For now, just add as user message
       // In future, this would call the backend
       setMessages((prev) => [
@@ -189,13 +197,22 @@ export default function VoiceScreen() {
           {/* Empty State - before first message */}
           {!hasStarted && (
             <View style={styles.emptyState}>
-              {voice.permissionState === "denied" ? (
+          {voice.permissionState === "denied" ? (
                 <>
                   <Text style={styles.primaryPrompt}>
                     Sakhi needs microphone access to listen.
                   </Text>
                   <Text style={styles.subtleHint}>
                     Tap the mic button to open Settings.
+                  </Text>
+                </>
+              ) : !isAuthReady ? (
+                <>
+                  <Text style={styles.primaryPrompt}>
+                    Sign in to start talking with Sakhi.
+                  </Text>
+                  <Text style={styles.subtleHint}>
+                    Voice replies need your account context first.
                   </Text>
                 </>
               ) : voice.permissionState === "undetermined" ? (
@@ -277,9 +294,17 @@ export default function VoiceScreen() {
               onSubmitEditing={handleTextSubmit}
               returnKeyType="send"
               multiline={false}
+              editable={isAuthReady}
             />
             {textInput.length > 0 && (
-              <Pressable style={styles.sendButton} onPress={handleTextSubmit}>
+              <Pressable
+                style={[
+                  styles.sendButton,
+                  !isAuthReady && styles.sendButtonDisabled,
+                ]}
+                onPress={handleTextSubmit}
+                disabled={!isAuthReady}
+              >
                 <Ionicons name="arrow-up" size={20} color={palette.fg} />
               </Pressable>
             )}
@@ -291,6 +316,7 @@ export default function VoiceScreen() {
               state={voice.state}
               permissionState={voice.permissionState}
               onPress={handleVoiceButton}
+              disabled={!isAuthReady}
             />
           </View>
         </View>
@@ -307,10 +333,12 @@ function VoiceOrb({
   state,
   permissionState,
   onPress,
+  disabled,
 }: {
   state: VoiceState;
   permissionState: PermissionState;
   onPress: () => void;
+  disabled: boolean;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
@@ -378,7 +406,7 @@ function VoiceOrb({
   }, [state, scaleAnim, glowAnim]);
 
   const isActive = state === "recording" || state === "processing" || state === "speaking";
-  const isDenied = permissionState === "denied";
+  const isDenied = permissionState === "denied" || disabled;
   const orbColor = isDenied
     ? palette.muted
     : state === "recording"
@@ -394,7 +422,7 @@ function VoiceOrb({
   }
 
   return (
-    <Pressable onPress={onPress} disabled={state === "processing"}>
+    <Pressable onPress={onPress} disabled={state === "processing" || disabled}>
       <Animated.View
         style={[
           styles.orbOuter,
@@ -574,6 +602,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 10,
+  },
+  sendButtonDisabled: {
+    backgroundColor: palette.subtle,
   },
   voiceButtonContainer: {
     alignItems: "center",

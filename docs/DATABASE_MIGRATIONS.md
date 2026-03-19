@@ -239,6 +239,7 @@ No rollback needed - additive changes are safe.
 | File | Purpose |
 |------|---------|
 | `sakhi/infra/scripts/migrations/0001_baseline.sql` | Full schema for fresh DBs (179 tables) |
+| `sakhi/infra/scripts/migrations/mvp_prod_bootstrap.sql` | Curated slim bootstrap for the continuity/chat MVP prod database |
 | `sakhi/infra/scripts/migrations/0002_*.sql` | New migrations |
 | `docs/DATABASE_SCHEMA.md` | Human-readable schema reference |
 | `_archive/migrations_consolidated/` | Historical migrations |

@@ -67,12 +67,6 @@ export const config = {
   get devBypassPersonId() {
     return getOptionalConfig("DEV_BYPASS_PERSON_ID");
   },
-  get releaseBypassPersonId() {
-    return getOptionalConfig("RELEASE_BYPASS_PERSON_ID");
-  },
-  get releaseBypassEnabled() {
-    return getOptionalConfig("RELEASE_BYPASS_ENABLED");
-  },
   get easBuildProfile() {
     return getOptionalConfig("EAS_BUILD_PROFILE");
   },
@@ -89,8 +83,6 @@ if (__DEV__) {
       supabaseAnonKey: config.supabaseAnonKey ? "SET (hidden)" : "NOT SET",
       backendUrl: config.backendUrl,
       devBypassPersonId: config.devBypassPersonId ? "SET" : "NOT SET",
-      releaseBypassEnabled: config.releaseBypassEnabled || "0",
-      releaseBypassPersonId: config.releaseBypassPersonId ? "SET" : "NOT SET",
       easBuildProfile: config.easBuildProfile || "unknown",
     });
   } catch (e) {

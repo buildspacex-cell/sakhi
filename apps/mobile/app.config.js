@@ -80,8 +80,6 @@ module.exports = {
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL,
       devBypassPersonId: process.env.EXPO_PUBLIC_DEV_BYPASS_PERSON_ID,
-      releaseBypassPersonId: process.env.EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID,
-      releaseBypassEnabled: process.env.EXPO_PUBLIC_RELEASE_BYPASS_ENABLED,
       easBuildProfile: process.env.EAS_BUILD_PROFILE,
       posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY,
       posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST,

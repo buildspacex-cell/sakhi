@@ -54,13 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
   const devBypassPersonId = (config.devBypassPersonId || "").trim();
-  const releaseBypassPersonId = (config.releaseBypassPersonId || "").trim();
-  const releaseBypassEnabled = (config.releaseBypassEnabled || "").trim() === "1";
   const isDevBypassActive = __DEV__ && !!devBypassPersonId;
-  const isReleaseBypassActive =
-    !__DEV__ && releaseBypassEnabled && !!releaseBypassPersonId;
-  const activeBypassPersonId = isDevBypassActive ? devBypassPersonId : releaseBypassPersonId;
-  const isBypassActive = isDevBypassActive || isReleaseBypassActive;
+  const activeBypassPersonId = devBypassPersonId;
+  const isBypassActive = isDevBypassActive;
 
   useEffect(() => {
     if (Platform.OS === "ios") {

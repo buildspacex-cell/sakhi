@@ -40,6 +40,8 @@
 
 Use the **direct connection** (port 5432) — pgbouncer cannot run DDL migrations.
 
+If you are bringing up the current continuity/chat MVP on a slim production database instead of the full legacy schema, do not use the full migration loop below. Use [prod-mvp-database-manifest.md](./prod-mvp-database-manifest.md) as the source of truth for the curated table set and import order, and run [mvp_prod_bootstrap.sql](/Users/fanantics/Documents/Sakhi/sakhi/infra/scripts/migrations/mvp_prod_bootstrap.sql) instead.
+
 ```bash
 # Direct connection — get from Supabase → Settings → Database → URI
 export PROD_DIRECT_URL="postgresql://postgres:[PASSWORD]@db.[NEW-REF].supabase.co:5432/postgres"
@@ -126,13 +128,11 @@ EXPO_PUBLIC_BACKEND_URL=https://[your-railway-prod-url]
 
 # Production: no bypass
 EXPO_PUBLIC_DEV_BYPASS_PERSON_ID=
-EXPO_PUBLIC_RELEASE_BYPASS_ENABLED=
-EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID=
 ```
 
 ### 6b. Update `apps/mobile/eas.json` production profile
 
-Ensure the `production` profile points to the new Supabase URL and has no bypass vars set.
+Ensure the `production` profile points to the new Supabase URL and uses normal Supabase auth.
 
 ### 6c. Build and submit
 
@@ -183,7 +183,7 @@ You will both create **fresh accounts** on prod — same as any beta user. This 
 - Real data accumulation
 - No bypass env vars in the production build
 
-For internal testing continue to use the dev environment and the `testflight-vidhya` EAS profile.
+For internal testing continue to use the dev environment and the dev-only mobile bypass when needed.
 
 ---
 

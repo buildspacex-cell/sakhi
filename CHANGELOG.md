@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Env contract gate in build workflow** — `sakhi/infra/scripts/check_env.py` now supports profiles (`local`, `prod_api`, `prod_web`, `ci`), `make verify` now enforces local env contract checks, and CI runs a `ci` profile pre-test validation
 - **Localhost web auth bypass** — development-only bypass for protected web routes via `DEV_AUTH_BYPASS_PERSON_ID` (defaults to `a1b2c3d4-1111-4000-8000-000000000001`)
 - **Mobile dev profile override (iOS/Expo)** — development-only bypass via `EXPO_PUBLIC_DEV_BYPASS_PERSON_ID` to run the full mobile experience against a fixed `person_id` (for example Vidhya simulation profile) without Supabase login
-- **Internal TestFlight fixed-profile build profile** — added `apps/mobile/eas.json` profile `testflight-vidhya` plus release override envs (`EXPO_PUBLIC_RELEASE_BYPASS_*`) so internal Fastlane/EAS TestFlight builds can open directly on `a1b2c3d4-1111-4000-8000-000000000001` without affecting normal production builds
+- **Mobile MVP release auth restored** — removed the TestFlight-only fixed-profile release bypass so production iOS builds now follow the normal Supabase auth flow instead of opening on a hardcoded Vidhya profile
 - Reorganized monorepo structure and test directories
 - Upgraded Next.js to 14.2.35 (patched CVE-2025-55184 and CVE-2025-67779)
 
