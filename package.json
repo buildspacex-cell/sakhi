@@ -22,5 +22,6 @@
       "@shopify/react-native-skia"
     ]
   },
+  "packageManager": "pnpm@10.19.0",
   "version": "1.0.0"
 }
