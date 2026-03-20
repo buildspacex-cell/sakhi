@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Protected MVP presentation route (web)** — the release deck can now be served from the Vercel web app at `/mvp-release` behind a shared password gate (`MVP_PRESENTATION_PASSWORD`), with the existing HTML deck and assets delivered through protected web routes
 
 ### Changed
+- **Normal chat MVP prompt** — the live `/v2/turn` system prompt now uses a lean continuity-first instruction set with explicit help/guide/probe modes, sharper one-question probing guidance, and continuity-aware coaching language while removing the old background context-scan block from the normal-chat system prompt
 - **Removed OpenRouter provider** — all LLM calls now use OpenAI directly (GPT-4o, GPT-4o-mini)
 - **Separated THINK vs RESPOND** in SAKHI_INSTRUCTIONS prompt for clearer reasoning
 - **Optimized conversation pipeline** — reduced turn latency from 15s to 6-8s

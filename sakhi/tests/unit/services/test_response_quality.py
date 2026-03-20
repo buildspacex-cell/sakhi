@@ -302,8 +302,8 @@ class TestBasePromptVoiceAlignment:
     def test_base_prompt_has_help_first(self):
         """Base prompt should instruct to help first."""
         result = build_prompt("hello", self._base_context(), self._base_tone())
-        assert "help" in result.lower()
-        assert "Don't ask just to ask" in result or "don't ask just to ask" in result.lower()
+        assert "Lead with something useful." in result
+        assert "Default to help or guide" in result
 
     def test_base_prompt_no_persona_mode(self):
         """Persona mode was removed in P2."""

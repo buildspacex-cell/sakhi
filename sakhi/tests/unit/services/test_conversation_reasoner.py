@@ -2,7 +2,7 @@
 Unit tests for conversation_reasoner — build_prompt() MVP prompt structure.
 
 Tests that the stripped-down MVP prompt contains only:
-Voice, State (emotion/friction), Conversation context, Topic continuity, Governance, User, Rules.
+Voice, lean response guidance, hidden continuity context, governance, and user message.
 """
 
 import pytest
@@ -64,12 +64,25 @@ class TestBasePromptStructure:
 
     def test_prompt_uses_response_contract(self):
         result = build_prompt("Need help prioritizing work this week.", _base_context(), _base_tone())
-        assert "Keep it focused. 60-120 words usually. Lead with practical help." in result
-        assert "Max 1 question. Make it feel natural." in result
+        assert "Keep it focused. 60-120 words usually." in result
+        assert "Lead with something useful." in result
+        assert "Max 1 question." in result
+        assert "Ask only if it helps you understand better or give a more useful response." in result
 
     def test_prompt_contains_voice_directive(self):
         result = build_prompt("Hello", _base_context(), _base_tone())
         assert "Never use Ayurvedic jargon" in result
+
+    def test_prompt_contains_internal_reasoning_block(self):
+        result = build_prompt("Hello", _base_context(), _base_tone())
+        assert "[INTERNAL REASONING — DO NOT OUTPUT]" in result
+        assert "Do NOT reveal this reasoning." in result
+
+    def test_prompt_contains_response_modes(self):
+        result = build_prompt("Hello", _base_context(), _base_tone())
+        assert "[RESPONSE MODE — INTERNAL ONLY]" in result
+        assert "Default to help or guide" in result
+        assert "Never ask more than 1 question" in result
 
     def test_cut_blocks_absent(self):
         """Blocks cut in MVP should NOT appear in prompt."""
@@ -167,6 +180,7 @@ class TestContinuityContextSection:
         assert "2025-11-26->2026-01-08" not in result
         assert "Anchor moments:" in result
         assert "Does this still make sense?" in result
+        assert "Use history as grounding, not as a detour." not in result
 
     def test_no_continuity_when_absent(self):
         result = build_prompt("Hello", _base_context(), _base_tone(), metadata={})
@@ -224,29 +238,28 @@ class TestContextScan:
             "friction_state": {"state": "Balanced", "drift_percentage": 5},
         }
         result = build_prompt("Hello", _base_context(), _base_tone(), metadata=metadata)
-        assert "CONTEXT" in result
-        assert "empathy=mirror-first" in result
-        assert "Friction: Balanced" in result
+        assert "CONTEXT — background intelligence" not in result
+        assert "empathy=mirror-first" not in result
+        assert "Friction: Balanced" not in result
 
 
 # =============================================================================
-# Conversation Context (short-term memory)
+# Conversation Context
 # =============================================================================
 
 
 class TestConversationContext:
-    """Tests that recent conversation turns appear in prompt."""
+    """Tests that build_prompt stays focused on the base system prompt only."""
 
-    def test_recent_turns_appear(self):
+    def test_short_term_texts_do_not_appear(self):
         ctx = _base_context()
         ctx["short_term"] = {"texts": ["First message", "Second message", "Third message"]}
         result = build_prompt("Hello", ctx, _base_tone())
-        assert "Recent conversation:" in result
-        assert "First message" in result
-        assert "Third message" in result
+        assert "Recent conversation:" not in result
+        assert "First message" not in result
+        assert "Third message" not in result
 
-    def test_no_recent_turns(self):
-        ctx = _base_context()
-        ctx["short_term"] = {"texts": []}
-        result = build_prompt("Hello", ctx, _base_tone())
-        assert "no recent context" in result
+    def test_prompt_ends_with_user_message_and_response_instruction(self):
+        result = build_prompt("Hello", _base_context(), _base_tone())
+        assert "User message:\nHello" in result
+        assert result.endswith("Respond naturally.")

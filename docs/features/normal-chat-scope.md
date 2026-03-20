@@ -1,6 +1,6 @@
 # Normal Chat Scope — Locked Design
 
-> **Status:** Locked (2026-03-13)
+> **Status:** Locked (2026-03-21)
 > **Applies to:** `POST /v2/turn` — the standard chat turn path
 > **Purpose:** Define exactly what context the LLM receives for a normal chat reply, and what is explicitly out of scope.
 
@@ -16,12 +16,13 @@ Built by `conversation_reasoner.py`.
 | Block | Content | Condition |
 |---|---|---|
 | Identity + voice | Sakhi persona, tone rules, word constraints | Always |
-| Current state | Tone style, emotion, energy level, context scan (emotion/friction/triage) | Always |
+| Current state | Tone style, emotion, energy level, mirroring strategy | Always |
 | Continuity section | Topic arc: phase path (4 labels), anchor moments (3), decision ledger (6 items), qualitative arc summary, evidence (up to 8 journal snippets) | When continuity pack has an active topic |
 | Cross-topic section | Connected thread label + life dimension signals (time/money/emotional bandwidth) | When cross-topic readiness is present |
 | Governance guard | Hard constraint block | When governance fires a guard |
 
 **Explicitly removed from system prompt:**
+- `build_context_scan()` output (emotion/friction background block) — computed metadata only, not injected into the live lean MVP prompt
 - `st_block` (`short_term.texts[-3:]` from `personal_model`) — duplicate of Layer 4, weaker signal (assistant-only, no user turns). Removed.
 
 ### Layer 2 — Recall System Message
@@ -30,13 +31,12 @@ Injected as a second system message in `conversation_engine.py`.
 | Condition | What happens |
 |---|---|
 | **Topic active** (continuity pack has `topic_key`) | Recall message is **skipped entirely** — continuity pack evidence already covers topic memory. Recall and patterns calls are also skipped at the gather stage (no wasted DB/embedding work). |
-| **No topic detected** | Vector-first global recall, `k=5`, recency + diversity weighted. Sources: journal embeddings, reflections, facts, memory nodes |
+| **No topic detected** | Vector-first global recall, `k=5`, recency + diversity weighted. Sources: journal embeddings, reflections, facts, memory nodes. When patterns context exists, it is appended to the same second system message under `Patterns:` |
 | **Explicit memory-retrieval intent** (router detects "remember when...", proper noun lookup) | BM25 hybrid recall enabled as escape hatch |
 
 **Explicitly removed from recall:**
 - BM25 from default path — only invoked on explicit memory-retrieval intent
 - LLM summarisation step inside `build_recall_context` (the `> 800 chars → call_llm` branch) — removed entirely
-- Patterns context (`build_patterns_context`) — 5-min per-user TTL cache, background refresh; excluded from second system message
 
 ### Layer 3 — Session Summary
 Compressed summary of older turns, injected when `total_turns >= compress_threshold` and a summary exists. Built by background `session_compress` worker.
@@ -74,6 +74,7 @@ These were present in the turn path and have been removed or gated:
 | `rhythm_soul_frame`, `ESR_frame`, `identity_momentum_frame`, `identity_timeline_frame` | Removed from LLM prompt | Ayurveda-era context frames, not continuity-first. Don't improve reply quality. |
 | `inner_dialogue` + `nudge_state` | Disabled (env flag `SAKHI_ENABLE_INNER_DIALOGUE=1` to re-enable) | LLM call + DB read. Rarely affects response. |
 | `compute_microreg`, `compute_tone`, `compute_empathy` | Fire-and-forget background task | DB writes to personal_model. Available next turn from DB. Not needed for current turn's LLM. |
+| `build_context_scan()` prompt block | Removed from live system prompt | Lean MVP prompt keeps state to tone/emotion/energy/mirroring and continuity guidance only. |
 | `micro_goals` | Fire-and-forget background task | DB write, side effect only. |
 | Recommendations pipeline | Reactive + body-module only (not proactive/contextual/nudge) | LLM call. Not a continuity-chat concern. |
 | Causal reasoning | Out of normal chat path | Separate vertical. Separate endpoint. |

@@ -222,7 +222,8 @@ Tier 1 computations (~10ms total):
   └─ compute_empathy()               →  empathy pattern
 ```
 
-These are compressed into a single-line-per-module scan:
+These are still compressed into a single-line-per-module scan for metadata/debug use,
+but they are no longer injected into the live MVP normal-chat system prompt:
 
 ```
 [CONTEXT SCAN — 360° awareness, use as background intelligence]
@@ -233,7 +234,7 @@ Friction: Mild Friction (drift=18%)
 Body: sleep=fair, 6.2h, hrv=42, energy=moderate
 ```
 
-**Data flows to:** `metadata_payload` → `build_context_scan()` in conversation_reasoner.
+**Data flows to:** `metadata_payload` → `build_context_scan()` in conversation_reasoner for metadata/debug use. The live MVP normal-chat prompt does not inject this block.
 
 ---
 
