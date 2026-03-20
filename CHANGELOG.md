@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker worker service** — `Dockerfile.worker` for Railway worker deployment
 - Session memory for Claude (`.claude/MEMORY.md`, `.claude/CURRENT_TASK.md`)
 - Quick task shortcuts, pre-commit hooks, code generators, feature flags, dev status dashboard
+- **Protected MVP presentation route (web)** — the release deck can now be served from the Vercel web app at `/mvp-release` behind a shared password gate (`MVP_PRESENTATION_PASSWORD`), with the existing HTML deck and assets delivered through protected web routes
 
 ### Changed
 - **Removed OpenRouter provider** — all LLM calls now use OpenAI directly (GPT-4o, GPT-4o-mini)
