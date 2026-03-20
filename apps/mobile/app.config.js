@@ -2,6 +2,14 @@
 require("dotenv").config({ path: ".env" });
 require("dotenv").config({ path: ".env.local" });
 
+const buildProfile = process.env.EAS_BUILD_PROFILE || "";
+const isReleaseLikeBuild = buildProfile === "preview" || buildProfile === "production";
+const backendUrl = (process.env.EXPO_PUBLIC_BACKEND_URL || "").trim();
+
+if (isReleaseLikeBuild && !backendUrl) {
+  throw new Error("EXPO_PUBLIC_BACKEND_URL must be set for preview/production mobile builds.");
+}
+
 // Dynamic Expo config that properly loads environment variables
 module.exports = {
   expo: {
@@ -78,7 +86,7 @@ module.exports = {
       // Expose env vars to the app via expo-constants
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-      backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL,
+      backendUrl,
       devBypassPersonId: process.env.EXPO_PUBLIC_DEV_BYPASS_PERSON_ID,
       easBuildProfile: process.env.EAS_BUILD_PROFILE,
       posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY,

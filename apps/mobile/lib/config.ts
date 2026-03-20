@@ -70,9 +70,6 @@ export const config = {
   get easBuildProfile() {
     return getOptionalConfig("EAS_BUILD_PROFILE");
   },
-  get openaiApiKey() {
-    return process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
-  },
 };
 
 // Log config status in development

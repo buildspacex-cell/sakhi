@@ -12,12 +12,14 @@
 import PostHog from "posthog-react-native";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const POSTHOG_KEY = (process.env.EXPO_PUBLIC_POSTHOG_KEY || "").trim();
 const POSTHOG_HOST = (process.env.EXPO_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").trim();
 // Set EXPO_PUBLIC_ANALYTICS_ENABLED=0 to hard-disable at build time (e.g. dev builds).
 // PostHog dashboard pause acts as the live runtime kill switch in production.
 const ANALYTICS_ENABLED = process.env.EXPO_PUBLIC_ANALYTICS_ENABLED !== "0";
+const ANALYTICS_OPT_OUT_KEY = "sakhi_analytics_opt_out";
 
 export const posthog = new PostHog(POSTHOG_KEY || "noop", {
   host: POSTHOG_HOST,
@@ -26,6 +28,19 @@ export const posthog = new PostHog(POSTHOG_KEY || "noop", {
   flushAt: 10,
   flushInterval: 30000,
 });
+
+let analyticsOptedOut = false;
+
+void AsyncStorage.getItem(ANALYTICS_OPT_OUT_KEY)
+  .then((value) => {
+    analyticsOptedOut = value === "1";
+    if (analyticsOptedOut) {
+      void posthog.optOut();
+    }
+  })
+  .catch(() => {
+    analyticsOptedOut = false;
+  });
 
 // ─── Session ID ──────────────────────────────────────────────────────────────
 // One session_id per app-open. Reset on explicit sign-out via resetSessionId().
@@ -85,13 +100,17 @@ export function resetUser(): void {
 // PostHog persists opt-out state internally via AsyncStorage.
 
 export function optOutAnalytics(): void {
-  posthog.optOutCapturing();
+  analyticsOptedOut = true;
+  void AsyncStorage.setItem(ANALYTICS_OPT_OUT_KEY, "1").catch(() => {});
+  void posthog.optOut();
 }
 
 export function optInAnalytics(): void {
-  posthog.optInCapturing();
+  analyticsOptedOut = false;
+  void AsyncStorage.removeItem(ANALYTICS_OPT_OUT_KEY).catch(() => {});
+  void posthog.optIn();
 }
 
 export function isAnalyticsOptedOut(): boolean {
-  return posthog.isOptedOutCapturing();
+  return analyticsOptedOut;
 }

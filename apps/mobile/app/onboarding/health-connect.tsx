@@ -32,12 +32,12 @@ export default function HealthConnectScreen() {
     if (granted) {
       setConnected(true);
       // Brief pause to show success, then navigate
-      setTimeout(() => router.replace("/voice" as never), 1200);
+      setTimeout(() => router.replace("/experience/converse" as never), 1200);
     }
   };
 
   const handleSkip = () => {
-    router.replace("/voice" as never);
+    router.replace("/experience/converse" as never);
   };
 
   // Non-iOS or no HealthKit: skip this screen

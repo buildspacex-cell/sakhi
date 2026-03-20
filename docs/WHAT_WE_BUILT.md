@@ -321,26 +321,24 @@ Standalone computational engines at `sakhi/apps/engine/`, each producing determi
 
 **119 API proxy routes** forwarding to the Python backend.
 
-### Mobile App (React Native / Expo, 30 screens)
+### Mobile App (React Native / Expo, 15 screens)
 
-**Tech:** Expo 54, React Native 0.81, React 19, TypeScript, NativeWind (Tailwind), Supabase Auth, React Query, Apple HealthKit integration
+**Tech:** Expo 54, React Native 0.81, React 19, TypeScript, NativeWind (Tailwind), Supabase Auth, React Query
 
-**Screens:**
-- Auth flow (login, OAuth callback)
-- Onboarding (questions, result, health connect)
+**Active MVP screens:**
+- Auth flow (Google/email login, OAuth callback)
+- Onboarding (name capture)
 - Conversation (canonical flow — mobile is source of truth)
-- Soul (8 screens: hub, values, alignment, narrative, timeline, shadow, friction, insights)
-- Voice mode
+- Reflection (`/soul/topic-reflection`) for topic threads and My Story
+- Account hub and support flows
 
 **Native integrations:**
-- Apple Sign-In
-- HealthKit (sleep, heart rate, activity)
 - Haptic feedback
 - Secure token storage
 
 ---
 
-## Voice Pipeline
+## Web Voice Pipeline
 
 ```
 User speaks → MediaRecorder → audio blob

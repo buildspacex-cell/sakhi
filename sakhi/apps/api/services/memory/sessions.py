@@ -117,7 +117,7 @@ async def load_recent_turns(session_id: str, limit: int = 12) -> List[Dict]:
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT role, text, tone, archetype, source
+            SELECT id, role, text, tone, archetype, source, created_at
             FROM conversation_turns
             WHERE session_id = $1
             ORDER BY created_at DESC

@@ -61,7 +61,7 @@ interface ContinuityArcResponse {
   included_moments?: ContinuityMoment[];
 }
 
-const BACKEND_URL = config.backendUrl || "https://sakhi-production-930f.up.railway.app";
+const BACKEND_URL = (config.backendUrl || "").replace(/\/+$/, "");
 const REFLECT_POLL_INTERVAL_MS = 2000;
 const REFLECT_POLL_MAX_ATTEMPTS = 70;
 const MIN_TOPIC_STORY_MOMENTS = 3;  // <Topic> Story: matches backend min_len=3
@@ -145,6 +145,7 @@ export default function TopicReflectionScreen() {
 
   const personId = user?.personId || "";
   const authToken = session?.access_token || "";
+  const backendConfigured = BACKEND_URL.length > 0;
 
   const [topics, setTopics] = useState<ContinuityTopicSummary[]>([]);
   const [selectedAnchor, setSelectedAnchor] = useState("");
@@ -526,6 +527,13 @@ export default function TopicReflectionScreen() {
 
   const loadTopics = useCallback(async () => {
     if (!personId) return;
+    if (!backendConfigured) {
+      setTopics([]);
+      setSelectedAnchor("");
+      setArc(null);
+      setError("This build is missing EXPO_PUBLIC_BACKEND_URL.");
+      return;
+    }
 
     setLoadingTopics(true);
     setError("");
@@ -582,7 +590,7 @@ export default function TopicReflectionScreen() {
     } finally {
       setLoadingTopics(false);
     }
-  }, [emitDebugEvent, ensureContinuityPolicyEnabled, fetchTopics, loadArc, personId]);
+  }, [backendConfigured, emitDebugEvent, ensureContinuityPolicyEnabled, fetchTopics, loadArc, personId]);
 
   useEffect(() => {
     void loadTopics();

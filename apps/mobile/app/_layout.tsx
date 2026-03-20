@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { PostHogProvider } from 'posthog-react-native';
 
@@ -10,7 +11,10 @@ import { posthog, identifyUser, resetUser } from '../lib/analytics/client';
 SplashScreen.preventAutoHideAsync();
 
 function AppContent() {
-  const { isLoading, user } = useAuth();
+  const { isLoading, user, authExitIntent, clearAuthExitIntent } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+  const handlingExpiredRef = useRef(false);
 
   useEffect(() => {
     if (!isLoading) {
@@ -28,6 +32,30 @@ function AppContent() {
     }
   }, [isLoading, user?.personId]);
 
+  useEffect(() => {
+    if (isLoading || authExitIntent !== 'expired' || handlingExpiredRef.current) {
+      return;
+    }
+
+    const topSegment = segments[0] || '';
+    const protectedSegments = new Set(['experience', 'account', 'soul', 'onboarding']);
+    if (!protectedSegments.has(topSegment)) {
+      clearAuthExitIntent();
+      return;
+    }
+
+    handlingExpiredRef.current = true;
+    clearAuthExitIntent();
+    router.replace('/auth' as never);
+    Alert.alert('Session expired', 'Please sign in again.');
+  }, [authExitIntent, clearAuthExitIntent, isLoading, router, segments]);
+
+  useEffect(() => {
+    if (authExitIntent === 'none') {
+      handlingExpiredRef.current = false;
+    }
+  }, [authExitIntent]);
+
   return (
     <Stack
         screenOptions={{
@@ -41,14 +69,6 @@ function AppContent() {
         <Stack.Screen name="auth/index" options={{ headerShown: false }} />
         <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="voice"
-          options={{
-            title: "Talk to Sakhi",
-            headerShown: false,
-            presentation: "fullScreenModal",
-          }}
-        />
         <Stack.Screen name="account" options={{ headerShown: false }} />
         <Stack.Screen name="soul" options={{ headerShown: false }} />
         <Stack.Screen name="experience" options={{ headerShown: false }} />

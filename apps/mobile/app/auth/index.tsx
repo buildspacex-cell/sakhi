@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,70 +8,109 @@ import {
   StatusBar,
   ActivityIndicator,
   TextInput,
-  Platform,
   Alert,
   KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../lib/auth/AuthContext";
+import { bootstrapMobileAuthProfile } from "../../lib/auth/mobileBootstrap";
 
 // =============================================================================
 // AUTH SCREEN
 // =============================================================================
 // Soft, calm authentication that feels like a natural step, not a barrier.
-// Supports Google, Apple (iOS), and Email magic link authentication.
+// Supports Google and Email magic link authentication.
 
 export default function AuthScreen() {
   const router = useRouter();
   const {
     signInWithGoogle,
-    signInWithApple,
     signInWithEmail,
-    isAppleAuthAvailable,
-    isAuthenticated,
+    user,
+    session,
   } = useAuth();
 
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [waitingForSession, setWaitingForSession] = useState(false);
+  const [isRoutingAuthenticatedUser, setIsRoutingAuthenticatedUser] = useState(false);
+  const lastBootstrapKeyRef = useRef<string | null>(null);
 
-  // Redirect when authenticated (after setSession completes in background)
+  // Resolve the post-login route once auth is present.
   useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/experience/converse" as never);
+    if (!session?.access_token || !user) {
+      setIsRoutingAuthenticatedUser(false);
+      return;
     }
-  }, [isAuthenticated, router]);
+    if (emailSent || showEmailInput) {
+      return;
+    }
+
+    const bootstrapKey = `${user.id}:${session.access_token}`;
+    if (lastBootstrapKeyRef.current === bootstrapKey) {
+      return;
+    }
+    lastBootstrapKeyRef.current = bootstrapKey;
+
+    let cancelled = false;
+    setIsRoutingAuthenticatedUser(true);
+
+    const routeAuthenticatedUser = async () => {
+      try {
+        const profile = await bootstrapMobileAuthProfile(session.access_token, {
+          email: user.email || "",
+          full_name: user.fullName,
+          avatar_url: user.avatarUrl,
+        }, { supabaseUserId: user.id });
+
+        if (cancelled) {
+          return;
+        }
+
+        const routeName = encodeURIComponent(profile.full_name || user.fullName || "");
+        const routeUser = encodeURIComponent(profile.person_id);
+        if (profile.needs_name) {
+          router.replace(`/onboarding?user=${routeUser}&name=${routeName}` as never);
+          return;
+        }
+        router.replace(`/experience/converse?user=${routeUser}&name=${routeName}` as never);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        console.error("Mobile auth bootstrap failed:", error);
+        lastBootstrapKeyRef.current = null;
+        setIsGoogleLoading(false);
+        setWaitingForSession(false);
+        setIsRoutingAuthenticatedUser(false);
+        Alert.alert("Sign In Failed", "Could not finish setting up your account. Please try again.");
+      }
+    };
+
+    void routeAuthenticatedUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [emailSent, router, session?.access_token, showEmailInput, user]);
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
-      // setSession fires in background — show waiting state until onAuthStateChange fires
+      // setSession fires in background - show waiting state until auth resolves.
       setWaitingForSession(true);
     } catch (error) {
       console.error("Google login failed:", error);
       Alert.alert("Sign In Failed", "Could not sign in with Google. Please try again.");
       setIsGoogleLoading(false);
     }
-    // Don't clear loading — keep spinner until isAuthenticated triggers redirect
-  };
-
-  const handleAppleLogin = async () => {
-    setIsAppleLoading(true);
-    try {
-      await signInWithApple();
-      // Apple sign-in awaits completion — auth state should update
-      setWaitingForSession(true);
-    } catch (error) {
-      console.error("Apple login failed:", error);
-      Alert.alert("Sign In Failed", "Could not sign in with Apple. Please try again.");
-      setIsAppleLoading(false);
-    }
+    // Don't clear loading - keep spinner until the post-auth route is resolved.
   };
 
   const handleEmailLogin = async () => {
@@ -111,7 +150,7 @@ export default function AuthScreen() {
   };
 
   // Waiting for session to be set (after OAuth callback)
-  if (waitingForSession) {
+  if (waitingForSession || isRoutingAuthenticatedUser) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
@@ -218,24 +257,6 @@ export default function AuthScreen() {
 
         {/* Auth buttons */}
         <View style={styles.authButtonsContainer}>
-          {/* Apple Sign In (iOS only) */}
-          {Platform.OS === "ios" && isAppleAuthAvailable && (
-            <Pressable
-              style={[styles.authButton, styles.appleButton, isAppleLoading && styles.buttonLoading]}
-              onPress={handleAppleLogin}
-              disabled={isAppleLoading}
-            >
-              {isAppleLoading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <>
-                  <Ionicons name="logo-apple" size={22} color="#ffffff" />
-                  <Text style={styles.appleButtonText}>Continue with Apple</Text>
-                </>
-              )}
-            </Pressable>
-          )}
-
           {/* Google Sign In */}
           <Pressable
             style={[styles.authButton, styles.googleButton, isGoogleLoading && styles.buttonLoading]}

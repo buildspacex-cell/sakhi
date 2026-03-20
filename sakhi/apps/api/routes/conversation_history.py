@@ -55,9 +55,12 @@ async def get_conversation_history(
             # Map 'assistant' to 'sakhi' for frontend consistency
             if role == "assistant":
                 role = "sakhi"
+            created_at = turn.get("created_at")
             messages.append({
+                "id": str(turn.get("id") or ""),
                 "role": role,
                 "content": turn.get("text"),
+                "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else None,
                 "tone": turn.get("tone"),
                 "archetype": turn.get("archetype"),
                 "source": turn.get("source", "text"),

@@ -8,7 +8,7 @@
 - EAS account logged in as `buildspacex`
 - Bundle ID: `com.buildspacex.sakhi`
 - EAS Project ID: `065334a1-741a-47fe-8796-63b9d91faa66`
-- EAS production env vars set: `EXPO_PUBLIC_BACKEND_URL`, `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_OPENAI_API_KEY`
+- EAS production env vars set: `EXPO_PUBLIC_BACKEND_URL`, `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 - Apple signing credentials stored on EAS (auto-generated on first build)
 
 ## Publish to TestFlight
@@ -79,7 +79,7 @@ npx eas-cli env:create --name NEW_VAR --value "value" --visibility plaintext --e
 |-------|-----|
 | `bundle identifier not available` | Change `bundleIdentifier` in `app.config.js` |
 | `autoIncrement not supported` | Remove `autoIncrement` from `eas.json` (not compatible with `app.config.js`) |
-| `No environment variables found` | Set vars with `eas env:create --environment production` |
+| `No environment variables found` | Set vars with `eas env:create --environment production`; release builds now fail fast if `EXPO_PUBLIC_BACKEND_URL` is missing |
 | App crashes on launch | Check env vars are set on EAS; `config.ts` now logs errors instead of throwing |
 | `EACCES` installing eas-cli | Use `npx eas-cli` instead of global install |
 

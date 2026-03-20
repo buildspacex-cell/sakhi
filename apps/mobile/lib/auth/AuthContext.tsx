@@ -4,9 +4,9 @@ import { Session, User } from "@supabase/supabase-js";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
-import * as SecureStore from "expo-secure-store";
 import { supabase } from "../supabase";
 import { config } from "../config";
+import { clearLegacyPersonIdCache, readCachedPersonId, writeCachedPersonId } from "./personCache";
 
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -15,7 +15,6 @@ WebBrowser.maybeCompleteAuthSession();
 // AUTH CONTEXT
 // =============================================================================
 
-const PERSON_ID_KEY = "sakhi_person_id";
 const BYPASS_PROFILE_LABELS: Record<string, string> = {
   "a1b2c3d4-1111-4000-8000-000000000001": "Vidhya",
   "4ea551dc-517c-443b-8f1f-d1f528ac10ba": "Ravi",
@@ -34,12 +33,14 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  authExitIntent: "none" | "signed_out" | "expired";
   isAppleAuthAvailable: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInWithEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  clearAuthExitIntent: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,11 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authExitIntent, setAuthExitIntent] = useState<"none" | "signed_out" | "expired">("none");
   const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
   const devBypassPersonId = (config.devBypassPersonId || "").trim();
   const isDevBypassActive = __DEV__ && !!devBypassPersonId;
   const activeBypassPersonId = devBypassPersonId;
   const isBypassActive = isDevBypassActive;
+  const intentionalSignOutRef = React.useRef(false);
+  const hadSessionRef = React.useRef(false);
 
   useEffect(() => {
     if (Platform.OS === "ios") {
@@ -77,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       fullName: bypassName,
       personId: activeBypassPersonId,
     });
+    setAuthExitIntent("none");
     setIsLoading(false);
   }, [activeBypassPersonId, isBypassActive]);
 
@@ -92,11 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch personId from DB and cache it locally
   const fetchAndCachePersonId = useCallback(async (supabaseUserId: string): Promise<string | undefined> => {
-    // Try cache first
-    try {
-      const cached = await SecureStore.getItemAsync(PERSON_ID_KEY);
-      if (cached) return cached;
-    } catch {}
+    const cached = await readCachedPersonId(supabaseUserId);
+    if (cached) return cached;
 
     // Fetch from DB
     try {
@@ -109,9 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error || !data?.id) return undefined;
 
       // Cache for next time
-      try {
-        await SecureStore.setItemAsync(PERSON_ID_KEY, data.id);
-      } catch {}
+      await writeCachedPersonId(supabaseUserId, data.id);
 
       return data.id;
     } catch {
@@ -128,36 +128,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let mounted = true;
     let initialResolved = false;
+    void clearLegacyPersonIdCache();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
         if (!mounted) return;
 
+        const hadSession = hadSessionRef.current;
+        hadSessionRef.current = !!newSession?.user;
         setSession(newSession);
 
         if (newSession?.user) {
+          setAuthExitIntent("none");
           const authUser = transformUser(newSession.user);
           if (authUser) {
-            // Try cached personId first for instant load
-            let personId: string | undefined;
-            try {
-              personId = (await SecureStore.getItemAsync(PERSON_ID_KEY)) || undefined;
-            } catch {}
+            const cachedPersonId = await readCachedPersonId(newSession.user.id);
 
-            if (personId) {
-              setUser({ ...authUser, personId });
+            if (cachedPersonId) {
+              setUser({ ...authUser, personId: cachedPersonId });
             } else {
               setUser(authUser);
             }
 
-            // Resolve loading on first event
-            if (!initialResolved) {
-              initialResolved = true;
-              setIsLoading(false);
-            }
-
             // Fetch personId in background if not cached
-            if (!personId) {
+            if (!cachedPersonId) {
               const fetchedId = await fetchAndCachePersonId(newSession.user.id);
               if (mounted && fetchedId) {
                 setUser((prev) => prev ? { ...prev, personId: fetchedId } : prev);
@@ -166,8 +160,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           setUser(null);
-          // Clear cached personId on sign out
-          try { await SecureStore.deleteItemAsync(PERSON_ID_KEY); } catch {}
+          if (hadSession) {
+            setAuthExitIntent(intentionalSignOutRef.current ? "signed_out" : "expired");
+          } else {
+            setAuthExitIntent("none");
+          }
+          intentionalSignOutRef.current = false;
         }
 
         // Always resolve loading after first auth event (signed in or not)
@@ -304,11 +302,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isBypassActive) {
       return;
     }
+    intentionalSignOutRef.current = true;
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (error) {
+      intentionalSignOutRef.current = false;
+      throw error;
+    }
     setUser(null);
     setSession(null);
-    try { await SecureStore.deleteItemAsync(PERSON_ID_KEY); } catch {}
+    await clearLegacyPersonIdCache();
   }, [isBypassActive]);
 
   // Refresh session
@@ -322,13 +324,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     isLoading,
-    isAuthenticated: isBypassActive ? !!user?.personId : !!session && !!user,
+    isAuthenticated: isBypassActive ? !!user?.personId : !!session && !!user?.personId,
+    authExitIntent,
     isAppleAuthAvailable,
     signInWithGoogle,
     signInWithApple,
     signInWithEmail,
     signOut,
     refreshSession,
+    clearAuthExitIntent: () => setAuthExitIntent("none"),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

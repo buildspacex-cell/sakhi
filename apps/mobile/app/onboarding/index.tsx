@@ -13,10 +13,13 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useOnboarding, OnboardingResponse } from "../../hooks/useOnboarding";
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../lib/auth/AuthContext";
+import { bootstrapMobileAuthProfile } from "../../lib/auth/mobileBootstrap";
 
 // =============================================================================
 // TYPES
@@ -1625,7 +1628,110 @@ const finalStyles = StyleSheet.create({
 // MAIN COMPONENT
 // =============================================================================
 
-export default function OnboardingScreen() {
+function SlimNameOnboardingScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ user?: string; name?: string }>();
+  const { user, session } = useAuth();
+  const [name, setName] = useState(
+    typeof params.name === "string" && params.name.trim()
+      ? params.name
+      : user?.fullName || "",
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  const authToken = session?.access_token || "";
+  const routePersonId = typeof params.user === "string" ? params.user.trim() : "";
+  const canContinue = name.trim().length > 0 && !!authToken;
+
+  const handleContinue = useCallback(async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName || !authToken) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const profile = await bootstrapMobileAuthProfile(authToken, {
+        email: user?.email || "",
+        full_name: trimmedName,
+        avatar_url: user?.avatarUrl,
+      }, { supabaseUserId: user?.id });
+      const personId = profile.person_id || routePersonId;
+      const encodedName = encodeURIComponent(trimmedName);
+      const encodedUser = encodeURIComponent(personId);
+
+      void supabase.auth.updateUser({
+        data: {
+          full_name: trimmedName,
+          name: trimmedName,
+        },
+      }).catch(() => {});
+
+      router.replace(`/experience/converse?user=${encodedUser}&name=${encodedName}` as never);
+    } catch (error) {
+      console.error("Name setup failed:", error);
+      Alert.alert("Could not continue", "Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [authToken, name, routePersonId, router, user?.avatarUrl, user?.email]);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.content}>
+          <View style={[styles.header, styles.framingHeader]}>
+            <Text style={styles.title}>What should I call you?</Text>
+            <Text style={styles.subtitle}>Whatever feels natural to you.</Text>
+          </View>
+
+          <View style={styles.questionContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Your name (or a nickname)"
+              placeholderTextColor="#52525b"
+              value={name}
+              onChangeText={setName}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => void handleContinue()}
+            />
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <Pressable
+            style={[
+              styles.transitionContinueButton,
+              (!canContinue || isSaving) && styles.calibrationButtonDisabled,
+            ]}
+            onPress={() => void handleContinue()}
+            disabled={!canContinue || isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text
+                style={[
+                  styles.transitionContinueText,
+                  !canContinue && styles.calibrationButtonTextDisabled,
+                ]}
+              >
+                Continue
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function LegacyOnboardingScreen() {
   const router = useRouter();
   const [currentScreen, setCurrentScreen] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
@@ -1713,8 +1819,8 @@ export default function OnboardingScreen() {
   const handleNext = useCallback(() => {
     if (refineMode) {
       if (refineScreen >= REFINE_SCREENS.length - 1) {
-        // Refine complete - go to voice
-        router.replace("/voice" as never);
+        // Refine complete - go to conversation
+        router.replace("/experience/converse" as never);
       } else {
         setRefineScreen((prev) => prev + 1);
       }
@@ -1742,7 +1848,7 @@ export default function OnboardingScreen() {
     // Skip current question and move to next
     if (refineMode) {
       if (refineScreen >= REFINE_SCREENS.length - 1) {
-        router.replace("/voice" as never);
+        router.replace("/experience/converse" as never);
       } else {
         setRefineScreen((prev) => prev + 1);
       }
@@ -1769,7 +1875,7 @@ export default function OnboardingScreen() {
         }
       }).catch(() => {}); // don't block navigation
     }
-    router.replace("/voice" as never);
+    router.replace("/experience/converse" as never);
   }, [router, answers]);
 
   const handleRefine = useCallback(() => {
@@ -1960,7 +2066,7 @@ export default function OnboardingScreen() {
               {screen.skipAllowed && !refineMode && (
                 <Pressable
                   style={styles.skipButton}
-                  onPress={() => router.replace("/voice" as never)}
+                  onPress={() => router.replace("/experience/converse" as never)}
                 >
                   <Text style={styles.skipButtonText}>Skip for now</Text>
                 </Pressable>
@@ -2299,3 +2405,7 @@ const styles = StyleSheet.create({
     color: "#71717a",
   },
 });
+
+export default function OnboardingScreen() {
+  return <SlimNameOnboardingScreen />;
+}

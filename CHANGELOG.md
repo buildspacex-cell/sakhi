@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded Next.js to 14.2.35 (patched CVE-2025-55184 and CVE-2025-67779)
 
 ### Fixed
+- **Mobile auth onboarding simplification** - mobile sign-in now bootstraps `auth_users`/`persons`, binds cached `person_id` values to the authenticated Supabase user before treating the session as ready, routes first-time users through a name-only onboarding step, sends returning users directly to `/experience/converse`, shows an explicit session-expired re-login path, removes Apple sign-in from the live mobile auth screen, and keeps the older friction-framework onboarding flow out of the default runtime path
+- **Mobile chat history hydration** — mobile `/experience/converse` now restores recent conversation turns from `/v2/conversation/history` on open, includes stable turn ids/timestamps in the history payload, and suppresses the empty-state flash while history is loading
+- **Mobile MVP route/security cleanup** - parked soul routes and the unused voice screen are removed from the runtime app, mobile no longer exposes `EXPO_PUBLIC_OPENAI_API_KEY`, and legacy onboarding fall-throughs now route to conversation instead of voice
+- **Internal TestFlight hardening** - active mobile chat/reflection screens now require an explicit backend URL instead of silently falling back to the old production Railway host, HealthKit is parked out of the current MVP build, and dead mobile helper files were removed so the release candidate can pass a clean mobile typecheck
 - **Overlap-aware continuity story gating** — continuity compilation now preserves bounded related-anchor evidence so shared moments can appear in both relevant story threads, while cross-topic `whole_story` readiness now allows dominant mirror-safe umbrella topics (for example Sakhi) to unlock Deep Reflect with meaningful supporting threads without lowering topic-detail safety globally
 - **Governance seeder race condition** — ON CONFLICT guards for concurrent seed requests
 - **JSONB parsing** — asyncpg returns JSONB as strings; added `_parse_json()` helpers in coherence/alignment engines

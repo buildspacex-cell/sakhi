@@ -2,7 +2,7 @@
 
 > **This file provides instructions for Claude and other LLMs working on this codebase.**
 >
-> Last Updated: 2026-03-11
+> Last Updated: 2026-03-20
 
 ---
 
@@ -307,6 +307,7 @@ const response = await fetch(`${getApiBase()}/endpoint`);
 - **Web layout pattern**: Center content in a max-width column (`maxWidth: 560px`, `margin: 0 auto`). Buttons, inputs, and footers live inside this column — never in a separate full-width bar.
 - **Responsive by default**: Use `width: 100%` with `maxWidth` constraints so layouts naturally adapt to narrow viewports without media queries.
 - When building or modifying any experience flow, always reference the mobile app for the canonical flow and question data, then adapt the presentation for web.
+- **Current mobile MVP runtime**: auth → name-only onboarding for first-time users → `experience/converse`; returning users go straight to conversation. Keep parked voice, HealthKit onboarding, and non-reflection `soul/*` screens out of the live mobile runtime unless the product direction explicitly changes.
 
 ---
 

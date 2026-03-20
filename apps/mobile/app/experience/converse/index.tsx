@@ -13,7 +13,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../lib/auth/AuthContext";
 import { config } from "../../../lib/config";
@@ -26,6 +26,13 @@ interface Message {
   content: string;
   timestamp: Date;
   kind?: "normal" | "deep" | "system";
+}
+
+interface HistoryMessagePayload {
+  id?: string;
+  role?: string;
+  content?: string;
+  created_at?: string | null;
 }
 
 interface DeepReflectSignal {
@@ -52,7 +59,7 @@ interface ContinuitySignal {
   whole_story?: WholeStorySignal;
 }
 
-const BACKEND_URL = config.backendUrl || "https://sakhi-production-930f.up.railway.app";
+const BACKEND_URL = (config.backendUrl || "").replace(/\/+$/, "");
 const DEEP_POLL_INTERVAL_MS = 2000;
 const DEEP_POLL_MAX_ATTEMPTS = 70;
 
@@ -131,11 +138,14 @@ function sleep(ms: number): Promise<void> {
 
 export default function ConversationScreen() {
   const router = useRouter();
-  const { user, session, signOut } = useAuth();
+  const params = useLocalSearchParams<{ user?: string; name?: string }>();
+  const { user, session, signOut, isLoading: isAuthLoading } = useAuth();
   const scrollViewRef = useRef<ScrollView>(null);
   const debugSequenceRef = useRef(0);
+  const loadedHistoryForPersonRef = useRef<string | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isRunningDeepAnswer, setIsRunningDeepAnswer] = useState(false);
@@ -144,8 +154,11 @@ export default function ConversationScreen() {
   const [latestUserMessage, setLatestUserMessage] = useState("");
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
 
-  const personId = user?.personId || "";
+  const routePersonId = typeof params.user === "string" ? params.user.trim() : "";
+  const routeName = typeof params.name === "string" ? params.name.trim() : "";
+  const personId = user?.personId || routePersonId;
   const authToken = session?.access_token || "";
+  const backendConfigured = BACKEND_URL.length > 0;
 
   const emitDebugEvent = useCallback(
     (event: SupportDebugEventInput) => {
@@ -184,8 +197,85 @@ export default function ConversationScreen() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+    if (!personId || !BACKEND_URL) {
+      setIsHistoryLoading(false);
+      return;
+    }
+    if (loadedHistoryForPersonRef.current === personId) {
+      setIsHistoryLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsHistoryLoading(true);
+
+    const loadHistory = async () => {
+      try {
+        const params = new URLSearchParams({
+          user: personId,
+          // TODO: support multi-session thread selection instead of the fixed converse slug.
+          session_slug: "converse",
+          limit: "20",
+        });
+        const response = await fetch(`${BACKEND_URL}/v2/conversation/history?${params.toString()}`, {
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as { messages?: HistoryMessagePayload[] };
+        const historyMessages = Array.isArray(payload.messages) ? payload.messages : [];
+        const mappedMessages = historyMessages
+          .map((message): Message | null => {
+            const role = message.role === "sakhi" || message.role === "assistant"
+              ? "sakhi"
+              : message.role === "user"
+                ? "user"
+                : null;
+            const content = String(message.content || "").trim();
+            if (!role || !content) {
+              return null;
+            }
+
+            return {
+              id: String(message.id || `${role}-${content.slice(0, 12)}`),
+              role,
+              content,
+              timestamp: message.created_at ? new Date(message.created_at) : new Date(),
+              kind: "normal",
+            };
+          })
+          .filter((message): message is Message => Boolean(message));
+
+        if (cancelled) {
+          return;
+        }
+
+        loadedHistoryForPersonRef.current = personId;
+        setMessages((current) => (current.length === 0 ? mappedMessages : current));
+      } catch {
+        // Gracefully fall back to the empty state if history cannot be loaded.
+      } finally {
+        if (!cancelled) {
+          setIsHistoryLoading(false);
+        }
+      }
+    };
+
+    void loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken, isAuthLoading, personId]);
+
   const wholeStorySignal = activeContinuitySignal?.whole_story;
-const wholeStoryTopics = useMemo(
+  const wholeStoryTopics = useMemo(
     () => wholeStorySignal?.selected_topics || [],
     [wholeStorySignal?.selected_topics],
   );
@@ -222,7 +312,7 @@ const wholeStoryTopics = useMemo(
     return "Good evening";
   };
 
-  const displayName = user?.fullName?.split(" ")[0] || "";
+  const displayName = user?.fullName?.split(" ")[0] || routeName.split(" ")[0] || "";
 
   const ensureContinuityPolicyEnabled = useCallback(async () => {
     if (!personId) return;
@@ -301,6 +391,19 @@ const wholeStoryTopics = useMemo(
   const sendMessage = useCallback(async () => {
     const text = inputText.trim();
     if (!text || !personId) return;
+    if (!backendConfigured) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `config-error-${Date.now()}`,
+          role: "sakhi",
+          content: "This build is missing EXPO_PUBLIC_BACKEND_URL. Ask the team to update the app configuration.",
+          timestamp: new Date(),
+          kind: "system",
+        },
+      ]);
+      return;
+    }
     Analytics.messageSent();
     emitDebugEvent({
       type: "action",
@@ -448,7 +551,7 @@ const wholeStoryTopics = useMemo(
     } finally {
       setIsSending(false);
     }
-  }, [authToken, emitDebugEvent, inputText, personId]);
+  }, [authToken, backendConfigured, emitDebugEvent, inputText, personId]);
 
   const handleRunDeepAnswer = useCallback(async () => {
     if (
@@ -667,7 +770,16 @@ const wholeStoryTopics = useMemo(
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {!hasMessages ? (
+          {!hasMessages && !backendConfigured ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyPrompt}>This build is not configured yet.</Text>
+              <Text style={styles.emptyHint}>Set `EXPO_PUBLIC_BACKEND_URL` before sending chat or opening reflection.</Text>
+            </View>
+          ) : !hasMessages && isHistoryLoading ? (
+            <View style={styles.historyLoadingState}>
+              <ActivityIndicator size="small" color={palette.muted} />
+            </View>
+          ) : !hasMessages ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyPrompt}>A clear space to think out loud.</Text>
               <Text style={styles.emptyHint}>Start anywhere. Sakhi keeps context as you talk.</Text>
@@ -972,6 +1084,12 @@ const styles = StyleSheet.create({
   },
 
   emptyState: {
+    alignItems: "center",
+    paddingHorizontal: 26,
+  },
+  historyLoadingState: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 26,
   },

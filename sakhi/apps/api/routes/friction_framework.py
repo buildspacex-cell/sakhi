@@ -223,6 +223,21 @@ class MobileOnboardingResponse(BaseModel):
     os_details: OSDetails
 
 
+class MobileAuthBootstrapRequest(BaseModel):
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class MobileAuthBootstrapResponse(BaseModel):
+    person_id: str
+    email: str
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    is_new_user: bool
+    needs_name: bool
+
+
 # =============================================================================
 # OPERATING SYSTEM DEFINITIONS
 # =============================================================================
@@ -1510,6 +1525,93 @@ async def _store_mobile_onboarding(
     except Exception as e:
         LOGGER.error(f"Failed to store mobile onboarding data: {e}")
         return False
+
+
+@router.post("/onboarding/mobile/bootstrap", response_model=MobileAuthBootstrapResponse)
+async def bootstrap_mobile_auth(
+    request: MobileAuthBootstrapRequest,
+    req: Request,
+) -> MobileAuthBootstrapResponse:
+    """Create/update the mobile auth user record and ensure the canonical person row exists."""
+    from sakhi.apps.api.deps.auth import get_current_user_id
+
+    authorization = req.headers.get("Authorization") or req.headers.get("authorization")
+    supabase_user_id = str(await get_current_user_id(authorization))
+    incoming_email = (request.email or "").strip()
+    incoming_full_name = (request.full_name or "").strip() or None
+    incoming_avatar_url = (request.avatar_url or "").strip() or None
+
+    existing_user = await q(
+        """
+        SELECT id, email, full_name, avatar_url
+        FROM auth_users
+        WHERE supabase_user_id = $1
+        LIMIT 1
+        """,
+        supabase_user_id,
+        one=True,
+    )
+
+    is_new_user = not existing_user
+
+    if existing_user:
+        person_id = str(existing_user["id"])
+        email = incoming_email or str(existing_user.get("email") or "").strip() or f"{supabase_user_id}@placeholder.sakhi"
+        existing_full_name = str(existing_user.get("full_name") or "").strip()
+        full_name = incoming_full_name or existing_full_name or None
+        avatar_url = incoming_avatar_url or str(existing_user.get("avatar_url") or "").strip() or None
+
+        await exec(
+            """
+            UPDATE auth_users
+            SET email = $2,
+                full_name = COALESCE($3, full_name),
+                avatar_url = COALESCE($4, avatar_url),
+                last_sign_in_at = NOW()
+            WHERE id = $1
+            """,
+            person_id,
+            email,
+            incoming_full_name,
+            incoming_avatar_url,
+        )
+    else:
+        email = incoming_email or f"{supabase_user_id}@placeholder.sakhi"
+        inserted_user = await q(
+            """
+            INSERT INTO auth_users (
+                supabase_user_id,
+                email,
+                full_name,
+                avatar_url,
+                last_sign_in_at
+            )
+            VALUES ($1, $2, $3, $4, NOW())
+            RETURNING id, email, full_name, avatar_url
+            """,
+            supabase_user_id,
+            email,
+            incoming_full_name,
+            incoming_avatar_url,
+            one=True,
+        )
+        person_id = str(inserted_user["id"])
+        full_name = str(inserted_user.get("full_name") or "").strip() or None
+        avatar_url = str(inserted_user.get("avatar_url") or "").strip() or None
+
+    await exec(
+        "INSERT INTO persons (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
+        person_id,
+    )
+
+    return MobileAuthBootstrapResponse(
+        person_id=person_id,
+        email=email,
+        full_name=full_name,
+        avatar_url=avatar_url,
+        is_new_user=is_new_user,
+        needs_name=bool(is_new_user or not full_name),
+    )
 
 
 @router.post("/onboarding/submit", response_model=MobileOnboardingResponse)
