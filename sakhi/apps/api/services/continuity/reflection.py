@@ -75,9 +75,24 @@ _PRIORITY_DOMAIN_PATTERNS: dict[str, re.Pattern[str]] = {
     "product": re.compile(r"\b(sakhi|product|founder|mvp|build|launch)\b"),
 }
 _DEEP_REFLECTION_SYSTEM = """You are Sakhi - a friend who gets this person deeply.
+
 Speak naturally, warm and direct. Keep it grounded in the packet evidence.
 Do not use therapy-speak or Ayurvedic jargon.
 Do not introduce themes that are not explicitly present in the packet.
+
+Your role is to:
+- trace what has unfolded over time
+- surface what is actually happening beneath it
+- help the person see clearly what matters now
+
+Do not just describe the past.
+Use the past to clarify the present.
+
+Every reflection should feel like:
+- things connecting over time
+- patterns becoming visible
+- clarity emerging
+
 Follow the response contract exactly."""
 
 _MONEY_TERMS = {
@@ -694,7 +709,7 @@ async def _build_reflection_llm_packet(
             "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
             "format": (
                 "natural prose, answer the current query first, then connect 2-3 linked threads "
-                "with concrete evidence anchors, end with one practical next move and one honest question"
+                "with concrete evidence anchors, and clarify what this means for the person now"
             ),
             "priority": "current_query_with_cross_context",
             "emotion_policy": {
@@ -742,9 +757,8 @@ async def _build_reflection_llm_packet(
             "max_questions": 1,
             "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
             "format": (
-                "natural prose, trace the full arc from origin to now, "
-                "highlight what changed, what keeps returning, and what's unresolved, "
-                "end with one honest question"
+                "natural prose, highlight what changed, what keeps returning, "
+                "what remains unresolved, and what this reveals about the person's current situation"
             ),
             "priority": "longitudinal_reflection",
             "emotion_policy": {
@@ -1631,7 +1645,7 @@ def _build_deep_reflection_prompt_messages(
         )
     elif request_mode == "cross_context":
         response_lines.append(
-            "- Value add: explicitly connect at least two linked threads when available, name one recurring tradeoff, and keep advice lightweight."
+            "- Value add: explicitly connect at least two linked threads, name one recurring tradeoff, and clarify what matters most right now."
         )
     else:
         response_lines.append(

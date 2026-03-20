@@ -702,6 +702,8 @@ def test_build_deep_reflection_prompt_messages_uses_language_first_sections():
 
     assert len(messages) == 2
     assert messages[0]["role"] == "system"
+    assert "trace what has unfolded over time" in messages[0]["content"]
+    assert "Use the past to clarify the present." in messages[0]["content"]
     assert messages[1]["role"] == "user"
     user_prompt = messages[1]["content"]
     assert "History on this topic:" in user_prompt
@@ -929,7 +931,8 @@ def test_build_deep_reflection_prompt_messages_cross_context_requires_multiple_t
     messages = reflection._build_deep_reflection_prompt_messages(packet)
     user_prompt = messages[1]["content"]
     assert "If two or more linked threads are present, explicitly name at least two." in user_prompt
-    assert "explicitly connect at least two linked threads when available" in user_prompt
+    assert "explicitly connect at least two linked threads" in user_prompt
+    assert "clarify what matters most right now" in user_prompt
 
 
 def test_build_deep_reflection_prompt_messages_omits_emotion_hint_without_priority_conflict():

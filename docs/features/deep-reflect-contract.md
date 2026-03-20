@@ -24,9 +24,9 @@ This mapping is the authoritative reference. Use frontend names when talking abo
 
 **Deep Reflect** — A chat feature. The user types a question, taps Deep Reflect, and gets a synthesis that answers that question using the full arc of the active topic woven with a correlated second thread. Appears in chat as a distinct element (not a normal bubble). Async, 5–30s.
 
-**`<Topic> Story`** — A Soul screen feature. No query. Traces the full longitudinal arc of a single topic — what changed, what keeps returning, what is unresolved. The user opens the Soul screen, selects a topic, and reads the arc.
+**`<Topic> Story`** — A Soul screen feature. No query. Traces the full longitudinal arc of a single topic - what changed, what keeps returning, what remains unresolved, and what that reveals about the person's current situation. The user opens the Soul screen, selects a topic, and reads the arc.
 
-**My Story** — A Soul screen feature. No query. Synthesises the interplay across all active topic threads — what themes cut across them, what recurring tradeoffs exist. The user opens the Soul screen My Story section.
+**My Story** — A Soul screen feature. No query. Synthesises the interplay across active topic threads - explicitly connecting linked threads, naming one recurring tradeoff, and clarifying what matters most right now. The user opens the Soul screen My Story section.
 
 **The core distinction:**
 - Chat features (Normal Chat, Deep Reflect) = part of a conversation, user is asking something
@@ -99,9 +99,9 @@ All three reflection features (`whole_story`, `topic_reflection`, `cross_context
 
 | Frontend Feature | Backend Mode | Length | Format |
 |---|---|---|---|
-| Deep Reflect | `whole_story` | 220–360 words | Answer query first, weave 2+ linked threads with evidence, end with one practical next move + one honest question |
-| `<Topic> Story` | `topic_reflection` | 150–250 words | Trace full arc: what changed, what keeps returning, what's unresolved, end with one honest question |
-| My Story | `cross_context` | 160–260 words | Explain thread interplay, name one recurring tradeoff, end with one grounding question |
+| Deep Reflect | `whole_story` | 220–360 words | Answer the current query first, connect 2–3 linked threads with concrete evidence anchors, and clarify what this means for the person now |
+| `<Topic> Story` | `topic_reflection` | 150–250 words | Highlight what changed, what keeps returning, what remains unresolved, and what this reveals about the person's current situation |
+| My Story | `cross_context` | 160–260 words | Explicitly connect at least two linked threads, name one recurring tradeoff, and clarify what matters most right now |
 
 **Emotion policy (all modes):** Mention emotion only when a priority conflict is evidenced (time/money/commitment tradeoff detectable in the arc). Otherwise stay tactical and evidence-grounded.
 
