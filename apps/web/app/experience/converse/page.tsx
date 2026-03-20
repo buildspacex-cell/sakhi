@@ -34,6 +34,14 @@ interface AuthUser {
   person_id: string;
   full_name: string | null;
   email: string;
+  needs_name?: boolean;
+}
+
+interface HistoryMessagePayload {
+  id?: string;
+  role?: string;
+  content?: string;
+  created_at?: string;
 }
 
 interface DeepReflectSignal {
@@ -148,9 +156,11 @@ export default function ConversePage() {
 function ConverseContent() {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const loadedHistoryForPersonRef = useRef<string | null>(null);
 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -167,10 +177,20 @@ function ConverseContent() {
         const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
+          const fullName = String(data.full_name || "").trim();
+          const encodedUser = encodeURIComponent(data.person_id || "");
+          const encodedName = encodeURIComponent(fullName);
+
+          if (Boolean(data.needs_name) || !fullName) {
+            router.replace(`/experience/onboarding?user=${encodedUser}&name=${encodedName}` as Route);
+            return;
+          }
+
           setAuthUser({
             person_id: data.person_id,
-            full_name: data.full_name,
+            full_name: fullName,
             email: data.email,
+            needs_name: Boolean(data.needs_name),
           });
         } else if (res.status === 401) {
           router.replace("/auth/login?redirect=/experience/converse" as Route);
@@ -184,12 +204,88 @@ function ConverseContent() {
     void loadAuth();
   }, [router]);
 
+  const personId = authUser?.person_id || "";
+  const hasMessages = messages.length > 0;
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+    if (!personId) {
+      setIsHistoryLoading(false);
+      return;
+    }
+    if (loadedHistoryForPersonRef.current === personId) {
+      setIsHistoryLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsHistoryLoading(true);
+
+    const loadHistory = async () => {
+      try {
+        const params = new URLSearchParams({
+          user: personId,
+          session_slug: "converse",
+          limit: "20",
+        });
+        const response = await fetch(`/api/conversation/history?${params.toString()}`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as { messages?: HistoryMessagePayload[] };
+        const historyMessages = Array.isArray(payload.messages) ? payload.messages : [];
+        const mappedMessages = historyMessages
+          .map((message): Message | null => {
+            const role = message.role === "sakhi" || message.role === "assistant"
+              ? "sakhi"
+              : message.role === "user"
+                ? "user"
+                : null;
+            const content = String(message.content || "").trim();
+            if (!role || !content) {
+              return null;
+            }
+
+            return {
+              id: String(message.id || `${role}-${content.slice(0, 12)}`),
+              role,
+              content,
+              timestamp: message.created_at ? new Date(message.created_at) : new Date(),
+              kind: "normal",
+            };
+          })
+          .filter((message): message is Message => Boolean(message));
+
+        if (cancelled) {
+          return;
+        }
+
+        loadedHistoryForPersonRef.current = personId;
+        setMessages((current) => (current.length === 0 ? mappedMessages : current));
+      } catch {
+        // Fall back to the current empty state if history cannot be loaded.
+      } finally {
+        if (!cancelled) {
+          setIsHistoryLoading(false);
+        }
+      }
+    };
+
+    void loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, personId]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  const personId = authUser?.person_id || "";
-  const hasMessages = messages.length > 0;
 
   const wholeStorySignal = activeContinuitySignal?.whole_story;
   const deepThreadLabel =
@@ -540,9 +636,9 @@ function ConverseContent() {
 
           {accountMenuOpen ? (
             <div style={styles.accountMenu}>
-              <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/reflection")}>Reflection</button>
+              <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/reflection")}>Profile</button>
               <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/settings")}>Settings</button>
-              <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/support")}>Support Console</button>
+              <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/support")}>Report an issue</button>
               <button style={{ ...styles.accountItem, color: "#f0b8c0" }} onClick={() => void handleSignOut()}>Sign out</button>
             </div>
           ) : null}
@@ -550,7 +646,11 @@ function ConverseContent() {
       </header>
 
       <main style={styles.messagesArea}>
-        {!hasMessages ? (
+        {!hasMessages && isHistoryLoading ? (
+          <div style={styles.historyLoadingState}>
+            <p style={{ color: palette.muted }}>Loading...</p>
+          </div>
+        ) : !hasMessages ? (
           <div style={styles.emptyState}>
             <p style={styles.emptyPrompt}>A clear space to think out loud.</p>
             <p style={styles.emptyHint}>Start anywhere. Sakhi keeps context as you talk.</p>
@@ -754,6 +854,10 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "auto",
     textAlign: "center",
     maxWidth: 620,
+  },
+  historyLoadingState: {
+    margin: "auto",
+    textAlign: "center",
   },
   emptyPrompt: {
     fontSize: 52,

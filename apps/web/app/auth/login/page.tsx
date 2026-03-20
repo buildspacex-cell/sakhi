@@ -12,9 +12,8 @@ const palette = {
   fg: "#f4f4f5",
   muted: "#a1a1aa",
   dimText: "#52525b",
-  accent: "#6366f1",
-  cardBg: "#18191d",
   border: "#27272a",
+  cardBg: "#18191d",
 };
 
 const fontFamily =
@@ -30,18 +29,23 @@ export default function LoginPage() {
 
 function LoginContent() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const redirectTo = searchParams?.get("redirect") || "/experience";
+  const redirectTo = searchParams?.get("redirect") || "/experience/converse";
+
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
+    setIsGoogleLoading(true);
     setError(null);
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
@@ -52,44 +56,165 @@ function LoginContent() {
         },
       });
 
-      if (error) {
-        setError(error.message);
-        setIsLoading(false);
+      if (authError) {
+        setError(authError.message);
+        setIsGoogleLoading(false);
       }
-    } catch (err: any) {
-      console.error("Login error:", err);
-      setError(err?.message || "Failed to initiate login. Please try again.");
-      setIsLoading(false);
+    } catch (err: unknown) {
+      console.error("Google login error:", err);
+      setError(err instanceof Error ? err.message : "Failed to initiate login. Please try again.");
+      setIsGoogleLoading(false);
     }
   };
 
+  const handleEmailLogin = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setIsEmailLoading(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email: trimmedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
+        },
+      });
+
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      setEmailSent(true);
+    } catch (err: unknown) {
+      console.error("Email login error:", err);
+      setError(err instanceof Error ? err.message : "Could not send magic link.");
+    } finally {
+      setIsEmailLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    if (emailSent) {
+      setEmailSent(false);
+      setEmail("");
+      return;
+    }
+    if (showEmailInput) {
+      setShowEmailInput(false);
+      setEmail("");
+      setError(null);
+      return;
+    }
+    router.back();
+  };
+
+  if (emailSent) {
+    return (
+      <div style={containerStyle}>
+        <button style={backButtonStyle} onClick={handleBack}>
+          &#8592;
+        </button>
+        <main style={contentStyle}>
+          <div style={iconContainerStyle}>✉</div>
+          <h1 style={titleStyle}>Check your email</h1>
+          <p style={subtitleStyle}>
+            We sent a magic link to
+            <br />
+            <span style={emailHighlightStyle}>{email}</span>
+          </p>
+          <button
+            style={{ ...authButtonStyle, ...emailButtonStyle }}
+            onClick={() => {
+              setEmailSent(false);
+              setEmail("");
+            }}
+          >
+            <span style={emailButtonTextStyle}>Use a different email</span>
+          </button>
+        </main>
+      </div>
+    );
+  }
+
+  if (showEmailInput) {
+    return (
+      <div style={containerStyle}>
+        <button style={backButtonStyle} onClick={handleBack}>
+          &#8592;
+        </button>
+        <main style={contentStyle}>
+          <div style={textContainerStyle}>
+            <h1 style={titleStyle}>Enter your email</h1>
+            <p style={subtitleStyle}>We&apos;ll send you a magic link to sign in.</p>
+          </div>
+
+          <div style={authButtonsStyle}>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="your@email.com"
+              autoFocus
+              style={emailInputStyle}
+            />
+            <button
+              onClick={() => void handleEmailLogin()}
+              disabled={isEmailLoading}
+              style={{
+                ...authButtonStyle,
+                ...googleButtonStyle,
+                opacity: isEmailLoading ? 0.7 : 1,
+                cursor: isEmailLoading ? "not-allowed" : "pointer",
+              }}
+            >
+              <span style={googleButtonTextStyle}>
+                {isEmailLoading ? "Sending..." : "Send magic link"}
+              </span>
+            </button>
+          </div>
+
+          {error ? <div style={errorStyle}>{error}</div> : null}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div style={containerStyle}>
-      {/* Back button */}
-      <button style={backButtonStyle} onClick={() => router.back()}>
+      <button style={backButtonStyle} onClick={handleBack}>
         &#8592;
       </button>
 
       <main style={contentStyle}>
-        {/* Explanation — matches mobile */}
         <div style={textContainerStyle}>
           <h1 style={explanationStyle}>So Sakhi can stay with you.</h1>
         </div>
 
-        {/* Auth buttons */}
         <div style={authButtonsStyle}>
-          {/* Google Sign In */}
           <button
-            onClick={handleGoogleLogin}
-            disabled={isLoading}
+            onClick={() => void handleGoogleLogin()}
+            disabled={isGoogleLoading}
             style={{
               ...authButtonStyle,
               ...googleButtonStyle,
-              opacity: isLoading ? 0.7 : 1,
-              cursor: isLoading ? "not-allowed" : "pointer",
+              opacity: isGoogleLoading ? 0.7 : 1,
+              cursor: isGoogleLoading ? "not-allowed" : "pointer",
             }}
           >
-            {isLoading ? (
+            {isGoogleLoading ? (
               <span style={googleButtonTextStyle}>Signing in...</span>
             ) : (
               <>
@@ -101,8 +226,13 @@ function LoginContent() {
             )}
           </button>
 
-          {/* Email Sign In */}
-          <button style={{ ...authButtonStyle, ...emailButtonStyle }}>
+          <button
+            style={{ ...authButtonStyle, ...emailButtonStyle }}
+            onClick={() => {
+              setShowEmailInput(true);
+              setError(null);
+            }}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={palette.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2" />
               <path d="M22 7l-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" />
@@ -111,14 +241,8 @@ function LoginContent() {
           </button>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div style={errorStyle}>
-            {error}
-          </div>
-        )}
+        {error ? <div style={errorStyle}>{error}</div> : null}
 
-        {/* Privacy note — matches mobile */}
         <p style={privacyNoteStyle}>
           This space is only between you and Sakhi.
         </p>
@@ -126,10 +250,6 @@ function LoginContent() {
     </div>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
 
 const containerStyle: React.CSSProperties = {
   minHeight: "100vh",
@@ -167,7 +287,7 @@ const contentStyle: React.CSSProperties = {
 };
 
 const textContainerStyle: React.CSSProperties = {
-  marginBottom: "56px",
+  marginBottom: "40px",
 };
 
 const explanationStyle: React.CSSProperties = {
@@ -177,6 +297,24 @@ const explanationStyle: React.CSSProperties = {
   textAlign: "center",
   lineHeight: "34px",
   margin: 0,
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: "24px",
+  fontWeight: 400,
+  color: "#ffffff",
+  textAlign: "center",
+  lineHeight: "34px",
+  margin: 0,
+};
+
+const subtitleStyle: React.CSSProperties = {
+  fontSize: "16px",
+  fontWeight: 400,
+  color: palette.muted,
+  textAlign: "center",
+  lineHeight: "24px",
+  margin: "16px 0 0",
 };
 
 const authButtonsStyle: React.CSSProperties = {
@@ -244,6 +382,19 @@ const emailButtonTextStyle: React.CSSProperties = {
   color: palette.muted,
 };
 
+const emailInputStyle: React.CSSProperties = {
+  width: "100%",
+  minHeight: "56px",
+  borderRadius: "14px",
+  border: `1px solid ${palette.border}`,
+  backgroundColor: palette.cardBg,
+  color: palette.fg,
+  padding: "16px 18px",
+  fontFamily,
+  fontSize: "16px",
+  outline: "none",
+};
+
 const errorStyle: React.CSSProperties = {
   marginTop: "20px",
   padding: "12px 16px",
@@ -258,8 +409,27 @@ const errorStyle: React.CSSProperties = {
 };
 
 const privacyNoteStyle: React.CSSProperties = {
-  marginTop: "32px",
-  fontSize: "13px",
+  marginTop: "40px",
+  fontSize: "14px",
   color: palette.dimText,
   textAlign: "center",
+  lineHeight: "20px",
+};
+
+const iconContainerStyle: React.CSSProperties = {
+  width: "72px",
+  height: "72px",
+  borderRadius: "36px",
+  border: `1px solid ${palette.border}`,
+  backgroundColor: palette.cardBg,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "28px",
+  marginBottom: "24px",
+  color: "#6366f1",
+};
+
+const emailHighlightStyle: React.CSSProperties = {
+  color: "#ffffff",
 };

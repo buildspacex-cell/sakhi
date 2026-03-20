@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Body health override** — physical symptom responses bypass generic Ayurvedic reasoning
 - **Email Intelligence v1** — Gmail OAuth integration, LLM-powered digest (triage, action items), signal extraction (subscriptions, avoidance, boundaries, cognitive load)
 - **Knowledge graph-powered symptom recommendations** + Prompt Playground
-- **Web onboarding flow** — 8 screens, 19 questions, progressive OS calibration
+- **Web MVP auth/runtime flow** — quiet home gate, Google + email login, name-only onboarding, and direct post-auth routing now match the current mobile MVP path
 - **Mobile onboarding, voice, and auth** with Ayurvedic knowledge graph
 - **Mobile continuity premium surfaces** — profile now includes a glass-style continuity reflection page with life-occupancy bubble mapping from continuity topics/arcs and threaded deep-reflection synthesis
 - **Full-brain simulation harness v2** — deep-dive visualizations for coherence, alignment, identity, themes
@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mobile MVP route/security cleanup** - parked soul routes and the unused voice screen are removed from the runtime app, mobile no longer exposes `EXPO_PUBLIC_OPENAI_API_KEY`, and legacy onboarding fall-throughs now route to conversation instead of voice
 - **Internal TestFlight hardening** - active mobile chat/reflection screens now require an explicit backend URL instead of silently falling back to the old production Railway host, HealthKit is parked out of the current MVP build, and dead mobile helper files were removed so the release candidate can pass a clean mobile typecheck
 - **iOS TestFlight build hardening** - the repo now pins `pnpm` as the workspace package manager, removes the stray root `package-lock.json`, and the local Fastlane build script now validates required mobile env vars while rejecting stale client OpenAI / release-bypass vars before upload
+- **Mobile home entry simplification** - the iOS home screen now lands users on the primary `BEGIN` action without the extra "What is Sakhi?" explainer link or its unused intro modal flow
+- **Web parity with mobile MVP** - web now removes the intro modal from `/experience`, routes first-time users through name-only onboarding, sends returning users straight to `/experience/converse`, restores recent chat history on open, and uses the mobile-style account hub labels (`Profile`, `Settings`, `Report an issue`, `Sign out`)
 - **Overlap-aware continuity story gating** — continuity compilation now preserves bounded related-anchor evidence so shared moments can appear in both relevant story threads, while cross-topic `whole_story` readiness now allows dominant mirror-safe umbrella topics (for example Sakhi) to unlock Deep Reflect with meaningful supporting threads without lowering topic-detail safety globally
 - **Governance seeder race condition** — ON CONFLICT guards for concurrent seed requests
 - **JSONB parsing** — asyncpg returns JSONB as strings; added `_parse_json()` helpers in coherence/alignment engines

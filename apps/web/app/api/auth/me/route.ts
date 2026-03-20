@@ -16,6 +16,7 @@ interface AuthMePayload {
   full_name: string | null;
   avatar_url: string | null;
   onboarding_completed: boolean;
+  needs_name: boolean;
 }
 
 function withDevBypassCookie(
@@ -64,6 +65,7 @@ async function getDevBypassResponse(
         full_name: authUser.full_name,
         avatar_url: authUser.avatar_url,
         onboarding_completed: !!authUser.onboarding_completed_at,
+        needs_name: !String(authUser.full_name || "").trim(),
       });
     }
   } catch (error) {
@@ -76,6 +78,7 @@ async function getDevBypassResponse(
     full_name: DEV_BYPASS_NAME,
     avatar_url: null,
     onboarding_completed: true,
+    needs_name: false,
   });
 }
 
@@ -149,6 +152,7 @@ export async function GET(request: NextRequest) {
           full_name: newUser.full_name,
           avatar_url: newUser.avatar_url,
           onboarding_completed: !!newUser.onboarding_completed_at,
+          needs_name: !String(newUser.full_name || "").trim(),
         });
       }
 
@@ -165,6 +169,7 @@ export async function GET(request: NextRequest) {
       full_name: authUser.full_name,
       avatar_url: authUser.avatar_url,
       onboarding_completed: !!authUser.onboarding_completed_at,
+      needs_name: !String(authUser.full_name || "").trim(),
     });
   } catch (error) {
     console.error("Error in /api/auth/me:", error);
