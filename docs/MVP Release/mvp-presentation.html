@@ -1121,6 +1121,8 @@
 
         .visionSlide {
             justify-content: center;
+            min-height: auto;
+            padding: 44px 56px;
         }
 
         .visionShell {
@@ -1129,8 +1131,7 @@
             align-items: center;
             text-align: center;
             width: 100%;
-            max-width: 1080px;
-            gap: 28px;
+            max-width: 920px;
             position: relative;
             z-index: 1;
         }
@@ -1139,106 +1140,76 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
         }
 
         .visionTitle {
             margin: 0;
-            max-width: none;
-            font-size: 48px;
-            line-height: 0.98;
+            max-width: 18ch;
+            font-size: 40px;
+            line-height: 1.1;
+            text-wrap: balance;
         }
 
-        .visionSubtitle {
-            margin: 0;
-            max-width: none;
-            font-size: 22px;
-            line-height: 1.2;
-            font-weight: 600;
-            color: rgba(236, 242, 250, 0.76);
-        }
-
-        .visionJourney {
-            display: grid;
-            grid-template-columns: minmax(300px, 380px) minmax(360px, 520px);
-            gap: 72px;
+        .visionStack {
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
             width: 100%;
-            margin-top: 12px;
+            max-width: 600px;
+            gap: 32px;
+            margin-top: 34px;
         }
 
-        .visionUseCases {
-            width: 100%;
-            margin: 0;
-            text-align: left;
-            max-width: 380px;
-        }
-
-        .visionUseCase {
-            margin: 0;
-            max-width: none;
-            font-size: 16px;
-            line-height: 1.6;
-            font-weight: 500;
-            color: rgba(236, 242, 250, 0.68);
-        }
-
-        .visionCenterStack {
+        .visionBlock {
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
-            justify-self: center;
-            text-align: left;
-            gap: 24px;
+            align-items: center;
+            gap: 6px;
             width: 100%;
-            max-width: 500px;
         }
 
-        .visionProblem {
+        .visionBlockLead {
             margin: 0;
-            max-width: 13ch;
-            font-size: 30px;
-            line-height: 1.12;
+            max-width: none;
+            font-size: 18px;
+            line-height: 1.28;
             font-weight: 700;
             color: var(--text-main);
+            text-wrap: balance;
         }
 
-        .visionSolution {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            text-align: left;
-            gap: 10px;
-            max-width: 460px;
-        }
-
-        .visionSolutionLead {
+        .visionBlockText {
             margin: 0;
             max-width: none;
+            font-size: 17px;
+            line-height: 1.38;
+            font-weight: 500;
+            color: rgba(236, 242, 250, 0.72);
+            text-wrap: balance;
+        }
+
+        .visionFinal {
+            margin: 54px 0 0;
+            max-width: 24ch;
             font-size: 26px;
-            line-height: 1.18;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .visionSolutionText {
-            margin: 0;
-            max-width: 22ch;
-            font-size: 20px;
-            line-height: 1.42;
-            font-weight: 500;
-            color: rgba(236, 242, 250, 0.78);
-        }
-
-        .visionFuture {
-            margin: 48px 0 0;
-            max-width: 20ch;
-            font-size: 30px;
             line-height: 1.22;
+            font-weight: 700;
+            color: rgba(246, 250, 255, 0.98);
+            text-wrap: balance;
+        }
+
+        .endCardSlide {
+            justify-content: center;
+        }
+
+        .endCardTitle {
+            margin: 0;
+            max-width: 18ch;
+            font-size: 56px;
+            line-height: 1.08;
             font-weight: 650;
-            letter-spacing: 0.01em;
-            color: rgba(244, 249, 255, 0.97);
+            color: rgba(248, 251, 255, 0.99);
+            text-wrap: balance;
         }
 
         .visionGrid {
@@ -1383,14 +1354,34 @@
         }
 
         .closing {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
             font-size: 28px;
             font-weight: 700;
-            color: var(--text-main);
+            color: rgba(246, 248, 252, 0.76);
         }
 
-        .closing strong {
-            color: var(--accent);
+        .closingLead {
+            letter-spacing: -0.02em;
+        }
+
+        .closingAccent {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px 10px;
+            border-radius: 999px;
+            color: #f2dfaa;
             font-family: "Sora", "Avenir Next", sans-serif;
+            letter-spacing: -0.03em;
+            background: linear-gradient(180deg, rgba(242, 223, 170, 0.16), rgba(242, 223, 170, 0.07));
+            border: 1px solid rgba(242, 223, 170, 0.2);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 248, 220, 0.08),
+                0 10px 28px rgba(0, 0, 0, 0.18),
+                0 0 24px rgba(242, 223, 170, 0.12);
         }
 
         .deckNav {
@@ -1618,57 +1609,33 @@
             }
 
             .visionTitle {
-                font-size: 42px;
+                font-size: 34px;
+                max-width: 16ch;
             }
 
-            .visionSubtitle {
-                font-size: 20px;
-            }
-
-            .visionJourney {
-                grid-template-columns: 1fr;
+            .visionStack {
+                max-width: 100%;
                 gap: 26px;
-                margin-top: 4px;
+                margin-top: 28px;
             }
 
-            .visionUseCases {
-                width: min(100%, 420px);
-                max-width: none;
-                justify-self: center;
-                text-align: center;
+            .visionBlockLead {
+                font-size: 17px;
             }
 
-            .visionUseCase {
+            .visionBlockText {
                 font-size: 16px;
             }
 
-            .visionCenterStack {
-                gap: 20px;
-                align-items: center;
-                text-align: center;
-                max-width: 420px;
+            .visionFinal {
+                font-size: 22px;
+                max-width: 24ch;
+                margin-top: 42px;
             }
 
-            .visionProblem,
-            .visionSolutionLead {
-                font-size: 23px;
-                max-width: none;
-            }
-
-            .visionSolution {
-                align-items: center;
-                text-align: center;
-            }
-
-            .visionSolutionText {
-                font-size: 18px;
-                max-width: 22ch;
-            }
-
-            .visionFuture {
-                font-size: 24px;
-                max-width: 18ch;
-                margin-top: 28px;
+            .endCardTitle {
+                font-size: 40px;
+                max-width: 15ch;
             }
 
             .visionCore {
@@ -1763,7 +1730,7 @@
                 <div class="pill-container">
                     <div class="pill fade">Remembers what you share</div>
                     <div class="pill fade">Connects it over time</div>
-                    <div class="pill fade">Helps you see it clearly</div>
+                    <div class="pill fade">Helps you reflect clearly</div>
                 </div>
             </div>
         </div>
@@ -1861,7 +1828,6 @@
                 <p class="lead">Across time and topics, everything connects.</p>
                 <p class="body-copy">What you’ve lived begins to form patterns.</p>
                 <p class="body-copy">Not just moments - but something you can understand.</p>
-                <p class="category-copy">This is personal intelligence.</p>
             </div>
 
             <div class="phoneFrame">
@@ -1934,7 +1900,10 @@
         <div class="content simple center">
             <div class="text">
                 <h1>This is just the beginning.</h1>
-                <p class="closing"><strong>Use it. Break it. Shape it.</strong></p>
+                <p class="closing">
+                    <span class="closingLead">Use it. Break it.</span>
+                    <span class="closingAccent">Shape it.</span>
+                </p>
             </div>
         </div>
     </section>
@@ -1944,26 +1913,41 @@
         <div class="content visionSlide">
             <div class="visionShell">
                 <div class="visionHeader">
-                    <h1 class="visionTitle">AI that works for you.</h1>
-                    <p class="visionSubtitle">Not the other way around.</p>
+                    <h1 class="visionTitle">When Intelligence adapts to you, everything works better.</h1>
                 </div>
 
-                <div class="visionJourney">
-                    <div class="visionUseCases">
-                        <p class="visionUseCase">The emails you draft, the ideas you explore, the plans you build, the questions you wrestle with.</p>
+                <div class="visionStack">
+                    <div class="visionBlock">
+                        <p class="visionBlockLead">Decisions don’t feel overwhelming.</p>
+                        <p class="visionBlockText">They’re grounded in what matters to you.</p>
                     </div>
 
-                    <div class="visionCenterStack">
-                        <p class="visionProblem">Today, each starts from zero.</p>
+                    <div class="visionBlock">
+                        <p class="visionBlockLead">Your thinking doesn’t reset every day.</p>
+                        <p class="visionBlockText">It builds - and gets sharper over time.</p>
+                    </div>
 
-                        <div class="visionSolution">
-                            <p class="visionSolutionLead">Sakhi changes that.</p>
-                            <p class="visionSolutionText">It builds on everything -<br>so every interaction gets sharper over time.</p>
-                        </div>
+                    <div class="visionBlock">
+                        <p class="visionBlockLead">Learning adapts to how you understand.</p>
+                        <p class="visionBlockText">Not how everyone else does.</p>
+                    </div>
+
+                    <div class="visionBlock">
+                        <p class="visionBlockLead">Your goals, your health, your priorities -</p>
+                        <p class="visionBlockText">stay aligned as things change.</p>
                     </div>
                 </div>
 
-                <p class="visionFuture">Over time, this becomes the layer your thinking runs through.</p>
+                <p class="visionFinal">Not just better answers. Better outcomes - for how people live, learn, and decide.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 13 -->
+    <section class="slide">
+        <div class="content simple center endCardSlide">
+            <div class="text">
+                <h1 class="endCardTitle">That's Sakhi for you!</h1>
             </div>
         </div>
     </section>
