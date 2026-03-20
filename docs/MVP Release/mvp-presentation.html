@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Sakhi MVP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
+
+        :root {
+            --bg-top: #111f34;
+            --bg-mid: #060c17;
+            --bg-bottom: #02050b;
+            --panel: rgba(8, 13, 24, 0.76);
+            --panel-strong: rgba(14, 20, 34, 0.92);
+            --panel-border: rgba(189, 206, 225, 0.14);
+            --panel-line: rgba(255, 255, 255, 0.06);
+            --text-main: #f6f8fc;
+            --text-muted: #cad4e2;
+            --text-subtle: #95a6bc;
+            --text-soft: #71839a;
+            --accent: #e5d1a0;
+            --accent-ice: #c5e3f0;
+            --accent-soft: rgba(229, 209, 160, 0.14);
+            --shadow: 0 48px 140px rgba(0, 0, 0, 0.48);
+        }
+
+        body {
+            margin: 0;
+            font-family: "Manrope", "Avenir Next", "SF Pro Text", sans-serif;
+            background:
+                radial-gradient(circle at 12% 16%, rgba(74, 114, 134, 0.22), transparent 30%),
+                radial-gradient(circle at 84% 76%, rgba(128, 90, 43, 0.16), transparent 24%),
+                linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 52%, var(--bg-bottom) 100%);
+            color: var(--text-main);
+            overflow: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background:
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 72px 72px;
+            opacity: 0.05;
+            mask-image: radial-gradient(circle at center, black 24%, transparent 88%);
+            pointer-events: none;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 50% 22%, rgba(197, 227, 240, 0.06), transparent 36%),
+                radial-gradient(circle at 18% 78%, rgba(229, 209, 160, 0.05), transparent 28%);
+            pointer-events: none;
+        }
+
+        .slide {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 64px;
+            box-sizing: border-box;
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateX(36px);
+            transition:
+                opacity 0.45s ease,
+                transform 0.45s ease,
+                visibility 0s linear 0.45s;
+        }
+
+        .slide.is-active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateX(0);
+            transition-delay: 0s;
+        }
+
+        .content {
+            max-width: 1180px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 60px;
+            box-sizing: border-box;
+            min-height: 74vh;
+            padding: 60px;
+            border-radius: 42px;
+            background:
+                linear-gradient(155deg, rgba(16, 23, 39, 0.95), rgba(7, 11, 21, 0.84)),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+            border: 1px solid var(--panel-border);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(24px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .content::before,
+        .content::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+        }
+
+        .content::before {
+            width: 340px;
+            height: 340px;
+            top: -170px;
+            right: -110px;
+            background: radial-gradient(circle, rgba(84, 122, 142, 0.28), rgba(84, 122, 142, 0.02) 70%);
+        }
+
+        .content::after {
+            width: 280px;
+            height: 280px;
+            left: -140px;
+            bottom: -140px;
+            background: radial-gradient(circle, rgba(153, 112, 58, 0.14), rgba(153, 112, 58, 0.02) 72%);
+        }
+
+        .content.simple {
+            max-width: 980px;
+            min-height: auto;
+            padding: 24px 0;
+            border: 0;
+            border-radius: 0;
+            background: none;
+            box-shadow: none;
+            backdrop-filter: none;
+            overflow: visible;
+            gap: 32px;
+        }
+
+        .content.simple::before,
+        .content.simple::after {
+            display: none;
+        }
+
+        .text {
+            flex: 1;
+            max-width: 540px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .openingText {
+            max-width: 800px;
+        }
+
+        .headline {
+            font-size: 56px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-bottom: 30px;
+            max-width: 13ch;
+        }
+
+        .line {
+            font-size: 22px;
+            color: #94a3b8;
+            margin: 10px 0;
+        }
+
+        .highlight {
+            font-size: 26px;
+            color: #ffffff;
+            font-weight: 500;
+            margin-top: 30px;
+        }
+
+        .brand {
+            font-size: 20px;
+            color: #cbd5e1;
+            margin-top: 30px;
+        }
+
+        .slide-two .text {
+            max-width: 800px;
+        }
+
+        .slide-two .headline {
+            font-size: 64px;
+            font-weight: 600;
+            line-height: 1.1;
+            text-align: center;
+            margin-bottom: 40px;
+            max-width: none;
+        }
+
+        .pill-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .pill {
+            padding: 14px 24px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            font-size: 18px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .pill:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pill:first-child {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .slide:nth-of-type(3) .pill:first-child {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .fade {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: none;
+        }
+
+        .slide.is-active .fade {
+            animation: fadeUp 0.8s ease forwards;
+        }
+
+        .fade:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+
+        .fade:nth-child(2) {
+            animation-delay: 0.6s;
+        }
+
+        .fade:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        .fade:nth-child(4) {
+            animation-delay: 1.4s;
+        }
+
+        .fade:nth-child(5) {
+            animation-delay: 1.8s;
+        }
+
+        .slide-two .text>.headline.fade:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+
+        .slide-two .pill-container .pill.fade:nth-child(1) {
+            animation-delay: 0.6s;
+        }
+
+        .slide-two .pill-container .pill.fade:nth-child(2) {
+            animation-delay: 1s;
+        }
+
+        .slide-two .pill-container .pill.fade:nth-child(3) {
+            animation-delay: 1.4s;
+        }
+
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-family: "Sora", "Avenir Next", sans-serif;
+            font-size: 56px;
+            line-height: 1.03;
+            letter-spacing: -0.055em;
+            margin: 0 0 22px;
+            max-width: 10.5ch;
+            text-wrap: balance;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(197, 227, 240, 0.07);
+            border: 1px solid rgba(197, 227, 240, 0.12);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-subtle);
+            margin-bottom: 18px;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: var(--accent-ice);
+            box-shadow: 0 0 0 6px rgba(197, 227, 240, 0.08);
+        }
+
+        p {
+            font-size: 21px;
+            line-height: 1.62;
+            color: var(--text-muted);
+            margin: 0 0 14px;
+            text-wrap: pretty;
+        }
+
+        .lead {
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 18px;
+            max-width: 18ch;
+        }
+
+        ul:not(.stepList) {
+            list-style: none;
+            padding: 0;
+            margin: 28px 0 0;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        ul:not(.stepList) li {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            align-self: flex-start;
+            padding: 15px 18px;
+            border-radius: 20px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 10px 24px rgba(0, 0, 0, 0.16);
+        }
+
+        ul:not(.stepList) li::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: radial-gradient(circle at 35% 35%, var(--accent-ice), var(--accent));
+            box-shadow: 0 0 0 7px rgba(229, 209, 160, 0.08);
+            flex: 0 0 auto;
+        }
+
+        .center {
+            flex-direction: column;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .center .text,
+        .center h1,
+        .center .lead {
+            max-width: 18ch;
+        }
+
+        .center p {
+            max-width: 30ch;
+            margin-inline: auto;
+        }
+
+        .center ul:not(.stepList) {
+            margin-top: 30px;
+        }
+
+        .center ul:not(.stepList) li {
+            justify-content: center;
+            align-self: center;
+        }
+
+        .content.simple .text {
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .content.simple h1,
+        .content.simple .lead {
+            max-width: none;
+        }
+
+        .slide-four .content {
+            gap: 40px;
+        }
+
+        .slide-four .text {
+            flex: 0 1 560px;
+            max-width: 560px;
+        }
+
+        .slide-four h1 {
+            position: relative;
+            display: inline-block;
+            font-size: 58px;
+            font-weight: 800;
+            line-height: 0.96;
+            margin-bottom: 34px;
+            max-width: 12.4ch;
+            isolation: isolate;
+        }
+
+        .slide-four h1::before {
+            content: "";
+            position: absolute;
+            inset: -18px -28px -16px -18px;
+            background: radial-gradient(circle at left, rgba(255, 255, 255, 0.06), transparent 45%);
+            filter: blur(12px);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .slide-four .lead {
+            max-width: none;
+            color: rgba(246, 248, 252, 0.8);
+            line-height: 1.5;
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+
+        .slide-four ul:not(.stepList) {
+            margin-top: 40px;
+            gap: 16px;
+        }
+
+        .slide-four ul:not(.stepList) li {
+            color: rgba(203, 213, 225, 0.85);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .slide-four ul:not(.stepList) li:first-child {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.06),
+                0 12px 28px rgba(0, 0, 0, 0.18),
+                0 0 20px rgba(255, 255, 255, 0.05);
+        }
+
+        .slide-four .phoneFrame::after {
+            content: "";
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.06), transparent 60%);
+            filter: blur(40px);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .slide-four .phone {
+            transform: scale(1.04);
+            box-shadow: 0 40px 120px rgba(0, 0, 0, 0.85);
+        }
+
+        .slide-four .phoneCaption {
+            color: rgba(203, 213, 225, 0.8);
+            font-size: 15px;
+            margin-top: 12px;
+        }
+
+        .slide-four h1.fade {
+            animation-delay: 0s;
+        }
+
+        .slide-four .lead.fade {
+            animation-delay: 0.1s;
+        }
+
+        .slide-four ul li.fade:nth-child(1) {
+            animation-delay: 0.25s;
+        }
+
+        .slide-four ul li.fade:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+
+        .slide-four ul li.fade:nth-child(3) {
+            animation-delay: 0.55s;
+        }
+
+        .slide-five .content {
+            gap: 72px;
+        }
+
+        .slide-five .text {
+            flex: 0 1 470px;
+            max-width: 470px;
+        }
+
+        .slide-five h1 {
+            position: relative;
+            display: inline-block;
+            font-size: 59px;
+            font-weight: 700;
+            line-height: 0.98;
+            margin-bottom: 30px;
+            color: rgba(250, 252, 255, 0.98);
+            isolation: isolate;
+        }
+
+        .slide-five h1::before {
+            content: "";
+            position: absolute;
+            inset: -18px -26px -12px -18px;
+            background: radial-gradient(circle at left, rgba(255, 255, 255, 0.05), transparent 45%);
+            filter: blur(12px);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .slide-five .lead {
+            max-width: 24ch;
+            color: rgba(236, 242, 250, 0.78);
+            line-height: 1.58;
+            margin-bottom: 28px;
+            text-wrap: pretty;
+        }
+
+        .slide-five .lead strong {
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.98);
+        }
+
+        .slide-five .reflection-body {
+            max-width: 24ch;
+            color: rgba(203, 213, 225, 0.88);
+            line-height: 1.7;
+            margin-bottom: 14px;
+        }
+
+        .slide-five .reflection-body + .reflection-body {
+            margin-top: 4px;
+        }
+
+        .slide-five .phoneCaption {
+            color: rgba(214, 224, 238, 0.8);
+            font-size: 15px;
+            margin-top: 12px;
+        }
+
+        .slide-five h1.fade {
+            animation-delay: 0s;
+        }
+
+        .slide-five .lead.fade {
+            animation-delay: 0.12s;
+        }
+
+        .slide-five .body-one.fade {
+            animation-delay: 0.24s;
+        }
+
+        .slide-five .body-two.fade {
+            animation-delay: 0.36s;
+        }
+
+        .slide-six .text {
+            max-width: 500px;
+        }
+
+        .slide-six h1 {
+            color: rgba(250, 252, 255, 0.98);
+            font-weight: 800;
+            line-height: 0.99;
+        }
+
+        .slide-six .lead {
+            max-width: 24ch;
+            color: rgba(236, 242, 250, 0.76);
+            line-height: 1.58;
+            margin-bottom: 24px;
+            white-space: normal;
+            text-wrap: balance;
+        }
+
+        .slide-six .body-copy {
+            max-width: 26ch;
+            color: rgba(203, 213, 225, 0.65);
+            line-height: 1.76;
+            margin-bottom: 0;
+        }
+
+        .slide-six .transition-copy {
+            max-width: 28ch;
+            color: rgba(203, 213, 225, 0.5);
+            font-size: 18px;
+            line-height: 1.55;
+            margin-bottom: 0;
+            margin-top: 24px;
+        }
+
+        .slide-six .phoneFrame {
+            position: relative;
+        }
+
+        .slide-six .phoneFrame::after {
+            content: "";
+            position: absolute;
+            top: 92px;
+            bottom: 112px;
+            left: 50%;
+            width: 1px;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg,
+                    rgba(197, 227, 240, 0.02),
+                    rgba(197, 227, 240, 0.14) 22%,
+                    rgba(197, 227, 240, 0.22) 50%,
+                    rgba(197, 227, 240, 0.14) 78%,
+                    rgba(197, 227, 240, 0.02));
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .slide-six .phone {
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide-six .phone img {
+            filter: contrast(1.04) brightness(1.02);
+        }
+
+        .slide-six .phoneCaption {
+            color: rgba(214, 224, 238, 0.66);
+            font-size: 15px;
+            margin-top: 12px;
+        }
+
+        .slide-seven .content {
+            gap: 72px;
+        }
+
+        .slide-seven .text {
+            flex: 0 1 500px;
+            max-width: 500px;
+            padding-left: 8px;
+        }
+
+        .slide-seven h1 {
+            color: rgba(250, 252, 255, 1);
+            font-weight: 800;
+            line-height: 1.06;
+            margin-bottom: 32px;
+        }
+
+        .slide-seven .lead {
+            max-width: 24ch;
+            color: rgba(236, 242, 250, 0.76);
+            font-weight: 600;
+            line-height: 1.32;
+            margin-bottom: 22px;
+        }
+
+        .slide-seven .body-copy {
+            max-width: 25ch;
+            color: rgba(203, 213, 225, 0.63);
+            font-weight: 400;
+            line-height: 1.48;
+            margin-bottom: 0;
+        }
+
+        .slide-seven .transition-copy {
+            max-width: 27ch;
+            color: rgba(203, 213, 225, 0.48);
+            font-size: 18px;
+            font-weight: 400;
+            line-height: 1.5;
+            letter-spacing: 0.01em;
+            margin-top: 34px;
+            margin-bottom: 0;
+        }
+
+        .slide-seven .phoneFrame {
+            transform: translateX(10px);
+        }
+
+        .slide-seven .phone {
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide-seven .phone img {
+            filter: contrast(1.1) brightness(1.04) saturate(1.02);
+        }
+
+        .slide-seven .phoneCaption {
+            color: rgba(214, 224, 238, 0.64);
+            font-size: 15px;
+            margin-top: 10px;
+        }
+
+        .slide-eight .content {
+            gap: 72px;
+        }
+
+        .slide-eight .text {
+            flex: 0 1 500px;
+            max-width: 500px;
+            padding-left: 8px;
+        }
+
+        .slide-eight h1 {
+            color: rgba(250, 252, 255, 1);
+            font-weight: 800;
+            line-height: 1.07;
+            margin-bottom: 36px;
+        }
+
+        .slide-eight .lead {
+            max-width: 22ch;
+            color: rgba(236, 242, 250, 0.75);
+            font-weight: 600;
+            line-height: 1.28;
+            margin-bottom: 24px;
+        }
+
+        .slide-eight .body-copy {
+            max-width: 24ch;
+            color: rgba(203, 213, 225, 0.63);
+            font-weight: 400;
+            line-height: 1.46;
+            margin-bottom: 0;
+        }
+
+        .slide-eight .category-copy {
+            max-width: 26ch;
+            color: rgba(203, 213, 225, 0.48);
+            font-size: 18px;
+            font-weight: 400;
+            line-height: 1.5;
+            letter-spacing: 0.01em;
+            margin-top: 32px;
+            margin-bottom: 0;
+        }
+
+        .slide-eight .phoneFrame {
+            position: relative;
+            transform: translateX(10px);
+        }
+
+        .slide-eight .phone {
+            position: relative;
+            z-index: 1;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.04),
+                0 44px 110px rgba(0, 0, 0, 0.72);
+        }
+
+        .slide-eight .phone img {
+            filter: contrast(1.1) brightness(1.05) saturate(1.04);
+        }
+
+        .slide-eight .phone::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 33% 31%, rgba(226, 239, 249, 0.16), transparent 15%),
+                radial-gradient(circle at 50% 86%, rgba(213, 166, 78, 0.18), transparent 15%),
+                radial-gradient(circle at 78% 22%, rgba(5, 9, 18, 0.08), transparent 16%),
+                radial-gradient(circle at 23% 61%, rgba(5, 9, 18, 0.08), transparent 15%),
+                radial-gradient(circle at 54% 60%, rgba(5, 9, 18, 0.08), transparent 15%),
+                radial-gradient(circle at 18% 81%, rgba(5, 9, 18, 0.1), transparent 15%),
+                linear-gradient(180deg, rgba(6, 10, 18, 0.02), rgba(6, 10, 18, 0.12));
+            z-index: 2;
+        }
+
+        .slide-eight .phoneCaption {
+            color: rgba(214, 224, 238, 0.55);
+            font-size: 15px;
+            margin-top: 14px;
+        }
+
+        .slide-nine .content {
+            gap: 72px;
+        }
+
+        .slide-nine .text {
+            flex: 0 1 500px;
+            max-width: 500px;
+            padding-left: 8px;
+        }
+
+        .slide-nine h1 {
+            color: rgba(250, 252, 255, 1);
+            font-weight: 800;
+            line-height: 1.06;
+            margin-bottom: 34px;
+        }
+
+        .slide-nine .lead {
+            max-width: 22ch;
+            color: rgba(236, 242, 250, 0.75);
+            font-weight: 600;
+            line-height: 1.32;
+            margin-bottom: 30px;
+        }
+
+        .slide-nine .body-copy {
+            max-width: 24ch;
+            color: rgba(203, 213, 225, 0.64);
+            font-weight: 400;
+            line-height: 1.5;
+            margin-bottom: 0;
+        }
+
+        .slide-nine .phoneFrame {
+            position: relative;
+            transform: translateX(10px);
+        }
+
+        .slide-nine .phone {
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide-nine .phone img {
+            filter: brightness(0.92) contrast(0.98) saturate(0.88);
+        }
+
+        .slide-nine .phone::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg, rgba(6, 10, 18, 0.1), rgba(6, 10, 18, 0.24)),
+                radial-gradient(circle at 50% 48%, rgba(214, 224, 238, 0.06), transparent 28%);
+            z-index: 2;
+        }
+
+        .slide-nine .phoneCaption {
+            color: rgba(214, 224, 238, 0.54);
+            font-size: 15px;
+            margin-top: 12px;
+        }
+
+        .slide-ten .content {
+            gap: 72px;
+        }
+
+        .slide-ten .text {
+            flex: 0 1 470px;
+            max-width: 470px;
+            padding-left: 8px;
+        }
+
+        .slide-ten h1 {
+            color: rgba(250, 252, 255, 1);
+            font-weight: 800;
+            line-height: 1.06;
+            margin-bottom: 34px;
+        }
+
+        .slide-ten .lead {
+            max-width: 22ch;
+            color: rgba(236, 242, 250, 0.76);
+            font-weight: 600;
+            line-height: 1.32;
+            margin-bottom: 0;
+        }
+
+        .slide-ten .accessGrid {
+            max-width: 440px;
+            gap: 0;
+        }
+
+        .slide-ten .accessCard {
+            padding: 32px;
+            border-radius: 32px;
+        }
+
+        .slide-ten .stepList {
+            gap: 22px;
+        }
+
+        .slide-ten .stepList li {
+            grid-template-columns: 52px minmax(0, 1fr);
+            gap: 18px;
+        }
+
+        .slide-ten .stepNumber {
+            width: 52px;
+            height: 52px;
+            font-size: 18px;
+            font-weight: 700;
+            box-shadow:
+                0 14px 28px rgba(0, 0, 0, 0.22),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .slide-ten .stepBody strong {
+            margin-bottom: 0;
+            font-size: 20px;
+            line-height: 1.3;
+        }
+
+        .slide-ten .accessInvite {
+            margin: 28px 0 0;
+            color: rgba(236, 242, 250, 0.72);
+            font-size: 18px;
+            line-height: 1.45;
+        }
+
+        .content.simple h1 {
+            font-size: 68px;
+            line-height: 0.98;
+            margin-bottom: 18px;
+        }
+
+        .content.simple p {
+            max-width: 30ch;
+            margin-inline: auto;
+        }
+
+        .content.simple .lead {
+            font-size: 30px;
+            margin-bottom: 8px;
+        }
+
+        .content.simple ul:not(.stepList) {
+            margin-top: 26px;
+            align-items: center;
+        }
+
+        .phone {
+            width: 304px;
+            border-radius: 36px;
+            overflow: hidden;
+            box-shadow: 0 36px 90px rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(203, 213, 225, 0.16);
+            background: #040914;
+            position: relative;
+        }
+
+        .phone img {
+            width: 100%;
+            display: block;
+        }
+
+        .phoneCaption {
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-soft);
+            margin-top: 18px;
+            text-align: center;
+            max-width: 292px;
+            letter-spacing: 0.01em;
+        }
+
+        .phoneFrame {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            padding: 18px 18px 22px;
+            border-radius: 44px;
+            background:
+                linear-gradient(180deg, rgba(18, 28, 45, 0.78), rgba(8, 13, 24, 0.54));
+            border: 1px solid rgba(189, 206, 225, 0.12);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.05),
+                0 20px 60px rgba(0, 0, 0, 0.28);
+        }
+
+        .phoneFrame::before {
+            content: "";
+            width: 92px;
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            margin-bottom: 14px;
+        }
+
+        .accessGrid {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            width: 100%;
+            max-width: 500px;
+            flex: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .accessCard {
+            padding: 28px;
+            border-radius: 30px;
+            background:
+                linear-gradient(180deg, rgba(17, 26, 42, 0.94), rgba(9, 14, 25, 0.9));
+            border: 1px solid var(--panel-line);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.05),
+                0 18px 44px rgba(0, 0, 0, 0.2);
+        }
+
+        .accessCard h3 {
+            margin: 0 0 18px;
+            font-family: "Sora", "Avenir Next", sans-serif;
+            font-size: 28px;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
+        }
+
+        .stepList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .stepList li {
+            display: grid;
+            grid-template-columns: 42px minmax(0, 1fr);
+            align-items: start;
+            gap: 14px;
+            color: var(--text-muted);
+        }
+
+        .stepList li::before {
+            display: none;
+        }
+
+        .stepNumber {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Sora", "Avenir Next", sans-serif;
+            font-size: 16px;
+            color: var(--text-main);
+            background: linear-gradient(180deg, rgba(197, 227, 240, 0.2), rgba(197, 227, 240, 0.08));
+            border: 1px solid rgba(197, 227, 240, 0.18);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+        }
+
+        .stepBody strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--text-main);
+            font-size: 18px;
+        }
+
+        .stepBody span {
+            display: block;
+            font-size: 16px;
+            line-height: 1.55;
+            color: var(--text-subtle);
+            font-weight: 500;
+        }
+
+        .accessNote {
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--text-soft);
+            margin: 0;
+        }
+
+        .accessNote strong {
+            color: var(--accent-ice);
+            font-weight: 700;
+        }
+
+        .accessNote a {
+            color: var(--accent-ice);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(197, 227, 240, 0.28);
+        }
+
+        .visionSlide {
+            justify-content: center;
+        }
+
+        .visionShell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+            max-width: 1080px;
+            gap: 28px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .visionHeader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .visionTitle {
+            margin: 0;
+            max-width: none;
+            font-size: 48px;
+            line-height: 0.98;
+        }
+
+        .visionSubtitle {
+            margin: 0;
+            max-width: none;
+            font-size: 22px;
+            line-height: 1.2;
+            font-weight: 600;
+            color: rgba(236, 242, 250, 0.76);
+        }
+
+        .visionJourney {
+            display: grid;
+            grid-template-columns: minmax(300px, 380px) minmax(360px, 520px);
+            gap: 72px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        .visionUseCases {
+            width: 100%;
+            margin: 0;
+            text-align: left;
+            max-width: 380px;
+        }
+
+        .visionUseCase {
+            margin: 0;
+            max-width: none;
+            font-size: 16px;
+            line-height: 1.6;
+            font-weight: 500;
+            color: rgba(236, 242, 250, 0.68);
+        }
+
+        .visionCenterStack {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-self: center;
+            text-align: left;
+            gap: 24px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .visionProblem {
+            margin: 0;
+            max-width: 13ch;
+            font-size: 30px;
+            line-height: 1.12;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .visionSolution {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            gap: 10px;
+            max-width: 460px;
+        }
+
+        .visionSolutionLead {
+            margin: 0;
+            max-width: none;
+            font-size: 26px;
+            line-height: 1.18;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .visionSolutionText {
+            margin: 0;
+            max-width: 22ch;
+            font-size: 20px;
+            line-height: 1.42;
+            font-weight: 500;
+            color: rgba(236, 242, 250, 0.78);
+        }
+
+        .visionFuture {
+            margin: 48px 0 0;
+            max-width: 20ch;
+            font-size: 30px;
+            line-height: 1.22;
+            font-weight: 650;
+            letter-spacing: 0.01em;
+            color: rgba(244, 249, 255, 0.97);
+        }
+
+        .visionGrid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+            gap: 18px;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        .visionCard {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 10px;
+            padding: 24px;
+            border-radius: 30px;
+            background:
+                linear-gradient(180deg, rgba(17, 26, 42, 0.92), rgba(9, 14, 25, 0.86));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 20px 40px rgba(0, 0, 0, 0.18);
+        }
+
+        .visionCardAccent {
+            background:
+                linear-gradient(180deg, rgba(39, 32, 19, 0.9), rgba(18, 15, 11, 0.82));
+            border-color: rgba(229, 209, 160, 0.14);
+        }
+
+        .visionCardText {
+            margin: 0;
+            max-width: none;
+            font-size: 21px;
+            line-height: 1.38;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .visionCardMeta {
+            margin: 0;
+            max-width: none;
+            font-size: 17px;
+            line-height: 1.45;
+            color: var(--text-soft);
+        }
+
+        .visionBlock {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .visionLine {
+            max-width: 30ch;
+            margin: 0;
+        }
+
+        .visionDivider {
+            width: 72px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(197, 227, 240, 0.45), transparent);
+            margin: 6px 0;
+        }
+
+        .visionMuted {
+            color: var(--text-soft);
+            font-size: 17px;
+        }
+
+        .visionCore {
+            margin: 0;
+            max-width: 28ch;
+            font-size: 30px;
+            line-height: 1.42;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .visionAnchor {
+            margin: 0;
+            max-width: 26ch;
+            font-size: 18px;
+            line-height: 1.5;
+            font-weight: 400;
+            color: rgba(203, 213, 225, 0.58);
+            letter-spacing: 0.01em;
+        }
+
+        .visionQuestion {
+            margin: 0;
+            font-family: "Sora", "Avenir Next", sans-serif;
+            font-size: 28px;
+            line-height: 1.18;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
+            max-width: 14ch;
+            align-self: center;
+        }
+
+        .visionPillRow {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            max-width: 720px;
+        }
+
+        .visionPill {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 10px 26px rgba(0, 0, 0, 0.14);
+            color: var(--text-main);
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .visionOutro {
+            margin: 0;
+            font-family: "Sora", "Avenir Next", sans-serif;
+            font-size: 24px;
+            line-height: 1.16;
+            letter-spacing: -0.04em;
+            color: var(--accent-ice);
+            max-width: 18ch;
+        }
+
+        .visionBridge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            max-width: 620px;
+        }
+
+        .closing {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .closing strong {
+            color: var(--accent);
+            font-family: "Sora", "Avenir Next", sans-serif;
+        }
+
+        .deckNav {
+            position: fixed;
+            inset: auto 0 28px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 28px;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .navButton {
+            width: 58px;
+            height: 58px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(10, 16, 28, 0.78);
+            color: var(--text-main);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            line-height: 1;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 14px 36px rgba(0, 0, 0, 0.22);
+            backdrop-filter: blur(18px);
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+        }
+
+        .navButton:hover:not(:disabled) {
+            transform: translateY(-2px);
+            background: rgba(18, 28, 45, 0.92);
+        }
+
+        .navButton:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+
+        @media (max-width: 900px) {
+            .slide {
+                min-height: 100vh;
+                padding: 44px 22px;
+            }
+
+            .content {
+                flex-direction: column;
+                text-align: center;
+                gap: 36px;
+                min-height: auto;
+                padding: 40px 28px;
+            }
+
+            h1 {
+                font-size: 42px;
+                max-width: none;
+            }
+
+            p,
+            li {
+                font-size: 19px;
+            }
+
+            .lead {
+                font-size: 22px;
+                max-width: none;
+            }
+
+            .text {
+                max-width: none;
+            }
+
+            .headline {
+                font-size: 42px;
+            }
+
+            .line {
+                font-size: 20px;
+            }
+
+            .highlight {
+                font-size: 23px;
+            }
+
+            .brand {
+                font-size: 18px;
+            }
+
+            .slide-two .headline {
+                font-size: 48px;
+                margin-bottom: 34px;
+            }
+
+            .slide-four h1 {
+                font-size: 46px;
+                max-width: none;
+            }
+
+            .slide-four .lead {
+                max-width: none;
+                white-space: normal;
+                margin-bottom: 22px;
+            }
+
+            .slide-four .text {
+                flex: none;
+                max-width: none;
+            }
+
+            .slide-four .phoneFrame {
+                transform: none;
+            }
+
+            .slide-five .content {
+                gap: 42px;
+            }
+
+            .slide-five .text {
+                flex: none;
+                max-width: none;
+            }
+
+            .slide-five h1 {
+                font-size: 48px;
+                max-width: none;
+            }
+
+            .slide-five .lead,
+            .slide-five .reflection-body {
+                max-width: none;
+            }
+
+            .slide-six .text,
+            .slide-six .lead,
+            .slide-six .body-copy,
+            .slide-six .transition-copy {
+                max-width: none;
+            }
+
+            .slide-six .lead {
+                white-space: normal;
+            }
+
+            .slide-seven .text,
+            .slide-seven .lead,
+            .slide-seven .body-copy,
+            .slide-seven .transition-copy {
+                max-width: none;
+            }
+
+            .slide-seven .text {
+                flex: none;
+                padding-left: 0;
+            }
+
+            .slide-seven .phoneFrame {
+                transform: none;
+            }
+
+            .slide-eight .text,
+            .slide-eight .lead,
+            .slide-eight .body-copy,
+            .slide-eight .category-copy {
+                max-width: none;
+            }
+
+            .slide-eight .text {
+                flex: none;
+                padding-left: 0;
+            }
+
+            .slide-eight .phoneFrame {
+                transform: none;
+            }
+
+            .slide-nine .text,
+            .slide-nine .lead,
+            .slide-nine .body-copy {
+                max-width: none;
+            }
+
+            .slide-nine .text {
+                flex: none;
+                padding-left: 0;
+            }
+
+            .slide-nine .phoneFrame {
+                transform: none;
+            }
+
+            .slide-ten .text,
+            .slide-ten .lead {
+                max-width: none;
+            }
+
+            .slide-ten .text {
+                flex: none;
+                padding-left: 0;
+            }
+
+            .pill {
+                font-size: 16px;
+                padding: 12px 20px;
+            }
+
+             .content.simple {
+                padding: 12px 0;
+            }
+
+            .content.simple h1 {
+                font-size: 48px;
+            }
+
+            .content.simple .lead {
+                font-size: 24px;
+            }
+
+            .visionMuted {
+                font-size: 17px;
+            }
+
+            .visionTitle {
+                font-size: 42px;
+            }
+
+            .visionSubtitle {
+                font-size: 20px;
+            }
+
+            .visionJourney {
+                grid-template-columns: 1fr;
+                gap: 26px;
+                margin-top: 4px;
+            }
+
+            .visionUseCases {
+                width: min(100%, 420px);
+                max-width: none;
+                justify-self: center;
+                text-align: center;
+            }
+
+            .visionUseCase {
+                font-size: 16px;
+            }
+
+            .visionCenterStack {
+                gap: 20px;
+                align-items: center;
+                text-align: center;
+                max-width: 420px;
+            }
+
+            .visionProblem,
+            .visionSolutionLead {
+                font-size: 23px;
+                max-width: none;
+            }
+
+            .visionSolution {
+                align-items: center;
+                text-align: center;
+            }
+
+            .visionSolutionText {
+                font-size: 18px;
+                max-width: 22ch;
+            }
+
+            .visionFuture {
+                font-size: 24px;
+                max-width: 18ch;
+                margin-top: 28px;
+            }
+
+            .visionCore {
+                font-size: 24px;
+            }
+
+            .visionAnchor {
+                font-size: 17px;
+            }
+
+            .visionQuestion {
+                font-size: 24px;
+            }
+
+            .visionPill {
+                font-size: 14px;
+            }
+
+            .visionGrid {
+                grid-template-columns: 1fr;
+            }
+
+            .visionCardText {
+                font-size: 19px;
+            }
+
+            .visionCardMeta {
+                font-size: 16px;
+            }
+
+            .visionOutro {
+                font-size: 21px;
+            }
+
+            .phone {
+                width: min(300px, 100%);
+            }
+
+            .deckNav {
+                bottom: 18px;
+                padding: 0 18px;
+            }
+
+            .navButton {
+                width: 52px;
+                height: 52px;
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Slide 1 -->
+    <section class="slide">
+        <div class="content simple center">
+            <div class="text openingText">
+                <h1 class="headline fade">There’s a conversation happening in your head.</h1>
+
+                <p class="line fade">It never really stops.</p>
+                <p class="line fade">And it doesn’t carry forward.</p>
+
+                <p class="highlight fade">Nothing actually holds it together.</p>
+
+                <p class="brand fade">Sakhi is where it carries forward.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 2 -->
+    <section class="slide slide-two">
+        <div class="content simple center">
+            <div class="text">
+                <h1 class="headline fade">So everything resets.</h1>
+
+                <div class="pill-container">
+                    <div class="pill fade">Conversations reset</div>
+                    <div class="pill fade">Insights fade</div>
+                    <div class="pill fade">No continuity</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 3 -->
+    <section class="slide slide-two">
+        <div class="content simple center">
+            <div class="text">
+                <h1 class="headline fade">Sakhi makes it all come together.</h1>
+
+                <div class="pill-container">
+                    <div class="pill fade">Remembers what you share</div>
+                    <div class="pill fade">Connects it over time</div>
+                    <div class="pill fade">Helps you see it clearly</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 4 (CHAT) -->
+    <section class="slide slide-four">
+        <div class="content">
+            <div class="text">
+                <div class="eyebrow">Conversation</div>
+                <h1 class="fade">This is how it comes together.</h1>
+                <p class="lead fade">A space to think out loud - without losing the thread.</p>
+                <ul>
+                    <li class="fade">It keeps the thread</li>
+                    <li class="fade">It builds over time</li>
+                    <li class="fade">It evolves with you</li>
+                </ul>
+            </div>
+
+            <div class="phoneFrame">
+                <div class="phone">
+                    <img src="./chat.PNG" alt="Sakhi mobile chat home screen" loading="lazy">
+                </div>
+                <div class="phoneCaption">Start anywhere. Sakhi keeps the thread.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 5 (REFLECTION) -->
+    <section class="slide slide-five">
+        <div class="content">
+            <div class="text">
+                <div class="eyebrow">Reflection</div>
+                <h1 class="fade">Your life becomes visible.</h1>
+                <p class="lead fade">Patterns stop feeling abstract when they show up as <strong>living threads</strong>.</p>
+                <p class="reflection-body body-one fade">You begin to see what’s actually taking your attention - and what’s missing.</p>
+                <p class="reflection-body body-two fade">And over time, your story starts to take shape.</p>
+            </div>
+
+            <div class="phoneFrame">
+                <div class="phone">
+                    <img src="./reflection.PNG" alt="Sakhi reflection life occupancy screen" loading="lazy">
+                </div>
+                <div class="phoneCaption">Threads emerge from what you have actually lived.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 6 (MOMENTS) -->
+    <section class="slide slide-six">
+        <div class="content">
+            <div class="text">
+                <div class="eyebrow">Moments</div>
+                <h1>Your story starts to take shape.</h1>
+                <p class="lead">Each thread becomes something you can return to - and build on.</p>
+                <p class="body-copy">What you’ve lived stays connected - forming a timeline you can move through.</p>
+                <p class="transition-copy">And over time, those moments begin to form your story.</p>
+            </div>
+
+            <div class="phoneFrame">
+                <div class="phone">
+                    <img src="./moments.PNG" alt="Sakhi topic moments timeline screen" loading="lazy">
+                </div>
+                <div class="phoneCaption">A timeline of real entries, not a generic summary.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 7 (DETAIL) -->
+    <section class="slide slide-seven">
+        <div class="content">
+            <div class="text">
+                <div class="eyebrow">Grounded Reflection</div>
+                <h1>Every insight stays grounded in your reality.</h1>
+                <p class="lead">Every insight is backed by something you actually lived.</p>
+                <p class="body-copy">You can always return to the moment behind the insight - not just the conclusion.</p>
+                <p class="transition-copy">And over time, those connections begin to reveal patterns.</p>
+            </div>
+
+            <div class="phoneFrame">
+                <div class="phone">
+                    <img src="./moments-detail.PNG" alt="Sakhi moment detail modal over reflection screen" loading="lazy">
+                </div>
+                <div class="phoneCaption">The moment behind every insight is always there.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 8 (SYNTHESIS) -->
+    <section class="slide slide-eight">
+        <div class="content">
+            <div class="text">
+                <div class="eyebrow">Synthesis</div>
+                <h1>Your life starts to make sense.</h1>
+                <p class="lead">Across time and topics, everything connects.</p>
+                <p class="body-copy">What you’ve lived begins to form patterns.</p>
+                <p class="body-copy">Not just moments - but something you can understand.</p>
+                <p class="category-copy">This is personal intelligence.</p>
+            </div>
+
+            <div class="phoneFrame">
+                <div class="phone">
+                    <img src="./reflection.PNG" alt="Sakhi reflection life occupancy screen with story synthesis entry point" loading="lazy">
+                </div>
+                <div class="phoneCaption">What matters becomes clear.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 9 (ACCOUNT HUB) -->
+    <section class="slide slide-nine">
+        <div class="content">
+            <div class="text">
+                <div class="eyebrow">Privacy</div>
+                <h1>What you share stays yours.</h1>
+                <p class="lead">Your conversations are yours - not ours.</p>
+                <p class="body-copy">End-to-end encrypted.<br>No one reads your conversations.<br>Not even Sakhi.</p>
+            </div>
+
+            <div class="phoneFrame">
+                <div class="phone">
+                    <img src="./vidz-space.PNG" alt="Sakhi account hub screen" loading="lazy">
+                </div>
+                <div class="phoneCaption">Private by default.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 10 -->
+    <section class="slide slide-ten">
+        <div class="content">
+            <div class="text">
+                <div class="eyebrow">Access</div>
+                <h1>Get early access to Sakhi.</h1>
+                <p class="lead">We’re inviting a small group of early users.</p>
+            </div>
+
+            <div class="accessGrid">
+                <div class="accessCard">
+                    <ul class="stepList">
+                        <li>
+                            <span class="stepNumber">1</span>
+                            <div class="stepBody">
+                                <strong>Share your Apple ID email</strong>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="stepNumber">2</span>
+                            <div class="stepBody">
+                                <strong>Accept the invite</strong>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="stepNumber">3</span>
+                            <div class="stepBody">
+                                <strong>Open Sakhi</strong>
+                            </div>
+                        </li>
+                    </ul>
+                    <p class="accessInvite">We’ll get you set up in minutes.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 11 -->
+    <section class="slide">
+        <div class="content simple center">
+            <div class="text">
+                <h1>This is just the beginning.</h1>
+                <p class="closing"><strong>Use it. Break it. Shape it.</strong></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 12 -->
+    <section class="slide">
+        <div class="content visionSlide">
+            <div class="visionShell">
+                <div class="visionHeader">
+                    <h1 class="visionTitle">AI that works for you.</h1>
+                    <p class="visionSubtitle">Not the other way around.</p>
+                </div>
+
+                <div class="visionJourney">
+                    <div class="visionUseCases">
+                        <p class="visionUseCase">The emails you draft, the ideas you explore, the plans you build, the questions you wrestle with.</p>
+                    </div>
+
+                    <div class="visionCenterStack">
+                        <p class="visionProblem">Today, each starts from zero.</p>
+
+                        <div class="visionSolution">
+                            <p class="visionSolutionLead">Sakhi changes that.</p>
+                            <p class="visionSolutionText">It builds on everything -<br>so every interaction gets sharper over time.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="visionFuture">Over time, this becomes the layer your thinking runs through.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="deckNav" aria-label="Slide navigation">
+        <button class="navButton" id="prevSlide" aria-label="Previous slide">←</button>
+        <button class="navButton" id="nextSlide" aria-label="Next slide">→</button>
+    </div>
+
+    <script>
+        const slides = Array.from(document.querySelectorAll('.slide'));
+        const prevButton = document.getElementById('prevSlide');
+        const nextButton = document.getElementById('nextSlide');
+        let currentSlide = 0;
+
+        function renderSlide(index) {
+            currentSlide = Math.max(0, Math.min(index, slides.length - 1));
+
+            slides.forEach((slide, slideIndex) => {
+                slide.classList.toggle('is-active', slideIndex === currentSlide);
+            });
+
+            prevButton.disabled = currentSlide === 0;
+            nextButton.disabled = currentSlide === slides.length - 1;
+        }
+
+        prevButton.addEventListener('click', () => renderSlide(currentSlide - 1));
+        nextButton.addEventListener('click', () => renderSlide(currentSlide + 1));
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === ' ') {
+                event.preventDefault();
+                renderSlide(currentSlide + 1);
+            }
+
+            if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+                event.preventDefault();
+                renderSlide(currentSlide - 1);
+            }
+        });
+
+        renderSlide(0);
+    </script>
+
+</body>
+
+</html>
