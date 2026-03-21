@@ -19,6 +19,10 @@ import { useAuth } from "../../lib/auth/AuthContext";
 import { config } from "../../lib/config";
 import { trackSupportDebugEvent, type SupportDebugEventInput } from "../../lib/support/debugTelemetry";
 import { Analytics } from "../../lib/analytics/events";
+import { theme } from "../../lib/theme/tokens";
+import { useAppHaptics } from "../../lib/feedback/useAppHaptics";
+import { IconButton } from "../../components/ui/IconButton";
+import { LoadingBlock } from "../../components/ui/LoadingBlock";
 
 interface ContinuityTopicSummary {
   anchor: string;
@@ -142,6 +146,7 @@ function buildMomentObservation(moment: ContinuityMoment): string {
 export default function TopicReflectionScreen() {
   const router = useRouter();
   const { user, session } = useAuth();
+  const haptics = useAppHaptics();
 
   const personId = user?.personId || "";
   const authToken = session?.access_token || "";
@@ -366,6 +371,7 @@ export default function TopicReflectionScreen() {
 
   const runDeepReflect = useCallback(async () => {
     if (!personId || !selectedAnchor || deepReflectLoading) return;
+    haptics.strongPress();
 
     emitDebugEvent({
       type: "action",
@@ -456,10 +462,11 @@ export default function TopicReflectionScreen() {
       setDeepReflectLoading(false);
       setDeepReflectStatus("");
     }
-  }, [authToken, deepReflectLoading, emitDebugEvent, personId, pollTopicReflection, selectedAnchor]);
+  }, [authToken, deepReflectLoading, emitDebugEvent, haptics, personId, pollTopicReflection, selectedAnchor]);
 
   const openThread = useCallback(
     (anchor: string) => {
+      haptics.selection();
       Analytics.topicSelected({ topic_key: anchor });
       emitDebugEvent({
         type: "action",
@@ -479,7 +486,7 @@ export default function TopicReflectionScreen() {
       }).start();
       void loadArc(anchor);
     },
-    [emitDebugEvent, loadArc, threadZoom],
+    [emitDebugEvent, haptics, loadArc, threadZoom],
   );
 
   const closeThread = useCallback(() => {
@@ -495,6 +502,7 @@ export default function TopicReflectionScreen() {
   }, [threadZoom]);
 
   const openMoment = useCallback((moment: ContinuityMoment) => {
+    haptics.selection();
     emitDebugEvent({
       type: "action",
       name: "moment_opened",
@@ -514,7 +522,7 @@ export default function TopicReflectionScreen() {
       setMomentOpening(false);
       momentOpenTimerRef.current = null;
     }, 220);
-  }, [emitDebugEvent]);
+  }, [emitDebugEvent, haptics]);
 
   const closeMoment = useCallback(() => {
     if (momentOpenTimerRef.current) {
@@ -742,6 +750,7 @@ export default function TopicReflectionScreen() {
 
   const runMeStory = useCallback(async () => {
     if (!personId || meStoryLoading || myStoryTopicKeys.length < 2) return;
+    haptics.strongPress();
 
     const primaryTopic = myStoryTopicKeys[0];
     emitDebugEvent({
@@ -837,7 +846,7 @@ export default function TopicReflectionScreen() {
       setMeStoryLoading(false);
       setMeStoryStatus("");
     }
-  }, [authToken, emitDebugEvent, meStoryLoading, myStoryTopicKeys, personId, pollTopicReflection]);
+  }, [authToken, emitDebugEvent, haptics, meStoryLoading, myStoryTopicKeys, personId, pollTopicReflection]);
 
   const threadLabel = selectedTopic?.label || arc?.label || selectedAnchor || "Thread";
   const threadLoadingText = deepReflectLoading
@@ -848,20 +857,19 @@ export default function TopicReflectionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View pointerEvents="none" style={styles.auroraA} />
-      <View pointerEvents="none" style={styles.auroraB} />
-
       <View style={styles.header}>
-        <Pressable style={styles.iconButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={18} color={palette.fg} />
-        </Pressable>
+        <IconButton
+          icon={<Ionicons name="chevron-back" size={18} color={palette.fg} />}
+          onPress={() => router.back()}
+        />
         <View style={styles.headerTitleWrap}>
           <Text style={styles.kicker}>Profile</Text>
           <Text style={styles.title}>Reflection</Text>
         </View>
-        <Pressable style={styles.iconButton} onPress={() => void loadTopics()}>
-          <Ionicons name="refresh-outline" size={18} color={palette.fg} />
-        </Pressable>
+        <IconButton
+          icon={<Ionicons name="refresh-outline" size={18} color={palette.fg} />}
+          onPress={() => void loadTopics()}
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -873,7 +881,11 @@ export default function TopicReflectionScreen() {
 
           {loadingTopics ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={palette.muted} />
+              <LoadingBlock
+                style={styles.loadingBlock}
+                lines={["92%", "76%", "68%"]}
+                lineHeight={12}
+              />
             </View>
           ) : topics.length === 0 ? (
             <Text style={styles.emptyText}>
@@ -897,8 +909,8 @@ export default function TopicReflectionScreen() {
                         width: diameter,
                         height: diameter,
                         backgroundColor: isActive
-                          ? "rgba(203, 233, 255, 0.25)"
-                          : `rgba(255, 255, 255, ${0.07 + weight * 0.18})`,
+                          ? theme.colors.accentSoft
+                          : `rgba(255, 255, 255, ${0.05 + weight * 0.12})`,
                       },
                     ]}
                   >
@@ -927,12 +939,12 @@ export default function TopicReflectionScreen() {
             >
               {meStoryLoading ? (
                 <View style={styles.deepReflectButtonContent}>
-                  <ActivityIndicator size="small" color="#f5dcb2" />
+                  <ActivityIndicator size="small" color={palette.accentText} />
                   <Text style={styles.deepReflectButtonText}>Building My Story...</Text>
                 </View>
               ) : (
                 <View style={styles.deepReflectButtonContent}>
-                  <Ionicons name="sparkles" size={15} color="#ffe6bf" />
+                  <Ionicons name="sparkles" size={15} color={palette.accentText} />
                   <Text style={styles.deepReflectButtonText}>My Story</Text>
                 </View>
               )}
@@ -978,20 +990,19 @@ export default function TopicReflectionScreen() {
           ]}
         >
           <SafeAreaView style={styles.threadScreenFill}>
-            <View pointerEvents="none" style={styles.auroraA} />
-            <View pointerEvents="none" style={styles.auroraB} />
-
             <View style={styles.header}>
-              <Pressable style={styles.iconButton} onPress={closeThread}>
-                <Ionicons name="chevron-back" size={18} color={palette.fg} />
-              </Pressable>
+              <IconButton
+                icon={<Ionicons name="chevron-back" size={18} color={palette.fg} />}
+                onPress={closeThread}
+              />
               <View style={styles.headerTitleWrap}>
                 <Text style={styles.kicker}>Reflection</Text>
                 <Text style={styles.title}>{threadLabel}</Text>
               </View>
-              <Pressable style={styles.iconButton} onPress={() => void loadArc(selectedAnchor)}>
-                <Ionicons name="refresh-outline" size={18} color={palette.fg} />
-              </Pressable>
+              <IconButton
+                icon={<Ionicons name="refresh-outline" size={18} color={palette.fg} />}
+                onPress={() => void loadArc(selectedAnchor)}
+              />
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -1086,7 +1097,7 @@ export default function TopicReflectionScreen() {
                                 <Text style={styles.momentMetaLeft}>
                                   {(moment.facet || moment.stance || "thread").toString().replace(/_/g, " ")}
                                 </Text>
-                                <Ionicons name="expand-outline" size={15} color="#cfe1ff" />
+                                <Ionicons name="expand-outline" size={15} color={palette.accentText} />
                               </View>
                             </Pressable>
                           );
@@ -1108,12 +1119,12 @@ export default function TopicReflectionScreen() {
                 >
                   {deepReflectLoading ? (
                     <View style={styles.deepReflectButtonContent}>
-                      <ActivityIndicator size="small" color="#f5dcb2" />
+                      <ActivityIndicator size="small" color={palette.accentText} />
                       <Text style={styles.deepReflectButtonText}>Building Story...</Text>
                     </View>
                   ) : (
                     <View style={styles.deepReflectButtonContent}>
-                      <Ionicons name="sparkles" size={15} color="#ffe6bf" />
+                      <Ionicons name="sparkles" size={15} color={palette.accentText} />
                       <Text style={styles.deepReflectButtonText}>{`${threadLabel} Story`}</Text>
                     </View>
                   )}
@@ -1127,7 +1138,12 @@ export default function TopicReflectionScreen() {
             </ScrollView>
             {(loadingArc || momentOpening || deepReflectLoading) ? (
               <View style={styles.threadLoadingOverlay}>
-                <ActivityIndicator size="large" color="#f5dcb2" />
+                <LoadingBlock
+                  warm
+                  lineHeight={14}
+                  lines={["78%", "64%"]}
+                  style={styles.threadLoadingBlock}
+                />
                 <Text style={styles.threadLoadingText}>{threadLoadingText}</Text>
               </View>
             ) : null}
@@ -1146,7 +1162,7 @@ export default function TopicReflectionScreen() {
             <Text style={styles.cardTitle}>{shortDate(selectedMoment?.ts) || "Moment"}</Text>
             {momentOpening ? (
               <View style={styles.momentLoadingRow}>
-                <ActivityIndicator size="small" color="#f5dcb2" />
+                <ActivityIndicator size="small" color={palette.accentText} />
                 <Text style={styles.momentLoadingText}>Opening moment...</Text>
               </View>
             ) : (
@@ -1173,11 +1189,16 @@ export default function TopicReflectionScreen() {
 }
 
 const palette = {
-  bg: "#060a13",
-  fg: "#f5f7fb",
-  muted: "#a7b0c0",
-  border: "rgba(231, 239, 255, 0.16)",
-  glass: "rgba(20, 28, 40, 0.7)",
+  bg: theme.colors.bg,
+  fg: theme.colors.text,
+  muted: theme.colors.textMuted,
+  border: theme.colors.border,
+  glass: theme.colors.surface,
+  accent: theme.colors.accent,
+  accentText: theme.colors.accentText,
+  accentBorder: theme.colors.accentBorder,
+  accentSoft: theme.colors.accentSoft,
+  deepBubble: theme.colors.deepBubble,
 };
 
 const styles = StyleSheet.create({
@@ -1192,24 +1213,6 @@ const styles = StyleSheet.create({
   threadScreenFill: {
     flex: 1,
     backgroundColor: palette.bg,
-  },
-  auroraA: {
-    position: "absolute",
-    top: -90,
-    left: -70,
-    width: 260,
-    height: 260,
-    borderRadius: 140,
-    backgroundColor: "rgba(120, 210, 239, 0.16)",
-  },
-  auroraB: {
-    position: "absolute",
-    bottom: 120,
-    right: -80,
-    width: 220,
-    height: 220,
-    borderRadius: 120,
-    backgroundColor: "rgba(255, 192, 128, 0.14)",
   },
   header: {
     flexDirection: "row",
@@ -1228,7 +1231,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: palette.border,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: theme.colors.surfaceMuted,
   },
   headerTitleWrap: {
     alignItems: "center",
@@ -1275,7 +1278,10 @@ const styles = StyleSheet.create({
   },
   loadingRow: {
     paddingVertical: 22,
-    alignItems: "center",
+    alignItems: "stretch",
+  },
+  loadingBlock: {
+    width: "100%",
   },
   emptyText: {
     color: palette.muted,
@@ -1304,7 +1310,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   topicBubbleActive: {
-    borderColor: "rgba(215, 244, 255, 0.7)",
+    borderColor: palette.accentBorder,
   },
   topicLabel: {
     color: palette.fg,
@@ -1313,7 +1319,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   topicShare: {
-    color: "#d8f5ff",
+    color: palette.accentText,
     fontSize: 16,
     fontWeight: "700",
     marginTop: 4,
@@ -1338,13 +1344,13 @@ const styles = StyleSheet.create({
   monthReflectorPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(207, 222, 244, 0.35)",
-    backgroundColor: "rgba(223, 234, 255, 0.12)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   monthReflectorText: {
-    color: "#dbe8ff",
+    color: palette.accentText,
     fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -1364,8 +1370,8 @@ const styles = StyleSheet.create({
     minHeight: 214,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(206, 227, 255, 0.34)",
-    backgroundColor: "rgba(39, 58, 84, 0.5)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
     paddingHorizontal: 14,
     paddingVertical: 15,
     shadowColor: "#0c1d36",
@@ -1386,7 +1392,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   momentIndex: {
-    color: "#c5d7f5",
+    color: palette.accentText,
     fontSize: 12,
     fontWeight: "600",
     letterSpacing: 0.3,
@@ -1394,13 +1400,13 @@ const styles = StyleSheet.create({
   momentDatePill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(207, 222, 244, 0.35)",
-    backgroundColor: "rgba(223, 234, 255, 0.12)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   momentDate: {
-    color: "#dbe8ff",
+    color: palette.accentText,
     fontSize: 11,
     fontWeight: "600",
   },
@@ -1421,7 +1427,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   momentMetaLeft: {
-    color: "#b9c9e4",
+    color: palette.muted,
     fontSize: 13,
     textTransform: "lowercase",
     flex: 1,
@@ -1438,15 +1444,15 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(207, 222, 244, 0.35)",
-    backgroundColor: "rgba(223, 234, 255, 0.12)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginTop: 8,
     marginBottom: 8,
   },
   monthStickyText: {
-    color: "#dbe8ff",
+    color: palette.accentText,
     fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -1465,15 +1471,15 @@ const styles = StyleSheet.create({
     minHeight: 88,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(198, 219, 252, 0.3)",
-    backgroundColor: "rgba(39, 58, 84, 0.5)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
     paddingHorizontal: 10,
     paddingVertical: 9,
     marginBottom: 8,
     alignSelf: "flex-start",
   },
   photoDate: {
-    color: "#dbe8ff",
+    color: palette.accentText,
     fontSize: 10,
     fontWeight: "600",
   },
@@ -1487,13 +1493,13 @@ const styles = StyleSheet.create({
     marginTop: 0,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(243, 214, 164, 0.58)",
-    backgroundColor: "rgba(117, 86, 42, 0.62)",
+    borderColor: palette.accentBorder,
+    backgroundColor: palette.deepBubble,
     paddingVertical: 12,
     paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#c98f45",
+    shadowColor: "#506381",
     shadowOpacity: 0.32,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -1512,7 +1518,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   deepReflectButtonText: {
-    color: "#fce7c3",
+    color: palette.accentText,
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.2,
@@ -1531,13 +1537,16 @@ const styles = StyleSheet.create({
   },
   threadLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(4, 10, 18, 0.62)",
+    backgroundColor: "rgba(8, 13, 24, 0.68)",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
   },
+  threadLoadingBlock: {
+    width: 180,
+  },
   threadLoadingText: {
-    color: "#fce7c3",
+    color: palette.accentText,
     fontSize: 13,
     fontWeight: "600",
     letterSpacing: 0.2,
@@ -1551,8 +1560,8 @@ const styles = StyleSheet.create({
   momentModalCard: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(231, 239, 255, 0.24)",
-    backgroundColor: "rgba(17, 26, 42, 0.94)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceStrong,
     padding: 16,
   },
   momentDetailText: {
@@ -1568,7 +1577,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   momentLoadingText: {
-    color: "#fce7c3",
+    color: palette.accentText,
     fontSize: 13,
     fontWeight: "600",
     letterSpacing: 0.2,
@@ -1580,7 +1589,7 @@ const styles = StyleSheet.create({
     textTransform: "lowercase",
   },
   momentObservation: {
-    color: "#d9e8ff",
+    color: palette.accentText,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 12,
@@ -1589,10 +1598,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(231, 239, 255, 0.24)",
+    borderColor: theme.colors.borderStrong,
     alignItems: "center",
     paddingVertical: 9,
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    backgroundColor: theme.colors.surfaceMuted,
   },
   momentCloseText: {
     color: palette.fg,

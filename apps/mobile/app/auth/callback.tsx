@@ -3,6 +3,8 @@ import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { bootstrapMobileAuthProfile } from "../../lib/auth/mobileBootstrap";
+import { Screen } from "../../components/ui/Screen";
+import { theme } from "../../lib/theme/tokens";
 
 // =============================================================================
 // AUTH CALLBACK SCREEN
@@ -98,23 +100,24 @@ export default function AuthCallback() {
   };
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#6366f1" />
+    <Screen>
+      <View style={styles.container}>
+      <ActivityIndicator size="large" color={theme.colors.accent} />
       <Text style={styles.text}>Completing sign in...</Text>
-    </View>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0a0a0a",
     alignItems: "center",
     justifyContent: "center",
     gap: 16,
   },
   text: {
-    color: "#71717a",
+    color: theme.colors.textSubtle,
     fontSize: 16,
   },
 });

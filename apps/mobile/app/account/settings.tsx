@@ -1,11 +1,8 @@
 import React, { useMemo, useState, useEffect } from "react";
 import {
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
-  Pressable,
   ScrollView,
   Switch,
   Platform,
@@ -15,17 +12,12 @@ import { useRouter } from "expo-router";
 
 import { useAuth } from "../../lib/auth/AuthContext";
 import { isAnalyticsOptedOut, optInAnalytics, optOutAnalytics } from "../../lib/analytics/client";
-
-const palette = {
-  bg: "#070b14",
-  fg: "#f6f7fb",
-  muted: "#a4adbc",
-  subtle: "#7d8899",
-  border: "rgba(228, 236, 250, 0.14)",
-  cardBg: "rgba(21, 28, 40, 0.74)",
-  accent: "#349ba9",
-  danger: "#f0b8c0",
-};
+import { useAppPreferences } from "../../lib/preferences/AppPreferencesContext";
+import { theme } from "../../lib/theme/tokens";
+import { IconButton } from "../../components/ui/IconButton";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Screen } from "../../components/ui/Screen";
 
 function formatMaskedId(personId: string): string {
   const raw = String(personId || "").trim();
@@ -37,10 +29,13 @@ function formatMaskedId(personId: string): string {
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const {
+    preferences,
+    setPushEnabled,
+    setHapticsEnabled,
+    setCompactMode,
+  } = useAppPreferences();
 
-  const [pushEnabled, setPushEnabled] = useState(true);
-  const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [compactMode, setCompactMode] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(!isAnalyticsOptedOut());
 
   useEffect(() => {
@@ -62,14 +57,12 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <View pointerEvents="none" style={styles.auroraA} />
-
+    <Screen>
       <View style={styles.header}>
-        <Pressable style={styles.iconButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={palette.fg} />
-        </Pressable>
+        <IconButton
+          icon={<Ionicons name="chevron-back" size={20} color={theme.colors.text} />}
+          onPress={() => router.back()}
+        />
         <View style={styles.headerTextWrap}>
           <Text style={styles.kicker}>Account</Text>
           <Text style={styles.title}>Settings</Text>
@@ -81,7 +74,7 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.section}>
+        <Card style={styles.section}>
           <Text style={styles.sectionTitle}>App</Text>
           <Text style={styles.sectionHint}>Local device settings for your Sakhi experience.</Text>
 
@@ -91,10 +84,10 @@ export default function SettingsScreen() {
               <Text style={styles.rowSubtitle}>Daily reminders and response follow-ups</Text>
             </View>
             <Switch
-              value={pushEnabled}
+              value={preferences.pushEnabled}
               onValueChange={setPushEnabled}
-              trackColor={{ false: "#3b4558", true: "rgba(52, 155, 169, 0.4)" }}
-              thumbColor={pushEnabled ? palette.accent : "#c2cad6"}
+              trackColor={{ false: "#3b4558", true: theme.colors.accentSoft }}
+              thumbColor={preferences.pushEnabled ? theme.colors.accent : "#c2cad6"}
               ios_backgroundColor="#3b4558"
             />
           </View>
@@ -105,10 +98,10 @@ export default function SettingsScreen() {
               <Text style={styles.rowSubtitle}>Subtle touch feedback while using chat</Text>
             </View>
             <Switch
-              value={hapticsEnabled}
+              value={preferences.hapticsEnabled}
               onValueChange={setHapticsEnabled}
-              trackColor={{ false: "#3b4558", true: "rgba(52, 155, 169, 0.4)" }}
-              thumbColor={hapticsEnabled ? palette.accent : "#c2cad6"}
+              trackColor={{ false: "#3b4558", true: theme.colors.accentSoft }}
+              thumbColor={preferences.hapticsEnabled ? theme.colors.accent : "#c2cad6"}
               ios_backgroundColor="#3b4558"
             />
           </View>
@@ -119,16 +112,16 @@ export default function SettingsScreen() {
               <Text style={styles.rowSubtitle}>Show tighter spacing in conversation view</Text>
             </View>
             <Switch
-              value={compactMode}
+              value={preferences.compactMode}
               onValueChange={setCompactMode}
-              trackColor={{ false: "#3b4558", true: "rgba(52, 155, 169, 0.4)" }}
-              thumbColor={compactMode ? palette.accent : "#c2cad6"}
+              trackColor={{ false: "#3b4558", true: theme.colors.accentSoft }}
+              thumbColor={preferences.compactMode ? theme.colors.accent : "#c2cad6"}
               ios_backgroundColor="#3b4558"
             />
           </View>
-        </View>
+        </Card>
 
-        <View style={styles.section}>
+        <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Privacy & Data</Text>
           <Text style={styles.sectionHint}>
             Support access stays off by default and only includes what you explicitly allow.
@@ -141,78 +134,57 @@ export default function SettingsScreen() {
             <Switch
               value={analyticsEnabled}
               onValueChange={setAnalyticsEnabled}
-              trackColor={{ false: "#3b4558", true: "rgba(52, 155, 169, 0.4)" }}
-              thumbColor={analyticsEnabled ? palette.accent : "#c2cad6"}
+              trackColor={{ false: "#3b4558", true: theme.colors.accentSoft }}
+              thumbColor={analyticsEnabled ? theme.colors.accent : "#c2cad6"}
               ios_backgroundColor="#3b4558"
             />
           </View>
-          <View style={styles.infoCard}>
+          <Card style={styles.infoCard} variant="muted">
             <Text style={styles.infoText}>Use "Report an issue" to send the team a bug report.</Text>
             <Text style={styles.infoText}>Journal content is never included. You can revoke access anytime.</Text>
-          </View>
-        </View>
+          </Card>
+        </Card>
 
-        <View style={styles.section}>
+        <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          <View style={styles.infoCard}>
+          <Card style={styles.infoCard} variant="muted">
             <Text style={styles.identityLine}>Email: {user?.email || "Not available"}</Text>
             <Text style={styles.identityLine}>Profile ID: {maskedPersonId}</Text>
-          </View>
-          <Pressable style={styles.signOutButton} onPress={handleSignOut}>
-            <Ionicons name="log-out-outline" size={16} color={palette.danger} />
-            <Text style={styles.signOutButtonText}>Sign out</Text>
-          </Pressable>
-        </View>
+          </Card>
+          <Button
+            label="Sign out"
+            variant="danger"
+            onPress={() => void handleSignOut()}
+            leftIcon={<Ionicons name="log-out-outline" size={16} color={theme.colors.danger} />}
+          />
+        </Card>
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.bg,
-  },
-  auroraA: {
-    position: "absolute",
-    top: -120,
-    right: -100,
-    width: 250,
-    height: 250,
-    borderRadius: 140,
-    backgroundColor: "rgba(89, 214, 226, 0.14)",
-  },
   header: {
-    paddingHorizontal: 18,
+    paddingHorizontal: theme.spacing.lg + 2,
     paddingTop: Platform.OS === "android" ? 16 : 12,
-    paddingBottom: 10,
+    paddingBottom: theme.spacing.sm,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: theme.colors.border,
   },
   headerTextWrap: {
     gap: 2,
   },
   kicker: {
-    color: palette.muted,
-    fontSize: 11,
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.kicker.fontSize,
     textTransform: "uppercase",
-    letterSpacing: 1.2,
+    letterSpacing: theme.typography.kicker.letterSpacing,
   },
   title: {
-    color: palette.fg,
+    color: theme.colors.text,
     fontSize: 22,
     fontWeight: "600",
   },
@@ -220,35 +192,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 34,
-    gap: 14,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md + 2,
+    paddingBottom: theme.spacing["4xl"] + 2,
+    gap: theme.spacing.md + 2,
   },
   section: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.cardBg,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
     gap: 10,
   },
   sectionTitle: {
-    color: palette.fg,
+    color: theme.colors.text,
     fontSize: 19,
     fontWeight: "600",
   },
   sectionHint: {
-    color: palette.muted,
+    color: theme.colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
   },
   row: {
-    borderRadius: 14,
+    borderRadius: theme.radii.sm + 2,
     borderWidth: 1,
-    borderColor: "rgba(176, 196, 228, 0.2)",
-    backgroundColor: "rgba(22, 34, 52, 0.74)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: "row",
@@ -261,50 +227,29 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   rowTitle: {
-    color: palette.fg,
+    color: theme.colors.text,
     fontSize: 15,
     fontWeight: "500",
   },
   rowSubtitle: {
-    color: palette.subtle,
+    color: theme.colors.textSubtle,
     fontSize: 12,
     lineHeight: 16,
   },
   infoCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(176, 196, 228, 0.2)",
-    backgroundColor: "rgba(18, 28, 43, 0.72)",
+    gap: 7,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    gap: 7,
+    ...theme.shadow.soft,
   },
   infoText: {
-    color: palette.muted,
+    color: theme.colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
   },
   identityLine: {
-    color: palette.fg,
+    color: theme.colors.text,
     fontSize: 13,
     lineHeight: 19,
   },
-  signOutButton: {
-    marginTop: 2,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(239, 111, 126, 0.35)",
-    backgroundColor: "rgba(88, 33, 44, 0.35)",
-    minHeight: 46,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  signOutButtonText: {
-    color: palette.danger,
-    fontSize: 15,
-    fontWeight: "600",
-  },
 });
-

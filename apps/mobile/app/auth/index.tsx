@@ -2,10 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
-  Pressable,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
   ActivityIndicator,
   TextInput,
   Alert,
@@ -16,6 +13,10 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../lib/auth/AuthContext";
 import { bootstrapMobileAuthProfile } from "../../lib/auth/mobileBootstrap";
+import { Screen } from "../../components/ui/Screen";
+import { Button } from "../../components/ui/Button";
+import { IconButton } from "../../components/ui/IconButton";
+import { theme } from "../../lib/theme/tokens";
 
 // =============================================================================
 // AUTH SCREEN
@@ -152,55 +153,57 @@ export default function AuthScreen() {
   // Waiting for session to be set (after OAuth callback)
   if (waitingForSession || isRoutingAuthenticatedUser) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" />
+      <Screen>
         <View style={styles.content}>
-          <ActivityIndicator size="large" color="#6366f1" />
+          <ActivityIndicator size="large" color={theme.colors.accent} />
           <Text style={[styles.subtitle, { marginTop: 24 }]}>Signing you in...</Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   // Email sent confirmation screen
   if (emailSent) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" />
-        <Pressable style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="chevron-back" size={24} color="#71717a" />
-        </Pressable>
+      <Screen>
+        <IconButton
+          style={styles.backButton}
+          onPress={handleBack}
+          icon={<Ionicons name="chevron-back" size={24} color={theme.colors.textSubtle} />}
+        />
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Ionicons name="mail-outline" size={48} color="#6366f1" />
+            <Ionicons name="mail-outline" size={48} color={theme.colors.accent} />
           </View>
           <Text style={styles.title}>Check your email</Text>
           <Text style={styles.subtitle}>
             We sent a magic link to{"\n"}
             <Text style={styles.emailHighlight}>{email}</Text>
           </Text>
-          <Pressable
+          <Button
+            variant="ghost"
+            label="Use a different email"
             style={styles.secondaryButton}
+            textStyle={styles.secondaryButtonText}
             onPress={() => {
               setEmailSent(false);
               setEmail("");
             }}
-          >
-            <Text style={styles.secondaryButtonText}>Use a different email</Text>
-          </Pressable>
+          />
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   // Email input screen
   if (showEmailInput) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" />
-        <Pressable style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="chevron-back" size={24} color="#71717a" />
-        </Pressable>
+      <Screen>
+        <IconButton
+          style={styles.backButton}
+          onPress={handleBack}
+          icon={<Ionicons name="chevron-back" size={24} color={theme.colors.textSubtle} />}
+        />
         <KeyboardAvoidingView
           style={styles.keyboardView}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -213,7 +216,7 @@ export default function AuthScreen() {
             <TextInput
               style={styles.emailInput}
               placeholder="your@email.com"
-              placeholderTextColor="#52525b"
+              placeholderTextColor={theme.colors.textFaint}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -221,76 +224,65 @@ export default function AuthScreen() {
               autoCorrect={false}
               autoFocus
             />
-            <Pressable
+            <Button
+              label="Send magic link"
+              variant="primary"
               style={[styles.primaryButton, isEmailLoading && styles.buttonLoading]}
               onPress={handleEmailLogin}
               disabled={isEmailLoading}
-            >
-              {isEmailLoading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Send magic link</Text>
-              )}
-            </Pressable>
+              busy={isEmailLoading}
+            />
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   // Main auth screen
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <Screen>
+      <IconButton
+        style={styles.backButton}
+        onPress={handleBack}
+        icon={<Ionicons name="chevron-back" size={24} color={theme.colors.textSubtle} />}
+      />
 
-      {/* Back button */}
-      <Pressable style={styles.backButton} onPress={handleBack}>
-        <Ionicons name="chevron-back" size={24} color="#71717a" />
-      </Pressable>
-
-      {/* Content */}
       <View style={styles.content}>
-        {/* Explanation */}
         <View style={styles.textContainer}>
           <Text style={styles.explanation}>So Sakhi can stay with you.</Text>
         </View>
 
-        {/* Auth buttons */}
         <View style={styles.authButtonsContainer}>
-          {/* Google Sign In */}
-          <Pressable
+          <Button
+            variant="secondary"
             style={[styles.authButton, styles.googleButton, isGoogleLoading && styles.buttonLoading]}
             onPress={handleGoogleLogin}
             disabled={isGoogleLoading}
-          >
-            {isGoogleLoading ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <>
-                <View style={styles.googleIconContainer}>
-                  <GoogleIcon />
-                </View>
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </Pressable>
+            busy={isGoogleLoading}
+            label="Continue with Google"
+            leftIcon={
+              <View style={styles.googleIconContainer}>
+                <GoogleIcon />
+              </View>
+            }
+            textStyle={styles.googleButtonText}
+          />
 
-          {/* Email Sign In */}
-          <Pressable
+          <Button
+            variant="secondary"
             style={[styles.authButton, styles.emailButton]}
             onPress={() => setShowEmailInput(true)}
-          >
-            <Ionicons name="mail-outline" size={20} color="#a1a1aa" />
-            <Text style={styles.emailButtonText}>Continue with email</Text>
-          </Pressable>
+            label="Continue with email"
+            leftIcon={<Ionicons name="mail-outline" size={20} color={theme.colors.textMuted} />}
+            textStyle={styles.emailButtonText}
+          />
         </View>
 
-        {/* Privacy note */}
         <Text style={styles.privacyNote}>
           This space is only between you and Sakhi.
         </Text>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -311,10 +303,6 @@ function GoogleIcon() {
 // =============================================================================
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0a0a0a",
-  },
   keyboardView: {
     flex: 1,
   },
@@ -325,45 +313,43 @@ const styles = StyleSheet.create({
     zIndex: 10,
     width: 48,
     height: 48,
-    alignItems: "center",
-    justifyContent: "center",
   },
   content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: theme.spacing["5xl"],
   },
   iconContainer: {
-    marginBottom: 24,
+    marginBottom: theme.spacing["2xl"],
   },
   textContainer: {
-    marginBottom: 56,
+    marginBottom: theme.spacing["6xl"],
   },
   title: {
-    fontSize: 24,
+    fontSize: theme.typography.hero.fontSize,
     fontWeight: "500",
-    color: "#ffffff",
+    color: theme.colors.white,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   subtitle: {
     fontSize: 16,
-    color: "#a1a1aa",
+    color: theme.colors.textMuted,
     textAlign: "center",
     lineHeight: 24,
-    marginBottom: 32,
+    marginBottom: theme.spacing["4xl"],
   },
   emailHighlight: {
-    color: "#6366f1",
+    color: theme.colors.accent,
     fontWeight: "500",
   },
   explanation: {
-    fontSize: 24,
+    fontSize: theme.typography.hero.fontSize,
     fontWeight: "400",
-    color: "#ffffff",
+    color: theme.colors.white,
     textAlign: "center",
-    lineHeight: 34,
+    lineHeight: theme.typography.hero.lineHeight,
   },
   authButtonsContainer: {
     width: "100%",
@@ -371,31 +357,16 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   authButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 18,
     paddingHorizontal: 28,
-    borderRadius: 14,
     width: "100%",
-    gap: 14,
-    minHeight: 56,
   },
   buttonLoading: {
     opacity: 0.7,
   },
-  appleButton: {
-    backgroundColor: "#ffffff",
-  },
-  appleButtonText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000000",
-  },
   googleButton: {
-    backgroundColor: "#18191d",
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: "#27272a",
+    borderColor: theme.colors.border,
   },
   googleIconContainer: {
     width: 26,
@@ -407,7 +378,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.colors.white,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -419,61 +390,48 @@ const styles = StyleSheet.create({
   googleButtonText: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#f4f4f5",
+    color: theme.colors.text,
   },
   emailButton: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#27272a",
+    borderColor: theme.colors.border,
   },
   emailButtonText: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#a1a1aa",
+    color: theme.colors.textMuted,
   },
   emailInput: {
-    backgroundColor: "#18191d",
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: "#27272a",
-    borderRadius: 14,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.sm + 2,
     paddingVertical: 18,
     paddingHorizontal: 18,
     fontSize: 16,
-    color: "#f4f4f5",
+    color: theme.colors.text,
     width: "100%",
     maxWidth: 320,
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
     minHeight: 56,
   },
   primaryButton: {
-    backgroundColor: "#6366f1",
-    paddingVertical: 18,
     paddingHorizontal: 28,
-    borderRadius: 14,
     width: "100%",
     maxWidth: 320,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 56,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#ffffff",
   },
   secondaryButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
     minHeight: 48,
   },
   secondaryButtonText: {
     fontSize: 14,
-    color: "#6366f1",
+    color: theme.colors.accent,
   },
   privacyNote: {
-    marginTop: 32,
+    marginTop: theme.spacing["4xl"],
     fontSize: 13,
-    color: "#52525b",
+    color: theme.colors.textFaint,
     textAlign: "center",
   },
 });

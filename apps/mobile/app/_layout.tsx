@@ -6,6 +6,8 @@ import { PostHogProvider } from 'posthog-react-native';
 
 import { AuthProvider, useAuth } from '../lib/auth/AuthContext';
 import { posthog, identifyUser, resetUser } from '../lib/analytics/client';
+import { AppPreferencesProvider } from '../lib/preferences/AppPreferencesContext';
+import { theme } from '../lib/theme/tokens';
 
 // Keep splash visible until auth resolves
 SplashScreen.preventAutoHideAsync();
@@ -60,9 +62,9 @@ function AppContent() {
     <Stack
         screenOptions={{
           headerTitleAlign: 'center',
-          headerStyle: { backgroundColor: '#0e0f12' },
-          headerTintColor: '#f4f4f5',
-          contentStyle: { backgroundColor: '#0e0f12' },
+          headerStyle: { backgroundColor: theme.colors.bgElevated },
+          headerTintColor: theme.colors.text,
+          contentStyle: { backgroundColor: theme.colors.bgElevated },
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -80,7 +82,9 @@ export default function RootLayout() {
   return (
     <PostHogProvider client={posthog}>
       <AuthProvider>
-        <AppContent />
+        <AppPreferencesProvider>
+          <AppContent />
+        </AppPreferencesProvider>
       </AuthProvider>
     </PostHogProvider>
   );

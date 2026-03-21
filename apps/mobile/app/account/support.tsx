@@ -4,10 +4,8 @@ import {
   Alert,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   Share,
-  StatusBar,
   StyleSheet,
   Switch,
   Text,
@@ -21,6 +19,8 @@ import Constants from "expo-constants";
 import { useAuth } from "../../lib/auth/AuthContext";
 import { config } from "../../lib/config";
 import { Analytics } from "../../lib/analytics/events";
+import { useAppHaptics } from "../../lib/feedback/useAppHaptics";
+import { theme } from "../../lib/theme/tokens";
 import {
   clearActiveSupportDebugSession,
   getActiveSupportDebugSession,
@@ -28,19 +28,23 @@ import {
   stopSupportDebugSession,
   type SupportDebugSession,
 } from "../../lib/support/debugTelemetry";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { IconButton } from "../../components/ui/IconButton";
+import { Screen } from "../../components/ui/Screen";
 
 const palette = {
-  bg: "#070b14",
-  fg: "#f6f7fb",
-  muted: "#a4adbc",
-  subtle: "#7d8899",
-  border: "rgba(228, 236, 250, 0.14)",
-  cardBg: "rgba(21, 28, 40, 0.74)",
-  accent: "#349ba9",
-  warning: "#f8ddb5",
-  warningBg: "rgba(93, 66, 31, 0.42)",
-  success: "#34d399",
-  successBg: "rgba(16, 58, 42, 0.6)",
+  bg: theme.colors.bg,
+  fg: theme.colors.text,
+  muted: theme.colors.textMuted,
+  subtle: theme.colors.textSubtle,
+  border: theme.colors.border,
+  cardBg: theme.colors.surface,
+  accent: theme.colors.accent,
+  warning: theme.colors.warning,
+  warningBg: theme.colors.warningSurface,
+  success: theme.colors.success,
+  successBg: theme.colors.successSurface,
 };
 
 function redactPersonId(value: string): string {
@@ -66,6 +70,7 @@ function formatExpiry(isoString: string): string {
 export default function SupportConsoleScreen() {
   const router = useRouter();
   const { user, session } = useAuth();
+  const haptics = useAppHaptics();
   const inputRef = useRef<TextInput>(null);
 
   // Form state
@@ -164,6 +169,7 @@ export default function SupportConsoleScreen() {
       const code = typeof payload?.support_code === "string" ? payload.support_code : "";
       const expires = typeof payload?.expires_at === "string" ? payload.expires_at : "";
       Analytics.supportReportCreated({ diagnostics_enabled: shareDiagnostics });
+      haptics.success();
       setSupportCode(code);
       setSupportExpiresAt(expires);
       setSubmitted(true);
@@ -191,6 +197,7 @@ export default function SupportConsoleScreen() {
       });
       if (!response.ok) throw new Error("revoke_failed");
       await clearActiveSupportDebugSession();
+      haptics.success();
       setDebugSession(null);
       setRevoked(true);
     } catch {
@@ -218,6 +225,7 @@ export default function SupportConsoleScreen() {
         clientContext: { appVersion, platform: `${Platform.OS} ${String(Platform.Version)}` },
       });
       Analytics.supportDebugSessionStarted();
+      haptics.success();
       setDebugSession(sessionPayload);
     } catch (error) {
       Alert.alert("Could not start live debug", error instanceof Error ? error.message : "Try again.");
@@ -237,6 +245,7 @@ export default function SupportConsoleScreen() {
         supportCode,
         sessionId: debugSession.sessionId,
       });
+      haptics.success();
       setDebugSession(null);
     } catch (error) {
       Alert.alert("Could not stop session", error instanceof Error ? error.message : "Try again.");
@@ -246,13 +255,12 @@ export default function SupportConsoleScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-
+    <Screen>
       <View style={styles.header}>
-        <Pressable style={styles.iconButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={palette.fg} />
-        </Pressable>
+        <IconButton
+          icon={<Ionicons name="chevron-back" size={20} color={palette.fg} />}
+          onPress={() => router.back()}
+        />
         <View style={styles.headerTextWrap}>
           <Text style={styles.kicker}>Beta</Text>
           <Text style={styles.title}>Something wrong?</Text>
@@ -267,7 +275,6 @@ export default function SupportConsoleScreen() {
       >
         {!submitted ? (
           <>
-            {/* Main form */}
             <TextInput
               ref={inputRef}
               style={styles.input}
@@ -280,7 +287,6 @@ export default function SupportConsoleScreen() {
               textAlignVertical="top"
             />
 
-            {/* Diagnostics toggle */}
             <View style={styles.toggleRow}>
               <View style={styles.toggleCopy}>
                 <Text style={styles.toggleTitle}>Include app diagnostics</Text>
@@ -297,21 +303,14 @@ export default function SupportConsoleScreen() {
               />
             </View>
 
-            {/* Send button */}
-            <Pressable
-              style={[styles.sendButton, (!issueText.trim() || isSubmitting) && styles.sendButtonDisabled]}
-              onPress={() => void handleSubmit()}
+            <Button
+              label={isSubmitting ? "Sending..." : "Send to team"}
+              busy={isSubmitting}
               disabled={!issueText.trim() || isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#e6f7fa" />
-              ) : (
-                <Ionicons name="paper-plane-outline" size={16} color="#e6f7fa" />
-              )}
-              <Text style={styles.sendButtonText}>
-                {isSubmitting ? "Sending..." : "Send to team"}
-              </Text>
-            </Pressable>
+              onPress={() => void handleSubmit()}
+              style={styles.sendButton}
+              leftIcon={<Ionicons name="paper-plane-outline" size={16} color="#e6f7fa" />}
+            />
 
             <Text style={styles.privacyNote}>
               Your journal and conversation content is never included.
@@ -319,14 +318,13 @@ export default function SupportConsoleScreen() {
           </>
         ) : (
           <>
-            {/* Success state */}
-            <View style={styles.successCard}>
+            <Card style={styles.successCard}>
               <Ionicons name="checkmark-circle" size={36} color={palette.success} />
               <Text style={styles.successTitle}>Sent</Text>
               <Text style={styles.successBody}>
                 We'll look into it. If we need more context, we'll reach out directly.
               </Text>
-            </View>
+            </Card>
 
             {!revoked ? (
               <Pressable
@@ -343,7 +341,6 @@ export default function SupportConsoleScreen() {
               <Text style={styles.revokedNote}>Access revoked — the team can no longer view this report.</Text>
             )}
 
-            {/* Advanced panel */}
             {supportCode && !revoked && (
               <View style={styles.advancedWrap}>
                 <Pressable
@@ -416,7 +413,7 @@ export default function SupportConsoleScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -434,16 +431,6 @@ const styles = StyleSheet.create({
     gap: 10,
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
   },
   headerTextWrap: { gap: 2 },
   kicker: {
@@ -499,22 +486,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   sendButton: {
-    minHeight: 52,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(127, 228, 240, 0.45)",
-    backgroundColor: "rgba(33, 103, 113, 0.5)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
     marginTop: 4,
-  },
-  sendButtonDisabled: { opacity: 0.5 },
-  sendButtonText: {
-    color: "#e6f7fa",
-    fontSize: 16,
-    fontWeight: "700",
   },
   privacyNote: {
     color: palette.subtle,

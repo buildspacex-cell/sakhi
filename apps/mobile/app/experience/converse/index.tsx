@@ -19,6 +19,10 @@ import { useAuth } from "../../../lib/auth/AuthContext";
 import { config } from "../../../lib/config";
 import { trackSupportDebugEvent, type SupportDebugEventInput } from "../../../lib/support/debugTelemetry";
 import { Analytics } from "../../../lib/analytics/events";
+import { theme } from "../../../lib/theme/tokens";
+import { useAppPreferences } from "../../../lib/preferences/AppPreferencesContext";
+import { useAppHaptics } from "../../../lib/feedback/useAppHaptics";
+import { LoadingBlock } from "../../../components/ui/LoadingBlock";
 
 interface Message {
   id: string;
@@ -140,6 +144,8 @@ export default function ConversationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ user?: string; name?: string }>();
   const { user, session, signOut, isLoading: isAuthLoading } = useAuth();
+  const { preferences } = useAppPreferences();
+  const haptics = useAppHaptics();
   const scrollViewRef = useRef<ScrollView>(null);
   const debugSequenceRef = useRef(0);
   const loadedHistoryForPersonRef = useRef<string | null>(null);
@@ -391,6 +397,7 @@ export default function ConversationScreen() {
   const sendMessage = useCallback(async () => {
     const text = inputText.trim();
     if (!text || !personId) return;
+    haptics.press();
     if (!backendConfigured) {
       setMessages((prev) => [
         ...prev,
@@ -551,7 +558,7 @@ export default function ConversationScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [authToken, backendConfigured, emitDebugEvent, inputText, personId]);
+  }, [authToken, backendConfigured, emitDebugEvent, haptics, inputText, personId]);
 
   const handleRunDeepAnswer = useCallback(async () => {
     if (
@@ -568,6 +575,7 @@ export default function ConversationScreen() {
     const pendingMessage = "Deep Reflect is reading your whole story across linked threads...";
 
     const pendingId = `deep-pending-${Date.now()}`;
+    haptics.strongPress();
     Analytics.deepStarted({ mode });
     emitDebugEvent({
       type: "action",
@@ -715,9 +723,11 @@ export default function ConversationScreen() {
     wholeStoryReady,
     wholeStorySelectedTopics,
     emitDebugEvent,
+    haptics,
   ]);
 
   const handleSignOut = async () => {
+    haptics.warning();
     setAccountMenuVisible(false);
     await signOut();
     router.replace("/" as never);
@@ -725,10 +735,11 @@ export default function ConversationScreen() {
 
   const openAccountRoute = useCallback(
     (path: string) => {
+      haptics.selection();
       setAccountMenuVisible(false);
       router.push(path as never);
     },
-    [router],
+    [haptics, router],
   );
 
   const hasMessages = messages.length > 0;
@@ -736,8 +747,6 @@ export default function ConversationScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <View pointerEvents="none" style={styles.auroraA} />
-      <View pointerEvents="none" style={styles.auroraB} />
 
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -749,7 +758,10 @@ export default function ConversationScreen() {
         </View>
         <Pressable
           style={styles.accountTrigger}
-          onPress={() => setAccountMenuVisible(true)}
+          onPress={() => {
+            haptics.selection();
+            setAccountMenuVisible(true);
+          }}
           hitSlop={12}
         >
           <Ionicons name="person-circle-outline" size={16} color={palette.fg} />
@@ -777,7 +789,11 @@ export default function ConversationScreen() {
             </View>
           ) : !hasMessages && isHistoryLoading ? (
             <View style={styles.historyLoadingState}>
-              <ActivityIndicator size="small" color={palette.muted} />
+              <LoadingBlock
+                lines={["84%", "66%", "72%"]}
+                style={styles.historySkeleton}
+                lineHeight={14}
+              />
             </View>
           ) : !hasMessages ? (
             <View style={styles.emptyState}>
@@ -797,6 +813,7 @@ export default function ConversationScreen() {
                     key={msg.id}
                     style={[
                       styles.bubble,
+                      preferences.compactMode && styles.bubbleCompact,
                       isUser
                         ? styles.userBubble
                         : isSystem
@@ -807,7 +824,15 @@ export default function ConversationScreen() {
                     ]}
                   >
                     {isDeep ? <Text style={styles.deepBadge}>Whole Story</Text> : null}
-                    <Text style={[styles.bubbleText, !isUser && styles.sakhiBubbleText]}>{msg.content}</Text>
+                    <Text
+                      style={[
+                        styles.bubbleText,
+                        preferences.compactMode && styles.bubbleTextCompact,
+                        !isUser && styles.sakhiBubbleText,
+                      ]}
+                    >
+                      {msg.content}
+                    </Text>
                   </View>
                 );
               })}
@@ -824,12 +849,12 @@ export default function ConversationScreen() {
                 >
                   {isRunningDeepAnswer ? (
                     <View style={styles.deepInlineContent}>
-                      <ActivityIndicator size="small" color="#f5dcb2" />
+                      <ActivityIndicator size="small" color={palette.accentText} />
                       <Text style={styles.deepInlineText}>Reading across your threads...</Text>
                     </View>
                   ) : (
                     <View style={styles.deepInlineContent}>
-                      <Ionicons name="sparkles" size={13} color="#ffe6bf" />
+                      <Ionicons name="sparkles" size={13} color={palette.accentText} />
                       <Text style={styles.deepInlineText}>Run Deep</Text>
                     </View>
                   )}
@@ -929,38 +954,29 @@ export default function ConversationScreen() {
 }
 
 const palette = {
-  bg: "#070b14",
-  fg: "#f6f7fb",
-  muted: "#a4adbc",
-  subtle: "#7d8899",
-  faint: "#5a6372",
-  accent: "#349ba9",
-  cardBg: "rgba(21, 28, 40, 0.74)",
-  border: "rgba(228, 236, 250, 0.14)",
+  bg: theme.colors.bg,
+  bgElevated: theme.colors.bgElevated,
+  fg: theme.colors.text,
+  muted: theme.colors.textMuted,
+  subtle: theme.colors.textSubtle,
+  faint: theme.colors.textFaint,
+  border: theme.colors.border,
+  cardBg: theme.colors.surface,
+  accent: theme.colors.accent,
+  accentText: theme.colors.accentText,
+  accentInk: theme.colors.accentInk,
+  accentBorder: theme.colors.accentBorder,
+  accentSoft: theme.colors.accentSoft,
+  userBubble: theme.colors.userBubble,
+  sakhiBubble: theme.colors.sakhiBubble,
+  deepBubble: theme.colors.deepBubble,
+  systemBubble: theme.colors.systemBubble,
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: palette.bg,
-  },
-  auroraA: {
-    position: "absolute",
-    top: -140,
-    right: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 180,
-    backgroundColor: "rgba(89, 214, 226, 0.18)",
-  },
-  auroraB: {
-    position: "absolute",
-    bottom: 120,
-    left: -100,
-    width: 240,
-    height: 240,
-    borderRadius: 140,
-    backgroundColor: "rgba(243, 194, 109, 0.12)",
   },
   keyboardView: {
     flex: 1,
@@ -997,7 +1013,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 11,
     borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.09)",
+    backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
     borderColor: palette.border,
   },
@@ -1017,7 +1033,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: palette.border,
-    backgroundColor: "rgba(15, 23, 38, 0.96)",
+    backgroundColor: theme.colors.surfaceStrong,
     paddingHorizontal: 16,
     paddingVertical: 16,
     gap: 8,
@@ -1038,8 +1054,8 @@ const styles = StyleSheet.create({
     minHeight: 68,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(176, 196, 228, 0.2)",
-    backgroundColor: "rgba(26, 38, 60, 0.72)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
     paddingHorizontal: 14,
     paddingVertical: 10,
     flexDirection: "row",
@@ -1093,6 +1109,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 26,
   },
+  historySkeleton: {
+    maxWidth: 280,
+  },
   emptyPrompt: {
     fontSize: 24,
     color: palette.fg,
@@ -1115,22 +1134,28 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
   },
+  bubbleCompact: {
+    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 13,
+    borderRadius: 18,
+  },
   userBubble: {
     alignSelf: "flex-end",
-    backgroundColor: "rgba(52, 155, 169, 0.88)",
-    borderColor: "rgba(137, 233, 244, 0.45)",
+    backgroundColor: palette.userBubble,
+    borderColor: theme.colors.borderStrong,
     borderBottomRightRadius: 8,
   },
   sakhiBubble: {
     alignSelf: "flex-start",
-    backgroundColor: palette.cardBg,
+    backgroundColor: palette.sakhiBubble,
     borderColor: palette.border,
     borderBottomLeftRadius: 8,
   },
   deepBubble: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(78, 56, 24, 0.58)",
-    borderColor: "rgba(233, 193, 128, 0.4)",
+    backgroundColor: palette.deepBubble,
+    borderColor: palette.accentBorder,
     borderBottomLeftRadius: 8,
   },
   deepInlineCard: {
@@ -1142,9 +1167,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(243, 214, 164, 0.55)",
-    backgroundColor: "rgba(117, 86, 42, 0.55)",
-    shadowColor: "#c98f45",
+    borderColor: palette.accentBorder,
+    backgroundColor: palette.deepBubble,
+    shadowColor: "#506381",
     shadowOpacity: 0.28,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -1158,13 +1183,13 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   deepInlineText: {
-    color: "#fce7c3",
+    color: palette.accentText,
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.2,
   },
   deepBadge: {
-    color: "#f0d5a6",
+    color: palette.accentText,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.6,
@@ -1173,14 +1198,18 @@ const styles = StyleSheet.create({
   },
   systemBubble: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(78, 89, 110, 0.32)",
-    borderColor: "rgba(170, 186, 212, 0.2)",
+    backgroundColor: palette.systemBubble,
+    borderColor: theme.colors.borderStrong,
     borderBottomLeftRadius: 8,
   },
   bubbleText: {
     fontSize: 15,
     color: "#ffffff",
     lineHeight: 22,
+  },
+  bubbleTextCompact: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   sakhiBubbleText: {
     color: palette.fg,
@@ -1203,19 +1232,19 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(178, 197, 226, 0.24)",
-    backgroundColor: "rgba(20, 31, 50, 0.72)",
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
     paddingVertical: 10,
     paddingHorizontal: 14,
     minHeight: 42,
     justifyContent: "center",
   },
   deepInfoPillReady: {
-    borderColor: "rgba(225, 190, 116, 0.44)",
-    backgroundColor: "rgba(85, 66, 35, 0.46)",
+    borderColor: palette.accentBorder,
+    backgroundColor: palette.accentSoft,
   },
   deepInfoText: {
-    color: "#c6d3ea",
+    color: palette.muted,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1224,12 +1253,12 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(243, 214, 164, 0.58)",
-    backgroundColor: "rgba(117, 86, 42, 0.62)",
+    borderColor: palette.accentBorder,
+    backgroundColor: palette.deepBubble,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
-    shadowColor: "#c98f45",
+    shadowColor: "#506381",
     shadowOpacity: 0.32,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -1244,7 +1273,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   deepRunButtonText: {
-    color: "#fce7c3",
+    color: palette.accentText,
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.2,

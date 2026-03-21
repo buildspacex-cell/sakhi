@@ -2,14 +2,14 @@ import React, { useEffect } from "react";
 import {
   View,
   Text,
-  Pressable,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../lib/auth/AuthContext";
+import { Screen } from "../components/ui/Screen";
+import { Button } from "../components/ui/Button";
+import { theme } from "../lib/theme/tokens";
 
 // =============================================================================
 // HOME SCREEN
@@ -29,21 +29,17 @@ export default function Index() {
   // Show loading while checking auth state
   if (isLoading || isAuthenticated) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" />
+      <Screen>
         <View style={styles.content}>
-          <ActivityIndicator size="large" color="#6366f1" />
+          <ActivityIndicator size="large" color={theme.colors.accent} />
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-
+    <Screen>
       <View style={styles.content}>
-        {/* Centered text */}
         <View style={styles.textContainer}>
           <Text style={styles.headline}>
             This is a quiet space to unload your mind.
@@ -53,15 +49,16 @@ export default function Index() {
           </Text>
         </View>
 
-        {/* BEGIN button */}
-        <Pressable
+        <Button
+          label="BEGIN"
+          variant="ghost"
+          size="lg"
           style={styles.beginButton}
+          textStyle={styles.beginText}
           onPress={() => router.push("/auth" as never)}
-        >
-          <Text style={styles.beginText}>BEGIN</Text>
-        </Pressable>
+        />
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -70,46 +67,39 @@ export default function Index() {
 // =============================================================================
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0a0a0a",
-  },
   content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: theme.spacing["5xl"],
   },
   textContainer: {
     alignItems: "center",
-    marginBottom: 56,
+    marginBottom: theme.spacing["6xl"],
   },
   headline: {
-    fontSize: 24,
+    fontSize: theme.typography.hero.fontSize,
     fontWeight: "400",
-    color: "#ffffff",
+    color: theme.colors.white,
     textAlign: "center",
-    lineHeight: 34,
-    marginBottom: 20,
+    lineHeight: theme.typography.hero.lineHeight,
+    marginBottom: theme.spacing.xl,
   },
   subheadline: {
     fontSize: 16,
     fontWeight: "400",
-    color: "#71717a",
+    color: theme.colors.textSubtle,
     textAlign: "center",
     lineHeight: 24,
   },
   beginButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    marginBottom: 32,
-    minHeight: 48,
-    justifyContent: "center",
+    marginBottom: theme.spacing["4xl"],
+    minWidth: 144,
   },
   beginText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#71717a",
+    color: theme.colors.textMuted,
     letterSpacing: 2,
   },
 });
