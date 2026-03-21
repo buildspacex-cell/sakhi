@@ -5,22 +5,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type React from "react";
 import type { Route } from "next";
+import { editorialFontFamily, midnightEditorial as palette } from "@/lib/theme/midnightEditorial";
 
 export const dynamic = "force-dynamic";
-
-const palette = {
-  bg: "#060a13",
-  fg: "#f5f7fb",
-  muted: "#a7b0c0",
-  border: "rgba(231, 239, 255, 0.16)",
-  glass: "rgba(20, 28, 40, 0.72)",
-  userBubble: "rgba(62, 87, 132, 0.58)",
-  sakhiBubble: "rgba(27, 36, 54, 0.9)",
-  deepBubble: "rgba(72, 57, 36, 0.9)",
-  systemBubble: "rgba(32, 38, 48, 0.74)",
-  accent: "#d08b4e",
-  accentDim: "rgba(208, 139, 78, 0.28)",
-};
 
 interface Message {
   id: string;
@@ -616,9 +603,6 @@ function ConverseContent() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.auroraA} />
-      <div style={styles.auroraB} />
-
       <header style={styles.header}>
         <div style={styles.headerLeft}>
           <div style={styles.brand}>Sakhi</div>
@@ -639,7 +623,7 @@ function ConverseContent() {
               <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/reflection")}>Profile</button>
               <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/settings")}>Settings</button>
               <button style={styles.accountItem} onClick={() => openAccountRoute("/experience/support")}>Report an issue</button>
-              <button style={{ ...styles.accountItem, color: "#f0b8c0" }} onClick={() => void handleSignOut()}>Sign out</button>
+              <button style={{ ...styles.accountItem, color: palette.danger }} onClick={() => void handleSignOut()}>Sign out</button>
             </div>
           ) : null}
         </div>
@@ -747,43 +731,23 @@ function ConverseContent() {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: "100vh",
-    background: palette.bg,
+    background: `linear-gradient(180deg, ${palette.bgElevated} 0%, ${palette.bg} 18%, ${palette.bg} 100%)`,
     color: palette.fg,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif',
+    fontFamily: editorialFontFamily,
     display: "flex",
     flexDirection: "column",
     position: "relative",
     overflow: "hidden",
   },
-  auroraA: {
-    position: "absolute",
-    top: -130,
-    right: -120,
-    width: 340,
-    height: 340,
-    borderRadius: "50%",
-    background: "rgba(114, 206, 239, 0.14)",
-    pointerEvents: "none",
-  },
-  auroraB: {
-    position: "absolute",
-    bottom: 100,
-    left: -100,
-    width: 280,
-    height: 280,
-    borderRadius: "50%",
-    background: "rgba(255, 190, 124, 0.11)",
-    pointerEvents: "none",
-  },
   header: {
     position: "relative",
     zIndex: 2,
     borderBottom: `1px solid ${palette.border}`,
-    padding: "20px 24px 14px",
+    padding: "16px 20px 12px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 16,
+    gap: 14,
   },
   headerLeft: {
     display: "flex",
@@ -793,25 +757,27 @@ const styles: Record<string, React.CSSProperties> = {
   brand: {
     textTransform: "uppercase",
     letterSpacing: "0.18em",
-    fontSize: 13,
+    fontSize: 12,
     color: palette.muted,
   },
   greeting: {
-    fontSize: 40,
-    lineHeight: 1.1,
+    fontSize: 30,
+    lineHeight: 1.08,
     fontWeight: 560,
     color: palette.fg,
+    letterSpacing: "-0.03em",
   },
   accountTrigger: {
     borderRadius: 999,
     border: `1px solid ${palette.border}`,
-    background: "rgba(255,255,255,0.08)",
+    background: palette.glassMuted,
     color: palette.fg,
-    padding: "8px 14px",
+    padding: "10px 16px",
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    fontSize: 15,
+    minHeight: 44,
+    fontSize: 14,
     cursor: "pointer",
   },
   accountMenu: {
@@ -821,7 +787,7 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 200,
     borderRadius: 16,
     border: `1px solid ${palette.border}`,
-    background: "rgba(14, 20, 31, 0.97)",
+    background: palette.glassStrong,
     backdropFilter: "blur(8px)",
     boxShadow: "0 12px 28px rgba(0,0,0,0.35)",
     padding: 8,
@@ -834,7 +800,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: "none",
     background: "transparent",
     color: palette.fg,
-    fontSize: 14,
+    fontSize: 13,
     textAlign: "left",
     borderRadius: 10,
     padding: "10px 12px",
@@ -845,10 +811,10 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1,
     flex: 1,
     overflowY: "auto",
-    padding: "22px 24px 12px",
+    padding: "18px 20px 10px",
     display: "flex",
     flexDirection: "column",
-    gap: 14,
+    gap: 12,
   },
   emptyState: {
     margin: "auto",
@@ -860,7 +826,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "center",
   },
   emptyPrompt: {
-    fontSize: 52,
+    fontSize: 42,
     lineHeight: 1.08,
     letterSpacing: "-0.03em",
     margin: 0,
@@ -868,22 +834,23 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 520,
   },
   emptyHint: {
-    margin: "18px auto 0",
-    fontSize: 26,
-    lineHeight: 1.25,
+    margin: "14px auto 0",
+    fontSize: 20,
+    lineHeight: 1.32,
     color: palette.muted,
-    maxWidth: 700,
+    maxWidth: 620,
   },
   bubble: {
     maxWidth: "78%",
     borderRadius: 22,
     border: `1px solid ${palette.border}`,
-    padding: "14px 16px",
+    padding: "13px 15px",
     whiteSpace: "pre-wrap",
   },
   userBubble: {
     alignSelf: "flex-end",
     background: palette.userBubble,
+    borderColor: palette.borderStrong,
   },
   sakhiBubble: {
     alignSelf: "flex-start",
@@ -892,15 +859,15 @@ const styles: Record<string, React.CSSProperties> = {
   deepBubble: {
     alignSelf: "flex-start",
     background: palette.deepBubble,
-    borderColor: "rgba(225, 186, 130, 0.3)",
+    borderColor: palette.accentBorder,
   },
   systemBubble: {
     alignSelf: "center",
     background: palette.systemBubble,
   },
   bubbleText: {
-    fontSize: 17,
-    lineHeight: 1.55,
+    fontSize: 15,
+    lineHeight: 1.5,
     color: palette.fg,
   },
   deepBadge: {
@@ -909,15 +876,15 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.1em",
     fontSize: 11,
     marginBottom: 8,
-    color: "#f5dcb2",
+    color: palette.accentText,
     fontWeight: 600,
   },
   inputArea: {
     position: "relative",
     zIndex: 2,
     borderTop: `1px solid ${palette.border}`,
-    padding: "12px 24px 20px",
-    background: "rgba(8, 12, 18, 0.95)",
+    padding: "10px 20px 18px",
+    background: palette.glassStrong,
     backdropFilter: "blur(8px)",
     display: "flex",
     flexDirection: "column",
@@ -931,25 +898,26 @@ const styles: Record<string, React.CSSProperties> = {
   deepInfoPill: {
     flex: 1,
     borderRadius: 999,
-    border: `1px solid rgba(183, 198, 230, 0.24)`,
-    background: "rgba(8, 18, 39, 0.62)",
+    border: `1px solid ${palette.border}`,
+    background: palette.glassMuted,
     padding: "9px 14px",
   },
   deepInfoPillReady: {
-    borderColor: "rgba(208, 139, 78, 0.52)",
-    background: "rgba(61, 45, 24, 0.5)",
+    borderColor: palette.accentBorder,
+    background: palette.accentSoft,
   },
   deepInfoText: {
     color: palette.muted,
-    fontSize: 14,
+    fontSize: 13,
   },
   deepRunButton: {
     borderRadius: 999,
-    border: `1px solid rgba(215, 175, 118, 0.6)`,
-    background: "rgba(74, 58, 36, 0.75)",
-    color: "#f5dcb2",
+    border: `1px solid ${palette.accentBorder}`,
+    background: palette.deepBubble,
+    color: palette.accentText,
+    minHeight: 44,
     padding: "10px 18px",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -963,22 +931,28 @@ const styles: Record<string, React.CSSProperties> = {
   },
   textInput: {
     flex: 1,
-    borderRadius: 26,
+    minHeight: 56,
+    borderRadius: 22,
     border: `1px solid ${palette.border}`,
-    background: "rgba(6, 16, 34, 0.8)",
+    background: palette.glass,
     color: palette.fg,
-    fontSize: 22,
+    fontSize: 18,
     padding: "14px 18px",
     outline: "none",
   },
   sendButton: {
+    minWidth: 112,
+    minHeight: 56,
     borderRadius: 999,
     border: "none",
     background: palette.accent,
-    color: "#fff",
+    color: palette.accentInk,
     padding: "0 22px",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 600,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     cursor: "pointer",
   },
   sendButtonDisabled: {

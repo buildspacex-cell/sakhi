@@ -4,15 +4,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useRouter } from "next/navigation";
 import type React from "react";
 import type { Route } from "next";
+import { editorialFontFamily as fontFamily, midnightEditorial as palette } from "@/lib/theme/midnightEditorial";
 
 export const dynamic = "force-dynamic";
-
-const palette = {
-  bg: "#0a0a0a",
-  fg: "#f4f4f5",
-  muted: "#71717a",
-  dimText: "#52525b",
-};
 
 const FADE_DURATION_MS = 400;
 
@@ -133,7 +127,7 @@ function ExperienceGateContent() {
           style={{
             ...beginButtonStyle,
             color: !authChecked
-              ? palette.dimText
+              ? palette.dim
               : isHoveringBegin
                 ? palette.fg
                 : palette.muted,
@@ -150,22 +144,21 @@ function ExperienceGateContent() {
   );
 }
 
-const fontFamily =
-  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif';
-
 const containerStyle: React.CSSProperties = {
   minHeight: "100vh",
-  background: palette.bg,
+  background: `radial-gradient(circle at top right, ${palette.auroraCool} 0%, transparent 32%), radial-gradient(circle at bottom left, ${palette.auroraWarm} 0%, transparent 28%), ${palette.bg}`,
   color: palette.fg,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "48px 40px",
+  padding: "40px 28px",
   fontFamily,
   transition: `opacity ${FADE_DURATION_MS}ms ease`,
 };
 
 const contentStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: "640px",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -174,38 +167,39 @@ const contentStyle: React.CSSProperties = {
 
 const textContainerStyle: React.CSSProperties = {
   textAlign: "center",
-  marginBottom: "56px",
+  marginBottom: "44px",
 };
 
 const headlineStyle: React.CSSProperties = {
   fontSize: "24px",
   fontWeight: 400,
-  color: "#ffffff",
+  color: palette.white,
   textAlign: "center",
-  lineHeight: "34px",
-  margin: "0 0 20px 0",
+  lineHeight: "32px",
+  margin: "0 0 16px 0",
+  letterSpacing: "-0.02em",
 };
 
 const subheadlineStyle: React.CSSProperties = {
-  fontSize: "16px",
+  fontSize: "15px",
   fontWeight: 400,
   color: palette.muted,
   textAlign: "center",
-  lineHeight: "24px",
+  lineHeight: "22px",
   margin: 0,
 };
 
 const beginButtonStyle: React.CSSProperties = {
   background: "transparent",
   border: "none",
-  padding: "16px 32px",
+  padding: "16px 36px",
   marginBottom: "32px",
-  minHeight: "48px",
+  minHeight: "52px",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   fontFamily,
-  fontSize: "14px",
+  fontSize: "15px",
   fontWeight: 500,
   letterSpacing: "0.14em",
   transition: "color 150ms ease",

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
+import { editorialFontFamily, midnightEditorial as palette } from "@/lib/theme/midnightEditorial";
 
 export const dynamic = "force-dynamic";
 
@@ -11,20 +12,6 @@ interface AuthUser {
   full_name: string | null;
   email: string;
 }
-
-const palette = {
-  bg: "#060a13",
-  fg: "#f5f7fb",
-  muted: "#a7b0c0",
-  subtle: "#7d8899",
-  border: "rgba(231, 239, 255, 0.16)",
-  glass: "rgba(20, 28, 40, 0.72)",
-  accent: "#349ba9",
-  warning: "#f8ddb5",
-  warningBg: "rgba(93, 66, 31, 0.42)",
-  success: "#34d399",
-  successBg: "rgba(16, 58, 42, 0.6)",
-};
 
 function formatExpiry(isoString: string): string {
   if (!isoString) return "";
@@ -166,7 +153,7 @@ function SupportPageContent() {
 
   if (authLoading) {
     return (
-      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: palette.bg, color: palette.muted }}>
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: styles.container.background, color: palette.muted, fontFamily: editorialFontFamily }}>
         Loading...
       </div>
     );
@@ -201,6 +188,7 @@ function SupportPageContent() {
                 type="checkbox"
                 checked={shareDiagnostics}
                 onChange={(event) => setShareDiagnostics(event.target.checked)}
+                style={styles.checkbox}
               />
             </label>
 
@@ -255,7 +243,7 @@ function SupportPageContent() {
 
 function PageFallback() {
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: palette.bg, color: palette.muted }}>
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: styles.container.background, color: palette.muted, fontFamily: editorialFontFamily }}>
       Loading...
     </div>
   );
@@ -264,23 +252,25 @@ function PageFallback() {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: "100vh",
-    background: palette.bg,
+    background: `radial-gradient(circle at top right, ${palette.auroraCool} 0%, transparent 28%), radial-gradient(circle at bottom left, ${palette.auroraWarm} 0%, transparent 24%), ${palette.bg}`,
     color: palette.fg,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif',
+    fontFamily: editorialFontFamily,
   },
   header: {
     borderBottom: `1px solid ${palette.border}`,
-    padding: "12px 16px",
+    padding: "14px 18px",
     display: "flex",
     alignItems: "center",
     gap: 12,
+    background: palette.glassMuted,
+    backdropFilter: "blur(18px)",
   },
   iconButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     border: `1px solid ${palette.border}`,
-    background: "rgba(255,255,255,0.06)",
+    background: palette.glass,
     color: palette.fg,
     cursor: "pointer",
   },
@@ -292,30 +282,34 @@ const styles: Record<string, React.CSSProperties> = {
   },
   title: {
     margin: "2px 0 0",
-    fontSize: 30,
+    fontSize: 24,
+    letterSpacing: "-0.02em",
   },
   content: {
+    padding: 18,
+    display: "grid",
+    gap: 16,
+    maxWidth: 860,
+    margin: "0 auto",
+  },
+  card: {
+    borderRadius: 24,
+    border: `1px solid ${palette.border}`,
+    background: palette.glassStrong,
+    boxShadow: "0 20px 48px rgba(3, 6, 12, 0.28)",
     padding: 16,
     display: "grid",
     gap: 14,
-    maxWidth: 860,
-  },
-  card: {
-    borderRadius: 20,
-    border: `1px solid ${palette.border}`,
-    background: palette.glass,
-    padding: 14,
-    display: "grid",
-    gap: 12,
   },
   textArea: {
     minHeight: 130,
-    borderRadius: 12,
+    borderRadius: 16,
     border: `1px solid ${palette.border}`,
-    background: "rgba(14, 22, 36, 0.82)",
+    background: palette.glass,
     color: palette.fg,
     fontSize: 15,
-    padding: 12,
+    lineHeight: 1.5,
+    padding: 14,
     resize: "vertical",
     outline: "none",
   },
@@ -324,26 +318,34 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "center",
     gap: 12,
-    borderRadius: 12,
-    border: `1px solid rgba(176, 196, 228, 0.2)`,
-    background: "rgba(22, 34, 52, 0.74)",
-    padding: "10px 12px",
+    borderRadius: 16,
+    border: `1px solid ${palette.border}`,
+    background: palette.glassMuted,
+    padding: "12px 14px",
   },
   toggleTitle: {
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: 600,
   },
   toggleSubtitle: {
     marginTop: 2,
-    fontSize: 13,
+    fontSize: 12,
     color: palette.muted,
   },
+  checkbox: {
+    width: 18,
+    height: 18,
+    accentColor: palette.accent,
+  },
   sendButton: {
-    borderRadius: 12,
-    border: "none",
-    background: palette.accent,
-    color: "#e6f7fa",
-    padding: "11px 14px",
-    fontSize: 15,
+    borderRadius: 14,
+    border: `1px solid ${palette.accentBorder}`,
+    background: palette.accentSoft,
+    color: palette.accentText,
+    padding: "12px 15px",
+    minHeight: 48,
+    fontSize: 14,
+    fontWeight: 600,
     cursor: "pointer",
   },
   sendButtonDisabled: {
@@ -357,21 +359,23 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardTitle: {
     margin: 0,
-    fontSize: 22,
+    fontSize: 20,
+    letterSpacing: "-0.02em",
   },
   cardSubtitle: {
     margin: 0,
     color: palette.muted,
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 1.5,
   },
   codePill: {
     borderRadius: 999,
-    border: `1px solid rgba(127, 214, 196, 0.5)`,
-    background: "rgba(26, 46, 40, 0.72)",
+    border: `1px solid ${palette.accentBorder}`,
+    background: palette.accentSoft,
     color: palette.success,
     padding: "12px 14px",
     fontFamily: "monospace",
-    fontSize: 22,
+    fontSize: 18,
     letterSpacing: "0.06em",
   },
   expiryText: {
@@ -381,24 +385,24 @@ const styles: Record<string, React.CSSProperties> = {
   },
   successBox: {
     borderRadius: 12,
-    border: `1px solid rgba(52, 211, 153, 0.34)`,
+    border: `1px solid rgba(147, 192, 167, 0.34)`,
     background: palette.successBg,
-    color: "#d6fff1",
+    color: palette.fg,
     padding: "10px 12px",
     fontSize: 14,
   },
   copyButton: {
-    borderRadius: 12,
+    borderRadius: 14,
     border: `1px solid ${palette.border}`,
-    background: "rgba(255,255,255,0.06)",
+    background: palette.glassMuted,
     color: palette.fg,
     padding: "10px 12px",
     fontSize: 14,
     cursor: "pointer",
   },
   revokeButton: {
-    borderRadius: 12,
-    border: `1px solid rgba(248, 221, 181, 0.5)`,
+    borderRadius: 14,
+    border: `1px solid rgba(220, 198, 152, 0.42)`,
     background: palette.warningBg,
     color: palette.warning,
     padding: "10px 12px",
@@ -411,18 +415,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
   errorText: {
     margin: 0,
-    color: "#f3b4bc",
+    color: palette.danger,
     fontSize: 14,
   },
   cardMuted: {
-    borderRadius: 16,
+    borderRadius: 20,
     border: `1px solid ${palette.border}`,
-    background: "rgba(18, 25, 38, 0.62)",
-    padding: "12px 14px",
+    background: palette.glass,
+    padding: "14px 16px",
   },
   cardMutedTitle: {
     margin: 0,
-    fontSize: 15,
+    fontSize: 14,
     color: palette.fg,
   },
   list: {

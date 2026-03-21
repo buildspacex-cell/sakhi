@@ -4,20 +4,9 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type React from "react";
+import { editorialFontFamily as fontFamily, midnightEditorial as palette } from "@/lib/theme/midnightEditorial";
 
 export const dynamic = "force-dynamic";
-
-const palette = {
-  bg: "#0a0a0a",
-  fg: "#f4f4f5",
-  muted: "#a1a1aa",
-  dimText: "#52525b",
-  border: "#27272a",
-  cardBg: "#18191d",
-};
-
-const fontFamily =
-  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif';
 
 export default function LoginPage() {
   return (
@@ -253,7 +242,7 @@ function LoginContent() {
 
 const containerStyle: React.CSSProperties = {
   minHeight: "100vh",
-  background: palette.bg,
+  background: `radial-gradient(circle at top right, ${palette.auroraCool} 0%, transparent 30%), radial-gradient(circle at bottom left, ${palette.auroraWarm} 0%, transparent 24%), ${palette.bg}`,
   color: palette.fg,
   fontFamily,
   position: "relative",
@@ -271,7 +260,7 @@ const backButtonStyle: React.CSSProperties = {
   justifyContent: "center",
   background: "none",
   border: "none",
-  color: "#71717a",
+  color: palette.subtle,
   fontSize: "22px",
   cursor: "pointer",
   fontFamily,
@@ -293,28 +282,30 @@ const textContainerStyle: React.CSSProperties = {
 const explanationStyle: React.CSSProperties = {
   fontSize: "24px",
   fontWeight: 400,
-  color: "#ffffff",
+  color: palette.white,
   textAlign: "center",
-  lineHeight: "34px",
+  lineHeight: "32px",
   margin: 0,
+  letterSpacing: "-0.02em",
 };
 
 const titleStyle: React.CSSProperties = {
   fontSize: "24px",
   fontWeight: 400,
-  color: "#ffffff",
+  color: palette.white,
   textAlign: "center",
-  lineHeight: "34px",
+  lineHeight: "32px",
   margin: 0,
+  letterSpacing: "-0.02em",
 };
 
 const subtitleStyle: React.CSSProperties = {
-  fontSize: "16px",
+  fontSize: "15px",
   fontWeight: 400,
   color: palette.muted,
   textAlign: "center",
-  lineHeight: "24px",
-  margin: "16px 0 0",
+  lineHeight: "22px",
+  margin: "14px 0 0",
 };
 
 const authButtonsStyle: React.CSSProperties = {
@@ -330,29 +321,30 @@ const authButtonStyle: React.CSSProperties = {
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "center",
-  padding: "18px 28px",
+  padding: "16px 24px",
   borderRadius: "14px",
   width: "100%",
   gap: "14px",
-  minHeight: "56px",
+  minHeight: "52px",
   fontFamily,
-  fontSize: "16px",
+  fontSize: "15px",
   fontWeight: 500,
   cursor: "pointer",
   transition: "opacity 150ms ease",
 };
 
 const googleButtonStyle: React.CSSProperties = {
-  backgroundColor: palette.cardBg,
+  backgroundColor: palette.glass,
   border: `1px solid ${palette.border}`,
   color: palette.fg,
+  boxShadow: "0 12px 24px rgba(0,0,0,0.18)",
 };
 
 const googleIconContainerStyle: React.CSSProperties = {
   width: "22px",
   height: "22px",
   borderRadius: "11px",
-  backgroundColor: "#ffffff",
+  backgroundColor: "rgba(255,255,255,0.92)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -365,43 +357,44 @@ const googleIconTextStyle: React.CSSProperties = {
 };
 
 const googleButtonTextStyle: React.CSSProperties = {
-  fontSize: "16px",
+  fontSize: "15px",
   fontWeight: 500,
   color: palette.fg,
 };
 
 const emailButtonStyle: React.CSSProperties = {
-  backgroundColor: "transparent",
-  border: `1px solid ${palette.border}`,
+  backgroundColor: palette.accentSoft,
+  border: `1px solid ${palette.accentBorder}`,
   color: palette.muted,
 };
 
 const emailButtonTextStyle: React.CSSProperties = {
-  fontSize: "16px",
+  fontSize: "15px",
   fontWeight: 500,
   color: palette.muted,
 };
 
 const emailInputStyle: React.CSSProperties = {
   width: "100%",
-  minHeight: "56px",
+  minHeight: "52px",
   borderRadius: "14px",
   border: `1px solid ${palette.border}`,
-  backgroundColor: palette.cardBg,
+  backgroundColor: palette.glass,
   color: palette.fg,
-  padding: "16px 18px",
+  padding: "14px 16px",
   fontFamily,
-  fontSize: "16px",
+  fontSize: "15px",
   outline: "none",
+  boxShadow: "0 10px 18px rgba(0,0,0,0.12)",
 };
 
 const errorStyle: React.CSSProperties = {
   marginTop: "20px",
   padding: "12px 16px",
-  background: "#ef444420",
-  border: "1px solid #ef4444",
+  background: palette.dangerBg,
+  border: `1px solid ${palette.danger}`,
   borderRadius: "8px",
-  color: "#fca5a5",
+  color: palette.danger,
   fontSize: "14px",
   textAlign: "center",
   width: "100%",
@@ -409,25 +402,25 @@ const errorStyle: React.CSSProperties = {
 };
 
 const privacyNoteStyle: React.CSSProperties = {
-  marginTop: "40px",
-  fontSize: "14px",
-  color: palette.dimText,
+  marginTop: "34px",
+  fontSize: "13px",
+  color: palette.dim,
   textAlign: "center",
-  lineHeight: "20px",
+  lineHeight: "18px",
 };
 
 const iconContainerStyle: React.CSSProperties = {
-  width: "72px",
-  height: "72px",
-  borderRadius: "36px",
+  width: "64px",
+  height: "64px",
+  borderRadius: "32px",
   border: `1px solid ${palette.border}`,
-  backgroundColor: palette.cardBg,
+  backgroundColor: palette.glass,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: "28px",
-  marginBottom: "24px",
-  color: "#6366f1",
+  fontSize: "24px",
+  marginBottom: "20px",
+  color: palette.accent,
 };
 
 const emailHighlightStyle: React.CSSProperties = {

@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useRouter, useSearchParams } from "next/navigation";
 import type React from "react";
 import type { Route } from "next";
+import { editorialFontFamily, midnightEditorial as palette } from "@/lib/theme/midnightEditorial";
 
 export const dynamic = "force-dynamic";
 
@@ -53,20 +54,6 @@ interface ContinuityArcResponse {
   };
   included_moments?: ContinuityMoment[];
 }
-
-const palette = {
-  bg: "#060a13",
-  fg: "#f5f7fb",
-  muted: "#a7b0c0",
-  border: "rgba(231, 239, 255, 0.16)",
-  glass: "rgba(20, 28, 40, 0.72)",
-  card: "rgba(13, 21, 34, 0.92)",
-  bubble: "rgba(255,255,255,0.08)",
-  bubbleActive: "rgba(203, 233, 255, 0.25)",
-  button: "rgba(74, 58, 36, 0.75)",
-  buttonText: "#f5dcb2",
-  warning: "#f3b4bc",
-};
 
 const REFLECT_POLL_INTERVAL_MS = 2000;
 const REFLECT_POLL_MAX_ATTEMPTS = 70;
@@ -642,7 +629,7 @@ function ReflectionPageContent() {
                       height: diameter,
                       background: isActive
                         ? palette.bubbleActive
-                        : `rgba(255,255,255, ${0.07 + weight * 0.18})`,
+                        : `rgba(255,255,255, ${0.04 + weight * 0.1})`,
                     }}
                     onClick={() => openThread(topic.anchor)}
                   >
@@ -854,9 +841,9 @@ function PageFallback() {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: "100vh",
-    background: palette.bg,
+    background: `radial-gradient(circle at top left, ${palette.auroraCool} 0%, transparent 26%), radial-gradient(circle at bottom right, ${palette.auroraWarm} 0%, transparent 22%), ${palette.bg}`,
     color: palette.fg,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif',
+    fontFamily: editorialFontFamily,
     position: "relative",
   },
   auroraA: {
@@ -866,7 +853,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 260,
     height: 260,
     borderRadius: "50%",
-    background: "rgba(120, 210, 239, 0.16)",
+    background: palette.auroraCool,
     pointerEvents: "none",
   },
   auroraB: {
@@ -876,7 +863,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 220,
     height: 220,
     borderRadius: "50%",
-    background: "rgba(255, 192, 128, 0.14)",
+    background: palette.auroraWarm,
     pointerEvents: "none",
   },
   header: {
@@ -895,7 +882,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "grid",
     placeItems: "center",
     border: `1px solid ${palette.border}`,
-    background: "rgba(255,255,255,0.08)",
+    background: palette.glassMuted,
     color: palette.fg,
     cursor: "pointer",
   },
@@ -907,13 +894,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   title: {
     color: palette.fg,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 600,
   },
   content: {
-    padding: "14px",
+    padding: "16px",
     display: "grid",
-    gap: "12px",
+    gap: "14px",
     position: "relative",
     zIndex: 1,
   },
@@ -927,13 +914,13 @@ const styles: Record<string, React.CSSProperties> = {
   cardTitle: {
     margin: 0,
     color: palette.fg,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 600,
   },
   cardSubtitle: {
     margin: "6px 0 0",
     color: palette.muted,
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 1.4,
   },
   loadingRow: {
@@ -947,7 +934,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   errorText: {
     marginTop: 12,
-    color: palette.warning,
+    color: palette.danger,
     fontSize: 14,
   },
   topicCloud: {
@@ -959,7 +946,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   topicBubble: {
     borderRadius: "50%",
-    border: `1px solid rgba(226, 239, 255, 0.28)`,
+    border: `1px solid ${palette.border}`,
     color: palette.fg,
     display: "grid",
     placeItems: "center",
@@ -969,22 +956,22 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.2,
   },
   topicBubbleActive: {
-    borderColor: "rgba(197, 230, 255, 0.62)",
-    boxShadow: "0 0 0 1px rgba(197,230,255,0.2)",
+    borderColor: palette.accentBorder,
+    boxShadow: `0 0 0 1px ${palette.accentSoft}`,
   },
   topicLabel: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 600,
     marginBottom: 4,
   },
   topicShare: {
-    fontSize: 38,
+    fontSize: 30,
     fontWeight: 700,
-    color: "#d4edf8",
+    color: palette.accentText,
     marginBottom: 2,
   },
   topicCount: {
-    fontSize: 14,
+    fontSize: 12,
     color: palette.muted,
   },
   storyActionBlock: {
@@ -994,11 +981,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   deepButton: {
     borderRadius: 999,
-    border: `1px solid rgba(215, 175, 118, 0.6)`,
-    background: palette.button,
-    color: palette.buttonText,
-    padding: "13px 18px",
-    fontSize: 30,
+    border: `1px solid ${palette.accentBorder}`,
+    background: palette.deepBubble,
+    color: palette.accentText,
+    padding: "12px 18px",
+    fontSize: 18,
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -1009,13 +996,13 @@ const styles: Record<string, React.CSSProperties> = {
   depthHint: {
     margin: "2px 0 0",
     color: palette.muted,
-    fontSize: 14,
+    fontSize: 13,
   },
   deepReflectText: {
     marginTop: 14,
     color: palette.fg,
-    fontSize: 16,
-    lineHeight: 1.6,
+    fontSize: 15,
+    lineHeight: 1.55,
     whiteSpace: "pre-wrap",
   },
   threadOverlay: {
@@ -1049,12 +1036,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   monthReflectorPill: {
     borderRadius: 999,
-    border: `1px solid rgba(181, 201, 237, 0.35)`,
-    background: "rgba(69, 84, 112, 0.45)",
+    border: `1px solid ${palette.borderStrong}`,
+    background: palette.glassMuted,
     padding: "7px 12px",
   },
   monthReflectorText: {
-    color: "#cfd8ea",
+    color: palette.accentText,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
     fontSize: 12,
@@ -1074,8 +1061,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   momentCard: {
     borderRadius: 18,
-    border: `1px solid rgba(186, 208, 244, 0.25)`,
-    background: "rgba(34, 45, 65, 0.92)",
+    border: `1px solid ${palette.border}`,
+    background: palette.glassStrong,
     color: palette.fg,
     padding: 12,
     textAlign: "left",
@@ -1094,17 +1081,17 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
   },
   momentIndex: {
-    color: "#cad5ea",
+    color: palette.accentText,
     fontSize: 13,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
   },
   momentDatePill: {
     borderRadius: 999,
-    border: `1px solid rgba(177, 200, 233, 0.35)`,
+    border: `1px solid ${palette.borderStrong}`,
     padding: "3px 8px",
     fontSize: 12,
-    color: "#d7e4fb",
+    color: palette.accentText,
   },
   momentTextLeft: {
     fontSize: 15,
@@ -1138,7 +1125,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   monthStickyText: {
     fontSize: 13,
-    color: "#d7e4fb",
+    color: palette.accentText,
     textTransform: "uppercase",
     letterSpacing: "0.09em",
     fontWeight: 600,
@@ -1150,8 +1137,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   photoCard: {
     borderRadius: 16,
-    border: `1px solid rgba(185, 207, 239, 0.24)`,
-    background: "rgba(35, 45, 66, 0.9)",
+    border: `1px solid ${palette.border}`,
+    background: palette.glassStrong,
     textAlign: "left",
     color: palette.fg,
     padding: 12,
@@ -1160,7 +1147,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
   },
   photoDate: {
-    color: "#d8e6ff",
+    color: palette.accentText,
     fontSize: 12,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
@@ -1173,7 +1160,7 @@ const styles: Record<string, React.CSSProperties> = {
   threadLoadingOverlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(6, 10, 19, 0.62)",
+    background: "rgba(10, 15, 27, 0.7)",
     display: "grid",
     placeItems: "center",
     gap: 10,
@@ -1183,13 +1170,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 22,
   },
   threadLoadingText: {
-    color: "#f5dcb2",
-    fontSize: 18,
+    color: palette.accentText,
+    fontSize: 16,
   },
   momentModalBackdrop: {
     position: "fixed",
     inset: 0,
-    background: "rgba(6, 10, 19, 0.72)",
+    background: "rgba(10, 15, 27, 0.78)",
     display: "grid",
     placeItems: "center",
     zIndex: 30,
@@ -1227,7 +1214,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   momentObservation: {
     marginTop: 10,
-    color: "#d5e8fa",
+    color: palette.accentText,
     fontSize: 14,
     lineHeight: 1.45,
   },
@@ -1235,7 +1222,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 14,
     borderRadius: 999,
     border: `1px solid ${palette.border}`,
-    background: "rgba(255,255,255,0.06)",
+    background: palette.glassMuted,
     color: palette.fg,
     padding: "10px 16px",
     cursor: "pointer",

@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Normal chat MVP prompt** — the live `/v2/turn` system prompt now uses a lean continuity-first instruction set with explicit help/guide/probe modes, sharper one-question probing guidance, and continuity-aware coaching language while removing the old background context-scan block from the normal-chat system prompt
 - **Deep Reflect MVP prompt** — deep reflection now frames the past as a way to clarify the present, with updated topic/cross-context/whole-story response contracts that emphasize longitudinal clarity, linked tradeoffs, and what matters now instead of descriptive retrospective summary
 - **Mobile MVP UI foundation** — active iOS MVP screens now share a centralized theme token layer and reusable screen/button/card/icon/loading primitives, while Settings persists compact-mode and haptics preferences and core chat/reflection/support flows use the same premium interaction language
+- **Web MVP proportion rebalance** — the local Midnight Editorial web pass now uses a tighter typography scale and calmer screen spacing so chat, auth, home, reflection, settings, and support feel balanced at normal browser zoom without shrinking controls
 - **Removed OpenRouter provider** — all LLM calls now use OpenAI directly (GPT-4o, GPT-4o-mini)
 - **Separated THINK vs RESPOND** in SAKHI_INSTRUCTIONS prompt for clearer reasoning
 - **Optimized conversation pipeline** — reduced turn latency from 15s to 6-8s
