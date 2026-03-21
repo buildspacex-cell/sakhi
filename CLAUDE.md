@@ -53,6 +53,7 @@ sakhi-monorepo/
 | Env contract check | `make check-env` |
 | Run migrations | `make db-migrate` |
 | Build web | `cd apps/web && pnpm build` |
+| Build iOS / TestFlight | `./scripts/ios-build.sh` |
 | Dev status dashboard | `make status` |
 | **Quick verification** | `make verify` |
 | **Ready to commit** | `make ready-to-commit` |

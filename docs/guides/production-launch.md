@@ -119,7 +119,7 @@ Trigger a manual redeploy after saving.
 
 ## Step 6 — Update mobile app
 
-### 6a. Create `apps/mobile/.env.prod` (do not commit)
+### 6a. Update `apps/mobile/.env.local` for the release build (do not commit)
 
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=https://[NEW-REF].supabase.co
@@ -130,22 +130,31 @@ EXPO_PUBLIC_BACKEND_URL=https://[your-railway-prod-url]
 EXPO_PUBLIC_DEV_BYPASS_PERSON_ID=
 ```
 
-### 6b. Update `apps/mobile/eas.json` production profile
+### 6b. Confirm the local Fastlane build env is clean
 
-Ensure the `production` profile points to the new Supabase URL and uses normal Supabase auth.
+Before shipping, make sure `apps/mobile/.env.local` does **not** contain stale release-bypass or client OpenAI vars:
+
+- `EXPO_PUBLIC_OPENAI_API_KEY`
+- `EXPO_PUBLIC_RELEASE_BYPASS_ENABLED`
+- `EXPO_PUBLIC_RELEASE_BYPASS_PERSON_ID`
+
+The canonical iOS release path loads env directly from `apps/mobile/.env.local` and validates these guards inside `./scripts/ios-build.sh`.
 
 ### 6c. Build and submit
 
 ```bash
-cd apps/mobile
-
-# TestFlight (internal beta)
-eas build --platform ios --profile production
-eas submit --platform ios --latest
-
-# Or if building for direct TestFlight install:
-eas build --platform ios --profile production --auto-submit
+# Canonical iOS release path
+./scripts/ios-build.sh
 ```
+
+This script:
+- Loads `apps/mobile/.env.local`
+- Installs JS dependencies with `pnpm`
+- Runs `pod install`
+- Runs `fastlane beta` from `apps/mobile/ios`
+- Uploads the archive to TestFlight
+
+We do **not** use Expo/EAS build for the iOS release path.
 
 ---
 
