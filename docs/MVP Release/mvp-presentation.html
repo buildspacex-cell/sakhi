@@ -832,23 +832,127 @@
             color: rgba(250, 252, 255, 1);
             font-weight: 800;
             line-height: 1.06;
+            max-width: 10ch;
             margin-bottom: 34px;
         }
 
         .slide-nine .lead {
-            max-width: 22ch;
+            max-width: 18ch;
             color: rgba(236, 242, 250, 0.75);
             font-weight: 600;
             line-height: 1.32;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .slide-nine .body-copy {
-            max-width: 24ch;
+            max-width: 17ch;
             color: rgba(203, 213, 225, 0.64);
             font-weight: 400;
             line-height: 1.5;
             margin-bottom: 0;
+        }
+
+        .slide-nine .privacyFeature {
+            display: flex;
+            align-items: flex-start;
+            gap: 26px;
+        }
+
+        .slide-nine .privacyFeature .body-copy {
+            flex: 1 1 auto;
+        }
+
+        .slide-nine .privacySeal {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 999px;
+            background:
+                radial-gradient(circle at 34% 30%, rgba(233, 240, 252, 0.2), rgba(233, 240, 252, 0.02) 38%, transparent 62%),
+                linear-gradient(180deg, rgba(26, 34, 52, 0.94), rgba(13, 19, 30, 0.98));
+            border: 1px solid rgba(142, 160, 190, 0.18);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                0 28px 48px rgba(0, 0, 0, 0.28);
+            overflow: hidden;
+        }
+
+        .slide-nine .privacySeal::before {
+            content: "";
+            position: absolute;
+            inset: 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(194, 208, 232, 0.12);
+            background: radial-gradient(circle at 50% 38%, rgba(155, 177, 213, 0.1), transparent 60%);
+        }
+
+        .slide-nine .privacySeal::after {
+            content: "";
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(156, 181, 230, 0.14), transparent 68%);
+            filter: blur(1px);
+        }
+
+        .slide-nine .privacyLock {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .slide-nine .privacyShackle {
+            width: 44px;
+            height: 34px;
+            border: 5px solid rgba(238, 244, 252, 0.92);
+            border-bottom: 0;
+            border-radius: 22px 22px 0 0;
+            box-sizing: border-box;
+            opacity: 0.92;
+        }
+
+        .slide-nine .privacyBodyLock {
+            position: relative;
+            width: 58px;
+            height: 48px;
+            margin-top: -2px;
+            border-radius: 16px;
+            background:
+                linear-gradient(180deg, rgba(239, 244, 252, 0.96), rgba(212, 224, 242, 0.86));
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.52),
+                0 12px 24px rgba(7, 11, 18, 0.2);
+        }
+
+        .slide-nine .privacyBodyLock::before {
+            content: "";
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            transform: translateX(-50%);
+            background: rgba(18, 26, 40, 0.9);
+        }
+
+        .slide-nine .privacyBodyLock::after {
+            content: "";
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            width: 4px;
+            height: 11px;
+            border-radius: 999px;
+            transform: translateX(-50%);
+            background: rgba(18, 26, 40, 0.9);
         }
 
         .slide-nine .phoneFrame {
@@ -1573,6 +1677,10 @@
                 padding-left: 0;
             }
 
+            .slide-nine .privacyFeature {
+                gap: 18px;
+            }
+
             .slide-nine .phoneFrame {
                 transform: none;
             }
@@ -1701,7 +1809,6 @@
 
                 <p class="highlight fade">Nothing actually holds it together.</p>
 
-                <p class="brand fade">Sakhi is where it carries forward.</p>
             </div>
         </div>
     </section>
@@ -1714,8 +1821,8 @@
 
                 <div class="pill-container">
                     <div class="pill fade">Conversations reset</div>
-                    <div class="pill fade">Insights fade</div>
-                    <div class="pill fade">No continuity</div>
+                    <div class="pill fade">Good Ideas die</div>
+                    <div class="pill fade">Continuity is lost</div>
                 </div>
             </div>
         </div>
@@ -1741,8 +1848,7 @@
         <div class="content">
             <div class="text">
                 <div class="eyebrow">Conversation</div>
-                <h1 class="fade">This is how it comes together.</h1>
-                <p class="lead fade">A space to think out loud - without losing the thread.</p>
+                <h1 class="fade">Start talking. Sakhi Does the rest.</h1>
                 <ul>
                     <li class="fade">It keeps the thread</li>
                     <li class="fade">It builds over time</li>
@@ -1846,7 +1952,15 @@
                 <div class="eyebrow">Privacy</div>
                 <h1>What you share stays yours.</h1>
                 <p class="lead">Your conversations are yours - not ours.</p>
-                <p class="body-copy">End-to-end encrypted.<br>No one reads your conversations.<br>Not even Sakhi.</p>
+                <div class="privacyFeature fade">
+                    <p class="body-copy">End-to-end encrypted.<br>No one reads your conversations.<br>Not even Sakhi.</p>
+                    <div class="privacySeal" aria-hidden="true">
+                        <div class="privacyLock">
+                            <div class="privacyShackle"></div>
+                            <div class="privacyBodyLock"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="phoneFrame">
@@ -1895,19 +2009,6 @@
         </div>
     </section>
 
-    <!-- Slide 11 -->
-    <section class="slide">
-        <div class="content simple center">
-            <div class="text">
-                <h1>This is just the beginning.</h1>
-                <p class="closing">
-                    <span class="closingLead">Use it. Break it.</span>
-                    <span class="closingAccent">Shape it.</span>
-                </p>
-            </div>
-        </div>
-    </section>
-
     <!-- Slide 12 -->
     <section class="slide">
         <div class="content visionSlide">
@@ -1916,25 +2017,15 @@
                     <h1 class="visionTitle">When Intelligence adapts to you, everything works better.</h1>
                 </div>
 
-                <div class="visionStack">
-                    <div class="visionBlock">
-                        <p class="visionBlockLead">Decisions don’t feel overwhelming.</p>
-                        <p class="visionBlockText">They’re grounded in what matters to you.</p>
-                    </div>
+	                <div class="visionStack">
+	                    <div class="visionBlock">
+	                        <p class="visionBlockLead">Decisions don’t feel overwhelming.</p>
+	                        <p class="visionBlockText">They’re grounded in what matters to you.</p>
+	                    </div>
 
-                    <div class="visionBlock">
-                        <p class="visionBlockLead">Your thinking doesn’t reset every day.</p>
-                        <p class="visionBlockText">It builds - and gets sharper over time.</p>
-                    </div>
-
-                    <div class="visionBlock">
-                        <p class="visionBlockLead">Learning adapts to how you understand.</p>
-                        <p class="visionBlockText">Not how everyone else does.</p>
-                    </div>
-
-                    <div class="visionBlock">
-                        <p class="visionBlockLead">Your goals, your health, your priorities -</p>
-                        <p class="visionBlockText">stay aligned as things change.</p>
+	                    <div class="visionBlock">
+	                        <p class="visionBlockLead">Your goals, your health, your priorities -</p>
+	                        <p class="visionBlockText">stay aligned as things change.</p>
                     </div>
                 </div>
 
@@ -1945,9 +2036,13 @@
 
     <!-- Slide 13 -->
     <section class="slide">
-        <div class="content simple center endCardSlide">
+        <div class="content simple center">
             <div class="text">
-                <h1 class="endCardTitle">That's Sakhi for you!</h1>
+                <h1>This is just the beginning.</h1>
+                <p class="closing">
+                    <span class="closingLead">Use it. Break it.</span>
+                    <span class="closingAccent">Shape it.</span>
+                </p>
             </div>
         </div>
     </section>
