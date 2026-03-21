@@ -175,6 +175,13 @@ Result payload additions:
 
 `sakhi/apps/api/services/demo/simulation_continuity.py` compiles continuity topics/arcs for simulation artifacts and supports ad-hoc arc construction.
 
+Simulation continuity compilation now includes a second-pass thread-aware resolver:
+- `sakhi/apps/api/services/continuity/thread_resolver.py`
+- ambiguous or `unknown` follow-up entries can attach to an already-confirmed thread when the evidence is strong enough
+- attachment uses multiple signals together (candidate anchor score, follow-up language, term overlap, light recency bias) instead of pure time bucketing
+- entries that still cannot be attached are returned in `compiled["unresolved_entries"]` for auditability
+- inferred attachments are marked with `membership_role="inferred"` so downstream/debug consumers can distinguish direct classification from thread attachment
+
 `apps/web/app/lab/simulation/client.tsx` renders:
 - Continuity topic selector.
 - Continuity Mirror card.
@@ -191,6 +198,7 @@ Backend:
 - `sakhi/tests/unit/services/test_continuity_service.py`
 - `sakhi/tests/unit/services/test_simulation_continuity.py`
 - `sakhi/tests/unit/services/test_simulation_continuity_benchmark.py`
+- `sakhi/tests/unit/services/test_thread_resolver.py`
 
 Kala:
 - `kala/tests/test_arc.py`

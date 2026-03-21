@@ -106,7 +106,7 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 | ✅ | Turn-level continuity pack | Continuity evidence injected into `turn_v2` metadata + prompt, now with compact history stats/phase path/anchor moments, deterministic qualitative arc summary, and a chronological decision ledger for richer normal-chat continuity | `sakhi/apps/api/routes/turn_v2.py`, `sakhi/apps/api/services/conversation_v2/conversation_reasoner.py` |
 | ✅ | Web continuity controls | Chat continuity toggle + deep reflection actions + proxy routes | `apps/web/app/experience/converse/page.tsx`, `apps/web/app/api/continuity/**/route.ts` |
 | ✅ | Simulation Ask-Sakhi debug inspector | `/demo/simulation/add-journal` returns `turn_debug` (`debug_data`) and simulation UI renders continuity evidence + prompt payload, a cross-topic gate validator (`candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`), and deep reflection run/status/result controls across all modes for rapid product iteration | `sakhi/apps/api/services/demo/simulation_profile_updater.py`, `apps/web/app/lab/simulation/client.tsx` |
-| ✅ | Simulation continuity mirror | Precompiled continuity arcs and explainability views in demo UI | `sakhi/apps/api/services/demo/simulation_continuity.py`, `apps/web/app/lab/simulation/` |
+| ✅ | Simulation continuity mirror | Precompiled continuity arcs and explainability views in demo UI, now with thread-aware follow-up attachment for ambiguous entries and explicit unresolved-entry surfacing in compile output | `sakhi/apps/api/services/demo/simulation_continuity.py`, `sakhi/apps/api/services/continuity/thread_resolver.py`, `apps/web/app/lab/simulation/` |
 
 Feature detail: `docs/features/continuity-arc-surface.md`
 

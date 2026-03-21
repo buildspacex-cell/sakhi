@@ -22,6 +22,7 @@ from typing import Any
 
 from kala.arc import build_arcs, extract_arc_features, segment_arc, summarize_arc_structure
 from sakhi.apps.api.services.continuity.taxonomy import SIMULATION_CONTINUITY_TAXONOMY
+from sakhi.apps.api.services.continuity.thread_resolver import resolve_thread_attachments
 from sakhi.apps.api.services.continuity.thresholds import (
     SIMULATION_CONTINUITY_THRESHOLD_PROFILE,
 )
@@ -292,6 +293,10 @@ def compile_simulation_continuity(
     ordered_entries = [entry for entry in entries if isinstance(entry, dict)]
     ordered_entries.sort(key=lambda entry: (_safe_int(entry.get("day")), _parse_ts(entry.get("timestamp"))))
     inferred = [_classify_entry(entry) for entry in ordered_entries]
+
+    # Phase 1: Thread-aware resolution for ambiguous/unknown entries
+    inferred, unresolved_entries = resolve_thread_attachments(inferred)
+
     grouped: dict[str, list[dict[str, Any]]] = {}
     for item in inferred:
         for membership in _topic_memberships_for_entry(item):
@@ -365,6 +370,17 @@ def compile_simulation_continuity(
             min_len=min_len,
         ),
         "topics": topics,
+        "unresolved_entries": [
+            {
+                "entry_id": str(e.get("entry", {}).get("id") or ""),
+                "day": _safe_int(e.get("entry", {}).get("day")),
+                "timestamp": str(e.get("entry", {}).get("timestamp") or ""),
+                "content_preview": str(e.get("entry", {}).get("content") or "")[:100],
+                "anchor_trace": e.get("anchor_trace", {}),
+                "attachment_info": e.get("thread_attachment", {}),
+            }
+            for e in unresolved_entries
+        ],
     }
 
 
@@ -612,7 +628,7 @@ def _topic_memberships_for_entry(item: dict[str, Any]) -> list[dict[str, Any]]:
             **item,
             "anchor": anchor,
             "source_anchor": anchor,
-            "membership_role": "primary",
+            "membership_role": item.get("membership_role") or "primary",
         }
     ]
     for related in item.get("related_anchors") or []:

@@ -46,8 +46,8 @@ def test_continuity_taxonomy_benchmark_corpus():
     for row in corpus:
         result = classify_simulation_entry({"content": row["content"]})
         assert result["taxonomy_version"] == "2026.03.03"
-        assert result["compiler_version"] == "2026.03.03.1"
-        assert result["threshold_profile_version"] == "2026.03.03.1"
+        assert result["compiler_version"] == "2026.03.18.1"
+        assert result["threshold_profile_version"] == "2026.03.18.1"
         assert result["primary_anchor"] == row["expected_anchor"], row["name"]
         assert result["facet"] == row["expected_facet"], row["name"]
         if row.get("expected_anchor_state"):
