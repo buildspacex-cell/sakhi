@@ -736,6 +736,8 @@ def _build_whole_story_signal(
 
 
 def _topic_story_count(topic: dict[str, Any]) -> int:
+    if "effective_selected_count" in topic:
+        return int(topic.get("effective_selected_count") or 0)
     if "primary_selected_count" in topic:
         return int(topic.get("primary_selected_count") or 0)
     return int(topic.get("selected_count") or 0)

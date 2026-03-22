@@ -274,6 +274,7 @@ function ConverseContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const deepReflectSignal = activeContinuitySignal?.deep_reflect;
   const wholeStorySignal = activeContinuitySignal?.whole_story;
   const deepThreadLabel =
     activeContinuitySignal?.topic_label || activeContinuitySignal?.topic_key || "this thread";
@@ -294,9 +295,10 @@ function ConverseContent() {
     return normalized.slice(0, 3);
   }, [activeContinuitySignal?.topic_key, wholeStoryTopics]);
 
-  const wholeStoryReady = Boolean(wholeStorySignal?.ready && wholeStorySelectedTopics.length >= 2);
+  const linkedWholeStoryReady = Boolean(wholeStorySignal?.ready && wholeStorySelectedTopics.length >= 2);
+  const deepReflectReady = Boolean(deepReflectSignal?.ready);
   const hasDeepQuery = latestUserMessage.trim().length > 0;
-  const deepAnswerReady = Boolean(activeContinuitySignal?.topic_key && hasDeepQuery && wholeStoryReady);
+  const deepAnswerReady = Boolean(activeContinuitySignal?.topic_key && hasDeepQuery && deepReflectReady);
 
   const deepStatusHint = (() => {
     if (!activeContinuitySignal?.topic_key) {
@@ -305,7 +307,7 @@ function ConverseContent() {
     if (!hasDeepQuery) {
       return "Send one message to set your current question.";
     }
-    if (wholeStoryReady) {
+    if (linkedWholeStoryReady) {
       const primary = deepThreadLabel;
       const linked = wholeStorySelectedTopics
         .filter((topic) => topic !== activeContinuitySignal.topic_key)
@@ -316,20 +318,23 @@ function ConverseContent() {
       }
       return `Deep Reflect is ready with whole-story context for ${primary}.`;
     }
-    if (wholeStorySignal && !wholeStorySignal.ready) {
-      const reason = wholeStorySignal.reason || "insufficient_depth";
-      if (reason === "insufficient_overlap") {
-        return "Deep Reflect is waiting for clearer links across your active threads.";
+    if (deepReflectReady) {
+      return `Deep Reflect is ready for ${deepThreadLabel}. Linked threads will be woven in when they are clearly relevant.`;
+    }
+    if (deepReflectSignal && !deepReflectSignal.ready) {
+      const reason = deepReflectSignal.reason || "insufficient_depth";
+      if (reason === "mirror_blocked") {
+        return "Deep Reflect will unlock once this thread is safe to mirror back clearly.";
       }
-      if (reason === "threads_inactive") {
-        return "Deep Reflect will unlock after more recent activity across related threads.";
+      if (reason === "detail_blocked") {
+        return "Deep Reflect will unlock once this thread has enough detail to reflect back clearly.";
       }
       if (reason === "insufficient_depth") {
-        return "Deep Reflect unlocks once this thread has deeper linked history.";
+        return `Deep Reflect unlocks once this thread has at least ${deepReflectSignal.min_moments} moments to draw from.`;
       }
-      return "Deep Reflect unlocks once this thread has enough linked history.";
+      return "Deep Reflect unlocks once this thread has enough history to draw from.";
     }
-    return "Deep Reflect unlocks once a second thread clearly links to this one.";
+    return "Deep Reflect unlocks once this thread has enough history to draw from.";
   })();
 
   const getGreeting = () => {
@@ -473,7 +478,7 @@ function ConverseContent() {
       !personId
       || !activeContinuitySignal?.topic_key
       || !hasDeepQuery
-      || !wholeStoryReady
+      || !deepAnswerReady
       || isRunningDeepAnswer
     ) {
       return;
@@ -489,7 +494,10 @@ function ConverseContent() {
       {
         id: pendingId,
         role: "sakhi",
-        content: "Deep Reflect is reading your whole story across linked threads...",
+        content:
+          selectedTopics.length >= 2
+            ? "Deep Reflect is reading your whole story across linked threads..."
+            : "Deep Reflect is reading the full story of this thread...",
         timestamp: new Date(),
         kind: "system",
       },
@@ -573,7 +581,7 @@ function ConverseContent() {
     latestUserMessage,
     personId,
     pollDeepAnswer,
-    wholeStoryReady,
+    deepAnswerReady,
     wholeStorySelectedTopics,
   ]);
 

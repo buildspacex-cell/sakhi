@@ -22,7 +22,7 @@ This mapping is the authoritative reference. Use frontend names when talking abo
 
 **Normal Chat** — The standard conversation. Sakhi replies to what the user says, grounded by the continuity pack (topic arc + journal evidence). Synchronous, < 3s.
 
-**Deep Reflect** — A chat feature. The user types a question, taps Deep Reflect, and gets a synthesis that answers that question using the full arc of the active topic woven with a correlated second thread. Appears in chat as a distinct element (not a normal bubble). Async, 5–30s.
+**Deep Reflect** — A chat feature. The user types a question, taps Deep Reflect, and gets a synthesis that answers that question using the full arc of the active topic, weaving in a correlated second thread when one is clearly available. Appears in chat as a distinct element (not a normal bubble). Async, 5–30s.
 
 **`<Topic> Story`** — A Soul screen feature. No query. Traces the full longitudinal arc of a single topic - what changed, what keeps returning, what remains unresolved, and what that reveals about the person's current situation. The user opens the Soul screen, selects a topic, and reads the arc.
 
@@ -43,14 +43,12 @@ The Deep Reflect button appears in chat only when all of the following are true:
 1. **Topic active** — `continuity.topic_key` present in the `/v2/turn` response
 2. **mirror_allowed** — governance permits mirroring this topic
 3. **detail_allowed** — topic has sufficient detail surface permission
-4. **selected_count >= 8** — at least 8 evidence moments in the primary topic arc
-5. **cross_context ready** — a correlated topic exists with combined_score >= 0.35 and >= 6 moments
-6. **whole_story thresholds** — primary >= 8 moments, related >= 6 moments, total >= 12
-7. **User has typed a query** — `latestUserMessage.trim().length > 0` (client-side gate)
+4. **effective_selected_count >= 8** — at least 8 effective same-thread moments in the active topic arc (strict primary moments + thread-attached follow-ups; related cross-topic projections do not count)
+5. **User has typed a query** — `latestUserMessage.trim().length > 0` (client-side gate)
 
 If the gate fails, the button does not appear. A status hint tells the user why.
 
-**Single-topic reflection is not surfaced in chat.** A user with only one thread uses `<Topic> Story` on the Soul screen instead.
+**Linked-thread context is additive, not mandatory.** If `continuity.whole_story.ready` is true, Deep Reflect weaves in the linked thread(s). If not, it still runs as a strong single-topic deep reflection on the active thread.
 
 ### `<Topic> Story` and My Story (`topic_reflection` / `cross_context`)
 
@@ -58,6 +56,12 @@ If the gate fails, the button does not appear. A status hint tells the user why.
 - **My Story**: eligible related topics must each have `selected_count >= 6` (`MIN_RELATED_TOPIC_MOMENTS`) — matches backend `cross_context_min_moments=6`; requires >= 2 such topics (`myStoryReady`)
 - `mirror_allowed` must be true for all topics
 - No query required
+
+**Continuity depth semantics**
+- `primary_selected_count` = explicit primary-anchor moments only
+- `attached_selected_count` = thread-aware follow-up moments attached after second-pass resolution
+- `effective_selected_count` = `primary_selected_count + attached_selected_count`
+- `related_selected_count` = projected linked-topic overlap; does not count toward chat Deep Reflect readiness
 
 ---
 
@@ -70,7 +74,7 @@ All three reflection features (`whole_story`, `topic_reflection`, `cross_context
 | `arc_compact_global` | Full arc: origin story, key pivots, recurring tensions, current stage, open questions | ✓ | ✓ | ✓ |
 | `evidence_anchors` | Journal moments by temporal spread — early + middle + late across arc timeline, up to 8 | ✓ | ✓ | ✓ |
 | `recent_episode_compact` | `memory_episodic` daily episode summaries (worker-produced), up to 3 | ✓ | ✓ | ✓ |
-| `related_topics_compact` | Full arcs of correlated topics, up to 3 | ✓ | — | ✓ |
+| `related_topics_compact` | Full arcs of correlated topics, up to 3 | Optional — when linked threads are available | — | ✓ |
 | `life_dimensions` | `continuity_life_dimensions` cache: time/money/emotional bandwidth | ✓ | — | ✓ |
 | `delta_since_last_reflection` | What changed in the arc since the last reflection run | ✓ | ✓ | ✓ |
 | `recent_verbatim_turns` | Last 4 conversation turns (user + assistant) verbatim, no topic filtering — immediate context that shaped the query | ✓ | — | — |
@@ -80,7 +84,7 @@ All three reflection features (`whole_story`, `topic_reflection`, `cross_context
 
 **What Deep Reflect adds over Normal Chat:**
 - `recent_episode_compact` — captures conversations that were never journalled. Normal Chat never touches `memory_episodic`.
-- `related_topics_compact` — full arcs of correlated topics, not just a one-line signal.
+- `related_topics_compact` — full arcs of correlated topics when linked threads are available, not just a one-line signal.
 - `life_dimensions` — integrated into synthesis, not just surface signals.
 - `delta_since_last_reflection` — what changed since the user last ran Deep Reflect.
 
@@ -99,7 +103,7 @@ All three reflection features (`whole_story`, `topic_reflection`, `cross_context
 
 | Frontend Feature | Backend Mode | Length | Format |
 |---|---|---|---|
-| Deep Reflect | `whole_story` | 220–360 words | Answer the current query first, connect 2–3 linked threads with concrete evidence anchors, and clarify what this means for the person now |
+| Deep Reflect | `whole_story` | 220–360 words | Answer the current query first, use linked threads and concrete evidence anchors when they add clarity, and clarify what this means for the person now |
 | `<Topic> Story` | `topic_reflection` | 150–250 words | Highlight what changed, what keeps returning, what remains unresolved, and what this reveals about the person's current situation |
 | My Story | `cross_context` | 160–260 words | Explicitly connect at least two linked threads, name one recurring tradeoff, and clarify what matters most right now |
 
@@ -121,12 +125,12 @@ All three reflection features (`whole_story`, `topic_reflection`, `cross_context
 | Recent verbatim turns | Last 8 turns | Last 4 turns (immediate context) | — | — |
 | Episodic memory | No | Yes — `memory_episodic` | Yes — `memory_episodic` | Yes — `memory_episodic` |
 | Delta since last reflection | No | Yes | Yes | Yes |
-| Cross-thread synthesis | Signal only (one line) | Full narrative — primary + correlated thread | No — single topic | Full — all active threads |
+| Cross-thread synthesis | Signal only (one line) | Optional — primary thread first, linked thread when available | No — single topic | Full — all active threads |
 | Life dimensions | Signal only | Integrated | Not included | Integrated |
 | Response form | Conversational reply, 60–120 words | Query answer as synthesis, 220–360 words | Arc trace, 150–250 words | Thread interplay, 160–260 words |
 | Render | Chat bubble | Distinct element in chat | Reflection card, Soul screen | Reflection card, Soul screen |
 | Latency | Synchronous, < 3s | Async, 5–30s | Async, 5–30s | Async, 5–30s |
-| Cross-topic gate | No | Yes — `whole_story.ready` | No | Yes — >= 2 eligible topics |
+| Cross-topic gate | No | Optional linked context via `whole_story.ready` | No | Yes — >= 2 eligible topics |
 
 ---
 
@@ -160,5 +164,5 @@ Normal Chat is synchronous via `POST /v2/turn` — no polling.
 
 - All reflection features require journalling history. Without journal entries the compiler has no moments, thresholds will not be met.
 - `recent_episode_compact` is empty if the `episodic_consolidation_v21` worker has not run.
-- Deep Reflect requires cross-topic correlation — a second active thread must exist with sufficient overlap. Single-topic users see the button locked; their arc is available as `<Topic> Story` on the Soul screen.
+- Deep Reflect no longer requires cross-topic correlation as a hard gate. A linked thread enriches the run when `whole_story.ready` is true, but single-topic deep runs are still allowed once the active thread has enough detail depth.
 - Governance (`mirror_allowed`, `detail_allowed`) can block any reflection feature independently of arc depth.

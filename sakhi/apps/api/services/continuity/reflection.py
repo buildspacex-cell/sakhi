@@ -54,7 +54,7 @@ _TOPIC_STOPWORDS = {
 }
 _REFLECTION_ALLOWED_MODES = {
     "topic_reflection",  # Soul screen: <Topic> Story — no query, single arc trace
-    "whole_story",       # Chat: Deep Reflect — query-driven, cross-thread synthesis
+    "whole_story",       # Chat: Deep Reflect — query-driven deep reflection with optional linked-thread synthesis
     "cross_context",     # Soul screen: My Story — no query, all-topic interplay
 }
 _REFLECTION_MAX_TOPIC_KEYS = CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE.max_topic_keys
@@ -708,10 +708,10 @@ async def _build_reflection_llm_packet(
             "max_questions": 1,
             "avoid": ["ayurvedic jargon", "therapy-speak", "generic motivation"],
             "format": (
-                "natural prose, answer the current query first, then connect 2-3 linked threads "
-                "with concrete evidence anchors, and clarify what this means for the person now"
+                "natural prose, answer the current query first, use linked threads and concrete evidence anchors "
+                "when they genuinely add clarity, and clarify what this means for the person now"
             ),
-            "priority": "current_query_with_cross_context",
+            "priority": "current_query_with_optional_linked_context",
             "emotion_policy": {
                 "mention_only_with_priority_conflict": True,
                 "priority_conflict_detected": priority_conflict.get("detected", False),
@@ -1641,7 +1641,7 @@ def _build_deep_reflection_prompt_messages(
             )
     if request_mode == "whole_story":
         response_lines.append(
-            "- Value add: answer the current query first, then connect at least two linked threads with concrete evidence."
+            "- Value add: answer the current query first, then use linked threads only when they add real clarity to the answer."
         )
     elif request_mode == "cross_context":
         response_lines.append(

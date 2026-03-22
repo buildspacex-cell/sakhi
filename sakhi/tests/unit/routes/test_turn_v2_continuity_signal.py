@@ -48,6 +48,26 @@ def test_build_public_continuity_signal_includes_deep_reflect_reason_when_depth_
     assert deep_reflect["min_moments"] == 8
 
 
+def test_build_public_continuity_signal_prefers_effective_topic_depth():
+    payload = turn_v2._build_public_continuity_signal(
+        {
+            "topic_key": "sakhi",
+            "surface": {"mirror_allowed": True, "detail_allowed": True},
+            "history_compact": {
+                "element_count": 9,
+                "strict_element_count": 4,
+                "attached_element_count": 5,
+            },
+            "evidence": [{"source_ref": "journal:1"}],
+        }
+    )
+
+    assert payload is not None
+    deep_reflect = payload["deep_reflect"]
+    assert deep_reflect["ready"] is True
+    assert deep_reflect["selected_count"] == 9
+
+
 def test_build_public_continuity_signal_prioritizes_surface_blocks():
     payload = turn_v2._build_public_continuity_signal(
         {

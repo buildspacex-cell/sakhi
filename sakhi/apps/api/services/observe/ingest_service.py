@@ -5,6 +5,7 @@ import os
 from typing import Iterable, List
 
 from sakhi.apps.api.core.db import q
+from sakhi.apps.api.core.person_utils import resolve_journal_owner_ids
 from sakhi.apps.api.services.observe.models import IngestedEntry
 from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
@@ -37,21 +38,25 @@ async def ingest_entry(
     safe_tags = list(tags or [])
     safe_user_tags = list(user_tags or safe_tags)
     safe_context = client_context or {}
+    owner_person_id, owner_user_id = await resolve_journal_owner_ids(person_id)
+    owner_person_id = owner_person_id or person_id
+    owner_user_id = owner_user_id or person_id
     storage = build_journal_storage_payload(person_id, text)
 
     if BUILD32_DB_EXTENSIONS:
         row = await q(
             """
             INSERT INTO journal_entries (
-                user_id, content, raw, raw_encrypted, layer, tags, mood,
+                person_id, user_id, content, raw, raw_encrypted, layer, tags, mood,
                 input_type, client_context, language, timezone, user_tags,
                 ts, created_at, updated_at,
                 processing_state, processing_attempts, ack_text
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $14, $14, 'queued', 0, $15)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15, $15, 'queued', 0, $16)
             RETURNING id
             """,
-            person_id,
+            owner_person_id,
+            owner_user_id,
             storage.content,
             storage.raw,
             storage.raw_encrypted,
@@ -72,14 +77,15 @@ async def ingest_entry(
         row = await q(
             """
             INSERT INTO journal_entries (
-                user_id, content, raw, raw_encrypted, layer, tags, mood,
+                person_id, user_id, content, raw, raw_encrypted, layer, tags, mood,
                 input_type, client_context, language, timezone, user_tags,
                 ts, created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $14)
             RETURNING id
             """,
-            person_id,
+            owner_person_id,
+            owner_user_id,
             storage.content,
             storage.raw,
             storage.raw_encrypted,

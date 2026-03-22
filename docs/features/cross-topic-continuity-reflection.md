@@ -774,12 +774,12 @@ No additional DB queries per turn. Both caches are recomputed lazily when new mo
 
 **When `whole_story.ready` is also true:**
 ```
-[ info pill: "Ready for [thread A] + [thread B]" ]  [ Run Deep ]  [ Whole Story ]
+[ info pill: "Ready for [thread A] + [thread B]" ]  [ Run Deep ]
 ```
 
-`Whole Story` triggers `handleRunWholeStory` — same polling pattern as `handleRunDeepAnswer`, sends `topic_keys: [primary, related]` and `mode: "whole_story"`. Result renders as a gold bubble with "Whole Story" badge (distinct from "Deep Reflect" badge).
+`Run Deep` always triggers the same `mode: "whole_story"` reflection flow. When linked context is available it sends `topic_keys: [primary, related]`; otherwise it sends `topic_keys: [primary]` and runs a single-thread deep reflection.
 
-When `whole_story.ready` is false, the button is absent. Not dimmed — absent. Save the screen real estate.
+When `whole_story.ready` is false, the button can still appear if `deep_reflect.ready` is true. In that case the run stays single-thread and skips linked-context weaving.
 
 ### Topic-Reflection — `soul/topic-reflection.tsx`
 
@@ -827,14 +827,14 @@ Correlations will be recomputed on next synthesis request or turn for that perso
 2. Mobile receives signal
    → activeContinuitySignal updated
    → cross_context.ready → "Full Picture" button activates in topic-reflection
-   → whole_story.ready → "Whole Story" button activates in chat Deep Reflect row
+   → whole_story.ready → linked-context version of "Run Deep" becomes available in chat row
 
 3a. User taps "Full Picture" (from topic-reflection)
     → POST /continuity/reflection/run { mode: "cross_context", topic_key, topic_key_b }
     → build_cross_context_packet() → LLM → result stored
     → "Full Picture" bubble in topic-reflection modal
 
-3b. User taps "Whole Story" (from chat)
+3b. User taps "Run Deep" with linked context available
     → POST /continuity/reflection/run { mode: "whole_story", topic_key, topic_keys, user_query }
     → server validates topic_keys against compiled candidates (reject unknown keys)
     → build_whole_story_packet() → LLM → result stored
@@ -882,7 +882,7 @@ apps/web/app/
 
 Mobile changes:
 apps/mobile/app/
-├── experience/converse/index.tsx             # "Whole Story" button in Deep Reflect row
+├── experience/converse/index.tsx             # Run Deep row with optional linked-context state
 └── soul/topic-reflection.tsx                 # Correlation lines + "Full Picture" in thread modal
 ```
 
@@ -933,8 +933,8 @@ apps/mobile/app/
 
 ## Definition of Done — Phase 4 (Mobile)
 
-- [ ] "Whole Story" button appears in Deep Reflect row when `whole_story.ready`; absent otherwise
-- [ ] "Whole Story" bubble renders with distinct treatment (two topic pills at top)
+- [ ] "Run Deep" appears when `deep_reflect.ready`; linked-context copy upgrades when `whole_story.ready`
+- [ ] "Whole Story" bubble renders with distinct treatment and can run with one or more selected topic pills
 - [ ] Topic-reflection screen shows correlation lines between bubbles with `combined_score >= 0.5`
 - [ ] "Full Picture" button appears in thread modal only when `cross_context.ready` for that thread
 - [ ] "Full Picture" result clearly names the relationship (not two thread summaries)

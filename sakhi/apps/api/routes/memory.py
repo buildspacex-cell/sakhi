@@ -6,6 +6,7 @@ import uuid
 
 from fastapi import APIRouter, Query, Request
 
+from sakhi.apps.api.core.person_utils import resolve_journal_owner_ids
 from sakhi.apps.api.core.db import exec as dbexec
 from sakhi.apps.api.core.db import q
 from sakhi.apps.api.services.continuity.cross_topic import (
@@ -252,6 +253,7 @@ async def run_weekly_flow_dev(request: Request):
             continue
         lifecycle_ts = dt.datetime.utcnow()
         entry_id = uuid.uuid4()
+        owner_person_id, owner_user_id = await resolve_journal_owner_ids(str(target_person))
         storage = build_journal_storage_payload(str(target_person), content)
         await dbexec(
             """
@@ -259,13 +261,14 @@ async def run_weekly_flow_dev(request: Request):
             -- ts = when the experience happened (lived time)
             -- created_at / updated_at = database lifecycle only
             INSERT INTO journal_entries (
-                id, user_id, content, raw, raw_encrypted, layer, ts, created_at, updated_at
+                id, person_id, user_id, content, raw, raw_encrypted, layer, ts, created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, 'journal', $6, $7, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, 'journal', $7, $8, $8)
             ON CONFLICT (id) DO NOTHING
             """,
             entry_id,
-            target_person,
+            owner_person_id or target_person,
+            owner_user_id or target_person,
             storage.content,
             storage.raw,
             storage.raw_encrypted,

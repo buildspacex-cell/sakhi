@@ -280,6 +280,7 @@ export default function ConversationScreen() {
     };
   }, [authToken, isAuthLoading, personId]);
 
+  const deepReflectSignal = activeContinuitySignal?.deep_reflect;
   const wholeStorySignal = activeContinuitySignal?.whole_story;
   const wholeStoryTopics = useMemo(
     () => wholeStorySignal?.selected_topics || [],
@@ -295,12 +296,13 @@ export default function ConversationScreen() {
     }
     return normalized.slice(0, 3);
   }, [activeContinuitySignal?.topic_key, wholeStoryTopics]);
-  const wholeStoryReady = Boolean(
+  const linkedWholeStoryReady = Boolean(
     wholeStorySignal?.ready && wholeStorySelectedTopics.length >= 2,
   );
+  const deepReflectReady = Boolean(deepReflectSignal?.ready);
   const hasDeepQuery = latestUserMessage.trim().length > 0;
   const deepAnswerReady = Boolean(
-    activeContinuitySignal?.topic_key && hasDeepQuery && wholeStoryReady,
+    activeContinuitySignal?.topic_key && hasDeepQuery && deepReflectReady,
   );
 
   const prevDeepReadyRef = useRef(false);
@@ -572,7 +574,9 @@ export default function ConversationScreen() {
     }
     const mode = "whole_story";
     const selectedTopics = wholeStorySelectedTopics;
-    const pendingMessage = "Deep Reflect is reading your whole story across linked threads...";
+    const pendingMessage = linkedWholeStoryReady
+      ? "Deep Reflect is reading your whole story across linked threads..."
+      : "Deep Reflect is reading the full story of this thread...";
 
     const pendingId = `deep-pending-${Date.now()}`;
     haptics.strongPress();
@@ -720,7 +724,7 @@ export default function ConversationScreen() {
     latestUserMessage,
     personId,
     pollDeepAnswer,
-    wholeStoryReady,
+    linkedWholeStoryReady,
     wholeStorySelectedTopics,
     emitDebugEvent,
     haptics,
@@ -850,7 +854,9 @@ export default function ConversationScreen() {
                   {isRunningDeepAnswer ? (
                     <View style={styles.deepInlineContent}>
                       <ActivityIndicator size="small" color={palette.accentText} />
-                      <Text style={styles.deepInlineText}>Reading across your threads...</Text>
+                      <Text style={styles.deepInlineText}>
+                        {linkedWholeStoryReady ? "Reading across your threads..." : "Reading your thread..."}
+                      </Text>
                     </View>
                   ) : (
                     <View style={styles.deepInlineContent}>

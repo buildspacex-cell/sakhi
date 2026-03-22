@@ -782,6 +782,60 @@ def test_build_deep_reflection_prompt_messages_includes_connected_threads_for_wh
     assert "Mode: whole_story" in user_prompt
 
 
+def test_build_deep_reflection_prompt_messages_allows_whole_story_without_linked_threads():
+    packet = {
+        "topic_key": "sakhi",
+        "topic_label": "Sakhi",
+        "request_mode": "whole_story",
+        "current_query": {
+            "text": "What should I focus on this week?",
+            "source": "provided",
+        },
+        "surface": {"detail_allowed": True, "mirror_allowed": True},
+        "arc_compact_global": {
+            "origin_story": "Started around ayurveda engine.",
+            "current_stage": "Currently centered on deterministic core.",
+            "key_pivots": ["Shifted from validation toward deterministic core."],
+            "recurring_tensions": ["Recurring return to founder alignment."],
+            "open_questions": ["What to prioritize first."],
+            "phase_compaction": [{"summary": "Started around ayurveda engine."}],
+        },
+        "related_topics_compact": [],
+        "life_dimensions": {},
+        "evidence_anchors": [
+            {"snippet": "Pilots gave us confidence in product direction."}
+        ],
+        "latest_turn_context": {
+            "latest_topic_user_message": "What should I focus on this week?",
+            "state_hints": {},
+        },
+        "delta_since_last_reflection": {"has_previous": False},
+        "response_contract": {
+            "voice": "friend, warm, direct",
+            "length_words": "220-360",
+            "max_questions": 1,
+            "avoid": ["therapy-speak"],
+            "format": (
+                "natural prose, answer the current query first, use linked threads and concrete evidence anchors "
+                "when they genuinely add clarity, and clarify what this means for the person now"
+            ),
+            "emotion_policy": {
+                "mention_only_with_priority_conflict": True,
+                "priority_conflict_detected": False,
+            },
+        },
+    }
+
+    messages = reflection._build_deep_reflection_prompt_messages(packet)
+    user_prompt = messages[1]["content"]
+
+    assert "No additional linked threads were included for this run." in user_prompt
+    assert (
+        "use linked threads only when they add real clarity to the answer" in user_prompt
+    )
+    assert "Mode: whole_story" in user_prompt
+
+
 def test_build_reflection_result_cross_context_names_related_threads():
     result = reflection._build_reflection_result(
         {

@@ -178,9 +178,20 @@ Result payload additions:
 Simulation continuity compilation now includes a second-pass thread-aware resolver:
 - `sakhi/apps/api/services/continuity/thread_resolver.py`
 - ambiguous or `unknown` follow-up entries can attach to an already-confirmed thread when the evidence is strong enough
+- close runner-up threads are now preserved as contextual attachments instead of forcing a single winner-or-drop outcome
 - attachment uses multiple signals together (candidate anchor score, follow-up language, term overlap, light recency bias) instead of pure time bucketing
 - entries that still cannot be attached are returned in `compiled["unresolved_entries"]` for auditability
 - inferred attachments are marked with `membership_role="inferred"` so downstream/debug consumers can distinguish direct classification from thread attachment
+- compiled topics now track `primary_selected_count`, `attached_selected_count`, `effective_selected_count`, and `related_selected_count` separately so chat Deep Reflect can unlock from real same-thread depth without counting projected cross-topic overlap
+
+### Journal Identity Consistency
+
+Active journal write paths now populate both `journal_entries.person_id` and `journal_entries.user_id` consistently.
+
+- new writes resolve canonical owner columns before insert
+- migration `sakhi/infra/scripts/migrations/0016_journal_person_id_backfill.sql` backfills legacy rows where `person_id` was null but `user_id` was present
+
+This keeps continuity loaders, debug tools, and future surface code from depending on legacy `person_id OR user_id` fallbacks forever.
 
 `apps/web/app/lab/simulation/client.tsx` renders:
 - Continuity topic selector.

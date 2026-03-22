@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from sakhi.apps.api.core.db import exec as dbexec, q
+from sakhi.apps.api.core.person_utils import resolve_journal_owner_ids
 from sakhi.apps.api.core.event_logger import log_event
 from sakhi.apps.api.core.events import publish, MEMORY_EVENT
 from sakhi.apps.api.core.metrics import aw_events_written, episodes_written
@@ -133,6 +134,7 @@ def _should_web_search(text: str) -> bool:
 async def _persist_web_snippet(person_id: str, query: str, snippet: str, ts: dt.datetime) -> str | None:
     source = {"kind": "web_snippet", "query": query}
     lifecycle_ts = dt.datetime.utcnow()
+    owner_person_id, owner_user_id = await resolve_journal_owner_ids(person_id)
     storage = build_journal_storage_payload(person_id, snippet)
     try:
         source_json = json.dumps(source, ensure_ascii=False)
@@ -142,12 +144,13 @@ async def _persist_web_snippet(person_id: str, query: str, snippet: str, ts: dt.
             -- ts = when the experience happened (lived time)
             -- created_at / updated_at = database lifecycle only
             INSERT INTO journal_entries (
-                user_id, content, raw, raw_encrypted, layer, tags, source_ref, ts, created_at, updated_at
+                person_id, user_id, content, raw, raw_encrypted, layer, tags, source_ref, ts, created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, 'external', ARRAY['web'], $5::jsonb, $6, $7, $7)
+            VALUES ($1, $2, $3, $4, $5, 'external', ARRAY['web'], $6::jsonb, $7, $8, $8)
             RETURNING id
             """,
-            person_id,
+            owner_person_id or person_id,
+            owner_user_id or person_id,
             storage.content,
             storage.raw,
             storage.raw_encrypted,
@@ -246,21 +249,23 @@ async def observe(body: ObserveIn) -> Dict[str, Any]:
     source_ref = {"triage": triage, "mood": body.mood}
     source_ref_json = json.dumps(source_ref, ensure_ascii=False)
 
+    owner_person_id, owner_user_id = await resolve_journal_owner_ids(person_id)
     storage = build_journal_storage_payload(person_id, body.text)
     row = await q(
             """
             INSERT INTO journal_entries (
-                user_id, content, raw, raw_encrypted, layer, tags, mood, mood_score, source_ref,
+                person_id, user_id, content, raw, raw_encrypted, layer, tags, mood, mood_score, source_ref,
                 ts, created_at, updated_at
             )
             -- IMPORTANT:
             -- ts = when the experience happened (lived time)
             -- created_at / updated_at = database lifecycle only
             -- Episodic memory and downstream reasoning depend on ts.
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $11)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $12)
             RETURNING id
             """,
-            person_id,
+            owner_person_id or person_id,
+            owner_user_id or person_id,
             storage.content,
             storage.raw,
             storage.raw_encrypted,

@@ -100,11 +100,12 @@ def test_resolve_thread_attachments_attaches_followup_to_thread():
     assert resolved[1]["anchor"] == "sakhi"
     assert resolved[1].get("membership_role") == "inferred"
     assert resolved[1]["thread_attachment"]["attached_to"] == "sakhi"
+    assert resolved[1].get("contextual_attachments") == []
     assert len(unresolved) == 0
 
 
-def test_resolve_thread_attachments_requires_margin():
-    """Ambiguous entry that could attach to two threads equally stays unresolved."""
+def test_resolve_thread_attachments_adds_contextual_attachment_when_scores_are_close():
+    """Close runner-up threads attach contextually instead of being dropped."""
     inferred = [
         {
             "entry": {"day": 1, "timestamp": "2026-01-01T08:00:00+00:00", "id": "e1"},
@@ -147,9 +148,12 @@ def test_resolve_thread_attachments_requires_margin():
 
     resolved, unresolved = resolve_thread_attachments(inferred, min_margin=0.10)
 
-    assert len(unresolved) == 1
-    # Margin is too small (0.05), so entry stays unresolved
-    assert resolved[2]["anchor"] == "unknown"
+    assert len(unresolved) == 0
+    assert resolved[2]["anchor"] == "career"
+    assert resolved[2]["thread_attachment"]["attached_to"] == "career"
+    assert resolved[2]["thread_attachment"]["reason"] == "thread_attached_multi"
+    assert resolved[2]["thread_attachment"]["contextual_anchors"] == ["family"]
+    assert resolved[2]["contextual_attachments"][0]["anchor"] == "family"
 
 
 def test_resolve_thread_attachments_respects_min_score():
@@ -272,6 +276,55 @@ def test_resolve_thread_attachments_builds_live_thread_index():
     # and might get better recency/term-overlap score
     assert resolved[1]["anchor"] == "sakhi"
     assert resolved[2]["anchor"] == "sakhi"
+
+
+def test_resolve_thread_attachments_exposes_contextual_memberships_for_compile():
+    inferred = [
+        {
+            "entry": {"day": 1, "timestamp": "2026-01-01T08:00:00+00:00", "id": "e1"},
+            "anchor": "sakhi",
+            "anchor_state": "CONFIDENT",
+            "anchor_hits": ["sakhi", "product"],
+            "anchor_trace": {
+                "winner": {"score": 2.4, "hits": ("sakhi", "product"), "key": "sakhi"},
+                "candidates": [{"key": "sakhi", "score": 2.4}],
+            },
+            "text": "launching sakhi product",
+        },
+        {
+            "entry": {"day": 2, "timestamp": "2026-01-02T08:00:00+00:00", "id": "e2"},
+            "anchor": "career",
+            "anchor_state": "CONFIDENT",
+            "anchor_hits": ["funding", "investor"],
+            "anchor_trace": {
+                "winner": {"score": 1.8, "hits": ("funding", "investor"), "key": "career"},
+                "candidates": [{"key": "career", "score": 1.8}],
+            },
+            "text": "career and investor pressure are both real",
+        },
+        {
+            "entry": {"day": 3, "timestamp": "2026-01-03T08:00:00+00:00", "id": "e3"},
+            "anchor": "unknown",
+            "anchor_state": "UNKNOWN",
+            "anchor_hits": [],
+            "anchor_trace": {
+                "winner": None,
+                "candidates": [
+                    {"key": "sakhi", "score": 0.95, "hits": ("app", "launch")},
+                    {"key": "career", "score": 0.9, "hits": ("investor", "launch")},
+                ],
+                "fallback_reason": "anchor_ambiguous",
+            },
+            "text": "the app launch also affects the investor story",
+        },
+    ]
+
+    resolved, unresolved = resolve_thread_attachments(inferred)
+
+    assert len(unresolved) == 0
+    assert resolved[2]["anchor"] in {"sakhi", "career"}
+    assert resolved[2]["contextual_attachments"][0]["anchor"] in {"sakhi", "career"}
+    assert resolved[2]["contextual_attachments"][0]["anchor"] != resolved[2]["anchor"]
 
 
 def test_compile_simulation_continuity_includes_unresolved_entries():
@@ -398,12 +451,12 @@ __all__ = [
     "test_resolve_thread_attachments_passes_through_confident_entries",
     "test_resolve_thread_attachments_leaves_unknown_alone_if_no_threads",
     "test_resolve_thread_attachments_attaches_followup_to_thread",
-    "test_resolve_thread_attachments_requires_margin",
+    "test_resolve_thread_attachments_adds_contextual_attachment_when_scores_are_close",
     "test_resolve_thread_attachments_respects_min_score",
     "test_resolve_thread_attachments_marks_unresolved_for_auditability",
     "test_resolve_thread_attachments_builds_live_thread_index",
+    "test_resolve_thread_attachments_exposes_contextual_memberships_for_compile",
     "test_compile_simulation_continuity_includes_unresolved_entries",
     "test_inferred_entries_preserve_membership_role_through_compilation",
     "test_original_anchor_state_preserved_in_attachment_trace",
 ]
-

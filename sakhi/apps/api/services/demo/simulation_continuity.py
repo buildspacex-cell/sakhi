@@ -41,7 +41,7 @@ VALID_STANCES = {"toward", "away", "unclear"}
 _TAXONOMY = SIMULATION_CONTINUITY_TAXONOMY
 _THRESHOLDS = SIMULATION_CONTINUITY_THRESHOLD_PROFILE
 _ALIAS_BOOST = 0.85
-COMPILER_VERSION = "2026.03.18.1"
+COMPILER_VERSION = "2026.03.22.1"
 
 
 def _canonicalize_anchor(anchor: str) -> str:
@@ -484,14 +484,31 @@ def _build_compiled_topic(
             and str(item.get("membership_role") or "primary") == "primary"
         )
     )
-    related_selected_count = max(len(visible_days) - primary_selected_count, 0)
+    attached_selected_count = sum(
+        1
+        for item in annotated_entries
+        if (
+            _compiled_entry_key(item["day"], item["timestamp"]) in visible_keys
+            and str(item.get("membership_role") or "") in {"inferred", "attached"}
+        )
+    )
+    related_selected_count = sum(
+        1
+        for item in annotated_entries
+        if (
+            _compiled_entry_key(item["day"], item["timestamp"]) in visible_keys
+            and str(item.get("membership_role") or "") == "related"
+        )
+    )
     topic = {
         "anchor": anchor,
         "label": _TAXONOMY.label_for(anchor),
         "confidence": round(sum(confidence_values) / len(confidence_values), 4) if confidence_values else 0.0,
         "selected_count": len(visible_days),
         "primary_selected_count": primary_selected_count,
+        "attached_selected_count": attached_selected_count,
         "related_selected_count": related_selected_count,
+        "effective_selected_count": primary_selected_count + attached_selected_count,
         "entry_days": visible_days,
         "entry_tags": entry_tags,
         "arc": built["arc"],
@@ -620,17 +637,16 @@ def _secondary_anchor_candidates(
 
 def _topic_memberships_for_entry(item: dict[str, Any]) -> list[dict[str, Any]]:
     anchor = str(item.get("anchor") or "").strip()
-    if not anchor or anchor in {"unknown", "life"}:
-        return []
-
-    memberships: list[dict[str, Any]] = [
-        {
-            **item,
-            "anchor": anchor,
-            "source_anchor": anchor,
-            "membership_role": item.get("membership_role") or "primary",
-        }
-    ]
+    memberships: list[dict[str, Any]] = []
+    if anchor and anchor not in {"unknown", "life"}:
+        memberships.append(
+            {
+                **item,
+                "anchor": anchor,
+                "source_anchor": anchor,
+                "membership_role": item.get("membership_role") or "primary",
+            }
+        )
     for related in item.get("related_anchors") or []:
         related_anchor = str((related or {}).get("anchor") or "").strip()
         if not related_anchor or related_anchor in {anchor, "unknown", "life"}:
@@ -641,6 +657,21 @@ def _topic_memberships_for_entry(item: dict[str, Any]) -> list[dict[str, Any]]:
                 "anchor": related_anchor,
                 "source_anchor": anchor,
                 "membership_role": "related",
+            }
+        )
+    for attachment in item.get("contextual_attachments") or []:
+        attached_anchor = str((attachment or {}).get("anchor") or "").strip()
+        if not attached_anchor or attached_anchor in {anchor, "unknown", "life"}:
+            continue
+        memberships.append(
+            {
+                **item,
+                "anchor": attached_anchor,
+                "source_anchor": anchor or str(item.get("source_anchor") or "unknown"),
+                "anchor_state": ClassificationState.UNCERTAIN.value,
+                "anchor_score": float((attachment or {}).get("raw_candidate_score") or 0.0),
+                "anchor_hits": list((attachment or {}).get("candidate_hits") or item.get("anchor_hits") or []),
+                "membership_role": "attached",
             }
         )
     return memberships
@@ -867,11 +898,13 @@ def _aggregate_classification_score(entry_tags: dict[str, dict[str, Any]]) -> fl
         confidence = float(tag.get("confidence") or 0.0)
         anchor_weight = state_weight.get(str(tag.get("anchor_state") or ClassificationState.UNKNOWN.value), 0.42)
         facet_weight = state_weight.get(str(tag.get("facet_state") or ClassificationState.UNKNOWN.value), 0.42)
-        membership_weight = (
-            _THRESHOLDS.related_anchor_membership_weight
-            if str(tag.get("membership_role") or "primary") == "related"
-            else 1.0
-        )
+        membership_role = str(tag.get("membership_role") or "primary")
+        if membership_role == "related":
+            membership_weight = _THRESHOLDS.related_anchor_membership_weight
+        elif membership_role in {"attached", "inferred"}:
+            membership_weight = _THRESHOLDS.attached_anchor_membership_weight
+        else:
+            membership_weight = 1.0
         scores.append(
             confidence
             * ((anchor_weight * 0.6) + (facet_weight * 0.4))
@@ -894,14 +927,28 @@ def _coherence_score(topic: dict[str, Any]) -> float:
 def _build_topic_surface(topic: dict[str, Any]) -> dict[str, Any]:
     classification_score = _aggregate_classification_score(topic.get("entry_tags") or {})
     coherence_score = _coherence_score(topic)
+    effective_selected_count = int(topic.get("effective_selected_count") or 0)
+    primary_selected_count = int(topic.get("primary_selected_count") or 0)
     mirror_allowed = (
         classification_score >= _THRESHOLDS.surface_mirror_min
+        and coherence_score >= _THRESHOLDS.coherence_min
+    ) or (
+        effective_selected_count >= _THRESHOLDS.surface_mirror_effective_min
         and coherence_score >= _THRESHOLDS.coherence_min
     )
     detail_allowed = (
         mirror_allowed
-        and classification_score >= _THRESHOLDS.surface_detail_min
-        and coherence_score >= _THRESHOLDS.coherence_min
+        and (
+            (
+                classification_score >= _THRESHOLDS.surface_detail_min
+                and coherence_score >= _THRESHOLDS.coherence_min
+            )
+            or (
+                effective_selected_count >= _THRESHOLDS.surface_detail_effective_min
+                and primary_selected_count >= _THRESHOLDS.surface_detail_primary_min
+                and coherence_score >= _THRESHOLDS.coherence_min
+            )
+        )
     )
 
     blocked_reason = None
@@ -1016,6 +1063,7 @@ def _annotate_topic_entries(
                 "membership_role": str(info.get("membership_role") or "primary"),
                 "source_anchor": str(info.get("source_anchor") or anchor),
                 "related_anchors": list(info.get("related_anchors") or []),
+                "contextual_attachments": list(info.get("contextual_attachments") or []),
                 "matched_terms": list(dict.fromkeys([*(info.get("anchor_hits") or []), *facet_hits])),
                 "trace": {
                     "anchor": info.get("anchor_trace") or {},
@@ -1036,6 +1084,7 @@ def _annotate_topic_entries(
                     "membership_role": str(info.get("membership_role") or "primary"),
                     "source_anchor": str(info.get("source_anchor") or anchor),
                     "related_anchors": list(info.get("related_anchors") or []),
+                    "contextual_attachments": list(info.get("contextual_attachments") or []),
                 },
             }
         )

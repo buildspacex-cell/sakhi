@@ -1,33 +1,19 @@
 """Thread-aware resolver for continuity entry attachment.
 
 After the per-entry classifier runs, some entries are left with anchor="unknown"
-because they lack strong keyword signal. These are typically follow-up entries
-that use pronouns, deictic references ("it", "this screen"), or topic-specific
-vocabulary without repeating the anchor keyword.
+because they lack strong keyword signal. These are usually follow-up entries
+that continue an already-active thread without repeating the anchor name.
 
-This resolver does a second pass over the classified entry list:
-  1. Build confident threads from entries with anchor_state=CONFIDENT.
-  2. For each unknown/unclassified entry, score it against every thread using
-     multiple signals (partial candidate scores, follow-up language, term
-     overlap, thread recency).
-  3. Attach the entry to a thread only when one thread wins clearly (minimum
-     score AND minimum margin over runner-up).
-  4. Leave non-attachable entries as unresolved; never silently discard them.
+The resolver now uses a two-layer model:
+  1. Build confident threads from CONFIDENT entries.
+  2. For each unresolved entry, score it against all live threads.
+  3. If the best thread clears the attachment threshold, attach it there.
+  4. If another thread is nearly as plausible, attach that too as contextual
+     overlap instead of forcing a single winner.
+  5. If nothing clears the threshold, keep the entry unresolved for auditability.
 
-Attached entries are marked with membership_role="inferred" so debug traces
-can explain why they joined a thread. Unresolved entries are returned
-separately for auditability.
-
-SEMANTICS:
-- source_anchor: For primary memberships, this is the resolved anchor (the thread
-  the entry was attached to). For inferred entries, the original unresolved
-  classification is preserved in thread_attachment.original_anchor_state.
-  The "source" anchor is what the membership is attributed to in the topic.
-
-- original_anchor_state: For inferred entries, stores the classification state
-  before resolution (UNKNOWN), so downstream code can make informed choices
-  about weighting. For example, _entry_confidence may wish to check this
-  before trusting the UNCERTAIN state applied by inference.
+This keeps the strict primary anchor classifier intact while allowing a
+follow-up entry to belong to more than one thread when the evidence is close.
 """
 
 from __future__ import annotations
@@ -35,9 +21,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-# ── Follow-up language signal tables ─────────────────────────────────────────
-# Strong phrases: specific product/topic references that strongly imply
-# continuation of a prior topic rather than a new topic.
 _STRONG_FOLLOWUP_PHRASES: tuple[str, ...] = (
     "deep reflect",
     "whole story",
@@ -55,8 +38,6 @@ _STRONG_FOLLOWUP_PHRASES: tuple[str, ...] = (
     "that topic",
 )
 
-# Weak words: generic deictic/anaphoric language. Present in many entries but
-# in combination they raise the follow-up probability.
 _WEAK_FOLLOWUP_WORDS: tuple[str, ...] = (
     "it",
     "this",
@@ -74,47 +55,59 @@ _WEAK_FOLLOWUP_WORDS: tuple[str, ...] = (
     "back to",
 )
 
-# Thread age thresholds (in relative day units, same scale as entry["day"])
-_THREAD_AGE_DECAY_START = 30   # decay begins after this many days of inactivity
-_THREAD_AGE_FULL_DECAY = 60    # score reaches 0 at this gap
+_THREAD_AGE_DECAY_START = 30
+_THREAD_AGE_FULL_DECAY = 60
 
-# Scoring weights: must sum to 1.0
-_W_CANDIDATE_SCORE = 0.50   # normalized raw candidate score from anchor trace
-_W_FOLLOWUP = 0.20          # follow-up language signal
-_W_TERM_OVERLAP = 0.20      # term overlap with thread's accumulated hits
-_W_RECENCY = 0.10           # recency boost (light; only a tie-breaker)
+_W_CANDIDATE_SCORE = 0.45
+_W_FOLLOWUP = 0.20
+_W_TERM_OVERLAP = 0.25
+_W_RECENCY = 0.10
+
+_SECONDARY_ATTACHMENT_RATIO = 0.82
+_SECONDARY_ATTACHMENT_MARGIN = 0.08
+_MAX_CONTEXTUAL_ATTACHMENTS = 1
+
+_TOKEN_RE = re.compile(r"[a-z0-9']+")
+_TOKEN_STOPWORDS = {
+    "the",
+    "and",
+    "for",
+    "with",
+    "this",
+    "that",
+    "they",
+    "them",
+    "then",
+    "from",
+    "into",
+    "about",
+    "have",
+    "been",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "would",
+    "could",
+    "should",
+    "there",
+    "their",
+    "just",
+    "only",
+    "really",
+    "also",
+}
 
 
 def resolve_thread_attachments(
     inferred: list[dict[str, Any]],
     *,
-    min_attachment_score: float = 0.30,
+    min_attachment_score: float = 0.18,
     min_margin: float = 0.15,
     thread_age_decay_days: int = _THREAD_AGE_DECAY_START,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Second-pass resolver that attaches unknown entries to confident threads.
-
-    Processes entries in chronological order (preserving the order of
-    ``inferred``, which must already be sorted by day/timestamp). As entries
-    are resolved they are added to the live thread index so that later entries
-    in the same pass can benefit from their attachment.
-
-    Args:
-        inferred: Classified entries from _classify_entry(), sorted by
-            (day, timestamp). Entries with anchor != "unknown"/"life" are
-            passed through unchanged.
-        min_attachment_score: Minimum composite score for attachment.
-        min_margin: Required gap between top-scoring thread and runner-up.
-        thread_age_decay_days: Days of thread inactivity before decay starts.
-
-    Returns:
-        A 2-tuple:
-        - resolved_inferred: All entries, with unknowns either patched with
-          an inferred anchor or left with their original anchor="unknown".
-        - unresolved_entries: Subset of resolved_inferred where attachment
-          failed; kept visible for debug/auditability.
-    """
-    # Build the initial thread index from CONFIDENT entries only.
+    """Second-pass resolver that attaches low-signal entries to live threads."""
     threads: dict[str, list[dict[str, Any]]] = {}
     for item in inferred:
         if _is_confident(item):
@@ -122,7 +115,6 @@ def resolve_thread_attachments(
             threads.setdefault(anchor, []).append(item)
 
     if not threads:
-        # No confident threads exist — nothing to attach to.
         unresolved = [item for item in inferred if _is_unclassified(item)]
         return inferred, unresolved
 
@@ -135,8 +127,6 @@ def resolve_thread_attachments(
             continue
 
         current_day = _safe_int((item.get("entry") or {}).get("day"))
-
-        # Score against every confident thread.
         scores: dict[str, float] = {
             thread_anchor: _score_entry_against_thread(
                 item=item,
@@ -148,48 +138,18 @@ def resolve_thread_attachments(
             for thread_anchor, thread_entries in threads.items()
         }
 
-        ranked = sorted(scores.items(), key=lambda pair: -pair[1])
+        ranked = sorted(scores.items(), key=lambda pair: (-pair[1], pair[0]))
         top_anchor, top_score = ranked[0] if ranked else ("", 0.0)
         runner_up_score = ranked[1][1] if len(ranked) > 1 else 0.0
         margin = top_score - runner_up_score
 
-        if top_score >= min_attachment_score and margin >= min_margin:
-            # Attach: carry the raw candidate score for this anchor so that
-            # _annotate_topic_entries can compute a reasonable confidence.
-            raw_candidate_score = _raw_candidate_score_for(item, top_anchor)
-            resolved_item = {
-                **item,
-                "anchor": top_anchor,
-                "anchor_state": "UNCERTAIN",   # inferred, not directly classified
-                "anchor_score": raw_candidate_score,
-                "membership_role": "inferred",
-                "source_anchor": item.get("anchor") or "unknown",
-                "thread_attachment": {
-                    "attached_to": top_anchor,
-                    "score": round(top_score, 4),
-                    "runner_up_score": round(runner_up_score, 4),
-                    "margin": round(margin, 4),
-                    "all_scores": {k: round(v, 4) for k, v in scores.items()},
-                    "followup_signal": _followup_language_score(
-                        str(item.get("text") or "")
-                    ) > 0,
-                    "reason": "thread_attached",
-                    "original_anchor_state": item.get("anchor_state"),  # Preserve original classification state
-                },
-            }
-            resolved_inferred.append(resolved_item)
-            # Add to the live thread so subsequent entries can see this one.
-            threads[top_anchor].append(resolved_item)
-        else:
-            reason = (
-                "below_min_score" if top_score < min_attachment_score
-                else "insufficient_margin"
-            )
+        if top_score < min_attachment_score:
             unresolved_item = {
                 **item,
+                "contextual_attachments": [],
                 "thread_attachment": {
                     "attached_to": None,
-                    "reason": reason,
+                    "reason": "below_min_score",
                     "top_score": round(top_score, 4),
                     "top_anchor": top_anchor or None,
                     "runner_up_score": round(runner_up_score, 4),
@@ -198,11 +158,54 @@ def resolve_thread_attachments(
             }
             resolved_inferred.append(unresolved_item)
             unresolved_entries.append(unresolved_item)
+            continue
+
+        contextual_attachments = _secondary_thread_attachments(
+            item=item,
+            ranked=ranked,
+            top_anchor=top_anchor,
+            top_score=top_score,
+            min_attachment_score=min_attachment_score,
+            min_margin=min_margin,
+        )
+        raw_candidate_score = _raw_candidate_score_for(item, top_anchor)
+        resolved_item = {
+            **item,
+            "anchor": top_anchor,
+            "anchor_state": "UNCERTAIN",
+            "anchor_score": raw_candidate_score,
+            "membership_role": "inferred",
+            "source_anchor": item.get("anchor") or "unknown",
+            "contextual_attachments": contextual_attachments,
+            "thread_attachment": {
+                "attached_to": top_anchor,
+                "contextual_anchors": [
+                    str(attachment.get("anchor") or "")
+                    for attachment in contextual_attachments
+                    if attachment.get("anchor")
+                ],
+                "score": round(top_score, 4),
+                "runner_up_score": round(runner_up_score, 4),
+                "margin": round(margin, 4),
+                "all_scores": {k: round(v, 4) for k, v in scores.items()},
+                "followup_signal": _followup_language_score(str(item.get("text") or "")) > 0,
+                "reason": (
+                    "thread_attached_multi"
+                    if contextual_attachments
+                    else "thread_attached"
+                ),
+                "original_anchor_state": item.get("anchor_state"),
+            },
+        }
+        resolved_inferred.append(resolved_item)
+        threads.setdefault(top_anchor, []).append(resolved_item)
+        for attachment in contextual_attachments:
+            attachment_anchor = str(attachment.get("anchor") or "").strip()
+            if attachment_anchor:
+                threads.setdefault(attachment_anchor, []).append(resolved_item)
 
     return resolved_inferred, unresolved_entries
 
-
-# ── Scoring ───────────────────────────────────────────────────────────────────
 
 def _score_entry_against_thread(
     item: dict[str, Any],
@@ -211,40 +214,25 @@ def _score_entry_against_thread(
     current_entry_day: int,
     thread_age_decay_days: int,
 ) -> float:
-    """Compute composite attachment score for item against a specific thread.
-
-    Signals (weighted, capped individually before weighting):
-      1. Normalized raw candidate score for the thread's anchor (up to 0.50).
-      2. Follow-up language score (up to 0.20).
-      3. Term overlap with thread's accumulated hit set (up to 0.20).
-      4. Recency boost — how recently the thread had activity (up to 0.10).
-
-    Thread age decay is applied as a final multiplicative factor.
-    """
-    # Signal 1: normalized raw candidate score
     raw = _raw_candidate_score_for(item, thread_anchor)
     threshold = _anchor_threshold_for(thread_anchor)
     normalized_candidate = min(raw / max(threshold, 0.01), 1.0)
     s1 = normalized_candidate * _W_CANDIDATE_SCORE
 
-    # Signal 2: follow-up language
     text = str(item.get("text") or "")
     s2 = _followup_language_score(text) * _W_FOLLOWUP
 
-    # Signal 3: term overlap with thread's accumulated hits
-    thread_hits = _accumulate_thread_hits(thread_entries)
-    entry_hits = {h for h in (item.get("anchor_hits") or []) if h}
-    if thread_hits and entry_hits:
-        overlap_ratio = len(entry_hits & thread_hits) / len(thread_hits)
+    thread_terms = _accumulate_thread_terms(thread_entries, thread_anchor)
+    entry_terms = _entry_terms_for(item, thread_anchor)
+    if thread_terms and entry_terms:
+        overlap_ratio = len(entry_terms & thread_terms) / max(1, len(entry_terms))
         s3 = overlap_ratio * _W_TERM_OVERLAP
     else:
         s3 = 0.0
 
-    # Signal 4: recency boost
     last_day = _last_thread_day(thread_entries)
     if last_day is not None and current_entry_day >= last_day:
         gap = current_entry_day - last_day
-        # Max boost when gap=0; decays linearly to 0 at thread_age_decay_days.
         recency_ratio = max(0.0, 1.0 - gap / max(thread_age_decay_days, 1))
         s4 = recency_ratio * _W_RECENCY
     else:
@@ -252,7 +240,6 @@ def _score_entry_against_thread(
 
     raw_score = s1 + s2 + s3 + s4
 
-    # Thread age decay: multiplicative reduction for very cold threads.
     if last_day is not None:
         gap = max(0, current_entry_day - last_day)
         if gap > thread_age_decay_days:
@@ -265,12 +252,6 @@ def _score_entry_against_thread(
 
 
 def _followup_language_score(text: str) -> float:
-    """Score the degree of follow-up/deictic language in text.
-
-    Strong phrases (specific feature/topic references) contribute 0.8 each.
-    Weak words (generic pronouns/deictics) contribute 0.15 each.
-    Score is capped at 1.0.
-    """
     strong_count = sum(
         1 for phrase in _STRONG_FOLLOWUP_PHRASES if _phrase_present(text, phrase)
     )
@@ -279,41 +260,97 @@ def _followup_language_score(text: str) -> float:
     )
     strong_score = min(strong_count * 0.8, 1.0)
     weak_score = min(weak_count * 0.15, 0.45)
-    # Use strong if present; otherwise fall back to weak
     return round(min(strong_score if strong_score > 0 else weak_score, 1.0), 4)
 
 
-def _accumulate_thread_hits(thread_entries: list[dict[str, Any]]) -> set[str]:
-    """Collect all anchor_hits across all thread entries into one set.
+def _secondary_thread_attachments(
+    *,
+    item: dict[str, Any],
+    ranked: list[tuple[str, float]],
+    top_anchor: str,
+    top_score: float,
+    min_attachment_score: float,
+    min_margin: float,
+) -> list[dict[str, Any]]:
+    if not ranked or top_score < min_attachment_score:
+        return []
 
-    Alias hits (prefixed with "alias:") are excluded; they are not useful
-    for term-overlap comparison against a new entry's raw hit set.
-    """
-    hits: set[str] = set()
+    contextual: list[dict[str, Any]] = []
+    for anchor, score in ranked[1:]:
+        if score < min_attachment_score:
+            continue
+        if (top_score - score) > max(min_margin, _SECONDARY_ATTACHMENT_MARGIN) and (
+            score / max(top_score, 0.01)
+        ) < _SECONDARY_ATTACHMENT_RATIO:
+            continue
+        contextual.append(
+            {
+                "anchor": anchor,
+                "score": round(score, 4),
+                "raw_candidate_score": round(_raw_candidate_score_for(item, anchor), 4),
+                "candidate_hits": _candidate_hits_for(item, anchor),
+            }
+        )
+        if len(contextual) >= _MAX_CONTEXTUAL_ATTACHMENTS:
+            break
+    return contextual
+
+
+def _accumulate_thread_terms(
+    thread_entries: list[dict[str, Any]],
+    thread_anchor: str,
+) -> set[str]:
+    terms: set[str] = set()
     for entry in thread_entries:
-        for hit in entry.get("anchor_hits") or []:
-            h = str(hit or "").strip()
-            if h and not h.startswith("alias:"):
-                hits.add(h)
-    return hits
+        for hit in _candidate_hits_for(entry, thread_anchor):
+            if hit and not hit.startswith("alias:"):
+                terms.add(hit)
+        terms.update(_tokenize_terms(str(entry.get("text") or "")))
+    return terms
+
+
+def _entry_terms_for(item: dict[str, Any], anchor: str) -> set[str]:
+    return {
+        *[
+            hit
+            for hit in _candidate_hits_for(item, anchor)
+            if hit and not hit.startswith("alias:")
+        ],
+        *_tokenize_terms(str(item.get("text") or "")),
+    }
+
+
+def _candidate_hits_for(item: dict[str, Any], anchor: str) -> list[str]:
+    anchor_trace = item.get("anchor_trace") or {}
+    winner = anchor_trace.get("winner") or {}
+    if str(winner.get("key") or "") == anchor:
+        return [str(hit) for hit in (winner.get("hits") or []) if str(hit or "").strip()]
+    for candidate in anchor_trace.get("candidates") or []:
+        if str(candidate.get("key") or "") == anchor:
+            return [str(hit) for hit in (candidate.get("hits") or []) if str(hit or "").strip()]
+    return [str(hit) for hit in (item.get("anchor_hits") or []) if str(hit or "").strip()]
 
 
 def _raw_candidate_score_for(item: dict[str, Any], anchor: str) -> float:
-    """Extract the raw candidate score for ``anchor`` from the entry's trace.
-
-    Even entries classified as UNKNOWN have a candidates list with partial
-    scores from the scoring pass. This extracts that partial score so we can
-    use it as a normalized attachment signal.
-    """
     anchor_trace = item.get("anchor_trace") or {}
+    winner = anchor_trace.get("winner") or {}
+    if str(winner.get("key") or "") == anchor:
+        return float(winner.get("score") or 0.0)
     for candidate in anchor_trace.get("candidates") or []:
         if str(candidate.get("key") or "") == anchor:
             return float(candidate.get("score") or 0.0)
     return 0.0
 
 
+def _tokenize_terms(text: str) -> set[str]:
+    return {
+        token
+        for token in _TOKEN_RE.findall((text or "").lower())
+        if len(token) >= 4 and token not in _TOKEN_STOPWORDS
+    }
+
+
 def _last_thread_day(thread_entries: list[dict[str, Any]]) -> int | None:
-    """Return the highest day value seen across all entries in a thread."""
     days = [
         _safe_int((e.get("entry") or {}).get("day"))
         for e in thread_entries
@@ -321,8 +358,6 @@ def _last_thread_day(thread_entries: list[dict[str, Any]]) -> int | None:
     ]
     return max(days) if days else None
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _is_confident(item: dict[str, Any]) -> bool:
     anchor = str(item.get("anchor") or "").strip()
@@ -336,17 +371,14 @@ def _is_unclassified(item: dict[str, Any]) -> bool:
 
 
 def _phrase_present(text: str, phrase: str) -> bool:
-    """Check if ``phrase`` appears as a whole word/phrase in ``text``."""
     return bool(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", text))
 
 
 def _anchor_threshold_for(anchor: str) -> float:
-    """Return the minimum score threshold for ``anchor``.
-
-    Imported lazily to avoid circular imports with simulation_continuity.
-    """
     from sakhi.apps.api.services.continuity.taxonomy import SIMULATION_CONTINUITY_TAXONOMY
-    from sakhi.apps.api.services.continuity.thresholds import SIMULATION_CONTINUITY_THRESHOLD_PROFILE
+    from sakhi.apps.api.services.continuity.thresholds import (
+        SIMULATION_CONTINUITY_THRESHOLD_PROFILE,
+    )
 
     base = SIMULATION_CONTINUITY_THRESHOLD_PROFILE.anchor_min_score
     override = SIMULATION_CONTINUITY_TAXONOMY.anchor_min_score(anchor)

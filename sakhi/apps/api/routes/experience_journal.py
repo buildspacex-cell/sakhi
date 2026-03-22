@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException, Request
 
+from sakhi.apps.api.core.person_utils import resolve_journal_owner_ids
 from sakhi.apps.api.core.db import exec as dbexec
 from sakhi.apps.api.core.db import q
 from sakhi.apps.api.ingest.extractor import extract
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 async def _insert_journal_entry(person_id: str, text: str, layer: str, ts: dt.datetime, entry_id: str) -> None:
+    owner_person_id, owner_user_id = await resolve_journal_owner_ids(person_id)
     storage = build_journal_storage_payload(person_id, text)
     # IMPORTANT:
     # ts = when the experience happened (lived time)
@@ -31,13 +33,14 @@ async def _insert_journal_entry(person_id: str, text: str, layer: str, ts: dt.da
     await dbexec(
         """
         INSERT INTO journal_entries (
-            id, user_id, content, raw, raw_encrypted, layer, ts, created_at, updated_at
+            id, person_id, user_id, content, raw, raw_encrypted, layer, ts, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
         ON CONFLICT (id) DO NOTHING
         """,
         entry_id,
-        person_id,
+        owner_person_id or person_id,
+        owner_user_id or person_id,
         storage.content,
         storage.raw,
         storage.raw_encrypted,

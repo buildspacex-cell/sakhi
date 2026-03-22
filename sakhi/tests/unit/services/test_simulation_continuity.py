@@ -203,8 +203,8 @@ def test_compile_simulation_continuity_derives_topics_from_entry_text():
 
     assert compiled["version"] == 2
     assert compiled["taxonomy_version"] == "2026.03.03"
-    assert compiled["compiler_version"] == "2026.03.18.1"
-    assert compiled["threshold_profile_version"] == "2026.03.18.1"
+    assert compiled["compiler_version"] == "2026.03.22.1"
+    assert compiled["threshold_profile_version"] == "2026.03.22.1"
     assert isinstance(compiled["inputs_hash"], str)
     anchors = [topic["anchor"] for topic in compiled["topics"]]
     assert "career" in anchors
@@ -213,6 +213,8 @@ def test_compile_simulation_continuity_derives_topics_from_entry_text():
     career_topic = next(topic for topic in compiled["topics"] if topic["anchor"] == "career")
     assert career_topic["selected_count"] == 3
     assert career_topic["primary_selected_count"] == 3
+    assert career_topic["attached_selected_count"] == 0
+    assert career_topic["effective_selected_count"] == 3
     assert career_topic["related_selected_count"] == 0
     assert career_topic["entry_days"] == [1, 5, 9]
     assert career_topic["arc"]["features"]["direction"] in {"rising", "flat"}
@@ -351,6 +353,74 @@ def test_compile_simulation_continuity_blocks_surfacing_for_low_signal_fallback(
     assert compiled["topics"][0]["surface"]["detail_allowed"] is False
 
 
+def test_compile_simulation_continuity_allows_detail_for_deep_coherent_attached_thread():
+    compiled = compile_simulation_continuity(
+        persona_id="vidhya",
+        entries=[
+            {
+                "day": 1,
+                "timestamp": "2026-01-01T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "hey sakhi, we are launching the Sakhi product MVP soon",
+            },
+            {
+                "day": 2,
+                "timestamp": "2026-01-02T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "the app launch feels real now",
+            },
+            {
+                "day": 3,
+                "timestamp": "2026-01-03T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "this screen in the app is finally showing the topic thread",
+            },
+            {
+                "day": 4,
+                "timestamp": "2026-01-04T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "Sakhi deep reflect should connect the whole story of the product",
+            },
+            {
+                "day": 5,
+                "timestamp": "2026-01-05T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "users may still think it is another chat app",
+            },
+            {
+                "day": 6,
+                "timestamp": "2026-01-06T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "the Sakhi launch with the core group gave the app more confidence",
+            },
+            {
+                "day": 7,
+                "timestamp": "2026-01-07T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "this product finally feels like continuity instead of isolated chats",
+            },
+            {
+                "day": 8,
+                "timestamp": "2026-01-08T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "the screen and the app both need to hold the narrative together",
+            },
+            {
+                "day": 9,
+                "timestamp": "2026-01-09T08:00:00+00:00",
+                "time_of_day": "morning",
+                "content": "Sakhi still needs the app and topic thread to feel intentional",
+            },
+        ],
+    )
+
+    sakhi_topic = next(topic for topic in compiled["topics"] if topic["anchor"] == "sakhi")
+    assert sakhi_topic["effective_selected_count"] >= 8
+    assert sakhi_topic["primary_selected_count"] >= 3
+    assert sakhi_topic["surface"]["mirror_allowed"] is True
+    assert sakhi_topic["surface"]["detail_allowed"] is True
+
+
 def test_compile_simulation_continuity_projects_shared_moments_into_related_topics():
     compiled = compile_simulation_continuity(
         persona_id="vidhya",
@@ -384,8 +454,12 @@ def test_compile_simulation_continuity_projects_shared_moments_into_related_topi
     family_topic = next(topic for topic in compiled["topics"] if topic["anchor"] == "family")
 
     assert sakhi_topic["primary_selected_count"] == 3
+    assert sakhi_topic["attached_selected_count"] == 0
+    assert sakhi_topic["effective_selected_count"] == 3
     assert sakhi_topic["related_selected_count"] == 0
     assert family_topic["primary_selected_count"] == 0
+    assert family_topic["attached_selected_count"] == 0
+    assert family_topic["effective_selected_count"] == 0
     assert family_topic["related_selected_count"] == 3
 
     first_key = "1|2026-01-01T08:00:00+00:00"

@@ -306,11 +306,17 @@ def _build_history_compact(
     arc = topic.get("arc") or {}
     phases = arc.get("phases") or []
     span_days = float(arc.get("span_days") or 0.0)
-    element_count = int(arc.get("element_count") or len(included_moments))
+    element_count = int(
+        topic.get("effective_selected_count")
+        or arc.get("element_count")
+        or len(included_moments)
+    )
     phase_count = int(arc.get("phase_count") or len(phases))
     return {
         "span_days": round(span_days, 2),
         "element_count": element_count,
+        "strict_element_count": int(topic.get("primary_selected_count") or 0),
+        "attached_element_count": int(topic.get("attached_selected_count") or 0),
         "phase_count": phase_count,
         "phase_path": _build_phase_path(phases, limit=4),
         "anchor_points": _build_history_anchors(included_moments, limit=3),

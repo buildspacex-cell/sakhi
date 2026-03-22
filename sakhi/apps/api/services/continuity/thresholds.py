@@ -20,11 +20,15 @@ class ContinuityThresholdProfile:
     max_facets_per_entry: int
     max_related_anchors_per_entry: int
     related_anchor_min_score_ratio: float
+    attached_anchor_membership_weight: float
     related_anchor_membership_weight: float
     unknown_if_ambiguous: bool
     coherence_min: float
     surface_mirror_min: float
     surface_detail_min: float
+    surface_mirror_effective_min: int
+    surface_detail_effective_min: int
+    surface_detail_primary_min: int
 
 
 @dataclass(frozen=True)
@@ -53,7 +57,7 @@ class CrossTopicContinuityThresholdProfile:
 
 
 SIMULATION_CONTINUITY_THRESHOLD_PROFILE = ContinuityThresholdProfile(
-    version="2026.03.18.1",
+    version="2026.03.22.1",
     anchor_min_score=1.0,
     anchor_margin_min=0.55,
     facet_min_score=0.7,
@@ -61,16 +65,20 @@ SIMULATION_CONTINUITY_THRESHOLD_PROFILE = ContinuityThresholdProfile(
     max_facets_per_entry=1,
     max_related_anchors_per_entry=1,
     related_anchor_min_score_ratio=0.55,
+    attached_anchor_membership_weight=0.88,
     related_anchor_membership_weight=0.72,
     unknown_if_ambiguous=True,
     coherence_min=0.5,
     surface_mirror_min=0.52,
     surface_detail_min=0.72,
+    surface_mirror_effective_min=6,
+    surface_detail_effective_min=8,
+    surface_detail_primary_min=3,
 )
 
 
 CONTINUITY_CROSS_TOPIC_THRESHOLD_PROFILE = CrossTopicContinuityThresholdProfile(
-    version="2026.03.18.1",
+    version="2026.03.22.1",
     max_candidate_topics=3,
     max_topic_keys=3,
     correlation_cache_ttl_hours=6,

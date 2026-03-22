@@ -5,6 +5,7 @@ from typing import Any, Dict
 import logging
 
 from sakhi.apps.api.core.db import get_db
+from sakhi.apps.api.core.person_utils import resolve_journal_owner_ids
 from sakhi.libs.security.journal_crypto import build_journal_storage_payload
 
 LOGGER = logging.getLogger(__name__)
@@ -28,6 +29,9 @@ async def observe_entry(
     experience_ts = created_at or None
     lifecycle_ts = None
     try:
+        owner_person_id, owner_user_id = await resolve_journal_owner_ids(person_id)
+        owner_person_id = owner_person_id or person_id
+        owner_user_id = owner_user_id or person_id
         storage = build_journal_storage_payload(person_id, text)
         await db.execute(
             """
@@ -36,7 +40,7 @@ async def observe_entry(
             -- created_at / updated_at = database lifecycle only
             -- Episodic memory and all downstream reasoning depend on ts.
             INSERT INTO journal_entries (
-                id, user_id, content, raw, raw_encrypted, source_ref, layer, ts, created_at, updated_at
+                id, person_id, user_id, content, raw, raw_encrypted, source_ref, layer, ts, created_at, updated_at
             )
             VALUES (
                 $1,
@@ -44,18 +48,20 @@ async def observe_entry(
                 $3,
                 $4,
                 $5,
+                $6,
                 jsonb_build_object(
-                    'source', $6::text,
-                    'clarity', $7::text
+                    'source', $7::text,
+                    'clarity', $8::text
                 ),
                 'journal',
-                COALESCE($8, NOW()),
+                COALESCE($9, NOW()),
                 NOW(),
                 NOW()
             )
             """,
             entry_id,
-            person_id,
+            owner_person_id,
+            owner_user_id,
             storage.content,
             storage.raw,
             storage.raw_encrypted,
