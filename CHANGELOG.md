@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Web `/story` GSAP cinematic narrative route** — `apps/web/app/(marketing)/story/page.tsx` now serves a full-screen GSAP timeline experience with stacked scenes (`Scene1Chaos` → `Scene6Close`) for the public investor narrative
+- **Web `/story-scroll` preserved narrative route** — the prior scroll-driven story has been retained at `apps/web/app/(marketing)/story-scroll/page.tsx` via `LegacyStoryPage`, so the repo now keeps both the new timeline runtime and the earlier scroll narrative without route collision
+- **Demo roadmap app + narrative layer** — roadmap content now lives in the content-only `@sakhi/narrative` package, with the active MVP presentation now consolidated onto the password-protected web `/mvp` route instead of split across duplicate shells
 - **Governance kernel (kala)** — pure-computation governance with constraint evaluation (11 operators), drift gating, contradiction detection (5 categories), objective versioning, and 552 tests
 - **Kala–Sakhi integration** — GovernanceGate wired into conversation pipeline via `services/governance/service.py`
 - **Continuity Arc surface (chat + API)** — policy-gated continuity topics/arcs, per-source exclusions, and deep reflection run/status/result endpoints under `/continuity/*`
@@ -32,9 +35,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker worker service** — `Dockerfile.worker` for Railway worker deployment
 - Session memory for Claude (`.claude/MEMORY.md`, `.claude/CURRENT_TASK.md`)
 - Quick task shortcuts, pre-commit hooks, code generators, feature flags, dev status dashboard
-- **Protected MVP presentation route (web)** — the release deck can now be served from the Vercel web app at `/mvp-release` behind a shared password gate (`MVP_PRESENTATION_PASSWORD`), with the existing HTML deck and assets delivered through protected web routes
+- **Protected MVP presentation route (web)** — the release deck can now be served from the Vercel web app at `/mvp-release` behind a shared password gate, with the existing HTML deck and assets delivered through protected web routes
 
 ### Changed
+- **Web `/story` continuity scene now turns noise into occupancy, then zooms into the startup arc** — the post-`Start shaping` scene in `apps/web/components/story/Scene4Continuity.tsx` now reintroduces full-screen life noise, pulls it inward through Sakhi, resolves into a reflection-style life-occupancy board, and then zooms into the `Start up` bubble to reveal a vertical zig-zag continuity arc before the continuity copy lands
+- **Web `/story` now extends the post-product promise with Sakhi's own voice** — the GSAP cinematic route now inserts a dedicated vision beat after the app walkthrough, carrying forward `Sakhi makes your life seen, understood, and actionable.` into a direct first-person sequence (`I see you.`, `I understand you.`, `I act for you.`) before the founder chapters begin
+- **Web `/story` founder close now reads as a continuity spine** — the lived-experience section in `apps/web/components/story/Scene6Close.tsx` now uses a broad straight-line continuity rail with stacked founder chapter titles revealing one-by-one instead of isolated boxed cards
+- **Web `/story` Ravi chapter now reads as a continuity spine** — the Ravi origin section in `apps/web/components/story/Scene7Close.tsx` now uses a four-step continuity rail (`Evolution` → `Realization` → `Expansion` → `Convergence`) with sequential reveals instead of the prior split-group card flow
+- **Web `/story` founder origin chapter** — the GSAP cinematic narrative now includes a dedicated founder-story scene using the Vidhya portrait and an operator-to-lived-experience arc before the final selection CTA
+- **Web `/story` playback controls** — the GSAP cinematic route now includes pause/resume and restart controls so the investor narrative can be stopped, resumed, or replayed without reloading the page
+- **Presentation surface consolidation** — the canonical public story now lives on web `/story` as the GSAP full-screen cinematic runtime, the previous scroll version moved to `/story-scroll`, the protected roadmap stays on web `/mvp`, and `apps/demo/app/page.tsx` remains parked so the repo no longer carries a second live presentation runtime
+- **MVP presentation surface consolidation** — the standalone demo `/mvp` route is retired, `apps/demo/` now opens on a parked handoff page, and all roadmap/cinematic iteration is expected to happen on the web `/mvp` implementation only
 - **Normal chat MVP prompt** — the live `/v2/turn` system prompt now uses a lean continuity-first instruction set with explicit help/guide/probe modes, sharper one-question probing guidance, and continuity-aware coaching language while removing the old background context-scan block from the normal-chat system prompt
 - **Deep Reflect MVP prompt** — deep reflection now frames the past as a way to clarify the present, with updated topic/cross-context/whole-story response contracts that emphasize longitudinal clarity, linked tradeoffs, and what matters now instead of descriptive retrospective summary
 - **Chat Deep Reflect gating** — in-chat Deep Reflect now unlocks from single-thread depth (`continuity.deep_reflect`) instead of requiring a linked second thread; when cross-topic context is available, the same `whole_story` run weaves it in as an enhancement rather than a hard gate
