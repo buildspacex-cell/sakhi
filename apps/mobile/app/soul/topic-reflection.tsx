@@ -24,6 +24,13 @@ import { useAppHaptics } from "../../lib/feedback/useAppHaptics";
 import { IconButton } from "../../components/ui/IconButton";
 import { LoadingBlock } from "../../components/ui/LoadingBlock";
 
+interface ArcLabels {
+  arc_start_label: string;
+  arc_now_label: string;
+  arc_bridge: string;
+  phase_labels?: string[];
+}
+
 interface ContinuityTopicSummary {
   anchor: string;
   label: string;
@@ -47,6 +54,15 @@ interface ContinuityMoment {
   stance?: string;
 }
 
+interface ArcPhase {
+  index: number;
+  start_ts: string;
+  end_ts: string;
+  start_day: number;
+  end_day: number;
+  element_count: number;
+}
+
 interface ContinuityArcResponse {
   label?: string;
   topic_confidence?: number;
@@ -58,6 +74,7 @@ interface ContinuityArcResponse {
     element_count?: number;
     span_days?: number;
     phase_count?: number;
+    phases?: ArcPhase[];
     features?: {
       direction?: string;
     };
@@ -127,6 +144,19 @@ function formatTopicReflectionResult(payload: Record<string, unknown>): string {
     .join(" ");
 }
 
+function extractArcLabels(payload: Record<string, unknown>): ArcLabels | null {
+  const result = (payload.result as Record<string, unknown> | undefined) || {};
+  const start = String(result.arc_start_label || "").trim();
+  const now = String(result.arc_now_label || "").trim();
+  const bridge = String(result.arc_bridge || "").trim();
+  if (!start && !now) return null;
+  const rawPhaseLabels = Array.isArray(result.phase_labels) ? result.phase_labels : [];
+  const phase_labels = rawPhaseLabels
+    .map((l) => String(l || "").trim())
+    .filter((l) => l.length > 0);
+  return { arc_start_label: start, arc_now_label: now, arc_bridge: bridge, phase_labels };
+}
+
 function buildMomentObservation(moment: ContinuityMoment): string {
   const facet = String(moment.facet || "").trim().replace(/_/g, " ");
   const stance = String(moment.stance || "").trim().toLowerCase();
@@ -141,6 +171,241 @@ function buildMomentObservation(moment: ContinuityMoment): string {
     return "Sakhi noticed a pull away from this direction.";
   }
   return "Sakhi noticed this added important context to your ongoing story.";
+}
+
+interface ArcScrollViewProps {
+  moments: ContinuityMoment[];
+  phases: ArcPhase[];
+  arcLabels: ArcLabels | null;
+  arcLabelsLoading: boolean;
+  topicLabel: string;
+  spanDays: number;
+  onMomentPress: (moment: ContinuityMoment) => void;
+}
+
+function phaseLabel(index: number, total: number): string {
+  const labels: Record<number, string[]> = {
+    2: ["Earlier", "Recent"],
+    3: ["Early", "Building", "Now"],
+    4: ["Early", "Middle", "Later", "Now"],
+  };
+  return labels[total]?.[index] ?? `Phase ${index + 1}`;
+}
+
+function shortDateRange(startTs?: string, endTs?: string): string {
+  const start = startTs ? new Date(startTs).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+  const end = endTs ? new Date(endTs).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+  if (!start) return "";
+  if (!end || start === end) return start;
+  return `${start} – ${end}`;
+}
+
+function assignMomentsToPhases(
+  moments: ContinuityMoment[],
+  phases: ArcPhase[],
+): Map<number, ContinuityMoment[]> {
+  const map = new Map<number, ContinuityMoment[]>();
+  for (const phase of phases) {
+    map.set(phase.index, []);
+  }
+  for (const moment of moments) {
+    if (!moment.ts) continue;
+    const ts = new Date(moment.ts).getTime();
+    let assigned = false;
+    for (const phase of phases) {
+      const start = new Date(phase.start_ts).getTime();
+      const end = new Date(phase.end_ts).getTime();
+      if (ts >= start && ts <= end) {
+        map.get(phase.index)?.push(moment);
+        assigned = true;
+        break;
+      }
+    }
+    // Overflow into last phase if timestamp falls outside all phase windows
+    if (!assigned && phases.length > 0) {
+      map.get(phases[phases.length - 1].index)?.push(moment);
+    }
+  }
+  return map;
+}
+
+function ArcScrollView({
+  moments,
+  phases,
+  arcLabels,
+  arcLabelsLoading,
+  topicLabel,
+  spanDays,
+  onMomentPress,
+}: ArcScrollViewProps) {
+  const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
+
+  const momentCount = moments.length;
+  const spanLabel = spanDays >= 365
+    ? `${Math.round(spanDays / 30)} months`
+    : spanDays > 0
+      ? `${Math.round(spanDays)} days`
+      : "";
+
+  const startLabel = arcLabels?.arc_start_label
+    || (arcLabelsLoading ? "" : `${topicLabel} thread began`);
+  const nowLabel = arcLabels?.arc_now_label
+    || (arcLabelsLoading ? "" : `${momentCount} moments captured`);
+  const bridgeLabel = arcLabels?.arc_bridge || "";
+
+  const hasPhasesData = phases.length >= 2;
+  const momentsByPhase = useMemo(
+    () => hasPhasesData ? assignMomentsToPhases(moments, phases) : new Map<number, ContinuityMoment[]>(),
+    [hasPhasesData, moments, phases],
+  );
+
+  const togglePhase = (index: number) => {
+    setExpandedPhase((prev) => prev === index ? null : index);
+  };
+
+  const renderMomentCard = (moment: ContinuityMoment, index: number) => {
+    const snippet = String(moment.short_snippet || "Moment").trim();
+    return (
+      <Pressable
+        key={`arc-moment-${moment.source_ref || index}`}
+        style={arcStyles.arcMomentCard}
+        onPress={() => onMomentPress(moment)}
+      >
+        <View style={arcStyles.arcMomentHeader}>
+          <Text style={arcStyles.arcMomentIndex}>Moment {index + 1}</Text>
+          <Text style={arcStyles.arcMomentDate}>{shortDate(moment.ts) || "Undated"}</Text>
+        </View>
+        <Text numberOfLines={3} style={arcStyles.arcMomentSnippet}>{snippet}</Text>
+        <Text style={arcStyles.arcMomentFacet}>
+          {(moment.facet || moment.stance || "thread").toString().replace(/_/g, " ")}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={arcStyles.container}>
+      {/* START node */}
+      <View style={arcStyles.node}>
+        <View style={arcStyles.nodeMarker}>
+          <View style={arcStyles.nodeDot} />
+        </View>
+        <View style={arcStyles.nodeContent}>
+          <Text style={arcStyles.nodeKicker}>WHERE IT BEGAN</Text>
+          {arcLabelsLoading && !arcLabels ? (
+            <View style={arcStyles.skeletonLine} />
+          ) : (
+            <Text style={arcStyles.nodeLabel}>{startLabel}</Text>
+          )}
+        </View>
+      </View>
+
+      {hasPhasesData ? (
+        // Phase-segmented connector — each phase is a named, expandable block
+        phases.map((phase, phaseIdx) => {
+          const phaseMoments = momentsByPhase.get(phase.index) || [];
+          const label = arcLabels?.phase_labels?.[phase.index] || phaseLabel(phase.index, phases.length);
+          const dateRange = shortDateRange(phase.start_ts, phase.end_ts);
+          const isLast = phaseIdx === phases.length - 1;
+          const isExpanded = expandedPhase === phase.index;
+
+          return (
+            <View key={`phase-${phase.index}`} style={[arcStyles.connectorColumn, { marginLeft: 10 }]}>
+              <View style={arcStyles.connectorLine} />
+              <Pressable
+                style={[arcStyles.countPill, isLast && arcStyles.countPillLast]}
+                onPress={() => togglePhase(phase.index)}
+              >
+                <View style={arcStyles.countPillInner}>
+                  <Text style={[arcStyles.phaseLabel, isLast && arcStyles.phaseLabelAccent]}>
+                    {label}
+                  </Text>
+                  <Text style={arcStyles.countPillCount}>
+                    · {phaseMoments.length} {phaseMoments.length === 1 ? "moment" : "moments"}
+                  </Text>
+                  {dateRange ? (
+                    <Text style={arcStyles.countPillSpan}>{dateRange}</Text>
+                  ) : null}
+                  <View style={arcStyles.countPillChevron}>
+                    <Ionicons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={11}
+                      color={arcPalette.accentText}
+                    />
+                  </View>
+                </View>
+                {isLast && bridgeLabel ? (
+                  <Text style={arcStyles.bridgeText}>{bridgeLabel}</Text>
+                ) : null}
+              </Pressable>
+              {isExpanded ? (
+                phaseMoments.length > 0 ? (
+                  <View style={arcStyles.expandedMoments}>
+                    {phaseMoments.map((moment, index) => renderMomentCard(moment, index))}
+                  </View>
+                ) : (
+                  <Text style={arcStyles.noMomentsHint}>No moments in this phase yet.</Text>
+                )
+              ) : null}
+            </View>
+          );
+        })
+      ) : (
+        // Fallback: flat connector when no phase data
+        <View style={[arcStyles.connectorColumn, { marginLeft: 10 }]}>
+          <View style={arcStyles.connectorLine} />
+          <Pressable style={arcStyles.countPill} onPress={() => togglePhase(-1)}>
+            <View style={arcStyles.countPillInner}>
+              <Text style={arcStyles.countPillCount}>
+                {momentCount} {momentCount === 1 ? "moment" : "moments"}
+              </Text>
+              {spanLabel ? (
+                <Text style={arcStyles.countPillSpan}>across {spanLabel}</Text>
+              ) : null}
+              <View style={arcStyles.countPillChevron}>
+                <Ionicons
+                  name={expandedPhase === -1 ? "chevron-up" : "chevron-down"}
+                  size={11}
+                  color={arcPalette.accentText}
+                />
+              </View>
+            </View>
+            {bridgeLabel ? (
+              <Text style={arcStyles.bridgeText}>{bridgeLabel}</Text>
+            ) : null}
+          </Pressable>
+          {expandedPhase === -1 ? (
+            <View style={arcStyles.expandedMoments}>
+              {moments.map((moment, index) => renderMomentCard(moment, index))}
+            </View>
+          ) : null}
+          <View style={arcStyles.connectorLine} />
+        </View>
+      )}
+
+      {/* Final connector into NOW node (phases path only — fallback already includes bottom line) */}
+      {hasPhasesData ? (
+        <View style={[arcStyles.connectorColumn, { marginLeft: 10 }]}>
+          <View style={arcStyles.connectorLine} />
+        </View>
+      ) : null}
+
+      {/* NOW node */}
+      <View style={arcStyles.node}>
+        <View style={arcStyles.nodeMarker}>
+          <View style={[arcStyles.nodeDot, arcStyles.nodeDotAccent]} />
+        </View>
+        <View style={arcStyles.nodeContent}>
+          <Text style={arcStyles.nodeKicker}>WHERE YOU ARE NOW</Text>
+          {arcLabelsLoading && !arcLabels ? (
+            <View style={arcStyles.skeletonLine} />
+          ) : (
+            <Text style={arcStyles.nodeLabel}>{nowLabel}</Text>
+          )}
+        </View>
+      </View>
+    </View>
+  );
 }
 
 export default function TopicReflectionScreen() {
@@ -164,6 +429,7 @@ export default function TopicReflectionScreen() {
   const [, setDeepReflectStatus] = useState("");
   const [deepReflectText, setDeepReflectText] = useState("");
   const [deepReflectError, setDeepReflectError] = useState("");
+  const [arcLabels, setArcLabels] = useState<ArcLabels | null>(null);
   const [meStoryLoading, setMeStoryLoading] = useState(false);
   const [, setMeStoryStatus] = useState("");
   const [meStoryText, setMeStoryText] = useState("");
@@ -308,8 +574,8 @@ export default function TopicReflectionScreen() {
   }, [authToken, emitDebugEvent, personId]);
 
   const pollTopicReflection = useCallback(
-    async (reflectionId: string, person: string): Promise<string | null> => {
-      const fetchResult = async (): Promise<string | null> => {
+    async (reflectionId: string, person: string): Promise<{ text: string | null; arcLabels: ArcLabels | null }> => {
+      const fetchResult = async (): Promise<{ text: string | null; arcLabels: ArcLabels | null } | null> => {
         const params = new URLSearchParams({
           id: reflectionId,
           person_id: person,
@@ -322,7 +588,10 @@ export default function TopicReflectionScreen() {
         if (!resultRes.ok) return null;
         const resultData = (await resultRes.json()) as Record<string, unknown>;
         if (String(resultData.status || "queued") !== "done") return null;
-        return formatTopicReflectionResult(resultData);
+        return {
+          text: formatTopicReflectionResult(resultData),
+          arcLabels: extractArcLabels(resultData),
+        };
       };
 
       for (let attempt = 0; attempt < REFLECT_POLL_MAX_ATTEMPTS; attempt += 1) {
@@ -342,10 +611,10 @@ export default function TopicReflectionScreen() {
           setDeepReflectStatus(status);
 
           if (status === "done") {
-            return await fetchResult();
+            return (await fetchResult()) ?? { text: null, arcLabels: null };
           }
           if (status === "failed") {
-            return null;
+            return { text: null, arcLabels: null };
           }
 
           if (attempt % 3 === 0) {
@@ -361,9 +630,9 @@ export default function TopicReflectionScreen() {
       }
 
       try {
-        return await fetchResult();
+        return (await fetchResult()) ?? { text: null, arcLabels: null };
       } catch {
-        return null;
+        return { text: null, arcLabels: null };
       }
     },
     [authToken],
@@ -430,13 +699,14 @@ export default function TopicReflectionScreen() {
         throw new Error("Deep Reflect response missing reflection id");
       }
 
-      const deepText = await pollTopicReflection(reflectionId, personId);
+      const { text: deepText, arcLabels: labels } = await pollTopicReflection(reflectionId, personId);
       if (deepText) {
         Analytics.topicStoryCompleted({
           latency_ms: Date.now() - requestStartedAt,
           request_id: res.headers.get("x-request-id") || undefined,
         });
         setDeepReflectText(deepText);
+        if (labels) setArcLabels(labels);
       } else {
         emitDebugEvent({
           type: "ui_error",
@@ -475,6 +745,9 @@ export default function TopicReflectionScreen() {
         metadata: { anchor },
       });
       setSelectedAnchor(anchor);
+      setArcLabels(null);
+      setDeepReflectText("");
+      setDeepReflectError("");
       setThreadOpen(true);
       threadZoom.setValue(0);
       Animated.spring(threadZoom, {
@@ -815,7 +1088,7 @@ export default function TopicReflectionScreen() {
         throw new Error("My Story response missing reflection id");
       }
 
-      const storyText = await pollTopicReflection(reflectionId, personId);
+      const { text: storyText } = await pollTopicReflection(reflectionId, personId);
       if (storyText) {
         Analytics.meStoryCompleted({
           topic_count: myStoryTopicKeys.length,
@@ -1009,102 +1282,26 @@ export default function TopicReflectionScreen() {
               <View style={styles.glassCard}>
                 <View style={styles.arcHeader}>
                   <View>
-                    <Text style={styles.cardTitle}>Moments</Text>
-                    <Text style={styles.cardSubtitle}>Tap a moment to open the full snapshot.</Text>
+                    <Text style={styles.cardTitle}>Continuity Arc</Text>
+                    <Text style={styles.cardSubtitle}>
+                      {moments.length > 0
+                        ? "Tap the moments callout to explore. Run Topic Story for insight labels."
+                        : "No moments yet for this thread."}
+                    </Text>
                   </View>
                   {loadingArc && <ActivityIndicator size="small" color={palette.muted} />}
                 </View>
 
-                {!loadingArc && moments.length === 0 ? (
-                  <Text style={styles.emptyText}>No moments yet for this thread.</Text>
-                ) : (
-                  <>
-                    <View style={styles.momentLaneHeader}>
-                      <View style={styles.monthReflectorPill}>
-                        <Text style={styles.monthReflectorText}>
-                          {momentDensity === "atlas" ? "Timeline by month" : activeMomentMonth}
-                        </Text>
-                      </View>
-                      <Text style={styles.momentLaneHint}>
-                        {momentDensity === "atlas" ? "Scroll memories" : "Swipe memories"}
-                      </Text>
-                    </View>
-
-                    {momentDensity === "atlas" ? (
-                      <View style={styles.atlasList}>
-                        {monthGroups.map((group, groupIndex) => (
-                          <View key={`month-group-${group.month}-${groupIndex}`} style={styles.monthBlock}>
-                            <View style={styles.monthStickyWrap}>
-                              <Text style={styles.monthStickyText}>{group.month}</Text>
-                            </View>
-                            <View style={styles.photoGrid}>
-                              {group.items.map((moment, itemIndex) => {
-                                const snippet = String(moment.short_snippet || "Moment").trim();
-                                return (
-                                  <Pressable
-                                    key={`${group.month}-${moment.source_ref || "moment"}-${itemIndex}`}
-                                    style={styles.photoCard}
-                                    onPress={() => openMoment(moment)}
-                                  >
-                                    <Text style={styles.photoDate}>{shortDate(moment.ts) || "Undated"}</Text>
-                                    <Text numberOfLines={3} style={styles.photoText}>
-                                      {snippet}
-                                    </Text>
-                                  </Pressable>
-                                );
-                              })}
-                            </View>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.momentRow}
-                        decelerationRate="fast"
-                        snapToAlignment="start"
-                        snapToInterval={horizontalSnapInterval}
-                        disableIntervalMomentum
-                        onScroll={handleMomentLaneScroll}
-                        scrollEventThrottle={16}
-                      >
-                        {moments.map((moment, index) => {
-                          const snippet = String(moment.short_snippet || "Moment").trim();
-                          return (
-                            <Pressable
-                              key={`${moment.source_ref || "moment"}-${index}`}
-                              style={[
-                                styles.momentCard,
-                                momentDensity === "flow" && styles.momentCardFlow,
-                                { width: horizontalCardWidth },
-                              ]}
-                              onPress={() => openMoment(moment)}
-                            >
-                              <View style={styles.momentHeaderRow}>
-                                <Text style={styles.momentIndex}>Moment {index + 1}</Text>
-                                <View style={styles.momentDatePill}>
-                                  <Text style={styles.momentDate}>{shortDate(moment.ts) || "Undated"}</Text>
-                                </View>
-                              </View>
-                              <Text
-                                numberOfLines={momentDensity === "flow" ? 4 : 5}
-                                style={[styles.momentTextLeft, momentDensity === "flow" && styles.momentTextFlow]}
-                              >
-                                {snippet}
-                              </Text>
-                              <View style={styles.momentMetaRow}>
-                                <Text style={styles.momentMetaLeft}>
-                                  {(moment.facet || moment.stance || "thread").toString().replace(/_/g, " ")}
-                                </Text>
-                                <Ionicons name="expand-outline" size={15} color={palette.accentText} />
-                              </View>
-                            </Pressable>
-                          );
-                        })}
-                      </ScrollView>
-                    )}
-                  </>
+                {!loadingArc && moments.length === 0 ? null : (
+                  <ArcScrollView
+                    moments={moments}
+                    phases={arc?.arc?.phases || []}
+                    arcLabels={arcLabels}
+                    arcLabelsLoading={deepReflectLoading}
+                    topicLabel={threadLabel}
+                    spanDays={toFiniteNumber(arc?.arc?.span_days, 0)}
+                    onMomentPress={openMoment}
+                  />
                 )}
               </View>
 
@@ -1607,5 +1804,181 @@ const styles = StyleSheet.create({
     color: palette.fg,
     fontSize: 13,
     fontWeight: "600",
+  },
+});
+
+const arcPalette = {
+  fg: theme.colors.text,
+  muted: theme.colors.textMuted,
+  border: theme.colors.border,
+  borderStrong: theme.colors.borderStrong,
+  surface: theme.colors.surfaceMuted,
+  accent: theme.colors.accent,
+  accentText: theme.colors.accentText,
+  accentSoft: theme.colors.accentSoft,
+};
+
+const arcStyles = StyleSheet.create({
+  container: {
+    marginTop: 16,
+    paddingHorizontal: 4,
+  },
+  node: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  nodeMarker: {
+    width: 20,
+    alignItems: "center",
+    paddingTop: 3,
+  },
+  nodeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: arcPalette.muted,
+    borderWidth: 2,
+    borderColor: arcPalette.border,
+  },
+  nodeDotAccent: {
+    backgroundColor: arcPalette.accent,
+    borderColor: arcPalette.accentSoft,
+  },
+  nodeContent: {
+    flex: 1,
+    paddingBottom: 4,
+  },
+  nodeKicker: {
+    color: arcPalette.muted,
+    fontSize: 10,
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  nodeLabel: {
+    color: arcPalette.fg,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+  },
+  skeletonLine: {
+    height: 14,
+    width: "75%",
+    borderRadius: 6,
+    backgroundColor: arcPalette.surface,
+    marginTop: 2,
+  },
+  connectorColumn: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 0,
+  },
+  connectorLine: {
+    width: 1,
+    height: 18,
+    backgroundColor: arcPalette.border,
+    alignSelf: "flex-start",
+  },
+  countPill: {
+    alignSelf: "stretch",
+    marginHorizontal: 0,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: arcPalette.borderStrong,
+    backgroundColor: arcPalette.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginVertical: 4,
+  },
+  countPillInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  countPillCount: {
+    color: arcPalette.accentText,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  countPillSpan: {
+    color: arcPalette.muted,
+    fontSize: 12,
+    flex: 1,
+  },
+  countPillChevron: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: arcPalette.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countPillLast: {
+    borderColor: arcPalette.accent,
+    backgroundColor: arcPalette.accentSoft,
+  },
+  phaseLabel: {
+    color: arcPalette.fg,
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.1,
+  },
+  phaseLabelAccent: {
+    color: arcPalette.accentText,
+  },
+  noMomentsHint: {
+    color: arcPalette.muted,
+    fontSize: 12,
+    fontStyle: "italic",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  bridgeText: {
+    color: arcPalette.muted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 6,
+    fontStyle: "italic",
+  },
+  expandedMoments: {
+    gap: 8,
+    paddingVertical: 8,
+    width: "100%",
+  },
+  arcMomentCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: arcPalette.borderStrong,
+    backgroundColor: arcPalette.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  arcMomentHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  arcMomentIndex: {
+    color: arcPalette.muted,
+    fontSize: 11,
+    letterSpacing: 0.3,
+  },
+  arcMomentDate: {
+    color: arcPalette.accentText,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  arcMomentSnippet: {
+    color: arcPalette.fg,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  arcMomentFacet: {
+    color: arcPalette.muted,
+    fontSize: 11,
+    textTransform: "capitalize",
   },
 });

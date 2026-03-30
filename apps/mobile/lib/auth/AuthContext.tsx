@@ -6,7 +6,12 @@ import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import { supabase } from "../supabase";
 import { config } from "../config";
-import { clearLegacyPersonIdCache, readCachedPersonId, writeCachedPersonId } from "./personCache";
+import {
+  clearCachedPersonId,
+  clearLegacyPersonIdCache,
+  readCachedPersonId,
+  writeCachedPersonId,
+} from "./personCache";
 
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -40,6 +45,12 @@ interface AuthContextType {
   signInWithEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  hydrateLinkedProfile: (profile: {
+    personId: string;
+    email?: string;
+    fullName?: string | null;
+    avatarUrl?: string | null;
+  }, options?: { supabaseUserId?: string }) => Promise<void>;
   clearAuthExitIntent: () => void;
 }
 
@@ -118,6 +129,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return undefined;
     }
   }, []);
+
+  const hydrateLinkedProfile = useCallback(async (
+    profile: {
+      personId: string;
+      email?: string;
+      fullName?: string | null;
+      avatarUrl?: string | null;
+    },
+    options?: { supabaseUserId?: string },
+  ): Promise<void> => {
+    const personId = String(profile.personId || "").trim();
+    if (!personId) return;
+
+    const supabaseUserId = String(
+      options?.supabaseUserId || user?.id || session?.user?.id || "",
+    ).trim();
+
+    if (supabaseUserId) {
+      await writeCachedPersonId(supabaseUserId, personId);
+    }
+
+    setUser((prev) => {
+      const base: AuthUser = prev || {
+        id: supabaseUserId || personId,
+        email: String(profile.email || ""),
+      };
+
+      return {
+        ...base,
+        email: String(profile.email || base.email || ""),
+        fullName: profile.fullName ?? base.fullName,
+        avatarUrl: profile.avatarUrl ?? base.avatarUrl,
+        personId,
+      };
+    });
+    setAuthExitIntent("none");
+  }, [session?.user?.id, user?.id]);
 
   // Initialize auth state — onAuthStateChange is the single source of truth.
   // Supabase fires INITIAL_SESSION immediately when subscribed (handles cached
@@ -300,18 +348,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sign out
   const signOut = useCallback(async () => {
     if (isBypassActive) {
+      setUser(null);
+      setSession(null);
+      setAuthExitIntent("signed_out");
       return;
     }
+
+    const supabaseUserId = String(session?.user?.id || user?.id || "").trim();
     intentionalSignOutRef.current = true;
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      intentionalSignOutRef.current = false;
-      throw error;
+
+    // Fire-and-forget — scope:"local" only clears local storage; we don't need
+    // to await it. Waiting can block on network or onAuthStateChange handlers,
+    // leaving the button stuck at "Signing out…" indefinitely.
+    supabase.auth.signOut({ scope: "local" }).catch((err) => {
+      console.warn("[auth] sign-out threw unexpectedly", err);
+    });
+
+    if (supabaseUserId) {
+      try {
+        await clearCachedPersonId(supabaseUserId);
+      } catch (err) {
+        console.warn("[auth] clearCachedPersonId failed", err);
+      }
     }
+
+    // Always clear local state regardless of network errors above
     setUser(null);
     setSession(null);
-    await clearLegacyPersonIdCache();
-  }, [isBypassActive]);
+    setAuthExitIntent("signed_out");
+
+    try {
+      await clearLegacyPersonIdCache();
+    } catch (err) {
+      console.warn("[auth] clearLegacyPersonIdCache failed", err);
+    }
+  }, [isBypassActive, session?.user?.id, user?.id]);
 
   // Refresh session
   const refreshSession = useCallback(async () => {
@@ -332,6 +403,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithEmail,
     signOut,
     refreshSession,
+    hydrateLinkedProfile,
     clearAuthExitIntent: () => setAuthExitIntent("none"),
   };
 

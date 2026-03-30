@@ -51,9 +51,15 @@ export default function SettingsScreen() {
     [user?.personId],
   );
 
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const handleSignOut = async () => {
-    await signOut();
-    router.replace("/" as never);
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   return (
@@ -155,6 +161,8 @@ export default function SettingsScreen() {
             label="Sign out"
             variant="danger"
             onPress={() => void handleSignOut()}
+            busy={isSigningOut}
+            disabled={isSigningOut}
             leftIcon={<Ionicons name="log-out-outline" size={16} color={theme.colors.danger} />}
           />
         </Card>

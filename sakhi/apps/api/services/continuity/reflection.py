@@ -74,6 +74,28 @@ _PRIORITY_DOMAIN_PATTERNS: dict[str, re.Pattern[str]] = {
     "money": re.compile(r"\b(money|budget|cost|debt|runway|funding|salary)\b"),
     "product": re.compile(r"\b(sakhi|product|founder|mvp|build|launch)\b"),
 }
+_ARC_LABEL_SYSTEM = """You generate short visual arc labels for a continuity story view.
+
+Return valid JSON only. No prose, no explanation, no markdown.
+
+Output format:
+{
+  "arc_start_label": "<1 sentence: what the person was actually dealing with at the start>",
+  "arc_now_label": "<1 sentence: where they genuinely are now>",
+  "arc_bridge": "<1-2 sentences: what the journey through the middle looked like>",
+  "phase_labels": ["<2-3 word label for phase 0>", "<2-3 word label for phase 1>", ...]
+}
+
+Rules:
+- Each label must be grounded in the evidence provided — no invented themes
+- Write as an outside observer who knows this person well: warm, direct, specific
+- Avoid generic phrases like "thinking about", "dealing with", "focusing on"
+- arc_start_label and arc_now_label: max 15 words each
+- arc_bridge: max 25 words
+- phase_labels: one entry per phase in order, 2-4 words each, describing what was actually happening in that phase (e.g. "First questions", "Finding the shape", "Building momentum") — not generic ("Early", "Middle", "Now")
+- If no phases are provided, return phase_labels as an empty array
+- Do not use therapy-speak or Ayurvedic jargon"""
+
 _DEEP_REFLECTION_SYSTEM = """You are Sakhi - a friend who gets this person deeply.
 
 Speak naturally, warm and direct. Keep it grounded in the packet evidence.
@@ -588,6 +610,24 @@ async def _enrich_reflection_with_llm(
             "generation_attempts": generation_attempts,
             "generated_at": datetime.now(UTC).isoformat(),
         }
+
+        # Synthesize short arc labels for the visual continuity scroll view
+        arc_labels = await _synthesize_arc_labels(
+            router=router,
+            origin_story=str(deterministic.get("origin_story") or ""),
+            current_stage=str(deterministic.get("current_stage") or ""),
+            key_pivots=list(deterministic.get("key_pivots") or []),
+            evidence_anchors=packet.get("evidence_anchors") or [],
+            topic_label=str(deterministic.get("topic_label") or topic_key),
+            model=model,
+            phases=list((arc_payload.get("arc") or {}).get("phases") or []),
+            included_moments=list(arc_payload.get("included_moments") or []),
+        )
+        result["arc_start_label"] = arc_labels["arc_start_label"]
+        result["arc_now_label"] = arc_labels["arc_now_label"]
+        result["arc_bridge"] = arc_labels["arc_bridge"]
+        result["phase_labels"] = arc_labels["phase_labels"]
+
     except Exception as exc:
         LOGGER.warning(
             "Deep reflection LLM synthesis failed for %s: %s", person_id, exc
@@ -607,6 +647,167 @@ def _get_deep_reflection_router() -> Any | None:
             "Deep reflection router unavailable; deterministic fallback: %s", exc
         )
         return None
+
+
+def _build_phase_summaries(
+    phases: list[dict[str, Any]],
+    included_moments: list[dict[str, Any]],
+) -> list[str]:
+    """Build compact per-phase summaries for the arc label prompt."""
+    if not phases:
+        return []
+
+    # Sort phases by index for consistent ordering
+    sorted_phases = sorted(phases, key=lambda p: int(p.get("index", 0)))
+
+    # Assign moments to phases by timestamp
+    phase_moments: dict[int, list[dict[str, Any]]] = {
+        int(p.get("index", i)): [] for i, p in enumerate(sorted_phases)
+    }
+    for moment in included_moments:
+        ts_str = str(moment.get("ts") or "")
+        if not ts_str:
+            continue
+        try:
+            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            continue
+        for phase in sorted_phases:
+            try:
+                start = datetime.fromisoformat(
+                    str(phase.get("start_ts") or "").replace("Z", "+00:00")
+                ).timestamp()
+                end = datetime.fromisoformat(
+                    str(phase.get("end_ts") or "").replace("Z", "+00:00")
+                ).timestamp()
+            except ValueError:
+                continue
+            if start <= ts <= end:
+                phase_moments[int(phase.get("index", 0))].append(moment)
+                break
+
+    summaries: list[str] = []
+    for phase in sorted_phases:
+        idx = int(phase.get("index", 0))
+        start_ts = str(phase.get("start_ts") or "")
+        end_ts = str(phase.get("end_ts") or "")
+        moments = phase_moments.get(idx, [])
+
+        # Date range
+        try:
+            start_date = datetime.fromisoformat(start_ts.replace("Z", "+00:00")).strftime("%b %-d")
+            end_date = datetime.fromisoformat(end_ts.replace("Z", "+00:00")).strftime("%b %-d")
+            date_range = f"{start_date} – {end_date}" if start_date != end_date else start_date
+        except ValueError:
+            date_range = "unknown dates"
+
+        # Dominant stance
+        stances = [str(m.get("stance") or "") for m in moments if m.get("stance")]
+        toward = stances.count("toward")
+        away = stances.count("away")
+        if toward > away:
+            stance_summary = "moving toward"
+        elif away > toward:
+            stance_summary = "pulling away"
+        else:
+            stance_summary = "mixed movement"
+
+        # Top facets
+        facets = [str(m.get("facet") or "").replace("_", " ") for m in moments if m.get("facet")]
+        top_facets = list(dict.fromkeys(facets))[:2]  # deduplicated, order-preserved
+        facet_text = ", ".join(top_facets) if top_facets else "general"
+
+        # Key snippet from this phase
+        snippets = [str(m.get("short_snippet") or "").strip() for m in moments if m.get("short_snippet")]
+        snippet_text = _truncate(snippets[0], 100) if snippets else ""
+
+        summary = (
+            f"Phase {idx} ({date_range}): {len(moments)} moments | {stance_summary} | themes: {facet_text}"
+        )
+        if snippet_text:
+            summary += f" | example: \"{snippet_text}\""
+        summaries.append(summary)
+
+    return summaries
+
+
+async def _synthesize_arc_labels(
+    *,
+    router: Any,
+    origin_story: str,
+    current_stage: str,
+    key_pivots: list[str],
+    evidence_anchors: list[dict[str, Any]],
+    topic_label: str,
+    model: str,
+    phases: list[dict[str, Any]] | None = None,
+    included_moments: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Generate short insight-dense arc labels for the visual continuity scroll view."""
+    ordered = sorted(evidence_anchors, key=lambda e: str(e.get("ts") or ""))
+    earliest = ordered[0] if ordered else {}
+    latest = ordered[-1] if len(ordered) > 1 else {}
+
+    earliest_snippet = _truncate(str(earliest.get("snippet") or "").strip(), 160)
+    latest_snippet = _truncate(str(latest.get("snippet") or "").strip(), 160)
+    pivots_text = "; ".join(key_pivots[:2]) if key_pivots else ""
+
+    phase_summaries = _build_phase_summaries(phases or [], included_moments or [])
+    phases_section = ""
+    if phase_summaries:
+        phases_section = "\n\nPhases (quantile segments of the arc):\n" + "\n".join(phase_summaries)
+
+    user_content = f"""Topic: {topic_label}
+
+Where it began (template): {origin_story}
+Where it is now (template): {current_stage}
+Key shifts: {pivots_text or "none recorded"}
+
+Earliest moment excerpt: {earliest_snippet or "not available"}
+Most recent moment excerpt: {latest_snippet or "not available"}{phases_section}
+
+Generate the arc labels now."""
+
+    phase_count = len(phase_summaries)
+
+    try:
+        response = await router.chat(
+            messages=[
+                {"role": "system", "content": _ARC_LABEL_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            model=model,
+            temperature=0.4,
+            max_tokens=200,
+        )
+        raw = str(response.text or "").strip()
+        # Strip markdown code fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+        parsed = json.loads(raw)
+        raw_phase_labels = parsed.get("phase_labels") or []
+        phase_labels = [
+            _truncate(str(label).strip(), 40)
+            for label in raw_phase_labels
+            if str(label).strip()
+        ][:phase_count]
+        return {
+            "arc_start_label": _truncate(str(parsed.get("arc_start_label") or "").strip(), 120),
+            "arc_now_label": _truncate(str(parsed.get("arc_now_label") or "").strip(), 120),
+            "arc_bridge": _truncate(str(parsed.get("arc_bridge") or "").strip(), 200),
+            "phase_labels": phase_labels,
+        }
+    except Exception as exc:
+        LOGGER.info("Arc label synthesis failed, using deterministic fallback: %s", exc)
+        return {
+            "arc_start_label": _truncate(origin_story, 120),
+            "arc_now_label": _truncate(current_stage, 120),
+            "arc_bridge": _truncate("; ".join(key_pivots[:1]), 200) if key_pivots else "",
+            "phase_labels": [],
+        }
 
 
 async def _build_reflection_llm_packet(
