@@ -131,10 +131,8 @@ export default function Scene1Chaos() {
           </div>
           <div className="mt-12 max-w-2xl space-y-6 text-xl leading-[1.45] tracking-[-0.03em] text-[#c9d3ea] sm:text-2xl">
             <p className="line-2">It never really stops.</p>
-            <div className="line-3 space-y-6">
-              <p>And it doesn&apos;t carry forward.</p>
-              <p className="text-slate-100">Nothing actually holds it together.</p>
-            </div>
+            <p className="line-3a">And it doesn&apos;t carry forward.</p>
+            <p className="line-3b text-slate-100">Nothing actually holds it together.</p>
           </div>
         </div>
       </div>

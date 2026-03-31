@@ -46,7 +46,10 @@ export default function Scene6Founder() {
               <div className="text-sm font-semibold tracking-[0.02em] text-white">
                 Vidhya
               </div>
-              <div className="mt-1 text-[13px] leading-5 text-white/62">
+              <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.18em] text-[#c4d2ff]/72">
+                Co-Founder &amp; CEO
+              </div>
+              <div className="mt-2 text-[13px] leading-5 text-white/62">
                 Built systems for companies. Now building one for humans.
               </div>
             </div>

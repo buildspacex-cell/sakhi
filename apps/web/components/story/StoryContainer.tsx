@@ -9,10 +9,12 @@ import Scene4Continuity from "@/components/story/Scene4Continuity";
 // import Scene4bHealthArc from "@/components/story/Scene4bHealthArc";
 import Scene5Email from "@/components/story/Scene5Email";
 import Scene6Vision from "@/components/story/Scene6Vision";
+import Scene6Transition from "@/components/story/Scene6Transition";
 import Scene6Close from "@/components/story/Scene6Close";
 import Scene7Close from "@/components/story/Scene7Close";
 import Scene8Close from "@/components/story/Scene8Close";
 import { useStoryTimeline } from "@/components/story/useStoryTimeline";
+import { useStorySpeech } from "@/components/story/useStorySpeech";
 
 function PlayIcon() {
   return (
@@ -62,20 +64,41 @@ function FullscreenExitIcon() {
   );
 }
 
+function SpeakerIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" />
+    </svg>
+  );
+}
+
+function MutedIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+  );
+}
+
 export default function StoryContainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsVisible, setControlsVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const { speakRef, muted, toggleMute, stop, prime } = useStorySpeech();
   const { isPaused, isComplete, progress, duration, togglePlayback, restart, seekTo } =
-    useStoryTimeline(containerRef);
+    useStoryTimeline(containerRef, speakRef);
 
   const elapsed = Math.round(progress * duration);
   const remaining = Math.max(0, Math.round(duration) - elapsed);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const revealControls = useCallback(() => {
+    prime();
     setControlsVisible(true);
 
     if (hideControlsTimeoutRef.current) {
@@ -85,7 +108,7 @@ export default function StoryContainer() {
     hideControlsTimeoutRef.current = setTimeout(() => {
       setControlsVisible(false);
     }, 1800);
-  }, []);
+  }, [prime]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -125,7 +148,7 @@ export default function StoryContainer() {
       }}
     >
       <div
-        className={`absolute inset-x-0 bottom-5 z-[80] px-4 transition-all duration-300 sm:bottom-7 sm:px-6 ${
+        className={`absolute inset-x-0 bottom-5 z-[120] px-4 transition-all duration-300 sm:bottom-7 sm:px-6 ${
           controlsVisible
             ? "translate-y-0 opacity-100"
             : "translate-y-3 opacity-0 pointer-events-none"
@@ -134,7 +157,7 @@ export default function StoryContainer() {
         <div className="mx-auto flex w-full max-w-4xl items-center gap-3 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(8,11,20,0.82),rgba(4,7,14,0.92))] px-3 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:gap-4 sm:px-4">
           <button
             type="button"
-            onClick={togglePlayback}
+            onClick={() => { prime(); togglePlayback(); }}
             onFocus={revealControls}
             aria-label={isComplete ? "Play story again" : isPaused ? "Play story" : "Pause story"}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/6 text-slate-100 transition hover:bg-white/10"
@@ -143,12 +166,25 @@ export default function StoryContainer() {
           </button>
           <button
             type="button"
-            onClick={restart}
+            onClick={() => { prime(); stop(); restart(); }}
             onFocus={revealControls}
             aria-label="Restart story"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-transparent text-slate-300 transition hover:border-white/18 hover:text-white"
           >
             <RestartIcon />
+          </button>
+          <button
+            type="button"
+            onClick={toggleMute}
+            onFocus={revealControls}
+            aria-label={muted ? "Unmute narration" : "Mute narration"}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition ${
+              muted
+                ? "border-white/10 bg-transparent text-slate-500 hover:text-slate-300"
+                : "border-white/10 bg-transparent text-slate-300 hover:border-white/18 hover:text-white"
+            }`}
+          >
+            {muted ? <MutedIcon /> : <SpeakerIcon />}
           </button>
           <input
             type="range"
@@ -156,6 +192,9 @@ export default function StoryContainer() {
             max={1000}
             step={1}
             value={Math.round(progress * 1000)}
+            onInput={(event) => {
+              seekTo(Number(event.currentTarget.value) / 1000);
+            }}
             onChange={(event) => {
               seekTo(Number(event.currentTarget.value) / 1000);
             }}
@@ -179,6 +218,25 @@ export default function StoryContainer() {
           </button>
         </div>
       </div>
+
+      {/* Click-to-start overlay — visible only before first play */}
+      {isPaused && progress === 0 && (
+        <button
+          type="button"
+          aria-label="Play story"
+          onClick={() => { prime(); togglePlayback(); }}
+          className="absolute inset-0 z-[90] flex flex-col items-center justify-center gap-4 bg-transparent"
+        >
+          <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/20 bg-white/8 backdrop-blur-sm transition hover:bg-white/14">
+            <svg viewBox="0 0 24 24" className="h-8 w-8 translate-x-0.5 fill-white">
+              <path d="M8 6.5v11l9-5.5-9-5.5Z" />
+            </svg>
+          </div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-white/50">
+            Click to play
+          </p>
+        </button>
+      )}
 
       <div id="scene-1" className="scene absolute inset-0 z-10">
         <Scene1Chaos />
@@ -204,12 +262,15 @@ export default function StoryContainer() {
         <Scene6Vision />
       </div>
       <div id="scene-7" className="scene absolute inset-0 z-[65] opacity-0">
-        <Scene6Close />
+        <Scene6Transition />
       </div>
       <div id="scene-8" className="scene absolute inset-0 z-[70] opacity-0">
-        <Scene7Close />
+        <Scene6Close />
       </div>
       <div id="scene-9" className="scene absolute inset-0 z-[75] opacity-0">
+        <Scene7Close />
+      </div>
+      <div id="scene-10" className="scene absolute inset-0 z-[80] opacity-0">
         <Scene8Close />
       </div>
     </div>

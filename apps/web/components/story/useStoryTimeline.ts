@@ -17,6 +17,7 @@ const PACE = {
 
 export const useStoryTimeline = (
   containerRef: RefObject<HTMLDivElement | null>,
+  speechRef?: RefObject<((text: string) => void) | null>,
 ) => {
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -31,7 +32,7 @@ export const useStoryTimeline = (
 
     const ctx = gsap.context(() => {
       gsap.set("#scene-1", { opacity: 1 });
-      gsap.set(["#scene-2", "#scene-3", "#scene-4", "#scene-5", "#scene-6", "#scene-7", "#scene-8", "#scene-9"], {
+      gsap.set(["#scene-2", "#scene-3", "#scene-4", "#scene-5", "#scene-6", "#scene-7", "#scene-8", "#scene-9", "#scene-10"], {
         opacity: 0,
       });
       gsap.set(".thought-field", { opacity: 0.42, scale: 0.96 });
@@ -101,6 +102,8 @@ export const useStoryTimeline = (
         transformOrigin: "center center",
       });
       gsap.set(".vision-signoff", { opacity: 0, y: 20 });
+      gsap.set(".builders-bridge-kicker", { opacity: 0, y: 14 });
+      gsap.set(".builders-bridge-line", { opacity: 0, y: 22, scale: 0.985 });
       gsap.set(".founder-opening", { opacity: 0, y: 24 });
       gsap.set(".founder-detail-kicker", { opacity: 0, y: 16 });
       gsap.set(".founder-portrait", { opacity: 0, y: 20, scale: 0.98 });
@@ -139,11 +142,22 @@ export const useStoryTimeline = (
       gsap.set(".health-output-stage", { opacity: 0, y: 26 });
       */
 
+      const prevPausedRef = { current: false };
+      const narrate = (text: string) => {
+        speechRef?.current?.(text);
+      };
+
       const tl = gsap.timeline({
+        paused: true,
         defaults: { ease: "power2.out" },
         onUpdate: () => {
+          const nowPaused = tl.paused();
+          if (nowPaused && !prevPausedRef.current && typeof window !== "undefined") {
+            window.speechSynthesis?.cancel();
+          }
+          prevPausedRef.current = nowPaused;
           setProgress(tl.progress());
-          setIsPaused(tl.paused());
+          setIsPaused(nowPaused);
           setIsComplete(tl.progress() >= 1);
         },
         onComplete: () => {
@@ -153,13 +167,13 @@ export const useStoryTimeline = (
         },
       });
       timelineRef.current = tl;
-      setIsPaused(false);
+      setIsPaused(true);
       setIsComplete(false);
       setProgress(0);
       // duration only available after timeline is built
       requestAnimationFrame(() => setDuration(tl.duration()));
 
-      const createProductPanelTimeline = (panelIndex: number, hold = 1.05) => {
+      const createProductPanelTimeline = (panelIndex: number, hold = 1.05, narrateText?: string) => {
         const panelSelector = `.product-panel-${panelIndex}`;
         const copySelector = `.product-panel-copy-${panelIndex}`;
         const phoneSelector = `.product-panel-phone-${panelIndex}`;
@@ -167,6 +181,7 @@ export const useStoryTimeline = (
 
         return gsap.timeline()
           .to(panelSelector, { opacity: 1, duration: 0.18 })
+          .call(() => { if (narrateText) narrate(narrateText); }, undefined, "<")
           .to(copySelector, { opacity: 1, x: 0, duration: 0.72 }, "<")
           .to(
             phoneSelector,
@@ -217,8 +232,17 @@ export const useStoryTimeline = (
 
       tl.to("#scene-1", { opacity: 1, duration: PACE.sceneFade })
         .from(".line-1", { opacity: 0, y: 40, duration: 0.95 })
-        .from(".line-2", { opacity: 0, y: 30, duration: PACE.lineReveal }, "-=0.34")
-        .from(".line-3", { opacity: 0, y: 30, duration: PACE.lineReveal }, "-=0.38")
+        .call(() => narrate("There's a conversation happening in your head."), undefined, "<")
+        .to({}, { duration: 2.2 })
+        .from(".line-2", { opacity: 0, y: 30, duration: PACE.lineRevealLong }, "<")
+        .call(() => narrate("It never really stops."), undefined, "<")
+        .to({}, { duration: 2.0 })
+        .from(".line-3a", { opacity: 0, y: 30, duration: PACE.lineRevealLong }, "<")
+        .call(() => narrate("And it doesn't carry forward."), undefined, "<")
+        .to({}, { duration: 2.0 })
+        .from(".line-3b", { opacity: 0, y: 30, duration: PACE.lineRevealLong }, "<")
+        .call(() => narrate("Nothing actually holds it together."), undefined, "<")
+        .to({}, { duration: 2.0 })
         .to(
           ".thought-field",
           {
@@ -226,7 +250,7 @@ export const useStoryTimeline = (
             scale: 1,
             duration: 0.8,
           },
-          "-=0.24",
+          "<",
         )
         .to(
           ".thought-persistent",
@@ -313,7 +337,7 @@ export const useStoryTimeline = (
           },
           "<",
         )
-        .to(".line-1, .line-2, .line-3", { opacity: 0, duration: 0.5 }, "-=0.28")
+        .to(".line-1, .line-2, .line-3a, .line-3b", { opacity: 0, duration: 0.5 }, "-=0.28")
         // Boost thoughts to full visibility before the per-group dissolution begins
         .to(".thought-persistent", { opacity: 0.55, duration: 0.5, ease: "power1.out" }, "+=0.1")
         // Scene 2 cross-fades in as the thought field is still alive
@@ -321,41 +345,47 @@ export const useStoryTimeline = (
 
         // "You wind down for the day" — general thoughts start a slow ambient drift
         .from(".bridge-1", { opacity: 0, y: 18, duration: PACE.lineReveal }, "<+0.4")
+        .call(() => narrate("You wind down for the day."), undefined, "<")
         .to(".thought-persistent:not(.thought-signal):not(.thought-thread):not(.thought-idea)", {
           y: "+=45", opacity: 0.22, duration: 2.4,
           stagger: { each: 0.04, from: "random" }, ease: "power1.inOut",
         }, "<+0.1")
 
         // "The signal fades with it" — signal thoughts blur and fade
-        .from(".bridge-2", { opacity: 0, y: 18, duration: PACE.lineReveal }, `+=${PACE.shortHold}`)
+        .from(".bridge-2", { opacity: 0, y: 18, duration: PACE.lineReveal }, "+=2.0")
+        .call(() => narrate("The signal fades with it."), undefined, "<")
         .to(".thought-signal", {
           opacity: 0, filter: "blur(10px)", y: "+=30", scale: 0.88, duration: 1.4,
           stagger: { each: 0.12, from: "random" }, ease: "power2.in",
         }, "<+0.05")
 
         // "By morning, the thread is gone" — thread thoughts stretch then vanish
-        .from(".bridge-3", { opacity: 0, y: 18, duration: PACE.lineRevealLong }, `+=${PACE.shortHold}`)
+        .from(".bridge-3", { opacity: 0, y: 18, duration: PACE.lineRevealLong }, "+=2.0")
+        .call(() => narrate("By morning, the thread is gone."), undefined, "<")
         .to(".thought-thread", {
           scaleX: 2.4, opacity: 0, filter: "blur(8px)", duration: 1.6,
           stagger: { each: 0.14, from: "random" }, ease: "power2.in",
         }, "<+0.05")
 
         // "Thoughts reset" — remaining general thoughts scatter and fall
-        .from(".break-1", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, `+=${PACE.shortHold}`)
+        .from(".break-1", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=2.0")
+        .call(() => narrate("Thoughts reset."), undefined, "<")
         .to(".thought-persistent:not(.thought-signal):not(.thought-thread):not(.thought-idea)", {
           y: "+=150", opacity: 0, filter: "blur(8px)", scale: 0.82, duration: 2.0,
           stagger: { each: 0.06, from: "random" }, ease: "power2.in",
         }, "<+0.05")
 
         // "Good ideas die" — amber idea sparks implode dramatically
-        .from(".break-2", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, `+=${PACE.shortHold}`)
+        .from(".break-2", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=2.0")
+        .call(() => narrate("Good ideas die."), undefined, "<")
         .to(".thought-idea", {
           scale: 0, opacity: 0, filter: "blur(14px)", duration: 1.2,
           stagger: { each: 0.12, from: "random" }, ease: "back.in(1.2)",
         }, "<+0.05")
 
         // "Continuity is lost" — vignette clears, scene-1 shell fades
-        .from(".break-3", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, `+=${PACE.shortHold}`)
+        .from(".break-3", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=2.0")
+        .call(() => narrate("Continuity is lost."), undefined, "<")
         .to(".thought-vignette", { opacity: 0, duration: 1.8, ease: "power1.in" }, "<")
         .to("#scene-1", { opacity: 0, duration: 1.0, ease: "power1.in" }, "<+0.9")
 
@@ -367,6 +397,7 @@ export const useStoryTimeline = (
           scale: 0.95,
           duration: 1,
         })
+        .call(() => narrate("Sakhi makes it all come together."), undefined, "<")
         .to(".sakhi-headline", {
           opacity: 0,
           y: -18,
@@ -377,16 +408,23 @@ export const useStoryTimeline = (
           opacity: 1,
           duration: 0.35,
         }, "-=0.08")
-        .to(".sakhi-bridge-line", {
+        .to(".sakhi-bridge-line-1", {
           opacity: 1,
           y: 0,
-          stagger: 0.2,
           duration: PACE.lineReveal,
         }, "<")
+        .call(() => narrate("You do not have to be driven by your thoughts."), undefined, "<")
+        .to({}, { duration: 2.2 })
+        .to(".sakhi-bridge-line-2", {
+          opacity: 1,
+          y: 0,
+          duration: PACE.lineReveal,
+        }, "<")
+        .call(() => narrate("You can shape them."), undefined, "<")
         .to(".sakhi-bridge", {
           opacity: 0,
           duration: 0.52,
-        }, `+=${PACE.bridgeHold}`)
+        }, "+=2.2")
         .to(".intro-sequence", {
           opacity: 1,
           duration: 0.35,
@@ -395,6 +433,7 @@ export const useStoryTimeline = (
           opacity: 1,
           duration: PACE.lineReveal,
         }, "<")
+        .call(() => narrate("Stop reacting."), undefined, "<")
         .to(".intro-line-1", {
           opacity: 0,
           y: -30,
@@ -407,22 +446,27 @@ export const useStoryTimeline = (
           scale: 1,
           duration: PACE.lineRevealLong,
         }, "-=0.24")
+        .call(() => narrate("Start shaping."), undefined, "<")
+        .to({}, { duration: 2.0 })
         .to(".intro-explainer", {
           opacity: 1,
           y: 0,
           duration: PACE.lineReveal,
-        }, "-=0.12")
+        })
+        .call(() => narrate("Sakhi learns how you think and evolves with you."), undefined, "<")
+        .to({}, { duration: 3.2 })
         .to(".intro-system", {
           opacity: 1,
           y: 0,
           duration: PACE.lineReveal,
-        }, "-=0.12")
+        })
         .to(".intro-active-1", {
           opacity: 1,
           x: "0vw",
           scale: 1,
           duration: PACE.lineReveal,
         }, "-=0.14")
+        .call(() => narrate("Builds a living model of you. It evolves over time."), undefined, "<")
         .to(".intro-progress-1", {
           scaleX: 1,
           duration: 0.48,
@@ -445,6 +489,7 @@ export const useStoryTimeline = (
           scale: 1,
           duration: PACE.lineReveal,
         }, "-=0.14")
+        .call(() => narrate("Makes your life visible. Across time, as a whole."), undefined, "<")
         .to(".intro-progress-2", {
           scaleX: 1,
           duration: 0.48,
@@ -467,6 +512,7 @@ export const useStoryTimeline = (
           scale: 1,
           duration: PACE.lineReveal,
         }, "-=0.14")
+        .call(() => narrate("Helps you act decisively. It learns from what follows."), undefined, "<")
         .to(".intro-progress-3", {
           scaleX: 1,
           duration: 0.48,
@@ -592,7 +638,7 @@ export const useStoryTimeline = (
           duration: 0.44,
           ease: "back.out(1.32)",
         }, "-=0.06")
-        .to({}, { duration: 2.2 })
+        .to({}, { duration: 4.5 })
         .to(".continuity-occupancy-bubble:not(.continuity-startup-bubble)", {
           opacity: 0.14,
           scale: 0.84,
@@ -642,7 +688,7 @@ export const useStoryTimeline = (
           stagger: 0.12,
           duration: 0.34,
         }, "<+0.04")
-        .to({}, { duration: 2.8 })
+        .to({}, { duration: 5.0 })
         .to(".continuity-visual", {
           opacity: 0,
           scale: 1.02,
@@ -654,13 +700,14 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.78,
         })
+        .call(() => narrate("Your life, connected across time."), undefined, "<")
         .from(".continuity-line", {
           opacity: 0,
           y: 18,
-          stagger: 0.18,
+          stagger: 3.0,
           duration: PACE.lineReveal,
         }, "<+0.04")
-        .to("#scene-4", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.longHold })
+        .to("#scene-4", { opacity: 0, duration: PACE.sceneFadeLong, delay: 4.5 })
         /* ── Scene 4b: Health Signal Arc — parked ───────────────────────
         .to("#scene-4b", { opacity: 1, duration: PACE.sceneFade }, "-=0.12")
         .to(".health-output-stage", { opacity: 1, y: 0, duration: 0.42 }, "<")
@@ -695,18 +742,17 @@ export const useStoryTimeline = (
           y: 0,
           duration: PACE.lineRevealLong,
         })
-        .to({}, { duration: 1.6 })
+        .call(() => narrate("First expression of Sakhi."), undefined, "<")
+        .to({}, { duration: 2.2 })
         .to(".product-intro", {
           opacity: 0,
           y: -18,
           duration: 0.45,
         })
-        .add(createProductPanelTimeline(1, 2.8))
-        .add(createProductPanelTimeline(2, 2.8))
-        .add(createProductPanelTimeline(3, 2.8))
-        .add(createProductPanelTimeline(4, 2.8))
-        .add(createProductPanelTimeline(5, 2.8))
-        .add(createProductPanelTimeline(6, 2.8))
+        .add(createProductPanelTimeline(1, 5.0, "Start talking. Sakhi does the rest."))
+        .add(createProductPanelTimeline(2, 5.0, "Your life becomes visible."))
+        .add(createProductPanelTimeline(3, 5.0, "Your story starts to take shape."))
+        .add(createProductPanelTimeline(4, 5.0, "What you share stays yours."))
         .to(".product-stage", {
           opacity: 0,
           scale: 0.975,
@@ -719,12 +765,16 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.82,
         })
+        .call(() => narrate("Sakhi makes your life seen,"), undefined, "<")
+        .to({}, { duration: 2.0 })
         .to(".vision-promise-line-2", {
           opacity: 1,
           y: 0,
           scale: 1,
           duration: PACE.lineRevealLong,
-        }, "-=0.22")
+        })
+        .call(() => narrate("understood, and actionable."), undefined, "<")
+        .to({}, { duration: 2.0 })
         .to(".vision-pillars-stage", {
           opacity: 1,
           y: 0,
@@ -736,18 +786,36 @@ export const useStoryTimeline = (
           stagger: 0.12,
           duration: 0.62,
         }, "<+0.06")
-        .to({}, { duration: 1.8 })
+        .to({}, { duration: 2.0 })
         // Voice lines pop in per column — connection to each pillar is explicit
         .add(createVisionVoiceReveal(1))
-        .to({}, { duration: 0.7 })
+        .call(() => narrate("I see you."), undefined, "<")
+        .to({}, { duration: 1.8 })
         .add(createVisionVoiceReveal(2))
-        .to({}, { duration: 0.7 })
+        .call(() => narrate("I understand you."), undefined, "<")
+        .to({}, { duration: 1.8 })
         .add(createVisionVoiceReveal(3))
-        .to({}, { duration: 1.2 })
+        .call(() => narrate("I act for you."), undefined, "<")
+        .to({}, { duration: 2.2 })
         .to(".vision-signoff", { opacity: 1, y: 0, duration: 0.72 })
         .to({}, { duration: 2.5 })
         .to("#scene-6", { opacity: 0, duration: PACE.sceneFadeLong })
         .to("#scene-7", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
+        .to(".builders-bridge-kicker", {
+          opacity: 1,
+          y: 0,
+          duration: 0.5,
+        })
+        .to(".builders-bridge-line", {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.9,
+        }, "-=0.18")
+        .call(() => narrate("The minds behind."), undefined, "<")
+        .to({}, { duration: 3.0 })
+        .to("#scene-7", { opacity: 0, duration: PACE.sceneFadeLong })
+        .to("#scene-8", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
         .to(".founder-portrait", {
           opacity: 1,
           y: 0,
@@ -764,6 +832,7 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.95,
         }, "-=0.2")
+        .call(() => narrate("I've spent 20 years helping organizations make better decisions. I realized we haven't solved this for individuals."), undefined, "<")
         .to({}, { duration: 5.0 })
         .to(".founder-opening", {
           opacity: 0,
@@ -796,6 +865,7 @@ export const useStoryTimeline = (
           filter: "blur(0px)",
           duration: 0.52,
         }, "-=0.5")
+        .call(() => narrate("Operator at Scale."), undefined, "<")
         .to(".founder-arc-step-1", {
           opacity: 1,
           y: 0,
@@ -806,17 +876,19 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.56,
         }, "-=0.12")
+        .call(() => narrate("Worked alongside CEOs and COOs, building systems that turned ambiguity into structured decisions."), undefined, "<")
         .to(".founder-arc-link-1", {
           opacity: 0.92,
           scaleX: 1,
           duration: 0.42,
-        }, "+=2.8")
+        }, "+=4.5")
         .to(".founder-arc-head-2", {
           opacity: 1,
           y: 0,
           filter: "blur(0px)",
           duration: 0.52,
         }, "-=0.08")
+        .call(() => narrate("Personal Inflection Point."), undefined, "<")
         .to(".founder-arc-step-2", {
           opacity: 1,
           y: 0,
@@ -827,17 +899,19 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.56,
         }, "-=0.12")
+        .call(() => narrate("In 2024, caregiving, leadership, and life complexity collided. What was missing was continuity at the level of a real human life."), undefined, "<")
         .to(".founder-arc-link-2", {
           opacity: 0.92,
           scaleX: 1,
           duration: 0.42,
-        }, "+=2.8")
+        }, "+=4.5")
         .to(".founder-arc-head-3", {
           opacity: 1,
           y: 0,
           filter: "blur(0px)",
           duration: 0.52,
         }, "-=0.08")
+        .call(() => narrate("Insight to Sakhi."), undefined, "<")
         .to(".founder-arc-step-3", {
           opacity: 1,
           y: 0,
@@ -848,14 +922,16 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.56,
         }, "-=0.12")
+        .call(() => narrate("Small, personalized interventions changed everything. The question became: can this be built as a system?"), undefined, "<")
         .to(".founder-final", {
           opacity: 1,
           y: 0,
           duration: 0.8,
-        }, "+=2.8")
+        }, "+=4.5")
+        .call(() => narrate("Sakhi is the system I wish existed when I needed it most."), undefined, "<")
         .to({}, { duration: 3.5 })
-        .to("#scene-7", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.shortHold })
-        .to("#scene-8", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
+        .to("#scene-8", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.shortHold })
+        .to("#scene-9", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
         .to(".ravi-visual", {
           opacity: 1,
           y: 0,
@@ -872,6 +948,7 @@ export const useStoryTimeline = (
           y: 0,
           duration: 1,
         }, "-=0.2")
+        .call(() => narrate("I'm a systems thinker at heart, grounded in deep technical expertise and driven to simplify complexity."), undefined, "<")
         .to({}, { duration: 5.0 })
         .to(".ravi-opening", {
           opacity: 0,
@@ -904,6 +981,7 @@ export const useStoryTimeline = (
           filter: "blur(0px)",
           duration: 0.52,
         }, "-=0.5")
+        .call(() => narrate("Evolution."), undefined, "<")
         .to(".ravi-arc-step-1", {
           opacity: 1,
           y: 0,
@@ -914,17 +992,19 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.56,
         }, "-=0.12")
+        .call(() => narrate("I started with engineering, building systems and applications, then kept moving closer to the question of what actually makes systems work."), undefined, "<")
         .to(".ravi-arc-link-1", {
           opacity: 0.92,
           scaleX: 1,
           duration: 0.42,
-        }, "+=2.8")
+        }, "+=4.5")
         .to(".ravi-arc-head-2", {
           opacity: 1,
           y: 0,
           filter: "blur(0px)",
           duration: 0.52,
         }, "-=0.08")
+        .call(() => narrate("Realization."), undefined, "<")
         .to(".ravi-arc-step-2", {
           opacity: 1,
           y: 0,
@@ -935,17 +1015,19 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.56,
         }, "-=0.12")
+        .call(() => narrate("Systems do not succeed just because they are built well. They succeed because people understand them, trust them, and use them."), undefined, "<")
         .to(".ravi-arc-link-2", {
           opacity: 0.92,
           scaleX: 1,
           duration: 0.42,
-        }, "+=2.8")
+        }, "+=4.5")
         .to(".ravi-arc-head-3", {
           opacity: 1,
           y: 0,
           filter: "blur(0px)",
           duration: 0.52,
         }, "-=0.08")
+        .call(() => narrate("Expansion."), undefined, "<")
         .to(".ravi-arc-step-3", {
           opacity: 1,
           y: 0,
@@ -956,17 +1038,19 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.56,
         }, "-=0.12")
+        .call(() => narrate("That pulled me across engineering, product, and product marketing, while yoga and meditation deepened how I think about human behavior over time."), undefined, "<")
         .to(".ravi-arc-link-3", {
           opacity: 0.92,
           scaleX: 1,
           duration: 0.42,
-        }, "+=2.8")
+        }, "+=4.5")
         .to(".ravi-arc-head-4", {
           opacity: 1,
           y: 0,
           filter: "blur(0px)",
           duration: 0.52,
         }, "-=0.08")
+        .call(() => narrate("Convergence."), undefined, "<")
         .to(".ravi-arc-step-4", {
           opacity: 1,
           y: 0,
@@ -977,21 +1061,24 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.56,
         }, "-=0.08")
+        .call(() => narrate("Technical depth, systems thinking, product narrative, and lived understanding of people now converge in building Sakhi."), undefined, "<")
         .to(".ravi-final", {
           opacity: 1,
           y: 0,
           duration: 0.8,
         }, "+=4.8")
+        .call(() => narrate("That gives me the clarity to build Sakhi."), undefined, "<")
         .to({}, { duration: 3.5 })
-        .to("#scene-8", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.shortHold })
-        .to("#scene-9", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
+        .to("#scene-9", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.shortHold })
+        .to("#scene-10", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
         .from(".close-line", {
           opacity: 0,
           y: 20,
           scale: 0.98,
-          stagger: 0.2,
+          stagger: 1.8,
           duration: PACE.lineRevealLong,
         })
+        .call(() => narrate("This is just the beginning. If this resonates, let's build this together."), undefined, "<")
         .from(".card", {
           opacity: 0,
           y: 30,
@@ -1004,7 +1091,7 @@ export const useStoryTimeline = (
       timelineRef.current = null;
       ctx.revert();
     };
-  }, [containerRef]);
+  }, [containerRef, speechRef]);
 
   const togglePlayback = useCallback(() => {
     const timeline = timelineRef.current;
@@ -1012,18 +1099,23 @@ export const useStoryTimeline = (
       return;
     }
 
-    if (isComplete) {
-      timeline.restart();
-      timeline.paused(false);
+    if (isComplete || timeline.progress() >= 1) {
+      timeline.pause(0);
+      timeline.play();
       setIsComplete(false);
       setIsPaused(false);
       setProgress(0);
       return;
     }
 
-    const nextPaused = !timeline.paused();
-    timeline.paused(nextPaused);
-    setIsPaused(nextPaused);
+    if (timeline.paused()) {
+      timeline.play();
+      setIsPaused(false);
+      return;
+    }
+
+    timeline.pause();
+    setIsPaused(true);
   }, [isComplete]);
 
   const restart = useCallback(() => {
@@ -1032,8 +1124,8 @@ export const useStoryTimeline = (
       return;
     }
 
-    timeline.restart();
-    timeline.paused(false);
+    timeline.pause(0);
+    timeline.play();
     setIsComplete(false);
     setIsPaused(false);
     setProgress(0);
@@ -1047,7 +1139,7 @@ export const useStoryTimeline = (
 
     const clamped = Math.max(0, Math.min(1, nextProgress));
     timeline.pause();
-    timeline.progress(clamped);
+    timeline.progress(clamped, false);
     setProgress(clamped);
     setIsPaused(true);
     setIsComplete(clamped >= 1);

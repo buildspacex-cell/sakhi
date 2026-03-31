@@ -8,7 +8,7 @@ const founders = [
     image: "/story/v-pic-20260327.png",
     imageStyle: {},
     name: "Vidhya",
-    role: "Founder & CEO",
+    role: "Co-Founder & CEO",
     bioLabel: "About Vidhya",
     bio: "Built systems for companies. Now building one for humans.",
     opening:
@@ -79,14 +79,21 @@ export function PitchTeam() {
             <FadeIn key={member.name} delay={200 + i * 120}>
               <div className="rounded-[40px] border border-white/10 bg-[linear-gradient(155deg,rgba(16,23,39,0.95),rgba(7,11,21,0.84))] p-8 sm:p-10">
                 <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
-                  <div className="relative mx-auto aspect-[3/4] w-[170px] overflow-hidden rounded-[28px] border border-white/10 sm:w-[200px] lg:mx-0">
-                    <Image
-                      src={member.image}
-                      alt={member.name}
-                      fill
-                      className="object-cover"
-                      style={member.imageStyle}
-                    />
+                  <div className="mx-auto flex w-[170px] flex-col gap-4 sm:w-[200px] lg:mx-0">
+                    <div className="relative aspect-[3/4] overflow-hidden rounded-[28px] border border-white/10">
+                      <Image
+                        src={member.image}
+                        alt={member.name}
+                        fill
+                        className="object-cover"
+                        style={member.imageStyle}
+                      />
+                    </div>
+                    <div className="inline-flex flex-col rounded-[18px] border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                      <p className="text-[0.95rem] leading-[1.55] tracking-[-0.01em] text-white/62">
+                        {member.bio}
+                      </p>
+                    </div>
                   </div>
                   <div className="min-w-0">
                     <p className="text-2xl font-semibold text-white -tracking-[0.03em]">
@@ -95,14 +102,6 @@ export function PitchTeam() {
                     <p className="mt-1 text-sm font-medium text-[#8ab0ff]/70 uppercase tracking-[0.15em]">
                       {member.role}
                     </p>
-                    <div className="mt-5 inline-flex max-w-xl flex-col rounded-[18px] border border-white/[0.08] bg-white/[0.03] px-4 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/34">
-                        {member.bioLabel}
-                      </p>
-                      <p className="mt-2 text-[0.95rem] leading-[1.55] tracking-[-0.01em] text-white/62">
-                        {member.bio}
-                      </p>
-                    </div>
                     <div className="mt-6 max-w-3xl rounded-[24px] border border-[#8ab0ff]/16 bg-[linear-gradient(160deg,rgba(140,176,255,0.08),rgba(255,255,255,0.02))] px-5 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
                       <p className="text-balance text-[1.26rem] font-semibold leading-[1.45] tracking-[-0.03em] text-white">
                         {member.opening}

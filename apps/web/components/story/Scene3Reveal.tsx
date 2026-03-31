@@ -19,10 +19,10 @@ export default function Scene3Reveal() {
 
       <div className="sakhi-bridge absolute inset-0 flex items-center justify-center px-8 py-10 opacity-0 sm:px-12 lg:px-16 xl:px-24">
         <div className="mx-auto max-w-4xl text-center">
-          <p className="sakhi-bridge-line text-balance text-[1.35rem] leading-[1.38] tracking-[-0.03em] text-[#d5ddf4] sm:text-[1.65rem]">
+          <p className="sakhi-bridge-line sakhi-bridge-line-1 text-balance text-[1.35rem] leading-[1.38] tracking-[-0.03em] text-[#d5ddf4] sm:text-[1.65rem]">
             You do not have to be driven by your thoughts.
           </p>
-          <p className="sakhi-bridge-line mt-5 text-balance text-[1.18rem] leading-[1.5] tracking-[-0.025em] text-slate-300 sm:text-[1.35rem]">
+          <p className="sakhi-bridge-line sakhi-bridge-line-2 mt-5 text-balance text-[1.18rem] leading-[1.5] tracking-[-0.025em] text-slate-300 sm:text-[1.35rem]">
             You can shape them.
           </p>
         </div>
