@@ -1631,7 +1631,7 @@ const finalStyles = StyleSheet.create({
 function SlimNameOnboardingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ user?: string; name?: string }>();
-  const { user, session } = useAuth();
+  const { user, session, hydrateLinkedProfile } = useAuth();
   const [name, setName] = useState(
     typeof params.name === "string" && params.name.trim()
       ? params.name
@@ -1656,6 +1656,12 @@ function SlimNameOnboardingScreen() {
         full_name: trimmedName,
         avatar_url: user?.avatarUrl,
       }, { supabaseUserId: user?.id });
+      await hydrateLinkedProfile({
+        personId: profile.person_id,
+        email: profile.email,
+        fullName: trimmedName,
+        avatarUrl: profile.avatar_url,
+      }, { supabaseUserId: user?.id });
       const personId = profile.person_id || routePersonId;
       const encodedName = encodeURIComponent(trimmedName);
       const encodedUser = encodeURIComponent(personId);
@@ -1674,7 +1680,7 @@ function SlimNameOnboardingScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [authToken, name, routePersonId, router, user?.avatarUrl, user?.email]);
+  }, [authToken, hydrateLinkedProfile, name, routePersonId, router, user?.avatarUrl, user?.email, user?.id]);
 
   return (
     <SafeAreaView style={styles.container}>

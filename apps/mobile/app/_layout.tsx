@@ -35,7 +35,7 @@ function AppContent() {
   }, [isLoading, user?.personId]);
 
   useEffect(() => {
-    if (isLoading || authExitIntent !== 'expired' || handlingExpiredRef.current) {
+    if (isLoading || authExitIntent === 'none' || handlingExpiredRef.current) {
       return;
     }
 
@@ -47,9 +47,12 @@ function AppContent() {
     }
 
     handlingExpiredRef.current = true;
+    const isExpired = authExitIntent === 'expired';
     clearAuthExitIntent();
     router.replace('/auth' as never);
-    Alert.alert('Session expired', 'Please sign in again.');
+    if (isExpired) {
+      Alert.alert('Session expired', 'Please sign in again.');
+    }
   }, [authExitIntent, clearAuthExitIntent, isLoading, router, segments]);
 
   useEffect(() => {

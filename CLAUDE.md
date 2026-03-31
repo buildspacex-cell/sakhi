@@ -2,7 +2,7 @@
 
 > **This file provides instructions for Claude and other LLMs working on this codebase.**
 >
-> Last Updated: 2026-03-20
+> Last Updated: 2026-03-25
 
 ---
 
@@ -11,12 +11,15 @@
 ```
 sakhi-monorepo/
 ├── apps/
+│   ├── demo/                  # Next.js 14 cinematic roadmap demo (App Router)
 │   ├── web/                   # Next.js 14 frontend (App Router)
 │   └── mobile/                # React Native (Expo)
+├── packages/
+│   └── narrative/             # Content-only narrative package (@sakhi/narrative)
 ├── sakhi/                     # Python backend (CANONICAL)
 │   ├── apps/api/              # FastAPI API
 │   │   ├── routes/            # 81 API route modules
-│   │   └── services/          # Business logic (233 modules)
+│   │   └── services/          # Business logic (234 modules)
 │   ├── apps/engine/           # 34 computational engines
 │   ├── apps/worker/           # RQ background workers
 │   ├── libs/                  # Shared Python libraries
@@ -44,6 +47,7 @@ sakhi-monorepo/
 |------|---------|
 | Start API | `make dev` |
 | Start web | `pnpm dev:web` |
+| Start demo | `pnpm dev:demo` |
 | Start workers | `make worker` |
 | Run tests | `make test` |
 | Quick tests only | `make quick-test` (currently stale target; use explicit pytest targets) |
@@ -53,6 +57,7 @@ sakhi-monorepo/
 | Env contract check | `make check-env` |
 | Run migrations | `make db-migrate` |
 | Build web | `cd apps/web && pnpm build` |
+| Build demo | `cd apps/demo && pnpm build` |
 | Build iOS / TestFlight | `./scripts/ios-build.sh` |
 | Dev status dashboard | `make status` |
 | **Quick verification** | `make verify` |
@@ -274,7 +279,7 @@ async def my_function():
 
 ---
 
-## Frontend (apps/web/)
+## Frontend (apps/web/ + apps/demo/)
 
 ### Next.js App Router structure
 ```
@@ -288,8 +293,25 @@ apps/web/app/
 │   ├── calendar/     # Calendar UI
 │   └── me/           # User profile/wellness
 ├── demo/             # Demo pages for investors
+├── mvp/              # Password-protected roadmap route
+├── mvp-release/      # Protected static release deck
 └── lab/              # Experimental features
 ```
+
+`apps/web/` serves both the canonical password-protected `/mvp` roadmap route
+and the public cinematic story routes.
+`apps/demo/` is parked as a lightweight handoff workspace and should not carry a
+second live presentation surface.
+`apps/web/components/mvp/` holds the reusable roadmap UI primitives.
+`apps/web/components/story/` holds the reusable cinematic story primitives for
+the web `/story` and `/story-scroll` routes. The canonical public story route
+now lives at `apps/web/app/(marketing)/story/page.tsx`, while the preserved
+scroll narrative lives at `apps/web/app/(marketing)/story-scroll/page.tsx`.
+`apps/demo/components/cinematic/` contains parked experimental presentation
+primitives and is not the active runtime surface.
+`packages/narrative/` is the content-only narrative package consumed through
+the `@narrative/*` path alias in both `apps/web/tsconfig.json` and
+`apps/demo/tsconfig.json`.
 
 ### API calls to backend
 ```typescript

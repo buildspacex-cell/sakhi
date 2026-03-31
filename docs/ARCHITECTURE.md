@@ -36,7 +36,7 @@
 | Backend | FastAPI (Python 3.11+) |
 | Database | PostgreSQL + pgvector |
 | Queue | Redis + RQ |
-| Frontend | Next.js 14 (React) |
+| Frontend | Next.js 14 (React, `apps/web` + `apps/demo`) |
 | Mobile | React Native (Expo) |
 | LLM | OpenAI (GPT-4o, GPT-4o-mini) |
 
@@ -47,12 +47,15 @@
 ```
 sakhi-monorepo/
 ├── apps/
-│   ├── web/                   # Next.js frontend
+│   ├── demo/                  # Next.js cinematic roadmap demo app
+│   ├── web/                   # Next.js frontend + protected presentation routes
 │   └── mobile/                # React Native (Expo)
+├── packages/
+│   └── narrative/             # Content-only narrative package (@sakhi/narrative)
 ├── sakhi/                     # Python backend (CANONICAL)
 │   ├── apps/api/              # FastAPI API
 │   │   ├── routes/            # 81 API route modules
-│   │   └── services/          # Business logic (233 modules)
+│   │   └── services/          # Business logic (234 modules)
 │   ├── apps/engine/           # 34 computational engines
 │   ├── apps/worker/           # Background job workers
 │   │   ├── pipelines/         # Worker orchestration
@@ -66,6 +69,19 @@ sakhi-monorepo/
 ├── scripts/                   # Dev/utility scripts
 └── config/                    # App configuration
 ```
+
+Presentation runtime note:
+- `apps/web/app/mvp/page.tsx` serves the canonical password-protected roadmap shell.
+- `apps/web/app/(marketing)/story/page.tsx` serves the canonical public GSAP cinematic story route.
+- `apps/web/app/pitch/page.tsx` serves the scrollable deck companion that mirrors the latest cinematic `/story` narrative in section form.
+- `apps/web/app/(marketing)/story-scroll/page.tsx` preserves the prior scroll-driven public story route.
+- `apps/web/app/mvp/unlock/page.tsx` and `apps/web/middleware.ts` gate access.
+- `apps/demo/app/page.tsx` is a parked handoff page so the workspace no longer carries a second live presentation runtime.
+- `apps/web/components/story/*` provides the reusable presentation primitives behind the web story route.
+- `apps/web/components/story/StoryContainer.tsx` and `apps/web/components/story/useStoryTimeline.ts` provide the stacked-scene GSAP timeline engine for the current `/story` runtime.
+- `apps/web/components/pitch/*` provides the deck surface that reuses story assets/copy while flattening the same beats into a readable scroll presentation.
+- `apps/demo/components/cinematic/*` remains parked experimental presentation code rather than an active route.
+- `packages/narrative/` holds the reusable narrative data so story text stays out of the UI shell.
 
 ---
 
@@ -512,6 +528,7 @@ embedding vector(1536)
 | Task | Command |
 |------|---------|
 | Start API | `make dev` |
+| Start demo | `pnpm dev:demo` |
 | Start web | `pnpm dev:web` |
 | Run tests | `make test` |
 | Format code | `make format` |

@@ -5,16 +5,34 @@ import {
 } from "@/lib/mvpPresentationAccess";
 import { updateSession } from "@/lib/supabase/middleware";
 
+function getProtectedMvpRoot(pathname: string) {
+  if (pathname === "/mvp" || pathname.startsWith("/mvp/")) {
+    return "/mvp";
+  }
+
+  if (pathname === "/mvp-release" || pathname.startsWith("/mvp-release/")) {
+    return "/mvp-release";
+  }
+
+  if (pathname === "/pitch" || pathname.startsWith("/pitch/")) {
+    return "/pitch";
+  }
+
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith("/mvp-release")) {
-    if (request.nextUrl.pathname.startsWith("/mvp-release/unlock")) {
+  const protectedRoot = getProtectedMvpRoot(request.nextUrl.pathname);
+
+  if (protectedRoot) {
+    if (request.nextUrl.pathname === `${protectedRoot}/unlock`) {
       return NextResponse.next();
     }
 
     const accessCookie = request.cookies.get(MVP_PRESENTATION_ACCESS_COOKIE)?.value;
     if (!isValidMvpPresentationAccessToken(accessCookie)) {
       const unlockUrl = request.nextUrl.clone();
-      unlockUrl.pathname = "/mvp-release/unlock";
+      unlockUrl.pathname = `${protectedRoot}/unlock`;
       unlockUrl.search = "";
       return NextResponse.redirect(unlockUrl);
     }

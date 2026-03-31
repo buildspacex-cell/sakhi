@@ -159,6 +159,7 @@ export default function ConversationScreen() {
   const [activeContinuitySignal, setActiveContinuitySignal] = useState<ContinuitySignal | null>(null);
   const [latestUserMessage, setLatestUserMessage] = useState("");
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const routePersonId = typeof params.user === "string" ? params.user.trim() : "";
   const routeName = typeof params.name === "string" ? params.name.trim() : "";
@@ -731,10 +732,15 @@ export default function ConversationScreen() {
   ]);
 
   const handleSignOut = async () => {
+    if (isSigningOut) return;
     haptics.warning();
     setAccountMenuVisible(false);
-    await signOut();
-    router.replace("/" as never);
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   const openAccountRoute = useCallback(
@@ -945,9 +951,15 @@ export default function ConversationScreen() {
               <Ionicons name="chevron-forward" size={16} color={palette.muted} />
             </Pressable>
 
-            <Pressable style={[styles.accountItem, styles.accountItemDanger]} onPress={handleSignOut}>
+            <Pressable
+              style={[styles.accountItem, styles.accountItemDanger, isSigningOut && { opacity: 0.5 }]}
+              onPress={handleSignOut}
+              disabled={isSigningOut}
+            >
               <View style={styles.accountItemCopy}>
-                <Text style={[styles.accountItemTitle, styles.accountItemDangerText]}>Sign out</Text>
+                <Text style={[styles.accountItemTitle, styles.accountItemDangerText]}>
+                  {isSigningOut ? "Signing out…" : "Sign out"}
+                </Text>
                 <Text style={styles.accountItemSubtitle}>End this session on this device</Text>
               </View>
               <Ionicons name="log-out-outline" size={16} color="#ef6f7e" />

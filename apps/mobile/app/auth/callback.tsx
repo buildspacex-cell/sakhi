@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { bootstrapMobileAuthProfile } from "../../lib/auth/mobileBootstrap";
+import { useAuth } from "../../lib/auth/AuthContext";
 import { Screen } from "../../components/ui/Screen";
 import { theme } from "../../lib/theme/tokens";
 
@@ -15,6 +16,7 @@ import { theme } from "../../lib/theme/tokens";
 export default function AuthCallback() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { hydrateLinkedProfile } = useAuth();
 
   useEffect(() => {
     handleCallback();
@@ -52,6 +54,13 @@ export default function AuthCallback() {
           email: user.email || "",
           full_name: user.user_metadata?.full_name || user.user_metadata?.name,
           avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+        }, { supabaseUserId: user.id });
+
+        await hydrateLinkedProfile({
+          personId: profile.person_id,
+          email: profile.email,
+          fullName: profile.full_name,
+          avatarUrl: profile.avatar_url,
         }, { supabaseUserId: user.id });
 
         const routeName = encodeURIComponent(profile.full_name || "");

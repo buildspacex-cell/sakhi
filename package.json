@@ -2,11 +2,13 @@
   "private": true,
   "name": "sakhi",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev:mobile": "cd apps/mobile && expo start --web",
     "dev:web": "pnpm --filter web dev",
+    "dev:demo": "pnpm --filter demo dev",
     "android": "expo run:android",
     "ios": "expo run:ios"
   },

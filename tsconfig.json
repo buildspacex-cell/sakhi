@@ -1,4 +1,11 @@
 {
-  "compilerOptions": {},
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@narrative/*": [
+        "packages/narrative/*"
+      ]
+    }
+  },
   "extends": "expo/tsconfig.base"
 }

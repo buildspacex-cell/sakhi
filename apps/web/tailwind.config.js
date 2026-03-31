@@ -7,6 +7,13 @@ module.exports = {
   ],
   theme: {
     extend: {
+      backgroundImage: {
+        'hero-glow':
+          'radial-gradient(circle at top left, rgba(111, 141, 255, 0.22), transparent 34%), radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.08), transparent 22%), radial-gradient(circle at bottom right, rgba(77, 111, 255, 0.14), transparent 30%)'
+      },
+      boxShadow: {
+        panel: '0 24px 80px rgba(0, 0, 0, 0.32)'
+      },
       colors: {
         brand: {
           50: '#eef2ff',

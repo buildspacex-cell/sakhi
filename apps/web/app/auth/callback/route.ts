@@ -30,9 +30,10 @@ export async function GET(request: NextRequest) {
   };
 
   if (code) {
-    // Create initial response — destination may change after we check onboarding
-    let response = NextResponse.redirect(`${origin}${redirect}`);
     let postAuthPath = redirect;
+
+    // Collect cookies set by Supabase so we can apply them with full options to the final redirect
+    const pendingCookies: { name: string; value: string; options: CookieOptions }[] = [];
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,9 +45,7 @@ export async function GET(request: NextRequest) {
             return request.cookies.getAll();
           },
           setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options);
-            });
+            pendingCookies.push(...cookiesToSet);
           },
         },
       }
@@ -125,8 +124,8 @@ export async function GET(request: NextRequest) {
     }
 
     const finalResponse = NextResponse.redirect(`${origin}${postAuthPath}`);
-    response.cookies.getAll().forEach((cookie) => {
-      finalResponse.cookies.set(cookie.name, cookie.value);
+    pendingCookies.forEach(({ name, value, options }) => {
+      finalResponse.cookies.set(name, value, options);
     });
     return finalResponse;
   }

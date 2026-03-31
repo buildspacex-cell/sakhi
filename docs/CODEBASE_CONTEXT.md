@@ -1,6 +1,6 @@
 # Codebase Context (Working Baseline)
 
-> Last audited: 2026-03-12  
+> Last audited: 2026-03-25  
 > Source of truth refresh command: `./scripts/context-audit.sh`
 
 ## Purpose
@@ -25,23 +25,23 @@ Use this first before substantial code edits.
    - `docs/TEST_STATUS.md`
    - `CHANGELOG.md` (`[Unreleased]`)
 
-## Current Snapshot (2026-03-12)
+## Current Snapshot (2026-03-25)
 
 ### Repository Shape
 
 | Metric | Value |
 |---|---:|
-| Tracked files | 1419 |
-| Python files | 863 |
-| TypeScript files (`.ts`, `.tsx`) | 381 |
+| Tracked files | 1495 |
+| Python files | 866 |
+| TypeScript files (`.ts`, `.tsx`) | 425 |
 | API route modules (`sakhi/apps/api/routes`, excluding `__init__`/`.bak`) | 81 |
-| API service modules (`sakhi/apps/api/services`, excluding `__init__`) | 233 |
+| API service modules (`sakhi/apps/api/services`, excluding `__init__`) | 234 |
 | Worker modules (`sakhi/apps/worker`, excluding `__init__`) | 114 |
 | Worker task modules (`sakhi/apps/worker/tasks`, excluding `__init__`, `_stubs.py`) | 86 |
 | Engine modules (`sakhi/apps/engine`, excluding `__init__`) | 34 |
-| Web pages (`apps/web/app/**/page.tsx`) | 78 |
+| Web pages (`apps/web/app/**/page.tsx`) | 83 |
 | Web API routes (`apps/web/app/api/**/route.ts`) | 119 |
-| Mobile screens (`apps/mobile/app/**/*.tsx`) | 34 |
+| Mobile screens (`apps/mobile/app/**/*.tsx`) | 15 |
 | Kala source modules | 49 |
 | Kala test functions | 552 |
 
@@ -56,6 +56,22 @@ Use this first before substantial code edits.
 | Duplicate `app.include_router(micro_momentum_router)` | 2 |
 
 ## Critical Runtime Paths
+
+### MVP Narrative Demo
+
+- Protected web UI: `apps/web/app/mvp/page.tsx`
+- Public GSAP cinematic story: `apps/web/app/(marketing)/story/page.tsx`
+- Public aligned pitch deck: `apps/web/app/pitch/page.tsx`
+- Preserved scroll narrative: `apps/web/app/(marketing)/story-scroll/page.tsx`
+- Password gate: `apps/web/app/mvp/unlock/page.tsx`, `apps/web/middleware.ts`
+- Narrative data: `packages/narrative/mvp/roadmap.ts`
+- Content package: `packages/narrative/package.json` (`@sakhi/narrative`)
+- Web components: `apps/web/components/mvp/Slide.tsx`, `apps/web/components/mvp/LoopDiagram.tsx`, `apps/web/components/mvp/PhaseGrid.tsx`
+- Web story components: `apps/web/components/story/*`
+- Web pitch components: `apps/web/components/pitch/*`
+- GSAP story shell: `apps/web/components/story/StoryContainer.tsx`, `apps/web/components/story/useStoryTimeline.ts`
+- Demo home handoff page: `apps/demo/app/page.tsx`
+- Parked demo cinematic components: `apps/demo/components/cinematic/*`
 
 ### Investor Simulation (Web)
 
@@ -88,11 +104,11 @@ Use this first before substantial code edits.
 
 ## Simulation Data Health (Verified)
 
-Source: `./scripts/context-audit.sh` on 2026-03-12.
+Source: `./scripts/context-audit.sh` on 2026-03-25.
 
 | File | Days | Entries | Coherence | Alignment | Identity | Themes | Patterns | Worker failures |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
-| `vidhya.json` | 116 | 67 | 117 | 117 | 117 | 103 | 0 | none |
+| `vidhya.json` | 117 | 68 | 118 | 118 | 118 | 104 | 0 | none |
 | `diya.json` | 30 | 30 | 31 | 31 | 31 | 25 | 18 | none |
 | `bigd.json` | 30 | 30 | 31 | 31 | 31 | 25 | 18 | none |
 | `anxious_achiever.json` | 1 | 2 | 2 | 2 | 2 | 1 | 0 | `weekly.weekly_rhythm_rollup: relation "rhythm_daily_curve" does not exist` |
@@ -104,7 +120,7 @@ Current read:
 - `anxious_achiever` still shows a deferred rhythm rollup schema gap from legacy snapshot runs.
 - `hormonal_harmony` and `stuck_creative` remain legacy/low-fidelity for deep-state outputs.
 
-## Test Reality (2026-03-12 Context Audit)
+## Test Reality (2026-03-25 Context Audit)
 
 ### Harness Signals
 
@@ -114,12 +130,12 @@ Current read:
 
 ### Audit Counts
 
-- `sakhi/tests` path-prefix count: `69`
-- `test_*.py` pattern count under `sakhi/tests`: `72`
+- `sakhi/tests` path-prefix count: `71`
+- `test_*.py` pattern count under `sakhi/tests`: `74`
 - Integration test files: `9`
-- Unit test files: `57`
+- Unit test files: `59`
 
-## Observability Signals (2026-03-12 Context Audit)
+## Observability Signals (2026-03-25 Context Audit)
 
 - `metrics_endpoint=present`
 - `health_readiness=present`

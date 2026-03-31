@@ -2,7 +2,7 @@
 
 > Living document tracking all planned work. Update checkboxes as items are completed.
 >
-> Last Updated: 2026-03-11
+> Last Updated: 2026-03-22
 >
 > **Coverage**: 100% — All demo capabilities have paths to become REAL (not just simulated)
 >
@@ -568,8 +568,9 @@ User: clicks [Track for 2 weeks]
 | ✅ | Act 2: Personal Mesh UI | Split-screen Your Sakhi ↔ Mom's Sakhi | `apps/web/app/demo/coordination/page.tsx` | Coordination demo works |
 | ✅ | Act 3: Business Mesh UI | Restaurant dashboard with guest profile | `apps/web/app/demo/restaurant/page.tsx` | Business coordination works |
 | ✅ | Act 4: Reflection UI | Causal reasoning with dosha context | `apps/web/app/demo/reveal/page.tsx` | Shows reflective intelligence |
+| ✅ | MVP Roadmap Demo | Web now carries the public cinematic `/story` narrative, the aligned `/pitch` deck companion, and the protected `/mvp` roadmap shell, while the demo app is parked to avoid split-surface drift | `apps/web/app/(marketing)/story/page.tsx`, `apps/web/app/pitch/page.tsx`, `apps/web/components/story/*`, `apps/web/components/pitch/*`, `apps/web/app/mvp/page.tsx`, `apps/web/app/mvp/unlock/page.tsx`, `apps/web/components/mvp/*`, `apps/demo/app/page.tsx`, `apps/demo/components/cinematic/*`, `packages/narrative/mvp/roadmap.ts` | `/story` in web serves the cinematic investor walkthrough, `/pitch` mirrors that story as a readable deck, `/mvp` in web redirects to unlock without access, and the demo app no longer hosts a competing live route |
 
-**Demo Access**: Navigate to `/demo` to access all 4 acts.
+**Demo Access**: Navigate to `/demo` for the parked 4-act investor demo shell, `/story` in the web app for the cinematic Sakhi narrative, `/pitch` in the web app for the aligned deck version of that narrative, and `/mvp` in the web app for the password-protected roadmap shell. The standalone demo `/mvp` route remains retired and the demo app is parked.
 
 **Test**: All 4 acts run smoothly in sequence for investor demo.
 

@@ -27,6 +27,14 @@ export async function writeCachedPersonId(
   }
 }
 
+export async function clearCachedPersonId(supabaseUserId: string): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(getPersonIdKey(supabaseUserId));
+  } catch {
+    // Best-effort cleanup only.
+  }
+}
+
 export async function clearLegacyPersonIdCache(): Promise<void> {
   try {
     await SecureStore.deleteItemAsync(LEGACY_PERSON_ID_KEY);

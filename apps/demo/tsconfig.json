@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -17,17 +13,11 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@narrative/*": [
-        "../../packages/narrative/*"
-      ],
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@narrative/*": ["../../packages/narrative/*"]
     },
     "plugins": [
       {
