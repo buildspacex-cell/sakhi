@@ -2,7 +2,7 @@
 
 > Internal working document. Last updated: 2026-04-02
 > Ground-up marketing strategy with extensive AI tool usage.
-> Budget: $100K GTM allocation from the $1.25M raise.
+> Budget: $171K GTM allocation from the $1.25M raise (14% of raise).
 
 ---
 
@@ -25,19 +25,19 @@ The job of marketing is to get enough people to that six-month point.
 ## The Three Phases
 
 ### Phase 1 — Seeding (Month 1–3)
-Goal: 500 users. Find the believers. Build the foundation.
+Goal: 2,000 total users, 200 paying. Find the believers. Build the foundation.
 Primary: founder personal brand + community seeding.
 No paid. No scale. Deep over wide.
 
 ### Phase 2 — Growing (Month 4–9)
-Goal: 5,000 users. Content flywheel active. Referral loop established.
+Goal: 9,000 total users, 1,200 paying. Content flywheel active. Referral loop established.
 Primary: content marketing + SEO + targeted community expansion.
 Light paid experimentation begins Month 6.
 
 ### Phase 3 — Scaling (Month 10–18)
-Goal: 10,000+ paying users. Channels proven. CAC known.
+Goal: 2,000 paying by M12. 10,000 paying by M18. Channels proven. CAC known.
 Primary: proven paid channels + creator partnerships + PR.
-Seed raise funded GTM begins here.
+Seed raise funded GTM begins here. M18 target requires Seed deployed and growth team in place.
 
 ---
 
@@ -65,7 +65,7 @@ At pre-seed, the founder IS the brand. No ad spend, no agency, no content team c
 - Taplio or Hypefury for scheduling and analytics ($49/mo)
 - Beehiiv for Substack alternative with better analytics ($49/mo)
 
-**Target:** 5,000 Twitter followers, 1,000 Substack subscribers by Month 6. These become the first cohort.
+**Target:** 5,000 Twitter followers, 1,000 Substack subscribers by Month 6. These become the first paying cohort.
 
 **Frequency:** 5 tweets/day, 1 long-form essay/week, 1 Substack/2 weeks.
 
@@ -413,8 +413,8 @@ Often forgotten but significant. 30–40% of app discovery happens through App S
 | Referral program | $5,000 | Month 3–18 | Referral rate, referred CAC |
 | Paid acquisition (experiments) | $15,000 | Month 6–10 | CAC by channel |
 | ASO | $2,000 | Month 4–5 | App Store ranking, organic installs |
-| Buffer / unallocated | $2,846 | — | Opportunistic spend |
-| **Total** | **$100,000** | | |
+| Buffer / unallocated | $30,000 | — | Channel pivots, opportunistic spend |
+| **Total** | **$171,000** | | |
 
 ---
 
@@ -461,20 +461,22 @@ Often forgotten but significant. 30–40% of app discovery happens through App S
 
 ## Month-by-Month Marketing Priorities
 
-| Month | Focus | Goal |
-|---|---|---|
-| 1 | Founder brand setup, waitlist launch, community seeding begins | 500 waitlist signups |
-| 2 | First essay published, community deepening, email sequence live | 1,000 total signups |
-| 3 | Product Hunt launch, referral program live | 3,000 total signups |
-| 4 | PR push, content cadence established, ASO live | 500 paying users |
-| 5 | SEO content ramping, newsletter growing | 750 paying users |
-| 6 | Paid experiments begin, creator outreach starts | 1,000 paying users |
-| 7 | First creator partnerships live, SEO traffic growing | 1,500 paying users |
-| 8 | Paid channel winners identified, doubled down | 2,000 paying users |
-| 9 | User story videos live, referral rate optimised | 3,000 paying users |
-| 10 | Scale proven channels, kill underperformers | 4,000 paying users |
-| 12 | Full engine running | 5,000+ paying users |
-| 18 | Seed raise metrics proven | 10,000+ paying users |
+| Month | Focus | Paying users | Total users |
+|---|---|---|---|
+| 1 | Founder brand setup, waitlist launch, community seeding begins | — | 500 |
+| 2 | First essay published, community deepening, email sequence live | — | 1,000 |
+| 3 | Product Hunt launch, referral program live | 200 | 2,000 |
+| 4 | PR push, content cadence established, ASO live | 300 | 3,000 |
+| 5 | SEO content ramping, newsletter growing | 450 | 4,000 |
+| 6 | Paid experiments begin, creator outreach starts | 600 | 5,000 |
+| 7 | First creator partnerships live, SEO traffic growing | 800 | 6,500 |
+| 8 | Paid channel winners identified, doubled down | 1,000 | 8,000 |
+| 9 | User story videos live, referral rate optimised | 1,200 | 9,000 |
+| 10 | Scale proven channels, kill underperformers | 1,500 | 10,500 |
+| 12 | Full organic engine running. Seed raise process begins. | 2,000 | 13,000 |
+| 18 | Seed deployed. Paid scaled. Growth team in place. | 10,000 | 55,000 |
+
+**Conversion assumption:** 15% free-to-paid across the cohort. M18 step-change is Seed capital deployed into proven paid channels, not organic continuation.
 
 ---
 

@@ -26,7 +26,7 @@ function Slide01ProblemSolution() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col px-10 py-10 sm:px-16 lg:px-20">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-10 py-10 pb-24 sm:px-16 lg:px-20">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5">
 
         {/* Hook */}
@@ -296,8 +296,8 @@ function Slide03Gap() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 px-10 pb-7 pt-16 sm:px-14 lg:px-16">
-      <div className="mx-auto flex h-full max-w-7xl flex-col gap-4">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-10 pb-24 pt-16 sm:px-14 lg:px-16">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4">
 
         <div className="cd3-item shrink-0">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
@@ -315,10 +315,10 @@ function Slide03Gap() {
         </div>
 
         {/* Two-column layout */}
-        <div className="cd3-item grid gap-4 lg:grid-cols-2" style={{ height: "62vh", maxHeight: 520, minHeight: 0 }}>
+        <div className="cd3-item grid gap-4 lg:grid-cols-2">
 
           {/* Left — table */}
-          <div className="overflow-y-auto rounded-xl border border-white/[0.08] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="rounded-xl border border-white/[0.08]">
             <table className="w-full text-left text-[0.7rem]">
               <thead>
                 <tr className="border-b border-white/[0.07] bg-white/[0.03]">
@@ -343,7 +343,7 @@ function Slide03Gap() {
           </div>
 
           {/* Right — capability matrix */}
-          <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
+          <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] min-h-[420px]">
               {/* Axis labels */}
               <div className="absolute left-1/2 top-2.5 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-white/14">Understands your life</div>
               <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-white/65">Surface-level only</div>
@@ -450,32 +450,38 @@ function Slide04WhyWeWin() {
   }, []);
 
   const moat = [
-    { label: "Continuity Engine", body: "Memory that persists, connects, and surfaces across sessions. Not a feature — the core infrastructure. No competitor has built this." },
-    { label: "Life Occupancy", body: "Maps where your attention actually goes across time. Patterns you never named, finally visible. No tool surfaces this today." },
-    { label: "Continuity Arc", body: "Traces how your thinking, values, and priorities evolve. A compounding record of who you are becoming — not just what you said." },
-    { label: "Personalization Flywheel", body: "Every conversation sharpens the model. Two years of private context cannot be replicated by a competitor who arrives late. The data is the moat." },
+    { label: "Continuity Engine", tag: "Core infrastructure", body: "Memory that persists, connects, and surfaces across sessions. Not a feature. The core infrastructure no competitor has built." },
+    { label: "Life Occupancy", tag: "Invisible to every other tool", body: "Maps where your attention actually goes across time. Patterns you never named, finally visible. No tool surfaces this today." },
+    { label: "Continuity Arc", tag: "Compounding record", body: "Traces how your thinking, values, and priorities evolve. A record of who you are becoming, not just what you said." },
+    { label: "Personalization Flywheel", tag: "Data moat", body: "Every conversation sharpens the model. Two years of private context cannot be replicated by a competitor who arrives late." },
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col px-10 py-12 sm:px-16 lg:px-20">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8">
-        <div className="cd4w-item shrink-0">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
+    <div ref={ref} className="absolute inset-0 flex flex-col justify-center px-10 py-14 sm:px-16 lg:px-20">
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="cd4w-item mb-10">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
             <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />Why We Win
           </div>
-          <h2 className="text-[clamp(1.8rem,3vw,2.8rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white">
+          <h2 className="text-[clamp(2.4rem,4.5vw,4rem)] font-bold leading-[1.02] tracking-[-0.06em] text-white">
             The model is the moat.
           </h2>
-          <p className="mt-3 max-w-2xl text-[clamp(0.88rem,1.1vw,1rem)] leading-[1.65] text-slate-500">
-            The model is the product, not the interface. Two years of private, cross-platform context in a proprietary Continuity Engine cannot be replicated.
+          <p className="mt-3 max-w-xl text-[clamp(0.88rem,1.1vw,1rem)] leading-[1.7] text-slate-500">
+            Not the interface. Not the features. The compounding intelligence that builds inside Sakhi and lives nowhere else.
           </p>
         </div>
 
-        <div className="cd4w-item grid flex-1 gap-3 sm:grid-cols-2">
-          {moat.map((m) => (
-            <div key={m.label} className="rounded-xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.04] px-5 py-4">
-              <div className="text-[0.82rem] font-semibold tracking-[-0.02em] text-[#c8d8ff]/85">{m.label}</div>
-              <p className="mt-1.5 text-[0.78rem] leading-[1.6] text-slate-500">{m.body}</p>
+        <div className="cd4w-item grid gap-3 sm:grid-cols-2">
+          {moat.map((m, i) => (
+            <div key={m.label} className="rounded-xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.04] px-5 py-5">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[0.9rem] font-bold tracking-[-0.02em] text-white">{m.label}</div>
+                  <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.22em] text-[#8cb7ff]/35">{m.tag}</div>
+                </div>
+                <span className="shrink-0 text-[1.6rem] font-bold leading-none tabular-nums text-[#8cb7ff]/10">0{i + 1}</span>
+              </div>
+              <p className="text-[0.82rem] leading-[1.7] text-slate-400">{m.body}</p>
             </div>
           ))}
         </div>
@@ -603,16 +609,16 @@ function Slide05Ask() {
     "Mobile-first experience, polished for iOS and Android",
     "10,000 active users, 2,000+ paying",
     "60%+ Day-90 retention",
-    "$80K MRR run rate",
+    "$40K MRR run rate",
   ];
 
   const allocation = [
-    { pct: "34%", amount: "$421K", label: "Runway + Buffer", detail: "10 months full team burn in reserve for Seed timing" },
-    { pct: "28%", amount: "$350K", label: "People", detail: "CEO, CTO, AI/ML engineer, growth hire, India statutory" },
     { pct: "20%", amount: "$254K", label: "Engineering", detail: "LLM API, infra, AI tools, design, QA, equipment, observability" },
-    { pct: "8%",  amount: "$100K", label: "GTM", detail: "First cohort, content, community, paid experiments" },
+    { pct: "14%", amount: "$171K", label: "GTM", detail: "First cohort, content, community, creator partnerships, paid experiments" },
+    { pct: "28%", amount: "$350K", label: "People", detail: "CEO, CTO, AI/ML engineer, growth hire, India statutory" },
     { pct: "6%",  amount: "$75K",  label: "Legal + Compliance", detail: "C-Corp, India entity, IP, SAFE, GDPR, HealthKit" },
     { pct: "4%",  amount: "$50K",  label: "Operations", detail: "Payroll, accounting, tools, co-working" },
+    { pct: "28%", amount: "$350K", label: "Runway + Buffer", detail: "8 months full team burn in reserve for Seed timing" },
   ];
 
   return (
@@ -632,7 +638,7 @@ function Slide05Ask() {
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Milestones */}
           <div className="cd5-item">
-            <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">What we achieve in 18 months</div>
+            <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">What we prove with this raise (Month 12)</div>
             <div className="space-y-2.5">
               {milestones.map((m, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
@@ -642,7 +648,7 @@ function Slide05Ask() {
               ))}
             </div>
             <div className="mt-4 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.04] px-4 py-3 text-[0.82rem] font-semibold text-emerald-300/70">
-              Seed target at 18 months: $4–5M at $15–20M valuation
+              Seed target at Month 12–15: $4–5M at $15–20M valuation
             </div>
           </div>
 
@@ -790,8 +796,12 @@ export function CompanyDeck() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "f" || e.key === "F") { toggleFullscreen(); return; }
-      if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") { e.preventDefault(); navigate(1); }
-      if (e.key === "ArrowLeft"  || e.key === "ArrowUp")                    { e.preventDefault(); navigate(-1); }
+      // Only navigate on vertical arrows if the active slide is not mid-scroll
+      const panel = contentRef.current?.querySelector<HTMLElement>(".slide-scroll-panel");
+      const atBottom = panel ? panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 4 : true;
+      const atTop = panel ? panel.scrollTop <= 4 : true;
+      if (e.key === "ArrowRight" || e.key === " " || (e.key === "ArrowDown" && atBottom)) { e.preventDefault(); navigate(1); }
+      if (e.key === "ArrowLeft"  || (e.key === "ArrowUp" && atTop))                        { e.preventDefault(); navigate(-1); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

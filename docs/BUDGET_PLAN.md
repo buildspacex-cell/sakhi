@@ -29,13 +29,13 @@ This is not included in the $1.25M raise. It represents founder skin-in-the-game
 
 ### Why $1.25M and not $1M
 
-We stress-tested the budget from the ground up — building every cost line from first principles rather than working backwards from a round number. The true cost of 18 months of execution comes to ~$768K in known costs. The remaining $482K is runway buffer — approximately 12 months of full team burn held in reserve.
+We stress-tested the budget from the ground up — building every cost line from first principles rather than working backwards from a round number. The true cost of 18 months of execution comes to ~$900K in known costs. The remaining $350K is runway buffer — approximately 8 months of full team burn held in reserve.
 
 We chose $1.25M over $1M for three reasons:
 
-1. **Seed timing buffer.** Pre-seed to Seed typically takes 3–6 months to close after hitting milestones. $482K of buffer means we are never raising from a position of desperation.
+1. **Seed timing buffer.** Pre-seed to Seed typically takes 3–6 months to close after hitting milestones. $350K of buffer means we are never raising from a position of desperation.
 2. **Round structure.** We are targeting at least one institutional investor (micro-VC). Institutional investors at pre-seed typically write $250–500K checks. A $1M round with one institutional investor at 50% concentration makes the round harder to fill cleanly. $1.25M gives better structure.
-3. **Discipline signal.** Showing $482K of identified runway — not vague "operations" — signals we know our costs precisely. This builds more trust than a tighter ask with less transparency.
+3. **Discipline signal.** Showing $350K of identified runway — not vague "operations" — signals we know our costs precisely. This builds more trust than a tighter ask with less transparency.
 
 We considered $1.5M but decided against it. The additional capital would not be deployed meaningfully in 18 months and would result in unnecessary dilution.
 
@@ -63,11 +63,11 @@ SAFE legal fees: ~$5K (included in legal budget).
 |---|---|---|---|
 | People | $350K | 28% | 4 people, 2 geographies, 12–18 months |
 | Engineering | $254K | 20% | Infra, AI tools, LLM API, design, QA, equipment, observability, 10% buffer |
-| GTM | $100K | 8% | Organic-first: content, community, first cohort |
+| GTM | $171K | 14% | Content, community, creators, paid experiments, marketing tools |
 | Legal + Compliance | $75K | 6% | Entity, IP, data privacy, SAFE |
 | Operations | $50K | 4% | Payroll, accounting, tools, co-working |
-| **Known costs** | **$829K** | **66%** | |
-| **Runway + Flex** | **$421K** | **34%** | ~10 months full team burn in reserve |
+| **Known costs** | **$900K** | **72%** | |
+| **Runway + Buffer** | **$350K** | **28%** | ~8 months full team burn in reserve |
 | **Total** | **$1.25M** | | |
 
 ---
@@ -341,7 +341,7 @@ The 10% buffer accounts for scope creep, underestimated complexity in the Contin
 
 ---
 
-## 3. GTM — $100K (8%)
+## 3. GTM — $171K (14%)
 
 ### The organic-first decision
 
@@ -351,16 +351,21 @@ We chose organic-led growth over paid acquisition for pre-seed for three reasons
 2. **Product fit signal.** If organic content resonates, it proves the positioning lands. If it doesn't, we have a positioning problem that paid acquisition would mask, not solve.
 3. **The target persona responds to organic.** Knowledge workers, founders, and caregivers — the people who feel Sakhi's problem most acutely — discover products through thoughtful content and peer recommendation, not ads.
 
-**The risk we are accepting:** If organic doesn't show traction by Month 6, we have $100K that cannot easily pivot to paid acquisition at scale. The $482K flex/runway buffer covers a pivot to paid if needed.
+**Why 14% and not 8%:** GTM is the rate-limiting step between a product that works and a product that grows. Under-investing in distribution at pre-seed is one of the most common ways good products die quietly. $171K gives us real budget for creator partnerships, a full marketing tool stack, and meaningful paid experiments — not just a symbolic allocation. The full channel-by-channel plan is in MARKETING_PLAN.md.
 
 | Activity | Budget | Notes |
 |---|---|---|
-| First cohort acquisition | $20K | At $10 CAC = 2,000 users. Referral program, early access. |
-| Content production | $25K | Long-form essays, founder voice, distribution |
-| Community building | $20K | Events, early access program, referral mechanics |
-| PR + press | $15K | One targeted product launch push |
-| Paid experiments | $20K | Small paid tests to validate CAC assumptions |
-| **Total** | **$100K** | |
+| First cohort acquisition | $20K | Referral program, early access, waitlist seeding |
+| Content production + SEO | $30K | Long-form essays, founder voice, freelance support, video |
+| Community building | $15K | Events, early access program, community sponsorships |
+| Creator partnerships | $20K | 6–8 niche partnerships (productivity, PKM, founders) |
+| PR + press | $10K | One targeted launch push, journalist outreach |
+| Paid experiments (M6+) | $20K | Meta, Google Search, Twitter — validate CAC before scaling |
+| Marketing AI tools (18mo) | $19K | Ahrefs, Surfer SEO, Descript, HeyGen, Clay, Modash, etc. |
+| Referral program | $5K | Infrastructure + rewards (extended memory window mechanic) |
+| ASO | $2K | App Store + Play Store optimisation |
+| Buffer | $30K | Opportunistic spend, channel pivots if needed |
+| **Total** | **$171K** | |
 
 ---
 
@@ -431,19 +436,22 @@ Buffer to $50K absorbs: unexpected travel for investor meetings, one-off equipme
 
 ---
 
-## 6. Runway + Flex — $421K (34%)
+## 6. Runway + Buffer — $350K (28%)
 
 This is not waste. This is the most important line in the budget.
 
-**What $421K buys:**
-- ~10 months of full team burn held in reserve
-- 3–6 months of Seed raise process without pressure
-- Ability to double GTM spend if organic stalls at Month 6
+**What $350K buys:**
+- ~8 months of full team burn held in reserve
+- 3–5 months of Seed raise process without pressure
+- Ability to scale GTM spend if a paid channel proves out at Month 6–8
 - Ability to bring forward a third Bangalore hire (Android, ~$45K for 9 months) if iOS traction demands it
-- Buffer for LLM costs if growth exceeds plan by 2.5x
+- Buffer for LLM costs if growth exceeds plan by 2x
+
+**Why this is the right buffer size:**
+We stress-tested going lower ($100K) and rejected it. $100K = 3 months of people + ops burn. If Seed takes 4 months to close or any one cost line runs over, $100K does not survive contact with reality. $350K gives genuine optionality. Reducing the buffer further to reach a round $1M number is not a sound reason to increase execution risk.
 
 **Why this builds investor confidence:**
-"We know exactly what we're spending and have 12 months of buffer" is a stronger signal than a tight budget with no slack. It says: we are not raising because we are desperate, we are raising to execute a plan we have already stress-tested.
+"We know exactly what we're spending and have 8 months of buffer" is a stronger signal than a tight budget with no slack. It says: we are not raising because we are desperate, we are raising to execute a plan we have already stress-tested.
 
 ---
 
@@ -462,13 +470,13 @@ From Month 9, revenue covers all non-people operational costs. People costs (sal
 
 ## Investor Q&A Prep
 
-**Q: What does $193K of engineering buy that your existing team can't deliver?**
+**Q: What does $254K of engineering buy that your existing team can't deliver?**
 
-Three specific workstreams that require dedicated build time beyond what two founders can ship while also running the company: Continuity Engine V2 (the core memory and inference architecture), iOS with HealthKit integration (a full mobile product requiring separate QA and App Store process), and the life signal layer (HealthKit, calendar, email — three separate OAuth and API integrations each with their own compliance requirements). Without dedicated engineering budget these ship 6–9 months late.
+Three specific workstreams that require dedicated build time beyond what two founders can ship while also running the company: Continuity Engine V2 (the core memory and inference architecture), iOS with HealthKit integration (a full mobile product requiring separate QA and App Store process), and the life signal layer (HealthKit, calendar, email — three separate OAuth and API integrations each with their own compliance requirements). Without dedicated engineering budget these ship 6–9 months late. The $254K includes a 10% buffer and full observability stack — not a plug number.
 
-**Q: GTM is only 8% — what if organic doesn't work?**
+**Q: GTM is 14% — more than most pre-seeds allocate. Why?**
 
-Month 6 is the decision point. If content and community have not generated meaningful referral momentum by Month 6, we have two options: (1) pull $50–80K from the flex budget and test paid channels aggressively for 60 days, or (2) reassess positioning before spending more on acquisition. The $482K flex/runway gives us the room to make this call without panic.
+GTM is the rate-limiting step between a product that works and a product that grows. $171K gives us creator partnerships, a full AI-powered marketing tool stack, paid experiments after Month 6, and a referral program — not just organic hope. The detailed channel plan with CAC targets by channel is in MARKETING_PLAN.md. Month 6 is the decision point: if channels are underperforming, the $350K buffer gives us room to pivot without panic.
 
 **Q: Why is legal so high at $75K?**
 
@@ -489,7 +497,7 @@ It is four people across two geographies with India statutory obligations includ
 | C-Corp conversion delay | Low | Blocks institutional close | Start conversion immediately on investor interest |
 | India entity setup delay | Low | IP risk, blocks close | Run parallel to C-Corp conversion |
 | CEO/CTO salary revision at M12 | Medium | Team stability | Pre-agreed plan in writing before clock starts |
-| Organic GTM stalls by M6 | Medium | CAC assumption breaks | $80K flex available to pivot to paid |
+| Organic GTM stalls by M6 | Medium | CAC assumption breaks | $30K GTM buffer + $350K runway available to pivot to paid |
 | Power user LLM cost concentration | Medium | Year 1 margin compression | 40% buffer + tiered pricing in Year 2 |
 | Apple HealthKit App Store rejection | Medium | 4–8 week delay | Security pen test + legal review before submission |
 
