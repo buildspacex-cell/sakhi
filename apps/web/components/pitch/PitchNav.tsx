@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-const sections = [
+export const pitchSections = [
   { id: "hero", label: "Story" },
   { id: "problem", label: "Problem" },
   { id: "solution", label: "Sakhi" },
@@ -13,50 +13,14 @@ const sections = [
   { id: "ask", label: "Ask" },
 ];
 
-export function PitchNav() {
-  const [activeId, setActiveId] = useState<string>("hero");
+type PitchNavProps = {
+  activeId: string;
+  onSelect: (id: string) => void;
+};
+
+export function PitchNav({ activeId, onSelect }: PitchNavProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-
-    const visibilityMap: Record<string, number> = {};
-
-    sections.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            visibilityMap[id] = entry.intersectionRatio;
-          });
-
-          let maxRatio = 0;
-          let mostVisible = activeId;
-          for (const [sectionId, ratio] of Object.entries(visibilityMap)) {
-            if (ratio > maxRatio) {
-              maxRatio = ratio;
-              mostVisible = sectionId;
-            }
-          }
-          setActiveId(mostVisible);
-        },
-        {
-          threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
-          rootMargin: "-10% 0px -10% 0px",
-        }
-      );
-
-      observer.observe(el);
-      observers.push(observer);
-    });
-
-    return () => {
-      observers.forEach((o) => o.disconnect());
-    };
-  }, [activeId]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -68,13 +32,6 @@ export function PitchNav() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, []);
-
-  const scrollTo = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
-  };
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -117,7 +74,7 @@ export function PitchNav() {
           </svg>
         )}
       </button>
-      {sections.map(({ id, label }) => {
+      {pitchSections.map(({ id, label }) => {
         const isActive = activeId === id;
         const isHovered = hoveredId === id;
 
@@ -134,7 +91,8 @@ export function PitchNav() {
               </span>
             )}
             <button
-              onClick={() => scrollTo(id)}
+              type="button"
+              onClick={() => onSelect(id)}
               aria-label={`Go to ${label}`}
               className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
                 isActive

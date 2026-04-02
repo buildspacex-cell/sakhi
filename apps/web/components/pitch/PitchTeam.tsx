@@ -63,23 +63,23 @@ const founders = [
 export function PitchTeam() {
   return (
     <section id="founders-story" className="border-t border-white/[0.06] bg-[#020617] px-8 py-32 sm:px-16 lg:px-24">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl">
         <FadeIn>
           <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.3em] text-[#8ab0ff]/80">
             Founders
           </p>
         </FadeIn>
         <FadeIn delay={100}>
-          <h2 className="mt-5 font-semibold text-white max-w-[20ch] leading-[1.08] -tracking-[0.04em]" style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)" }}>
+          <h2 className="mt-5 max-w-[18ch] font-semibold leading-[1.04] -tracking-[0.05em] text-white" style={{ fontSize: "clamp(2.8rem, 5.4vw, 5rem)" }}>
             Built from lived experience.
           </h2>
         </FadeIn>
         <div className="mt-16 space-y-10">
           {founders.map((member, i) => (
             <FadeIn key={member.name} delay={200 + i * 120}>
-              <div className="rounded-[40px] border border-white/10 bg-[linear-gradient(155deg,rgba(16,23,39,0.95),rgba(7,11,21,0.84))] p-8 sm:p-10">
-                <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
-                  <div className="mx-auto flex w-[170px] flex-col gap-4 sm:w-[200px] lg:mx-0">
+              <div className="rounded-[40px] border border-white/10 bg-[linear-gradient(155deg,rgba(16,23,39,0.95),rgba(7,11,21,0.84))] p-8 sm:p-10 xl:p-12">
+                <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,820px)] lg:items-center lg:justify-center lg:gap-7 xl:grid-cols-[260px_minmax(0,900px)]">
+                  <div className="mx-auto flex w-[180px] flex-col gap-4 sm:w-[210px] lg:mx-0 lg:w-[240px]">
                     <div className="relative aspect-[3/4] overflow-hidden rounded-[28px] border border-white/10">
                       <Image
                         src={member.image}
@@ -90,20 +90,23 @@ export function PitchTeam() {
                       />
                     </div>
                     <div className="inline-flex flex-col rounded-[18px] border border-white/[0.08] bg-white/[0.03] px-4 py-3">
-                      <p className="text-[0.95rem] leading-[1.55] tracking-[-0.01em] text-white/62">
+                      <p className="text-[1rem] leading-[1.55] tracking-[-0.01em] text-white/62">
                         {member.bio}
                       </p>
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-2xl font-semibold text-white -tracking-[0.03em]">
+                    <p className="text-[clamp(2.1rem,3vw,2.8rem)] font-semibold -tracking-[0.04em] text-white">
                       {member.name}
                     </p>
-                    <p className="mt-1 text-sm font-medium text-[#8ab0ff]/70 uppercase tracking-[0.15em]">
+                    <p className="mt-2 text-[0.86rem] font-medium uppercase tracking-[0.18em] text-[#8ab0ff]/70">
                       {member.role}
                     </p>
-                    <div className="mt-6 max-w-3xl rounded-[24px] border border-[#8ab0ff]/16 bg-[linear-gradient(160deg,rgba(140,176,255,0.08),rgba(255,255,255,0.02))] px-5 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
-                      <p className="text-balance text-[1.26rem] font-semibold leading-[1.45] tracking-[-0.03em] text-white">
+                    <div className="mt-6 max-w-none rounded-[28px] border border-[#8ab0ff]/16 bg-[linear-gradient(160deg,rgba(140,176,255,0.08),rgba(255,255,255,0.02))] px-6 py-6 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:px-7 sm:py-7">
+                      <p
+                        className="max-w-[13ch] text-balance font-semibold leading-[0.98] tracking-[-0.07em] text-white"
+                        style={{ fontSize: "clamp(2.8rem, 5.8vw, 5.7rem)" }}
+                      >
                         {member.opening}
                       </p>
                     </div>
@@ -117,14 +120,14 @@ export function PitchTeam() {
                           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8ab0ff]/68">
                             {beat.label}
                           </p>
-                          <p className="mt-3 text-[0.95rem] leading-[1.65] text-white/55">
+                          <p className="mt-3 text-[1rem] leading-[1.65] text-white/55">
                             {beat.body}
                           </p>
                         </div>
                       ))}
                     </div>
 
-                    <p className="mt-8 text-[1.06rem] font-medium leading-7 tracking-[-0.02em] text-white">
+                    <p className="mt-8 text-[1.12rem] font-medium leading-8 tracking-[-0.02em] text-white">
                       {member.closing}
                     </p>
                   </div>
