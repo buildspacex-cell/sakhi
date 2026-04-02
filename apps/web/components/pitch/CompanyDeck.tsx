@@ -1,10 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 
-const TOTAL = 7;
+const TOTAL = 8;
 const COVER = 0;
+const DECK_HEADER_BADGE_CLASS =
+  "mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40";
+const DECK_TITLE_CLASS =
+  "text-[clamp(1.8rem,3vw,2.8rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white";
+const DECK_SUBTITLE_CLASS =
+  "mt-3 max-w-4xl text-[clamp(0.88rem,1.1vw,1rem)] leading-[1.65] text-slate-400";
 
 // ── Slide 1 — Problem + Solution ─────────────────────────────────────────────
 function Slide01ProblemSolution() {
@@ -31,11 +38,11 @@ function Slide01ProblemSolution() {
 
         {/* Hook */}
         <div className="cd1-item shrink-0">
-          <h2 className="text-[clamp(1.7rem,3vw,2.8rem)] font-bold leading-[1.06] tracking-[-0.055em] text-white">
+          <h2 className={DECK_TITLE_CLASS}>
             6,200 thoughts a day.<sup className="text-[0.5em] align-super text-white/30">1</sup>{" "}
             <span className="text-white/40">Most scattered, forgotten.</span>
           </h2>
-          <p className="mt-2 text-[clamp(0.88rem,1.1vw,1rem)] text-slate-500">
+          <p className={DECK_SUBTITLE_CLASS}>
             We built infrastructure for everything except the mind.
           </p>
         </div>
@@ -148,10 +155,10 @@ function Slide02LongGame() {
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8">
 
         <div className="cd-lg-item shrink-0">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
+          <div className={DECK_HEADER_BADGE_CLASS}>
             <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />The Long Game
           </div>
-          <h2 className="text-[clamp(1.8rem,3.2vw,3rem)] font-bold leading-[1.05] tracking-[-0.055em] text-white">
+          <h2 className={DECK_TITLE_CLASS}>
             <span className="text-white/35">Every LLM wants to be your interface.</span><br />
             Sakhi becomes your thinking layer.
           </h2>
@@ -220,13 +227,13 @@ function Slide02Market() {
     <div ref={ref} className="absolute inset-0 overflow-y-auto px-10 py-12 sm:px-16 lg:px-20">
       <div className="mx-auto max-w-6xl space-y-7">
         <div className="cd2-item">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
+          <div className={DECK_HEADER_BADGE_CLASS}>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" />Market Opportunity
           </div>
-          <h2 className="text-[clamp(1.8rem,3vw,2.8rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white">
+          <h2 className={DECK_TITLE_CLASS}>
             The number isn&apos;t the story. The timing is.
           </h2>
-          <p className="mt-3 text-[clamp(0.88rem,1.1vw,1rem)] leading-[1.65] text-slate-400">
+          <p className={DECK_SUBTITLE_CLASS}>
             LLMs just became capable enough to hold context at depth. People are willing to talk to an AI in ways they never were before. And they are overwhelmed enough to pay for relief. That window didn&apos;t exist three years ago. Nobody has walked through it yet.
           </p>
         </div>
@@ -296,14 +303,14 @@ function Slide03Gap() {
   ];
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-10 pb-24 pt-16 sm:px-14 lg:px-16">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-10 py-12 pb-24 sm:px-14 lg:px-16">
       <div className="mx-auto flex max-w-7xl flex-col gap-4">
 
         <div className="cd3-item shrink-0">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
+          <div className={DECK_HEADER_BADGE_CLASS}>
             <span className="h-1.5 w-1.5 rounded-full bg-amber-400/70" />Why It Doesn&apos;t Exist
           </div>
-          <h2 className="text-[clamp(1.5rem,2.5vw,2.4rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white">
+          <h2 className={DECK_TITLE_CLASS}>
             Everyone stores. Nobody remembers.
           </h2>
         </div>
@@ -442,48 +449,91 @@ function Slide04WhyWeWin() {
   useEffect(() => {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
-      gsap.set(".cd4w-item", { opacity: 0, y: 18 });
+      gsap.set(".cd4w-header,.cd4w-card,.cd4w-proof,.cd4w-note", { opacity: 0, y: 18 });
       gsap.timeline({ defaults: { ease: "power2.out" } })
-        .to(".cd4w-item", { opacity: 1, y: 0, stagger: 0.09, duration: 0.6 }, 0.2);
+        .to(".cd4w-header", { opacity: 1, y: 0, duration: 0.55 }, 0.15)
+        .to(".cd4w-card", { opacity: 1, y: 0, stagger: 0.08, duration: 0.55 }, 0.35)
+        .to(".cd4w-proof", { opacity: 1, y: 0, stagger: 0.12, duration: 0.7 }, 0.48)
+        .to(".cd4w-note", { opacity: 1, y: 0, duration: 0.45 }, 0.82);
     }, ref);
     return () => ctx.revert();
   }, []);
 
   const moat = [
-    { label: "Continuity Engine", tag: "Core infrastructure", body: "Memory that persists, connects, and surfaces across sessions. Not a feature. The core infrastructure no competitor has built." },
-    { label: "Life Occupancy", tag: "Invisible to every other tool", body: "Maps where your attention actually goes across time. Patterns you never named, finally visible. No tool surfaces this today." },
-    { label: "Continuity Arc", tag: "Compounding record", body: "Traces how your thinking, values, and priorities evolve. A record of who you are becoming, not just what you said." },
-    { label: "Personalization Flywheel", tag: "Data moat", body: "Every conversation sharpens the model. Two years of private context cannot be replicated by a competitor who arrives late." },
+    { label: "Continuity Engine", tag: "Core infrastructure", body: "Memory that persists, connects, and surfaces across sessions. Not a feature. The infrastructure layer no competitor has built." },
+    { label: "Personalization Flywheel", tag: "Data moat", body: "Every conversation sharpens the model. The system compounds private context instead of starting from zero each session." },
+    { label: "Life Occupancy", tag: "Visible in product", body: "The app already maps what has actually occupied your life across time. This is not conceptual deckware." },
+    { label: "Continuity Arc", tag: "Visible in product", body: "The app already turns moments into an explorable story arc, so users can revisit how a thread evolved." },
+  ];
+
+  const proofPanels = [
+    {
+      title: "Life Occupancy",
+      tag: "Life Occupancy",
+      src: "/story/life-occupancy.PNG",
+      alt: "Sakhi reflection screen showing life occupancy",
+      tilt: "-rotate-[5deg]",
+    },
+    {
+      title: "Continuity Arc",
+      tag: "Continuity Arc",
+      src: "/story/continuity.PNG",
+      alt: "Sakhi continuity arc screen",
+      tilt: "rotate-[4deg]",
+    },
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col justify-center px-10 py-14 sm:px-16 lg:px-20">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="cd4w-item mb-10">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col justify-start px-10 py-12 pb-24 sm:px-14 lg:px-18">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="cd4w-header mx-auto mb-7 w-full max-w-6xl">
+          <div className={DECK_HEADER_BADGE_CLASS}>
             <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />Why We Win
           </div>
-          <h2 className="text-[clamp(2.4rem,4.5vw,4rem)] font-bold leading-[1.02] tracking-[-0.06em] text-white">
+          <h2 className={DECK_TITLE_CLASS}>
             The model is the moat.
           </h2>
-          <p className="mt-3 max-w-xl text-[clamp(0.88rem,1.1vw,1rem)] leading-[1.7] text-slate-500">
+          <p className={DECK_SUBTITLE_CLASS}>
             Not the interface. Not the features. The compounding intelligence that builds inside Sakhi and lives nowhere else.
           </p>
         </div>
 
-        <div className="cd4w-item grid gap-3 sm:grid-cols-2">
-          {moat.map((m, i) => (
-            <div key={m.label} className="rounded-xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.04] px-5 py-5">
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-[0.9rem] font-bold tracking-[-0.02em] text-white">{m.label}</div>
-                  <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.22em] text-[#8cb7ff]/35">{m.tag}</div>
-                </div>
-                <span className="shrink-0 text-[1.6rem] font-bold leading-none tabular-nums text-[#8cb7ff]/10">0{i + 1}</span>
+        <div className="mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-10">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {moat.map((m) => (
+              <div key={m.label} className="cd4w-card rounded-2xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.04] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                <div className="text-[0.92rem] font-bold tracking-[-0.02em] text-white">{m.label}</div>
+                <div className="mt-1 text-[8px] font-semibold uppercase tracking-[0.22em] text-[#8cb7ff]/40">{m.tag}</div>
+                <p className="mt-3 text-[0.81rem] leading-[1.65] text-slate-400">{m.body}</p>
               </div>
-              <p className="text-[0.82rem] leading-[1.7] text-slate-400">{m.body}</p>
+            ))}
+          </div>
+
+          <div className="relative flex min-h-[29rem] items-center justify-center rounded-[34px] border border-white/[0.07] bg-[linear-gradient(160deg,rgba(13,18,31,0.98),rgba(7,10,20,0.96))] px-6 py-8 shadow-[0_36px_120px_rgba(0,0,0,0.32)]">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_24%,rgba(111,144,221,0.12),transparent_28%),radial-gradient(circle_at_78%_74%,rgba(183,126,63,0.10),transparent_26%)]" />
+            <div className="relative z-10 flex w-full max-w-[34rem] items-center justify-center gap-2 sm:gap-4">
+              {proofPanels.map((panel) => (
+                <div key={panel.title} className={`cd4w-proof flex flex-col items-center ${panel.tilt}`}>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.24em] text-white/40">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/65" />
+                    {panel.tag}
+                  </div>
+                  <div className="relative flex flex-col items-center rounded-[34px] border border-[rgba(189,206,225,0.12)] bg-[linear-gradient(180deg,rgba(18,28,45,0.78),rgba(8,13,24,0.54))] px-3 pb-4 pt-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_20px_60px_rgba(0,0,0,0.28)]">
+                    <div className="mb-2.5 h-[5px] w-[76px] rounded-full bg-white/10" />
+                    <div className="relative overflow-hidden rounded-[28px] border border-[rgba(203,213,225,0.16)] bg-[#040914] shadow-[0_30px_80px_rgba(0,0,0,0.46)]">
+                      <Image
+                        src={panel.src}
+                        alt={panel.alt}
+                        width={720}
+                        height={1280}
+                        className="block h-auto w-[min(220px,26vw)] min-w-[170px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </div>
@@ -523,13 +573,13 @@ function Slide04Revenue() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 overflow-y-auto px-10 py-12 sm:px-16 lg:px-20">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-10 py-12 pb-24 sm:px-16 lg:px-20">
       <div className="mx-auto max-w-6xl">
         <div className="cd4-item mb-7">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
+          <div className={DECK_HEADER_BADGE_CLASS}>
             <span className="h-1.5 w-1.5 rounded-full bg-violet-400/70" />Revenue Model
           </div>
-          <h2 className="text-[clamp(1.8rem,3vw,2.8rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white">
+          <h2 className={DECK_TITLE_CLASS}>
             Simple. Subscription-first. No ads. No data selling.
           </h2>
         </div>
@@ -622,7 +672,7 @@ function Slide05Ask() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 overflow-y-auto px-10 py-12 sm:px-16 lg:px-20">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-10 py-12 pb-24 sm:px-16 lg:px-20">
       <div className="mx-auto max-w-6xl">
         <div className="cd5-item mb-8 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
@@ -676,6 +726,108 @@ function Slide05Ask() {
             </div>
 
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Slide 6 — Compact founders narrative ─────────────────────────────────────
+const FOUNDERS_COMPACT = [
+  {
+    name: "Vidhya",
+    role: "Co-Founder & CEO",
+    image: "/story/v-pic-20260327.png",
+    imageStyle: {},
+    bio: "Built systems for companies. Now building one for humans.",
+    quote:
+      "I've spent 20+ years helping organizations make better decisions. I realized we haven't solved this for individuals.",
+    beats: [
+      "Operator at Scale: turned ambiguity into structured decisions.",
+      "Inflection Point: caregiving, leadership, and life complexity collided.",
+      "Insight to Sakhi: personalization and timing mattered more than generic advice.",
+    ],
+    closing: "\"Sakhi is the system I wish existed when I needed it most.\"",
+    accent: "#c4d2ff",
+  },
+  {
+    name: "Ravi Shankar",
+    role: "Co-Founder & CTO",
+    image: "/story/r-pic.png",
+    imageStyle: { objectPosition: "50% 24%" },
+    bio: "Built systems across engineering, product, and AI. Now building one for the self.",
+    quote:
+      "I'm a systems thinker at heart, grounded in deep technical expertise and driven to simplify complexity.",
+    beats: [
+      "Evolution: moved from engineering into product systems thinking.",
+      "Realization: systems work only when people trust and use them.",
+      "Convergence: technical depth plus human-behavior lens now builds Sakhi.",
+    ],
+    closing: "\"That gives me the clarity to build Sakhi.\"",
+    accent: "#bfe3ff",
+  },
+] as const;
+
+function Slide06FoundersCompact() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ctx = gsap.context(() => {
+      gsap.set(".cd7-head,.cd7-card", { opacity: 0, y: 16 });
+      gsap.timeline({ defaults: { ease: "power2.out" } })
+        .to(".cd7-head", { opacity: 1, y: 0, duration: 0.55 }, 0.2)
+        .to(".cd7-card", { opacity: 1, y: 0, stagger: 0.1, duration: 0.65 }, 0.38);
+    }, ref);
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-8 py-10 pb-24 sm:px-12 lg:px-16 xl:px-20">
+      <div className="mx-auto max-w-7xl">
+        <div className="cd7-head mb-7">
+          <p className={DECK_HEADER_BADGE_CLASS}>
+            <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />Founders
+          </p>
+          <h2 className={DECK_TITLE_CLASS}>
+            The Minds Behind Sakhi
+          </h2>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          {FOUNDERS_COMPACT.map((founder) => (
+            <div key={founder.name} className="cd7-card rounded-[28px] border border-white/[0.09] bg-[linear-gradient(160deg,rgba(16,23,39,0.9),rgba(7,11,21,0.82))] p-5">
+              <div className="grid gap-5 sm:grid-cols-[9.5rem_minmax(0,1fr)]">
+                <div className="mx-auto w-[9.5rem] sm:mx-0">
+                  <div className="relative rounded-[22px] border border-white/10 bg-white/[0.03] p-2">
+                    <div className="relative aspect-[3/4] overflow-hidden rounded-[18px]">
+                      <Image src={founder.image} alt={founder.name} fill className="object-cover" style={founder.imageStyle} />
+                    </div>
+                    <div className="mt-2 rounded-[12px] border border-white/10 bg-[rgba(7,11,18,0.72)] px-2.5 py-2">
+                      <div className="text-[0.82rem] font-semibold text-white">{founder.name}</div>
+                      <div className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-white/58">{founder.role}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[0.86rem] leading-[1.5] text-white/58">{founder.bio}</p>
+                  <p className="mt-3 text-[clamp(1.05rem,1.3vw,1.35rem)] font-semibold leading-[1.3] tracking-[-0.03em] text-white">
+                    {founder.quote}
+                  </p>
+                  <div className="mt-4 space-y-2.5">
+                    {founder.beats.map((beat) => (
+                      <div key={beat} className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[0.78rem] leading-[1.5] text-slate-300">
+                        {beat}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-[0.9rem] font-medium leading-6 text-white/85" style={{ color: founder.accent }}>
+                    {founder.closing}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -741,7 +893,16 @@ function SlideCover({ onEnter }: { onEnter: () => void }) {
 }
 
 // ── Slide router ──────────────────────────────────────────────────────────────
-const SLIDE_LABELS = ["Problem + Solution", "The Long Game", "Market", "Why It Doesn't Exist", "Why We Win", "Revenue", "The Ask"];
+const SLIDE_LABELS = [
+  "Problem + Solution",
+  "The Long Game",
+  "Market",
+  "Why It Doesn't Exist",
+  "Why We Win",
+  "Revenue",
+  "The Ask",
+  "Founders",
+];
 
 function renderSlide(step: number, onEnter: () => void) {
   switch (step) {
@@ -753,6 +914,7 @@ function renderSlide(step: number, onEnter: () => void) {
     case 5: return <Slide04WhyWeWin />;
     case 6: return <Slide04Revenue />;
     case 7: return <Slide05Ask />;
+    case 8: return <Slide06FoundersCompact />;
     default: return null;
   }
 }
@@ -808,7 +970,7 @@ export function CompanyDeck() {
   }, [navigate, toggleFullscreen]);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 bg-[#020617] text-white">
+    <div ref={containerRef} className="fixed inset-0 overflow-hidden bg-[#020617] text-white">
       {/* Slide content */}
       <div ref={contentRef} className="absolute inset-0">
         {renderSlide(step, () => goTo(1))}
