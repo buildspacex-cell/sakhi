@@ -34,7 +34,7 @@ function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void })
   ];
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-10 py-10 pb-24 sm:px-16 lg:px-20">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-14 pb-20 sm:px-12 sm:pt-14 sm:pb-6 lg:px-16 lg:pt-12 lg:pb-8">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5">
 
         {/* Hook */}
@@ -123,14 +123,21 @@ function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void })
               <button
                 type="button"
                 onClick={onWatchStory}
-                className="inline-flex items-center gap-2.5 text-[0.78rem] font-semibold text-[#8cb7ff]/60 transition-colors hover:text-[#8cb7ff]"
+                className="group inline-flex items-center gap-3 transition-opacity"
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#8cb7ff]/30 bg-[#8cb7ff]/10">
-                  <svg width="7" height="9" viewBox="0 0 7 9" fill="currentColor" aria-hidden="true">
-                    <path d="M0 0l7 4.5L0 9V0z" />
-                  </svg>
+                {/* Mini Sakhi orb with ping ring */}
+                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+                  <span className="absolute inset-0 rounded-full bg-[#8ab0ff]/20 animate-ping" />
+                  <span className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#8ab0ff]/30 bg-[radial-gradient(circle_at_38%_32%,rgba(140,183,255,0.28),rgba(80,120,210,0.18)_48%,rgba(3,11,24,0.85)_78%)] shadow-[0_0_22px_rgba(100,148,255,0.28)] transition-shadow group-hover:shadow-[0_0_36px_rgba(100,148,255,0.50)]">
+                    <span className="pointer-events-none absolute inset-[13%] rounded-full border border-white/[0.09]" />
+                    <svg width="6" height="8" viewBox="0 0 6 8" fill="currentColor" className="relative z-10 translate-x-px text-[#8ab0ff]/90" aria-hidden="true">
+                      <path d="M0 0l6 4L0 8V0z" />
+                    </svg>
+                  </span>
                 </span>
-                Watch Sakhi Story
+                <span className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff] transition-colors group-hover:text-white">
+                  Watch Sakhi Story
+                </span>
               </button>
             </div>
           </div>
@@ -166,7 +173,7 @@ function Slide02LongGame() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col px-10 py-12 sm:px-16 lg:px-20">
+    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-14 pb-4 sm:px-12 sm:pt-14 sm:pb-7 lg:px-16 lg:pt-12 lg:pb-10">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8">
 
         <div className="cd-lg-item shrink-0">
@@ -239,7 +246,7 @@ function Slide02Market() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 overflow-y-auto px-10 py-12 sm:px-16 lg:px-20">
+    <div ref={ref} className="absolute inset-0 overflow-y-auto px-6 pt-14 pb-4 sm:px-12 sm:pt-14 sm:pb-7 lg:px-16 lg:pt-12 lg:pb-10">
       <div className="mx-auto max-w-6xl space-y-7">
         <div className="cd2-item">
           <div className={DECK_HEADER_BADGE_CLASS}>
@@ -287,7 +294,7 @@ function Slide02Market() {
           </p>
         </div>
 
-        <div className="cd2-item border-t border-white/[0.05] pt-4 text-[0.7rem] leading-[1.6] text-white/22">
+        <div className="cd2-item border-t border-white/[0.05] pt-3 text-[0.68rem] leading-[1.5] text-white/20">
           <p><sup>2</sup> Combined TAM: Precedence Research, <em>Mental Health Apps Market</em>, 2023; Grand View Research, <em>Productivity Management Software Market</em>, 2023. &nbsp;<sup>3</sup> BLS, <em>Occupational Employment Statistics</em>, 2023 (US management &amp; professional occupations, age 25–55: ~63M); ONS, <em>Labour Force Survey</em>, 2023 (UK: ~12M). SAM reflects subset already paying for a productivity or wellness subscription.</p>
           <p><sup>4</sup> Notion Series C at $10B valuation, Oct 2021 (The Information). &nbsp;<sup>5</sup> Automattic acquisition of Day One, 2021. &nbsp;<sup>6</sup> Rewind AI funding rounds, TechCrunch, 2022–2023. &nbsp;<sup>7</sup> Replika public user count, Luka Inc. press, 2023.</p>
         </div>
@@ -321,7 +328,7 @@ function Slide03Gap() {
   ];
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-10 py-12 pb-24 sm:px-14 lg:px-16">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 pt-14 pb-20 sm:px-10 sm:pt-14 sm:pb-6 lg:px-14 lg:pt-12 lg:pb-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-4">
 
         <div className="cd3-item shrink-0">
@@ -335,8 +342,8 @@ function Slide03Gap() {
 
         {/* Column labels — same row, aligned above their panels */}
         <div className="cd3-item grid shrink-0 gap-4 lg:grid-cols-2">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Landscape</div>
-          <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Capability map</div>
+          <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/60">Landscape</div>
+          <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/60">Capability map</div>
         </div>
 
         {/* Two-column layout */}
@@ -370,13 +377,13 @@ function Slide03Gap() {
           {/* Right — capability matrix */}
           <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] min-h-[420px]">
               {/* Axis labels */}
-              <div className="absolute left-1/2 top-2.5 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-[#8cb7ff]/70">Understands your life</div>
-              <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-white/28">Surface-level only</div>
-              <div className="absolute left-2 top-[53%] text-[7px] font-semibold uppercase tracking-[0.2em] text-white/28">Forgets you</div>
-              <div className="absolute right-2 top-[53%] text-right text-[7px] font-semibold uppercase tracking-[0.2em] text-[#8cb7ff]/70">Remembers &amp; compounds</div>
+              <div className="absolute left-1/2 top-2.5 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-[#8cb7ff]/90">Understands your life</div>
+              <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-white/50">Surface-level only</div>
+              <div className="absolute left-2 top-[53%] text-[7px] font-semibold uppercase tracking-[0.2em] text-white/50">Forgets you</div>
+              <div className="absolute right-2 top-[53%] text-right text-[7px] font-semibold uppercase tracking-[0.2em] text-[#8cb7ff]/90">Remembers &amp; compounds</div>
               {/* Axis lines */}
-              <div className="absolute inset-x-8 top-1/2 h-px bg-white/[0.06]" />
-              <div className="absolute inset-y-8 left-1/2 w-px bg-white/[0.06]" />
+              <div className="absolute inset-x-8 top-1/2 h-px bg-white/[0.18]" />
+              <div className="absolute inset-y-8 left-1/2 w-px bg-white/[0.18]" />
               {/* Bottom-left: surface + forgets */}
               {[
                 { label: "ChatGPT",    x: "24%", y: "56%" },
@@ -502,7 +509,7 @@ function Slide04WhyWeWin() {
   ];
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col justify-start px-10 py-12 pb-24 sm:px-14 lg:px-18">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col justify-start px-6 pt-14 pb-20 sm:px-10 sm:pt-14 sm:pb-6 lg:px-14 lg:pt-12 lg:pb-8">
       <div className="mx-auto w-full max-w-7xl">
         <div className="cd4w-header mx-auto mb-7 w-full max-w-6xl">
           <div className={DECK_HEADER_BADGE_CLASS}>
@@ -591,7 +598,7 @@ function Slide04Revenue() {
   ];
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-10 py-12 pb-24 sm:px-16 lg:px-20">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 pt-14 pb-20 sm:px-12 sm:pt-14 sm:pb-6 lg:px-16 lg:pt-12 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <div className="cd4-item mb-7">
           <div className={DECK_HEADER_BADGE_CLASS}>
@@ -636,7 +643,7 @@ function Slide04Revenue() {
               ))}
             </div>
             <p className="mt-2 text-[0.72rem] leading-[1.5] text-slate-500">Memory-intensive inference (long-context reflection, thread surfacing) keeps COGS elevated in Year 1. Margin improves as caching and batching mature.</p>
-            <p className="mt-1.5 text-[0.7rem] leading-[1.5] text-white/22"><sup>8</sup> Blended CAC reflects full channel mix: organic ($0–12), creator partnerships ($8–15), and paid acquisition ($10–20) scaling through Month 18. Gross margin assumes frontier model (GPT-4o / Claude Sonnet) for all substantive interactions; improves as inference costs decline and caching matures.</p>
+            <p className="mt-1.5 text-[0.68rem] leading-[1.5] text-white/20"><sup>8</sup> Blended CAC reflects full channel mix: organic ($0–12), creator partnerships ($8–15), and paid acquisition ($10–20) scaling through Month 18. Gross margin assumes frontier model (GPT-4o / Claude Sonnet) for all substantive interactions; improves as inference costs decline and caching matures.</p>
           </div>
 
           {/* Growth trajectory */}
@@ -695,7 +702,7 @@ function Slide05Ask() {
   ];
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-10 py-12 pb-24 sm:px-16 lg:px-20">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 pt-14 pb-20 sm:px-12 sm:pt-14 sm:pb-6 lg:px-16 lg:pt-12 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <div className="cd5-item mb-8 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40">
@@ -806,7 +813,7 @@ function Slide06FoundersCompact() {
   }, []);
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-8 py-10 pb-24 sm:px-12 lg:px-16 xl:px-20">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-5 pt-14 pb-20 sm:px-10 sm:pt-14 sm:pb-6 lg:px-14 lg:pt-12 lg:pb-8">
       <div className="mx-auto max-w-7xl">
         <div className="cd7-head mb-7">
           <p className={DECK_HEADER_BADGE_CLASS}>
@@ -953,7 +960,7 @@ function SlideGTM() {
   };
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-8 py-10 pb-24 sm:px-12 lg:px-16">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-5 pt-14 pb-20 sm:px-10 sm:pt-14 sm:pb-6 lg:px-14 lg:pt-12 lg:pb-8">
       <div className="mx-auto max-w-7xl space-y-6">
 
         {/* Header */}
@@ -1161,7 +1168,7 @@ function Slide10Beginning() {
   }, []);
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col items-center justify-center px-8 py-12 text-center">
+    <div ref={ref} className="absolute inset-0 flex flex-col items-center justify-center px-8 pt-14 pb-8 text-center">
       <div className="mx-auto w-full max-w-3xl">
         <div className="cd-end-item">
           <h2
@@ -1188,7 +1195,7 @@ function Slide10Beginning() {
           <div className="flex-1 rounded-[28px] border border-white/10 bg-white/[0.04] px-7 py-7 text-left">
             <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff]/65">Invest</p>
             <p className="mt-4 text-[0.9rem] leading-relaxed text-white/55">
-              For investors who see this space the way we do, we share everything: vision, GTM, early product, and roadmap.
+              For investors who see this space the way we do, lets connect.
             </p>
           </div>
         </div>
@@ -1331,8 +1338,8 @@ export function CompanyDeck() {
           <span className="text-[11px] font-semibold tracking-[0.38em] text-[#8ab0ff]/70">SAKHI</span>
           {step > 0 && (
             <>
-              <span className="text-white/12">·</span>
-              <span className="text-[11px] text-white/30">{SLIDE_LABELS[step - 1]}</span>
+              <span className="text-white/20">/</span>
+              <span className="text-[11px] font-medium tracking-[0.06em] text-white/55">{SLIDE_LABELS[step - 1]}</span>
             </>
           )}
         </div>
