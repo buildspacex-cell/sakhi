@@ -910,20 +910,12 @@ function SlideGTM() {
       accent: "#a78bfa",
       rows: [
         {
-          name: "Conversation Layer",
+          name: "Product",
           dot: "#a78bfa",
           bars: [
             { from: 1, to: 1, label: "Harden the foundation: reliability, privacy, and security. Topic recognition live. When you return to something, Sakhi picks up where it left off.", theme: "amber" },
             { from: 2, to: 2, label: "Continuity Engine V2. Sakhi infers across threads, classifies them across multiple dimensions, and creates continuity from multiple parameters. That is how separate moments become compounding context, and why the model gets sharper with every return.", theme: "blue" },
-            { from: 3, to: 3, label: "Life Occupancy and Continuity Arc live. The user can see what has been filling their life and how they have been changing. Already built. Active users experience this within weeks.", theme: "green" },
-          ],
-        },
-        {
-          name: "Sensing Layer",
-          dot: "#f472b6",
-          bars: [
-            { from: 1, to: 1, label: "", theme: "empty" },
-            { from: 2, to: 3, label: "Calendar, communication, and health signals enrich the model. Context without effort.", theme: "neutral" },
+            { from: 3, to: 3, label: "Calendar, communication, and health signals enrich the model. Life Occupancy and Continuity Arc live. Context without effort.", theme: "green" },
           ],
         },
       ],
@@ -979,7 +971,6 @@ function SlideGTM() {
 
           {/* Phase header row */}
           <div className="flex items-end pb-3">
-            <div className="w-[190px] shrink-0" />
             <div className="grid flex-1 grid-cols-3">
               {phases.map((p, i) => (
                 <div key={p.label} className="relative px-3">
@@ -999,7 +990,6 @@ function SlideGTM() {
 
           {/* Timeline spine */}
           <div className="flex items-center">
-            <div className="w-[190px] shrink-0" />
             <div className="relative flex-1">
               <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.12] to-white/[0.06]" />
               {/* Phase dividers */}
@@ -1024,14 +1014,7 @@ function SlideGTM() {
                 <div className="space-y-2.5">
                   {lane.rows.map((row) => (
                     <div key={row.name} className="flex items-stretch">
-                      <div className="w-[178px] shrink-0 pr-4">
-                        <div className="flex h-full items-center gap-2 pl-3">
-                          <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: row.dot, boxShadow: `0 0 5px ${row.dot}80` }} />
-                          <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.14em] text-white/46">{row.name}</span>
-                        </div>
-                      </div>
-
-                      <div className="relative flex-1 border-l border-white/[0.08] pl-3">
+                      <div className="relative flex-1 pl-3">
                         <div className="pointer-events-none absolute inset-0 grid grid-cols-3">
                           {phases.map((p, pi) => (
                             <div key={pi} className="mx-0.5 rounded-lg" style={{ background: p.dim, opacity: 0.5 }} />
@@ -1078,7 +1061,6 @@ function SlideGTM() {
 
           {/* Milestone row */}
           <div className="mt-4 flex">
-            <div className="w-[190px] shrink-0" />
             <div className="grid flex-1 grid-cols-3 gap-1">
               {milestones.map((m) => (
                 <div key={m.col} className="gtm-milestone flex flex-col items-center gap-1.5 pt-1">
@@ -1096,7 +1078,7 @@ function SlideGTM() {
 }
 
 // ── Cover slide ───────────────────────────────────────────────────────────────
-function SlideCover({ onEnter }: { onEnter: () => void }) {
+function SlideCover({ onEnter, onWatchFounders }: { onEnter: () => void; onWatchFounders?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -1137,18 +1119,30 @@ function SlideCover({ onEnter }: { onEnter: () => void }) {
         </h1>
       </div>
 
-      {/* Enter cta */}
-      <button
-        type="button"
-        onClick={onEnter}
-        className="cov-cta absolute bottom-10 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 transition hover:text-white/60"
-        style={{ opacity: 0 }}
-      >
-        View deck
-        <svg viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 6l6 6-6 6" />
-        </svg>
-      </button>
+      {/* CTAs */}
+      <div className="cov-cta relative z-10 mt-10 flex items-center gap-7" style={{ opacity: 0 }}>
+        <button
+          type="button"
+          onClick={onEnter}
+          className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/40 transition hover:text-white/70"
+        >
+          View Company Deck
+          <svg viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
+        <span className="text-white/15">|</span>
+        <button
+          type="button"
+          onClick={onWatchFounders}
+          className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 transition hover:text-white/60"
+        >
+          From the Founders
+          <svg viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 3l14 9-14 9V3z" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
@@ -1236,9 +1230,9 @@ const SLIDE_LABELS = [
   "The Beginning",
 ];
 
-function renderSlide(step: number, onEnter: () => void, onWatchStory?: () => void) {
+function renderSlide(step: number, onEnter: () => void, onWatchStory?: () => void, onWatchFounders?: () => void) {
   switch (step) {
-    case 0: return <SlideCover onEnter={onEnter} />;
+    case 0: return <SlideCover onEnter={onEnter} onWatchFounders={onWatchFounders} />;
     case 1: return <Slide01ProblemSolution onWatchStory={onWatchStory} />;
     case 2: return <Slide02LongGame />;
     case 3: return <Slide02Market />;
@@ -1328,7 +1322,7 @@ export function CompanyDeck() {
     <div ref={containerRef} className="fixed inset-0 overflow-hidden bg-[#020617] text-white">
       {/* Slide content */}
       <div ref={contentRef} className="absolute inset-0">
-        {renderSlide(step, () => goTo(1), openStory)}
+        {renderSlide(step, () => goTo(1), openStory, openStory)}
       </div>
 
       {/* Top bar */}
