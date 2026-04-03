@@ -3,8 +3,9 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import StoryContainer from "@/components/story/StoryContainer";
 
-const TOTAL = 9;
+const TOTAL = 10;
 const COVER = 0;
 const DECK_HEADER_BADGE_CLASS =
   "mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40";
@@ -14,7 +15,7 @@ const DECK_SUBTITLE_CLASS =
   "mt-3 max-w-4xl text-[clamp(0.88rem,1.1vw,1rem)] leading-[1.65] text-slate-400";
 
 // ── Slide 1 — Problem + Solution ─────────────────────────────────────────────
-function Slide01ProblemSolution() {
+function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -84,7 +85,7 @@ function Slide01ProblemSolution() {
           {/* Result row */}
           <div className="grid grid-cols-[1fr_1px_1fr]">
             <div className="bg-emerald-950/25 px-6 py-3.5">
-              <span className="text-[0.82rem] font-semibold text-emerald-300/60">Result: Order, compounding progress, and a clear record of what changed.</span>
+              <span className="text-[0.82rem] font-semibold text-emerald-300/60">Result: Order. Progress that compounds. A clear record of what changed.</span>
             </div>
             <div className="bg-white/[0.06]" />
             <div className="bg-rose-950/25 px-6 py-3.5">
@@ -99,8 +100,8 @@ function Slide01ProblemSolution() {
 
           {/* Bridge as intro */}
           <p className="mb-5 text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.75] text-slate-500">
-            You started tracking your steps. Your health improved, not because you wrote the numbers down, but because you finally saw the pattern.{" "}
-            <span className="text-white">Sakhi does that for your mind. A mirror that compounds. Letting you stop reacting to life and start shaping it.</span>
+            Sakhi does for your mind what fitness trackers did for your body.{" "}
+            <span className="text-white">It surfaces the patterns you cannot see alone. A mirror that compounds, letting you stop reacting to life and start shaping it.</span>
           </p>
 
           <div className="border-t border-[#8cb7ff]/10 pt-5">
@@ -111,13 +112,27 @@ function Slide01ProblemSolution() {
               {[
                 "Remembers what you said, what you meant, and what you're becoming.",
                 "Not a chatbot. Not a journal. A Life Intelligence that compounds over time.",
-                "Every conversation makes it more accurate. Every reflection more useful.",
+                "Surfaces what you are becoming before you would notice it yourself.",
               ].map((t) => (
                 <li key={t} className="flex gap-2.5 text-[0.82rem] leading-[1.55] text-slate-400">
                   <span className="mt-[0.4em] h-1 w-1 shrink-0 rounded-full bg-[#8cb7ff]/40" />{t}
                 </li>
               ))}
             </ul>
+            <div className="mt-5 flex justify-center border-t border-[#8cb7ff]/10 pt-4">
+              <button
+                type="button"
+                onClick={onWatchStory}
+                className="inline-flex items-center gap-2.5 text-[0.78rem] font-semibold text-[#8cb7ff]/60 transition-colors hover:text-[#8cb7ff]"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#8cb7ff]/30 bg-[#8cb7ff]/10">
+                  <svg width="7" height="9" viewBox="0 0 7 9" fill="currentColor" aria-hidden="true">
+                    <path d="M0 0l7 4.5L0 9V0z" />
+                  </svg>
+                </span>
+                Watch Sakhi Story
+              </button>
+            </div>
           </div>
         </div>
 
@@ -145,9 +160,9 @@ function Slide02LongGame() {
   }, []);
 
   const pillars = [
-    { label: "Today", heading: "Your thinking partner", body: "Talk to Sakhi. It remembers everything: what you said, what you meant, what you keep returning to. Every conversation builds a clearer picture of who you are." },
-    { label: "Tomorrow", heading: "Your personal context layer", body: "Sakhi becomes the lens through which you interact with every AI. It carries your values, your priorities, your history. Every tool you touch already knows you." },
-    { label: "The vision", heading: "From self to the world", body: "Every AI lab is racing to be your interface. Sakhi starts from the other direction, from inside your mind, outward. That inversion is the moat no frontier lab is building." },
+    { label: "Today", heading: "Your thinking partner", body: "Talk to Sakhi. It remembers everything: what you said, what you meant, what you keep returning to." },
+    { label: "Tomorrow", heading: "Your personal context layer", body: "Sakhi becomes the lens through which you interact with every AI. It carries your values, your priorities, your history. Every tool you touch already knows you. Context stops being something you repeat." },
+    { label: "The vision", heading: "The inversion no frontier lab is building", body: "Every AI lab is racing to be your interface. Sakhi starts from the other direction, from inside your mind, outward. That inversion is the moat no frontier lab is building." },
   ];
 
   return (
@@ -178,7 +193,7 @@ function Slide02LongGame() {
               <p className="mt-3 flex-1 text-[0.83rem] leading-[1.65] text-slate-400">{p.body}</p>
               {i === 2 && (
                 <p className="mt-5 text-[0.78rem] font-semibold tracking-[-0.01em] text-[#8cb7ff]/60">
-                  Not one AI among many. The one that knows you well enough to decide which AI you need.
+                  The one that knows you well enough to decide which AI you need. That is a different company.
                 </p>
               )}
             </div>
@@ -188,7 +203,7 @@ function Slide02LongGame() {
         <div className="cd-lg-item shrink-0 rounded-2xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.03] px-6 py-4">
           <p className="text-[clamp(0.88rem,1.05vw,1rem)] leading-[1.65] text-slate-400">
             The physical world got GPS, hospitals, financial rails.{" "}
-            <span className="text-white/60">The inner world gets Sakhi: the infrastructure layer for the continuity of a human mind.</span>
+            <span className="text-white/60">The inner world gets Sakhi. The infrastructure layer for the continuity of a human mind.</span>
           </p>
         </div>
 
@@ -211,16 +226,16 @@ function Slide02Market() {
   }, []);
 
   const tam = [
-    { label: "TAM", size: "500M+", detail: "Knowledge workers, caregivers & professionals with complex mental load", market: "$80B by 2030²" },
+    { label: "TAM", size: "500M+", detail: "Professionals, caregivers, and high-agency individuals managing complex lives", market: "$80B by 2030²" },
     { label: "SAM", size: "75M", detail: "Professionals & caregivers, 25–55, in the US & UK already paying for productivity software", market: "$9.0B³" },
-    { label: "SOM", size: "100K", detail: "Target users in 18 months. 10K paying at $20/mo = $2.4M ARR before Seed", market: "$2.4M ARR" },
+    { label: "SOM", size: "100K", detail: "Target users in 18 months. 10K paying at $20/mo = $2.4M ARR at Seed", market: "$2.4M ARR" },
   ];
 
   const comps = [
     { name: "Notion", signal: "$10B valuation on personal + team knowledge⁴" },
     { name: "Day One", signal: "Acquired by Automattic; journaling alone had exit value⁵" },
     { name: "Rewind", signal: "$75M raised on passive desktop recall alone⁶" },
-    { name: "Replika", signal: "10M+ users seeking connection, but it forgets. It doesn't build a model of you.⁷" },
+    { name: "Replika", signal: "10M+ users seeking connection, but it forgets. No model of you.⁷" },
   ];
 
   return (
@@ -234,7 +249,10 @@ function Slide02Market() {
             The number isn&apos;t the story. The timing is.
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            LLMs just became capable enough to hold context at depth. People are willing to talk to an AI in ways they never were before. And they are overwhelmed enough to pay for relief. That window didn&apos;t exist three years ago. Nobody has walked through it yet.
+            LLMs just became capable enough to hold context at depth. People are willing to talk to an AI in ways they never were before. And they are overwhelmed enough to pay for relief. That window didn&apos;t exist three years ago.
+          </p>
+          <p className="mt-3 text-[clamp(0.88rem,1.1vw,1rem)] font-semibold leading-[1.65] text-white/60">
+            Nobody has walked through it yet.
           </p>
         </div>
 
@@ -263,8 +281,8 @@ function Slide02Market() {
           </div>
         </div>
 
-        <div className="cd2-item rounded-2xl border border-emerald-400/12 bg-emerald-400/[0.04] px-5 py-4">
-          <p className="text-[clamp(0.88rem,1.05vw,1rem)] leading-[1.65] text-emerald-200/70">
+        <div className="cd2-item rounded-2xl border border-[#8cb7ff]/15 bg-[#8cb7ff]/[0.04] px-5 py-4">
+          <p className="text-[clamp(0.88rem,1.05vw,1rem)] leading-[1.65] text-[#8cb7ff]/70">
             Nobody owns the continuity layer. That&apos;s the gap. The gap is the company.
           </p>
         </div>
@@ -299,7 +317,7 @@ function Slide03Gap() {
     { category: "Companionship",   name: "Replika / Pi / Character.AI", does: "Builds relational memory",    misses: "Domain-locked to the relationship. Models the bond, not your life." },
     { category: "Mindfulness",     name: "Headspace / Calm",            does: "Session-based calm",          misses: "No continuity. Resets with every session." },
     { category: "Mental Health",   name: "BetterHelp / Talkspace",      does: "Guided therapy",              misses: "Isolated sessions. No longitudinal picture." },
-    { category: "Personal AI",     name: "Dot / Kin / Personal.ai",     does: "Stores your life context",    misses: "Retrieval, not inference. An archive, not a model of who you're becoming." },
+    { category: "Personal AI",     name: "Dot / Kin / Personal.ai",     does: "Stores your life context",    misses: "Retrieval, not inference. An archive, not a model." },
   ];
 
   return (
@@ -352,10 +370,10 @@ function Slide03Gap() {
           {/* Right — capability matrix */}
           <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] min-h-[420px]">
               {/* Axis labels */}
-              <div className="absolute left-1/2 top-2.5 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-white/14">Understands your life</div>
-              <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-white/65">Surface-level only</div>
-              <div className="absolute left-2 top-[53%] text-[7px] font-semibold uppercase tracking-[0.2em] text-white/65">Forgets you</div>
-              <div className="absolute right-2 top-[53%] text-right text-[7px] font-semibold uppercase tracking-[0.2em] text-white/14">Remembers &amp; compounds</div>
+              <div className="absolute left-1/2 top-2.5 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-[#8cb7ff]/70">Understands your life</div>
+              <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-white/28">Surface-level only</div>
+              <div className="absolute left-2 top-[53%] text-[7px] font-semibold uppercase tracking-[0.2em] text-white/28">Forgets you</div>
+              <div className="absolute right-2 top-[53%] text-right text-[7px] font-semibold uppercase tracking-[0.2em] text-[#8cb7ff]/70">Remembers &amp; compounds</div>
               {/* Axis lines */}
               <div className="absolute inset-x-8 top-1/2 h-px bg-white/[0.06]" />
               <div className="absolute inset-y-8 left-1/2 w-px bg-white/[0.06]" />
@@ -432,8 +450,8 @@ function Slide03Gap() {
         {/* Qualification statement */}
         <div className="cd3-item shrink-0 rounded-xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.03] px-5 py-3.5">
           <p className="text-[0.78rem] leading-[1.65] text-slate-400">
-            Replika, Pi, Dot, Kin, and Personal.ai are building toward the top-right.{" "}
             <span className="text-white/70">All five retrieve. Sakhi infers.</span>{" "}
+            Replika, Pi, Dot, Kin, and Personal.ai are building toward the top-right.{" "}
             The difference: an archive of what you said versus a compounding model of who you are becoming.
           </p>
         </div>
@@ -460,10 +478,10 @@ function Slide04WhyWeWin() {
   }, []);
 
   const moat = [
-    { label: "Continuity Engine", tag: "Core infrastructure", body: "Memory that persists, connects, and surfaces across sessions. Not a feature. The infrastructure layer no competitor has built." },
-    { label: "Personalization Flywheel", tag: "Data moat", body: "Every conversation sharpens the model. The system compounds private context instead of starting from zero each session." },
+    { label: "Continuity Engine", tag: "Core infrastructure", body: "Other AI remembers what you said. Sakhi sharpens your living model with every return. Threads stay live. Patterns build. Judgment compounds." },
+    { label: "Personalization Flywheel", tag: "Compounding Moat", body: "Your patterns, your language, your contradictions. A compounding mirror cannot be exported or replicated. Switching cost earned, not engineered." },
     { label: "Life Occupancy", tag: "Visible in product", body: "The app already maps what has actually occupied your life across time. This is not conceptual deckware." },
-    { label: "Continuity Arc", tag: "Visible in product", body: "The app already turns moments into an explorable story arc, so users can revisit how a thread evolved." },
+    { label: "Continuity Arc", tag: "Visible in product", body: "Moments become an explorable arc, so users can revisit how a thread evolved." },
   ];
 
   const proofPanels = [
@@ -491,10 +509,10 @@ function Slide04WhyWeWin() {
             <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />Why We Win
           </div>
           <h2 className={DECK_TITLE_CLASS}>
-            The model is the moat.
+            The compounding mirror Sakhi builds is the moat.
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Not the interface. Not the features. The compounding intelligence that builds inside Sakhi and lives nowhere else.
+            Not the interface. Not the features. The understanding of who you are becoming, built across time. That is not a feature. It is a foundation.
           </p>
         </div>
 
@@ -554,21 +572,21 @@ function Slide04Revenue() {
   }, []);
 
   const tiers = [
-    { name: "Free", price: "$0", color: "border-white/8 bg-white/[0.02]", tag: "Experience Sakhi", features: ["Start seeing your life more clearly", "Capture thoughts, decisions, and patterns", "30-day active memory window", "3 Deep Reflects/mo to experience the system", "Arc view (read only)"] },
-    { name: "Pro", price: "$20/mo", color: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.05]", tag: "Build your model", features: ["Annual plan: $180/yr. Commit to continuity.", "Your model builds and compounds over time", "Understand what's really going on across weeks, not moments", "See patterns, cycles, and decisions clearly", "Full Arc. Full history. Unlimited Deep Reflect."] },
+    { name: "Free", price: "$0", color: "border-white/8 bg-white/[0.02]", tag: "Experience Sakhi", features: ["Start seeing your life more clearly", "30-day active memory window", "3 Deep Reflects/mo. Then the model stops growing."] },
+    { name: "Pro", price: "$20/mo", color: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.05]", tag: "Build your living model", features: ["Your model builds and compounds over time", "Understand what's really going on across weeks, not moments", "See patterns, cycles, and decisions clearly", "Full Arc. Full history. Unlimited Deep Reflect.", "Annual plan: $180/yr"] },
     { name: "Collective", price: "$30/user/mo", color: "border-amber-400/12 bg-amber-400/[0.04]", tag: "Year 2, expansion", features: ["Shared intelligence across people who matter", "Each person builds their own model", "Shared context across relationships. Think together, not in fragments.", "Privacy-first by design"] },
   ];
 
   const trajectory = [
     { period: "Month 12", users: "2,000 paying", arr: "$480K ARR" },
     { period: "Month 18", users: "10,000 paying", arr: "$2.4M ARR" },
-    { period: "Month 24", users: "50,000 paying", arr: "$12M ARR" },
+    { period: "Month 24", users: "50,000 paying", arr: "$12M ARR", note: "Collective launch + referral loop" },
   ];
 
   const unitEcon = [
-    { label: "CAC target (organic-led)", value: "$8–12⁸" },
+    { label: "Blended CAC target", value: "$20–35⁸" },
     { label: "ARPU", value: "$240/yr" },
-    { label: "LTV:CAC (yr 1)", value: "20–30×" },
+    { label: "LTV:CAC (yr 1)", value: "7–12×" },
     { label: "Gross margin (Yr 2)", value: "50–65%⁸" },
   ];
 
@@ -618,7 +636,7 @@ function Slide04Revenue() {
               ))}
             </div>
             <p className="mt-2 text-[0.72rem] leading-[1.5] text-slate-500">Memory-intensive inference (long-context reflection, thread surfacing) keeps COGS elevated in Year 1. Margin improves as caching and batching mature.</p>
-            <p className="mt-1.5 text-[0.7rem] leading-[1.5] text-white/22"><sup>8</sup> CAC assumes organic-led growth. Gross margin assumes frontier model (GPT-4o / Claude Sonnet) for all substantive interactions; improves as inference costs decline and caching matures. See internal pricing assumptions doc.</p>
+            <p className="mt-1.5 text-[0.7rem] leading-[1.5] text-white/22"><sup>8</sup> Blended CAC reflects full channel mix: organic ($0–12), creator partnerships ($8–15), and paid acquisition ($10–20) scaling through Month 18. Gross margin assumes frontier model (GPT-4o / Claude Sonnet) for all substantive interactions; improves as inference costs decline and caching matures.</p>
           </div>
 
           {/* Growth trajectory */}
@@ -626,10 +644,15 @@ function Slide04Revenue() {
             <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Growth trajectory</div>
             <div className="space-y-2.5">
               {trajectory.map((t) => (
-                <div key={t.period} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
-                  <div className="text-[0.78rem] font-semibold text-white/50">{t.period}</div>
-                  <div className="text-[0.78rem] text-slate-400">{t.users}</div>
-                  <div className="text-[0.82rem] font-bold tracking-[-0.02em] text-emerald-300/80">{t.arr}</div>
+                <div key={t.period} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[0.78rem] font-semibold text-white/50">{t.period}</div>
+                    <div className="text-[0.78rem] text-slate-400">{t.users}</div>
+                    <div className="text-[0.82rem] font-bold tracking-[-0.02em] text-emerald-300/80">{t.arr}</div>
+                  </div>
+                  {"note" in t && t.note && (
+                    <div className="mt-1 text-[0.68rem] text-white/25">{t.note}</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -655,20 +678,20 @@ function Slide05Ask() {
 
   const milestones = [
     "Continuity Engine V2: deeper memory, cross-session inference",
-    "Life signal layer (HealthKit, calendar, email): the first version of Sakhi that knows what's happening in your life without you having to narrate it",
-    "Mobile-first experience, polished for iOS and Android",
+    "Sensing layer: calendar, communication, health data. Sakhi understands what is happening, not just what you say.",
+    "iOS and Android live with proven Day-30 retention.",
     "10,000 active users, 2,000+ paying",
     "60%+ Day-90 retention",
     "$40K MRR run rate",
   ];
 
   const allocation = [
+    { pct: "28%", amount: "$350K", label: "People", detail: "Core team: engineering, AI/ML, growth" },
     { pct: "20%", amount: "$254K", label: "Engineering", detail: "LLM API, infra, AI tools, design, QA, equipment, observability" },
     { pct: "14%", amount: "$171K", label: "GTM", detail: "First cohort, content, community, creator partnerships, paid experiments" },
-    { pct: "28%", amount: "$350K", label: "People", detail: "CEO, CTO, AI/ML engineer, growth hire, India statutory" },
     { pct: "6%",  amount: "$75K",  label: "Legal + Compliance", detail: "C-Corp, India entity, IP, SAFE, GDPR, HealthKit" },
     { pct: "4%",  amount: "$50K",  label: "Operations", detail: "Payroll, accounting, tools, co-working" },
-    { pct: "28%", amount: "$350K", label: "Runway + Buffer", detail: "8 months full team burn in reserve for Seed timing" },
+    { pct: "28%", amount: "$350K", label: "Runway + Buffer", detail: "18-month total runway. Buffer for Seed timing." },
   ];
 
   return (
@@ -680,7 +703,7 @@ function Slide05Ask() {
           </div>
           <div className="text-[clamp(3.5rem,7vw,6rem)] font-bold leading-none tracking-[-0.07em] text-white">$1,250,000</div>
           <p className="mt-3 text-[clamp(0.95rem,1.3vw,1.2rem)] text-slate-400">
-            Raising $1.25M to prove what we already believe:{" "}
+            Raising $1.25M to prove{" "}
             <span className="text-white/60">the world&apos;s most underbuilt infrastructure is the continuity of a human mind.</span>
           </p>
         </div>
@@ -710,13 +733,13 @@ function Slide05Ask() {
                 <div key={a.label} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-[1.5rem] font-bold leading-none tracking-[-0.05em] text-white/88">{a.pct}</span>
+                      <span className="text-[0.78rem] font-semibold tabular-nums text-white/30 w-8 shrink-0">{a.pct}</span>
                       <div>
-                        <div className="text-[0.85rem] font-semibold text-white/70">{a.label}</div>
+                        <div className="text-[0.92rem] font-bold text-white/88">{a.label}</div>
                         <div className="text-[0.75rem] text-slate-500">{a.detail}</div>
                       </div>
                     </div>
-                    <div className="text-[0.9rem] font-bold tracking-[-0.03em] text-[#c8d8ff]/60">{a.amount}</div>
+                    <div className="text-[0.9rem] font-bold tracking-[-0.03em] text-[#c8d8ff]/60 shrink-0">{a.amount}</div>
                   </div>
                   <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
                     <div className="h-full rounded-full bg-[#8cb7ff]/40" style={{ width: a.pct }} />
@@ -743,9 +766,9 @@ const FOUNDERS_COMPACT = [
     quote:
       "I've spent 20+ years helping organizations make better decisions. I realized we haven't solved this for individuals.",
     beats: [
-      "Operator at Scale: turned ambiguity into structured decisions.",
-      "Inflection Point: caregiving, leadership, and life complexity collided.",
-      "Insight to Sakhi: personalization and timing mattered more than generic advice.",
+      "Worked alongside CEOs and COOs, building systems that turned ambiguity into structured decisions.",
+      "Personal Inflection Point: caregiving, leadership, and life complexity, all at once. Continuity was missing.",
+      "Insight to Sakhi: timing and personalization beat generic advice. Could this be a system?",
     ],
     closing: "\"Sakhi is the system I wish existed when I needed it most.\"",
     accent: "#c4d2ff",
@@ -759,9 +782,10 @@ const FOUNDERS_COMPACT = [
     quote:
       "I'm a systems thinker at heart, grounded in deep technical expertise and driven to simplify complexity.",
     beats: [
-      "Evolution: moved from engineering into product systems thinking.",
-      "Realization: systems work only when people trust and use them.",
-      "Convergence: technical depth plus human-behavior lens now builds Sakhi.",
+      "Evolution: engineering first. Kept moving toward what actually makes systems work.",
+      "Realization: systems succeed because people trust and use them. Not just because they are built well.",
+      "Expansion: engineering, product, product marketing. Yoga and meditation deepened how he reads human behavior over time.",
+      "Convergence: technical depth, systems thinking, and lived understanding of people. All of it builds Sakhi.",
     ],
     closing: "\"That gives me the clarity to build Sakhi.\"",
     accent: "#bfe3ff",
@@ -882,7 +906,7 @@ function SlideGTM() {
           name: "Conversation Layer",
           dot: "#a78bfa",
           bars: [
-            { from: 1, to: 1, label: "Production foundation. Harden infrastructure, code quality, observability, testing, deployment, privacy, and security so the MVP becomes a reliable product. Topic recognition across sessions. When you return to something, Sakhi picks up where it left off.", theme: "amber" },
+            { from: 1, to: 1, label: "Harden the foundation: reliability, privacy, and security. Topic recognition live. When you return to something, Sakhi picks up where it left off.", theme: "amber" },
             { from: 2, to: 2, label: "Continuity Engine V2. Sakhi infers across threads, classifies them across multiple dimensions, and creates continuity from multiple parameters. That is how separate moments become compounding context, and why the model gets sharper with every return.", theme: "blue" },
             { from: 3, to: 3, label: "Life Occupancy and Continuity Arc live. The user can see what has been filling their life and how they have been changing. Already built. Active users experience this within weeks.", theme: "green" },
           ],
@@ -892,7 +916,7 @@ function SlideGTM() {
           dot: "#f472b6",
           bars: [
             { from: 1, to: 1, label: "", theme: "empty" },
-            { from: 2, to: 3, label: "The sensing layer enriches the model with signals from your life, such as communication patterns, calendar rhythms, health data, and other ambient context. Sakhi understands what is happening in your life, not just what you say.", theme: "neutral" },
+            { from: 2, to: 3, label: "Calendar, communication, and health signals enrich the model. Context without effort.", theme: "neutral" },
           ],
         },
       ],
@@ -905,7 +929,7 @@ function SlideGTM() {
           name: "Channels",
           dot: "#8cb7ff",
           bars: [
-            { from: 1, to: 1, label: "Reach 25 to 50 users through DMs, referrals, and warm communities.\n\nTarget users who share a common trait.\n\nRun high-touch onboarding.\n\nRun manual interviews.", theme: "amber" },
+            { from: 1, to: 1, label: "Reach 25 to 50 users through DMs, referrals, and warm communities.\n\nTarget users who share a common trait.\n\nRun high-touch onboarding.", theme: "amber" },
             { from: 2, to: 2, label: "Seed communities like Indie Hackers, YC, and Ness Labs.\n\nLaunch on Product Hunt.\n\nRun a referral program that rewards users with more Sakhi.\n\nDrive word of mouth.", theme: "blue" },
             { from: 3, to: 3, label: "Build content and SEO over 6 to 12 months.\n\nLaunch creator partnerships.\n\nRun paid experiments.", theme: "green" },
           ],
@@ -939,7 +963,7 @@ function SlideGTM() {
           </div>
           <h2 className={DECK_TITLE_CLASS}>Go-to-Market Motion</h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Prove early user impact first, then scale distribution with confidence.
+            Depth before scale. The right 50 users unlock the next 50,000.
           </p>
         </div>
 
@@ -1123,6 +1147,75 @@ function SlideCover({ onEnter }: { onEnter: () => void }) {
 }
 
 // ── Slide router ──────────────────────────────────────────────────────────────
+// ── Slide 10 — The Beginning (closing) ───────────────────────────────────────
+function Slide10Beginning() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ctx = gsap.context(() => {
+      gsap.set(".cd-end-item", { opacity: 0, y: 18 });
+      gsap.timeline({ defaults: { ease: "power2.out" } })
+        .to(".cd-end-item", { opacity: 1, y: 0, stagger: 0.12, duration: 0.7 }, 0.2);
+    }, ref);
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <div ref={ref} className="absolute inset-0 flex flex-col items-center justify-center px-8 py-12 text-center">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="cd-end-item">
+          <h2
+            className="font-bold leading-[1.05] tracking-[-0.06em] text-white"
+            style={{ fontSize: "clamp(3.5rem,8vw,6.5rem)" }}
+          >
+            This is just<br />the beginning.
+          </h2>
+        </div>
+
+        <div className="cd-end-item mt-5">
+          <p className="text-[clamp(1rem,1.4vw,1.2rem)] leading-relaxed text-white/45">
+            If this resonates, let&apos;s build this together.
+          </p>
+        </div>
+
+        <div className="cd-end-item mt-12 flex flex-col gap-4 sm:flex-row">
+          <div className="flex-1 rounded-[28px] border border-white/10 bg-white/[0.04] px-7 py-7 text-left">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff]/65">Collaborate</p>
+            <p className="mt-4 text-[0.9rem] leading-relaxed text-white/55">
+              If you believe we should shape our lives, not just react to them, come build this with us.
+            </p>
+          </div>
+          <div className="flex-1 rounded-[28px] border border-white/10 bg-white/[0.04] px-7 py-7 text-left">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff]/65">Invest</p>
+            <p className="mt-4 text-[0.9rem] leading-relaxed text-white/55">
+              For investors who see this space the way we do, we share everything: vision, GTM, early product, and roadmap.
+            </p>
+          </div>
+        </div>
+
+        <div className="cd-end-item mt-10">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-white/28">
+            For Collaboration or Investment
+          </p>
+          <a
+            href="mailto:founders@sakhiintelligence.com"
+            className="mt-3 inline-flex items-center gap-2 text-[1.1rem] font-medium text-white/75 transition-colors hover:text-white"
+          >
+            founders@sakhiintelligence.com
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 opacity-50" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.5l11-11m0 0H7.5m8 0v8" />
+            </svg>
+          </a>
+        </div>
+
+        <div className="cd-end-item mt-8">
+          <p className="text-[10px] uppercase tracking-widest text-white/18">Sakhi · 2026</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const SLIDE_LABELS = [
   "Problem + Solution",
   "The Long Game",
@@ -1133,12 +1226,13 @@ const SLIDE_LABELS = [
   "The Ask",
   "Go to Market",
   "Founders",
+  "The Beginning",
 ];
 
-function renderSlide(step: number, onEnter: () => void) {
+function renderSlide(step: number, onEnter: () => void, onWatchStory?: () => void) {
   switch (step) {
     case 0: return <SlideCover onEnter={onEnter} />;
-    case 1: return <Slide01ProblemSolution />;
+    case 1: return <Slide01ProblemSolution onWatchStory={onWatchStory} />;
     case 2: return <Slide02LongGame />;
     case 3: return <Slide02Market />;
     case 4: return <Slide03Gap />;
@@ -1147,6 +1241,7 @@ function renderSlide(step: number, onEnter: () => void) {
     case 7: return <Slide05Ask />;
     case 8: return <SlideGTM />;
     case 9: return <Slide06FoundersCompact />;
+    case 10: return <Slide10Beginning />;
     default: return null;
   }
 }
@@ -1156,8 +1251,29 @@ export function CompanyDeck() {
   const [step, setStep] = useState(COVER);
   const [transitioning, setTransitioning] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [storyOpen, setStoryOpen] = useState(false);
+  const [showBackToDeck, setShowBackToDeck] = useState(false);
+  const backToDeckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const openStory = useCallback(() => {
+    setStoryOpen(true);
+    setShowBackToDeck(false);
+    backToDeckTimerRef.current = setTimeout(() => setShowBackToDeck(true), 5000);
+  }, []);
+
+  const closeStory = useCallback(() => {
+    setStoryOpen(false);
+    setShowBackToDeck(false);
+    if (backToDeckTimerRef.current) clearTimeout(backToDeckTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (backToDeckTimerRef.current) clearTimeout(backToDeckTimerRef.current);
+    };
+  }, []);
 
   const goTo = useCallback((next: number) => {
     if (transitioning || next < COVER || next > TOTAL) return;
@@ -1205,7 +1321,7 @@ export function CompanyDeck() {
     <div ref={containerRef} className="fixed inset-0 overflow-hidden bg-[#020617] text-white">
       {/* Slide content */}
       <div ref={contentRef} className="absolute inset-0">
-        {renderSlide(step, () => goTo(1))}
+        {renderSlide(step, () => goTo(1), openStory)}
       </div>
 
       {/* Top bar */}
@@ -1296,6 +1412,29 @@ export function CompanyDeck() {
       {step > 0 && (
         <div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2 text-[11px] font-medium tracking-[0.22em] text-white/20">
           {step} / {TOTAL}
+        </div>
+      )}
+
+      {/* Story overlay */}
+      {storyOpen && (
+        <div className="absolute inset-0 z-50">
+          <StoryContainer autoPlay />
+          <div
+            className={`absolute bottom-[4.8rem] right-6 z-[100] transition-all duration-500 sm:bottom-[5.2rem] sm:right-8 ${
+              showBackToDeck ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={closeStory}
+              className="flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-5 py-2.5 text-[12px] font-medium text-white/45 backdrop-blur-md transition hover:border-white/18 hover:text-white/75"
+            >
+              Back to deck
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
     </div>
