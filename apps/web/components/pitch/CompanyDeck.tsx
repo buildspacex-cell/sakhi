@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 
-const TOTAL = 8;
+const TOTAL = 9;
 const COVER = 0;
 const DECK_HEADER_BADGE_CLASS =
   "mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40";
@@ -156,7 +156,7 @@ function Slide02LongGame() {
 
         <div className="cd-lg-item shrink-0">
           <div className={DECK_HEADER_BADGE_CLASS}>
-            <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />The Long Game
+            <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />Vision
           </div>
           <h2 className={DECK_TITLE_CLASS}>
             <span className="text-white/35">Every LLM wants to be your interface.</span><br />
@@ -212,7 +212,7 @@ function Slide02Market() {
 
   const tam = [
     { label: "TAM", size: "500M+", detail: "Knowledge workers, caregivers & professionals with complex mental load", market: "$80B by 2030²" },
-    { label: "SAM", size: "80M", detail: "English-speaking professionals & caregivers, 25–55, already paying for productivity software", market: "$9.6B³" },
+    { label: "SAM", size: "75M", detail: "Professionals & caregivers, 25–55, in the US & UK already paying for productivity software", market: "$9.0B³" },
     { label: "SOM", size: "100K", detail: "Target users in 18 months. 10K paying at $20/mo = $2.4M ARR before Seed", market: "$2.4M ARR" },
   ];
 
@@ -270,7 +270,7 @@ function Slide02Market() {
         </div>
 
         <div className="cd2-item border-t border-white/[0.05] pt-4 text-[0.7rem] leading-[1.6] text-white/22">
-          <p><sup>2</sup> Combined TAM: Precedence Research, <em>Mental Health Apps Market</em>, 2023; Grand View Research, <em>Productivity Management Software Market</em>, 2023. &nbsp;<sup>3</sup> Internal estimate (Statista, <em>SaaS User Demographics</em>, 2023).</p>
+          <p><sup>2</sup> Combined TAM: Precedence Research, <em>Mental Health Apps Market</em>, 2023; Grand View Research, <em>Productivity Management Software Market</em>, 2023. &nbsp;<sup>3</sup> BLS, <em>Occupational Employment Statistics</em>, 2023 (US management &amp; professional occupations, age 25–55: ~63M); ONS, <em>Labour Force Survey</em>, 2023 (UK: ~12M). SAM reflects subset already paying for a productivity or wellness subscription.</p>
           <p><sup>4</sup> Notion Series C at $10B valuation, Oct 2021 (The Information). &nbsp;<sup>5</sup> Automattic acquisition of Day One, 2021. &nbsp;<sup>6</sup> Rewind AI funding rounds, TechCrunch, 2022–2023. &nbsp;<sup>7</sup> Replika public user count, Luka Inc. press, 2023.</p>
         </div>
       </div>
@@ -834,6 +834,236 @@ function Slide06FoundersCompact() {
   );
 }
 
+// ── GTM Slide ─────────────────────────────────────────────────────────────────
+function SlideGTM() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ctx = gsap.context(() => {
+      gsap.set(".gtm-item", { opacity: 0, y: 18 });
+      gsap.set(".gtm-bar", { opacity: 0, scaleX: 0.6, transformOrigin: "left center" });
+      gsap.set(".gtm-milestone", { opacity: 0, scale: 0 });
+      gsap.timeline({ defaults: { ease: "power2.out" } })
+        .to(".gtm-item", { opacity: 1, y: 0, stagger: 0.07, duration: 0.55 }, 0.15)
+        .to(".gtm-bar", { opacity: 1, scaleX: 1, stagger: { each: 0.05, from: "start" }, duration: 0.55, ease: "power2.out" }, 0.5)
+        .to(".gtm-milestone", { opacity: 1, scale: 1, stagger: 0.08, duration: 0.4, ease: "back.out(1.4)" }, 0.9);
+    }, ref);
+    return () => ctx.revert();
+  }, []);
+
+  const phases = [
+    { label: "Launch", sublabel: "Months 1 to 2", period: "Find the moment", accent: "rgba(251,191,36,0.55)", dim: "rgba(251,191,36,0.08)" },
+    { label: "Deepen", sublabel: "Months 3 to 6", period: "Continuity compounds", accent: "rgba(140,183,255,0.55)", dim: "rgba(140,183,255,0.07)" },
+    { label: "Scale", sublabel: "Months 7 to 12", period: "Distribution", accent: "rgba(45,212,191,0.55)", dim: "rgba(45,212,191,0.08)" },
+  ];
+
+  // from/to are 1-indexed phase numbers
+  const swimLanes = [
+    {
+      label: "User Impact",
+      accent: "#f59e0b",
+      rows: [
+        {
+          name: "Outcome",
+          dot: "#f59e0b",
+          bars: [
+            { from: 1, to: 1, label: "User feels heard across sessions for the first time. Nothing is lost. They come back because the conversation did not end.", theme: "amber" },
+            { from: 2, to: 2, label: "Clarity on something they have been carrying. A decision gets easier. A pattern becomes visible. They tell someone: this is different.", theme: "blue" },
+            { from: 3, to: 3, label: "User sees the shape of their own life. What has actually mattered. How they have been changing. This is when they refer, retain, and pay.", theme: "green" },
+          ],
+        },
+      ],
+    },
+    {
+      label: "Product",
+      accent: "#a78bfa",
+      rows: [
+        {
+          name: "Conversation Layer",
+          dot: "#a78bfa",
+          bars: [
+            { from: 1, to: 1, label: "Production foundation. Harden infrastructure, code quality, observability, testing, deployment, privacy, and security so the MVP becomes a reliable product. Topic recognition across sessions. When you return to something, Sakhi picks up where it left off.", theme: "amber" },
+            { from: 2, to: 2, label: "Continuity Engine V2. Sakhi infers across threads, classifies them across multiple dimensions, and creates continuity from multiple parameters. That is how separate moments become compounding context, and why the model gets sharper with every return.", theme: "blue" },
+            { from: 3, to: 3, label: "Life Occupancy and Continuity Arc live. The user can see what has been filling their life and how they have been changing. Already built. Active users experience this within weeks.", theme: "green" },
+          ],
+        },
+        {
+          name: "Sensing Layer",
+          dot: "#f472b6",
+          bars: [
+            { from: 1, to: 1, label: "", theme: "empty" },
+            { from: 2, to: 3, label: "The sensing layer enriches the model with signals from your life, such as communication patterns, calendar rhythms, health data, and other ambient context. Sakhi understands what is happening in your life, not just what you say.", theme: "neutral" },
+          ],
+        },
+      ],
+    },
+    {
+      label: "Marketing",
+      accent: "#8cb7ff",
+      rows: [
+        {
+          name: "Channels",
+          dot: "#8cb7ff",
+          bars: [
+            { from: 1, to: 1, label: "Reach 25 to 50 users through DMs, referrals, and warm communities.\n\nTarget users who share a common trait.\n\nRun high-touch onboarding.\n\nRun manual interviews.", theme: "amber" },
+            { from: 2, to: 2, label: "Seed communities like Indie Hackers, YC, and Ness Labs.\n\nLaunch on Product Hunt.\n\nRun a referral program that rewards users with more Sakhi.\n\nDrive word of mouth.", theme: "blue" },
+            { from: 3, to: 3, label: "Build content and SEO over 6 to 12 months.\n\nLaunch creator partnerships.\n\nRun paid experiments.", theme: "green" },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const milestones = [
+    { col: 1, label: "Pre-seed raised", color: "rgba(255,255,255,0.55)" },
+    { col: 2, label: "Continuity compounds", color: "#8cb7ff" },
+    { col: 3, label: "2,000 paying", color: "#2dd4bf" },
+  ];
+
+  const barStyles = {
+    amber:   { bg: "rgba(251,191,36,0.10)",   border: "rgba(251,191,36,0.28)",   text: "rgba(254,240,138,0.80)", glow: "0 0 14px rgba(251,191,36,0.10)" },
+    blue:    { bg: "rgba(140,183,255,0.10)",  border: "rgba(140,183,255,0.25)",  text: "rgba(200,216,255,0.80)", glow: "0 0 14px rgba(140,183,255,0.10)" },
+    green:   { bg: "rgba(45,212,191,0.08)",   border: "rgba(45,212,191,0.24)",   text: "rgba(153,246,228,0.8)", glow: "0 0 14px rgba(45,212,191,0.1)" },
+    neutral: { bg: "rgba(255,255,255,0.04)",  border: "rgba(255,255,255,0.08)",  text: "rgba(255,255,255,0.38)", glow: "" },
+    empty:   { bg: "transparent",             border: "transparent",             text: "transparent",             glow: "" },
+  };
+
+  return (
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-8 py-10 pb-24 sm:px-12 lg:px-16">
+      <div className="mx-auto max-w-7xl space-y-6">
+
+        {/* Header */}
+        <div className="gtm-item">
+          <div className={DECK_HEADER_BADGE_CLASS}>
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-400/70" />Go to Market
+          </div>
+          <h2 className={DECK_TITLE_CLASS}>Go-to-Market Motion</h2>
+          <p className={DECK_SUBTITLE_CLASS}>
+            Prove early user impact first, then scale distribution with confidence.
+          </p>
+        </div>
+
+        {/* Gantt */}
+        <div className="gtm-item">
+
+          {/* Phase header row */}
+          <div className="flex items-end pb-3">
+            <div className="w-[190px] shrink-0" />
+            <div className="grid flex-1 grid-cols-3">
+              {phases.map((p, i) => (
+                <div key={p.label} className="relative px-3">
+                  {/* Phase column tint */}
+                  <div className="pointer-events-none absolute inset-x-1 -bottom-3 top-0 rounded-t-xl" style={{ background: p.dim }} />
+                  {/* Tick */}
+                  <div className="absolute left-0 top-0 h-2 w-px" style={{ background: p.accent }} />
+                  <div className="relative">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: p.accent }}>{p.label}</div>
+                    <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-white/30">{p.sublabel}</div>
+                    <div className="mt-0.5 text-[7px] text-white/18">{p.period}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Timeline spine */}
+          <div className="flex items-center">
+            <div className="w-[190px] shrink-0" />
+            <div className="relative flex-1">
+              <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.12] to-white/[0.06]" />
+              {/* Phase dividers */}
+              <div className="pointer-events-none absolute inset-0 grid grid-cols-3">
+                {phases.map((p, i) => (
+                  <div key={i} className="relative">
+                    <div className="absolute left-0 top-[-3px] h-[7px] w-px" style={{ background: p.accent, opacity: 0.6 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Track rows */}
+          <div className="mt-3 space-y-3">
+            {swimLanes.map((lane, laneIndex) => (
+              <div key={lane.label} className="space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: lane.accent, boxShadow: `0 0 8px ${lane.accent}80` }} />
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45">{lane.label}</div>
+                </div>
+                <div className="space-y-2.5">
+                  {lane.rows.map((row) => (
+                    <div key={row.name} className="flex items-stretch">
+                      <div className="w-[178px] shrink-0 pr-4">
+                        <div className="flex h-full items-center gap-2 pl-3">
+                          <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: row.dot, boxShadow: `0 0 5px ${row.dot}80` }} />
+                          <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.14em] text-white/46">{row.name}</span>
+                        </div>
+                      </div>
+
+                      <div className="relative flex-1 border-l border-white/[0.08] pl-3">
+                        <div className="pointer-events-none absolute inset-0 grid grid-cols-3">
+                          {phases.map((p, pi) => (
+                            <div key={pi} className="mx-0.5 rounded-lg" style={{ background: p.dim, opacity: 0.5 }} />
+                          ))}
+                        </div>
+                        <div className="relative grid grid-cols-3 gap-1">
+                          {row.bars.map((bar, bi) => {
+                            const s = barStyles[bar.theme as keyof typeof barStyles];
+                            return (
+                              <div
+                                key={bi}
+                                className={`gtm-bar rounded-xl border px-3 py-2.5 ${bar.theme === "empty" ? "pointer-events-none" : ""}`}
+                                style={{
+                                  gridColumn: `${bar.from} / ${bar.to + 1}`,
+                                  background: s.bg,
+                                  borderColor: s.border,
+                                  boxShadow: s.glow,
+                                }}
+                              >
+                                {bar.label && <p className="whitespace-pre-line text-[0.74rem] leading-[1.5]" style={{ color: s.text }}>{bar.label}</p>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {laneIndex < swimLanes.length - 1 && (
+                  <div className="relative h-[7px] w-full">
+                    <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-white/[0.06] via-white/[0.12] to-white/[0.06]" />
+                    <div className="pointer-events-none absolute inset-0 grid grid-cols-3">
+                      {phases.map((p, pi) => (
+                        <div key={pi} className="relative">
+                          <div className="absolute left-0 top-0 h-[7px] w-px" style={{ background: p.accent, opacity: 0.6 }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Milestone row */}
+          <div className="mt-4 flex">
+            <div className="w-[190px] shrink-0" />
+            <div className="grid flex-1 grid-cols-3 gap-1">
+              {milestones.map((m) => (
+                <div key={m.col} className="gtm-milestone flex flex-col items-center gap-1.5 pt-1">
+                  <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: m.color, boxShadow: `0 0 8px ${m.color}` }} />
+                  <div className="text-center text-[7.5px] font-semibold leading-[1.3] tracking-[0.06em]" style={{ color: m.color }}>{m.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ── Cover slide ───────────────────────────────────────────────────────────────
 function SlideCover({ onEnter }: { onEnter: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -901,6 +1131,7 @@ const SLIDE_LABELS = [
   "Why We Win",
   "Revenue",
   "The Ask",
+  "Go to Market",
   "Founders",
 ];
 
@@ -914,7 +1145,8 @@ function renderSlide(step: number, onEnter: () => void) {
     case 5: return <Slide04WhyWeWin />;
     case 6: return <Slide04Revenue />;
     case 7: return <Slide05Ask />;
-    case 8: return <Slide06FoundersCompact />;
+    case 8: return <SlideGTM />;
+    case 9: return <Slide06FoundersCompact />;
     default: return null;
   }
 }

@@ -85,7 +85,7 @@ function Slide01Chaos() {
       gsap.set(".s1-thought", { opacity: 0 });
       gsap.set(".s1-transient", { opacity: 0, y: 12, scale: 0.94 });
       gsap.set(".s1-transient .blip-marker", { scale: 0.5, opacity: 0 });
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+      const tl = gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } });
       tl.to(".s1-line-1", { opacity: 1, y: 0, duration: 0.9 }, 0.2)
         .to(".s1-line-2", { opacity: 1, y: 0, duration: 0.72 }, "+=0.6")
         .to(".s1-line-3a", { opacity: 1, y: 0, duration: 0.72 }, "+=0.4")
@@ -163,7 +163,7 @@ function Slide02Breakdown() {
       gsap.set(".s2-thought-idea", { opacity: 0.78 });
       gsap.set(".s2-bridge-1,.s2-bridge-2,.s2-bridge-3", { opacity: 0, y: 18 });
       gsap.set(".s2-break-1,.s2-break-2,.s2-break-3", { opacity: 0, y: 22, scale: 0.96 });
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+      const tl = gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } });
       tl.to(".s2-bridge-1", { opacity: 1, y: 0, duration: 0.72 }, 0.3)
         .to(".s2-bridge-2", { opacity: 1, y: 0, duration: 0.72 }, "+=0.45")
         .to(".s2-bridge-3", { opacity: 1, y: 0, duration: 0.72 }, "+=0.45")
@@ -231,7 +231,7 @@ function Slide03SakhiReveal() {
       gsap.set(".s3-orb-glow", { opacity: 0 });
       gsap.set(".s3-headline", { opacity: 0, y: 18, scale: 0.95 });
 
-      const tl = gsap.timeline({ defaults: { ease: "power2.in" } });
+      const tl = gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.in" } });
       tl
         // Thoughts converge from all quadrants into orb center
         .to(".s3-tl", { opacity: 0, scale: 0.18, x: 140, y: 90, filter: "blur(8px)", stagger: { each: 0.05, from: "random" }, duration: 1.1 }, 0.2)
@@ -308,7 +308,7 @@ function Slide04Bridge() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s4-line-1,.s4-line-2", { opacity: 0, y: 22 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s4-line-1", { opacity: 1, y: 0, duration: 0.85 }, 0.3)
         .to(".s4-line-2", { opacity: 1, y: 0, duration: 0.85 }, "+=0.6");
     }, ref);
@@ -352,7 +352,7 @@ function Slide05StopReacting() {
       gsap.set(".s5-resolved", { opacity: 0.18, y: 110, scale: 0.94 });
       gsap.set(".s5-resolved-item", { opacity: 0.45, y: 0 });
 
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s5-line-1", { opacity: 1, duration: 0.72 }, 0.2)
         .to(".s5-line-1", { opacity: 0, y: -30, scale: 0.94, duration: 0.65 }, "+=0.9")
         .to(".s5-line-2", { opacity: 1, y: 0, duration: 0.72 }, "-=0.14")
@@ -533,7 +533,7 @@ function Slide06Continuity() {
       gsap.set(".s6-arc-kicker",{ opacity: 0, y: 12 });
       gsap.set(".s6-arc-card",  { opacity: 0, y: 16 });
 
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s6-orb-shell", { opacity: 1, scale: 1, duration: 0.62 }, 0)
         .to(".s6-orb-label", { opacity: 1, y: 0, duration: 0.4 }, "-=0.28")
         .to(".s6-orb-ring",  { opacity: 0.36, scale: 1, stagger: 0.04, duration: 0.54 }, "<")
@@ -708,7 +708,7 @@ function Slide07LifeConnected() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s7-kicker,.s7-headline,.s7-line", { opacity: 0, y: 20 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s7-kicker", { opacity: 1, y: 0, duration: 0.5 }, 0.2)
         .to(".s7-headline", { opacity: 1, y: 0, duration: 0.85 }, "+=0.1")
         .to(".s7-line", { opacity: 1, y: 0, stagger: 0.22, duration: 0.65 }, "+=0.5");
@@ -746,7 +746,7 @@ function Slide08FirstExpression() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s8-text,.s8-sub", { opacity: 0, y: 24 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s8-text", { opacity: 1, y: 0, duration: 1.0 }, 0.3)
         .to(".s8-sub", { opacity: 1, y: 0, duration: 0.8 }, "+=0.5");
     }, ref);
@@ -810,7 +810,7 @@ function SlideProduct({ panelIndex }: { panelIndex: number }) {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".sp-badge,.sp-headline,.sp-lead,.sp-detail,.sp-phone", { opacity: 0, y: 22 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".sp-badge", { opacity: 1, y: 0, duration: 0.5 }, 0.15)
         .to(".sp-headline", { opacity: 1, y: 0, duration: 0.78 }, "+=0.1")
         .to(".sp-lead", { opacity: 1, y: 0, duration: 0.68 }, "+=0.2")
@@ -892,7 +892,7 @@ function Slide13Vision() {
           { opacity: 1, x: "0vw", scale: 1, filter: "blur(0px)", duration: 0.86, ease: "back.out(1.55)" },
         );
 
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s13-p1",     { opacity: 1, y: 0,  duration: 0.72 }, 0.2)
         .to({}, { duration: 2.0 })
         .to(".s13-p2",     { opacity: 1, y: 0, scale: 1, duration: 0.72 })
@@ -951,7 +951,7 @@ function Slide14FounderBridge() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s14b-kicker,.s14b-headline", { opacity: 0, y: 18 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s14b-kicker", { opacity: 1, y: 0, duration: 0.55 }, 0.2)
         .to(".s14b-headline", { opacity: 1, y: 0, duration: 0.9 }, "+=0.12");
     }, ref);
@@ -982,7 +982,7 @@ function Slide14VidhyaQuote() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s14-portrait,.s14-meta,.s14-quote", { opacity: 0, y: 18 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s14-portrait", { opacity: 1, y: 0, duration: 0.85 }, 0.2)
         .to(".s14-meta", { opacity: 1, y: 0, duration: 0.6 }, "+=0.1")
         .to(".s14-quote", { opacity: 1, y: 0, duration: 0.9 }, "+=0.2");
@@ -1027,7 +1027,7 @@ function Slide15VidhyaArc() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s15-kicker,.s15-step,.s15-final", { opacity: 0, y: 16 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s15-kicker", { opacity: 1, y: 0, duration: 0.55 }, 0.2)
         .to(".s15-step", { opacity: 1, y: 0, stagger: 0.2, duration: 0.7 }, "+=0.2")
         .to(".s15-final", { opacity: 1, y: 0, duration: 0.7 }, "+=0.3");
@@ -1074,7 +1074,7 @@ function Slide16RaviQuote() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s16-portrait,.s16-meta,.s16-quote", { opacity: 0, y: 18 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s16-portrait", { opacity: 1, y: 0, duration: 0.85 }, 0.2)
         .to(".s16-meta", { opacity: 1, y: 0, duration: 0.6 }, "+=0.1")
         .to(".s16-quote", { opacity: 1, y: 0, duration: 0.9 }, "+=0.2");
@@ -1120,7 +1120,7 @@ function Slide17RaviArc() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s17-kicker,.s17-step,.s17-final", { opacity: 0, y: 16 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s17-kicker", { opacity: 1, y: 0, duration: 0.55 }, 0.2)
         .to(".s17-step", { opacity: 1, y: 0, stagger: 0.18, duration: 0.7 }, "+=0.2")
         .to(".s17-final", { opacity: 1, y: 0, duration: 0.7 }, "+=0.3");
@@ -1167,7 +1167,7 @@ function Slide18Ask() {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".s18-headline,.s18-sub,.s18-card,.s18-email", { opacity: 0, y: 20 });
-      gsap.timeline({ defaults: { ease: "power2.out" } })
+      gsap.timeline({ data: "pitch-slide", defaults: { ease: "power2.out" } })
         .to(".s18-headline", { opacity: 1, y: 0, duration: 0.9 }, 0.2)
         .to(".s18-sub", { opacity: 1, y: 0, duration: 0.72 }, "+=0.3")
         .to(".s18-card", { opacity: 1, y: 0, stagger: 0.18, duration: 0.7 }, "+=0.4")
@@ -1251,6 +1251,7 @@ export function PitchPresentation({ open, onClose }: PitchPresentationProps) {
   const [step, setStep] = useState(1);
   const [transitioning, setTransitioning] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSlideAnimationComplete, setIsSlideAnimationComplete] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -1263,6 +1264,7 @@ export function PitchPresentation({ open, onClose }: PitchPresentationProps) {
       if (transitioning || next < 1 || next > TOTAL_STEPS) return;
       setTransitioning(true);
       gsap.to(contentRef.current, {
+        data: "pitch-transition",
         opacity: 0,
         duration: 0.22,
         ease: "power1.in",
@@ -1272,7 +1274,7 @@ export function PitchPresentation({ open, onClose }: PitchPresentationProps) {
           gsap.fromTo(
             contentRef.current,
             { opacity: 0 },
-            { opacity: 1, duration: 0.28, ease: "power1.out" },
+            { data: "pitch-transition", opacity: 1, duration: 0.28, ease: "power1.out" },
           );
         },
       });
@@ -1292,6 +1294,42 @@ export function PitchPresentation({ open, onClose }: PitchPresentationProps) {
     }, FOUNDER_BRIDGE_AUTO_ADVANCE_MS);
     return () => window.clearTimeout(timer);
   }, [open, step, transitioning, goTo]);
+
+  useEffect(() => {
+    if (!open) return;
+    setIsSlideAnimationComplete(false);
+
+    const startedAt = performance.now();
+    let timerId: number | null = null;
+
+    const poll = () => {
+      const slideTimelines = gsap.globalTimeline
+        .getChildren(true, true, true)
+        .filter((animation) => (animation.vars as { data?: string } | undefined)?.data === "pitch-slide");
+
+      if (slideTimelines.length === 0) {
+        if (performance.now() - startedAt > 800) {
+          setIsSlideAnimationComplete(true);
+          return;
+        }
+        timerId = window.setTimeout(poll, 70);
+        return;
+      }
+
+      const allComplete = slideTimelines.every((animation) => animation.totalProgress() >= 1);
+      if (allComplete) {
+        setIsSlideAnimationComplete(true);
+        return;
+      }
+
+      timerId = window.setTimeout(poll, 70);
+    };
+
+    timerId = window.setTimeout(poll, 70);
+    return () => {
+      if (timerId !== null) window.clearTimeout(timerId);
+    };
+  }, [open, step]);
 
   const toggleFullscreen = useCallback(() => {
     const el = containerRef.current;
@@ -1405,7 +1443,9 @@ export function PitchPresentation({ open, onClose }: PitchPresentationProps) {
         className={`absolute bottom-6 right-5 z-10 flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition sm:bottom-8 sm:right-7 ${
           step === TOTAL_STEPS
             ? "cursor-not-allowed border-white/8 bg-[#020617]/30 text-white/18"
-            : "border-white/12 bg-[#020617]/76 text-white/78 shadow-[0_18px_40px_rgba(0,0,0,0.28)] hover:border-white/22 hover:bg-[#08111f]/92 hover:text-white"
+            : isSlideAnimationComplete
+              ? "border-emerald-300/45 bg-emerald-500/[0.16] text-emerald-100 shadow-[0_18px_40px_rgba(16,185,129,0.24)] hover:border-emerald-200/70 hover:bg-emerald-500/[0.24] hover:text-white"
+              : "border-white/12 bg-[#020617]/76 text-white/78 shadow-[0_18px_40px_rgba(0,0,0,0.28)] hover:border-white/22 hover:bg-[#08111f]/92 hover:text-white"
         }`}
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
