@@ -310,9 +310,9 @@ function Slide02Market() {
   }, []);
 
   const tam = [
-    { label: "TAM", size: "500M+", detail: "Professionals, caregivers, and high-agency individuals managing complex lives", market: "$80B by 2030²" },
-    { label: "SAM", size: "75M", detail: "Professionals and caregivers in the US & UK already paying for tools that improve work, life, or mental clarity", market: "$9.0B³" },
-    { label: "SOM", size: "100K", detail: "Initial wedge over 18 months: 100K target users, with 10K paid at $20/mo = $2.4M ARR", market: "$2.4M ARR" },
+    { label: "TAM", size: "500M+", detail: "People navigating ongoing, unresolved threads across work, relationships, health, and self-direction.", market: "$80B by 2030²" },
+    { label: "SAM", size: "75M", detail: "US & UK adults already trying to manage ongoing decisions, clarity, and mental load with existing tools.", market: "$9.0B³" },
+    { label: "SOM", size: "100K", detail: "Initial wedge: founders, operators, and high-agency professionals managing unresolved threads across work and life.\n100K target users in 18 months → 10K paid → $2.4M ARR", market: "$2.4M ARR" },
   ];
 
   const comps = [
@@ -364,7 +364,7 @@ function Slide02Market() {
             <div key={t.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-6">
               <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-emerald-400/70">{t.label}</div>
               <div className="mt-2 text-[clamp(2.4rem,4vw,3.6rem)] font-bold leading-none tracking-[-0.06em] text-white">{t.size}</div>
-              <p className="mt-3 text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.55] text-slate-400">{t.detail}</p>
+              <p className="mt-3 whitespace-pre-line text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.55] text-slate-400">{t.detail}</p>
               <div className="mt-4 text-[9px] font-semibold uppercase tracking-[0.22em] text-emerald-400/60">{t.market}</div>
             </div>
           ))}
@@ -1026,7 +1026,7 @@ function SlideGTM() {
           name: "Distribution",
           dot: "#8cb7ff",
           bars: [
-            { from: 1, to: 1, label: "Start with 25–50 high-intensity users already carrying unresolved threads.\nHigh-touch onboarding. Learn what creates return.", theme: "amber" },
+            { from: 1, to: 1, label: "Start with 25–50 founders and operators already carrying unresolved decisions across weeks.\nHigh-touch onboarding. Learn what creates return.", theme: "amber" },
             { from: 2, to: 2, label: "Turn insight into word of mouth.\nSeed trusted communities.\nLaunch only once the \"this is different\" moment is repeatable.", theme: "blue" },
             { from: 3, to: 3, label: "Layer distribution onto retention.\nContent, creators, referrals, and paid only work once continuity already sticks.", theme: "green" },
           ],
