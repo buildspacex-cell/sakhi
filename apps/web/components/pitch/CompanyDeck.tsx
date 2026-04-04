@@ -1011,8 +1011,8 @@ function SlideGTM() {
           name: "Product",
           dot: "#a78bfa",
           bars: [
-            { from: 1, to: 1, label: "Nail the return experience.\nReliable continuity, privacy, and topic recognition. When they come back, Sakhi picks up the thread.", theme: "amber" },
-            { from: 2, to: 2, label: "Threads become a system.\nSakhi organizes scattered moments into living continuity. This is where compounding starts.", theme: "blue" },
+            { from: 1, to: 1, label: "Make return feel magical.\nWhen users come back, Sakhi remembers what matters and picks up the thread without friction.", theme: "amber" },
+            { from: 2, to: 2, label: "Threads become personally useful.\nSakhi connects moments into patterns, so users return not just to talk, but to understand.", theme: "blue" },
             { from: 3, to: 3, label: "The model expands beyond conversation.\nCalendar, communication, and behavioral signal enrich the thread. Context becomes ambient, not manual.", theme: "green" },
           ],
         },
@@ -1026,9 +1026,9 @@ function SlideGTM() {
           name: "Distribution",
           dot: "#8cb7ff",
           bars: [
-            { from: 1, to: 1, label: "Start with 25–50 founders and operators already carrying unresolved decisions across weeks.\nHigh-touch onboarding. Learn what creates return.", theme: "amber" },
-            { from: 2, to: 2, label: "Turn insight into word of mouth.\nSeed trusted communities.\nLaunch only once the \"this is different\" moment is repeatable.", theme: "blue" },
-            { from: 3, to: 3, label: "Layer distribution onto retention.\nContent, creators, referrals, and paid only work once continuity already sticks.", theme: "green" },
+            { from: 1, to: 1, label: "Start with 25–50 founders and operators already carrying unresolved decisions across weeks.\nHigh-touch onboarding through warm intros, founder/operator communities, and direct outreach.", theme: "amber" },
+            { from: 2, to: 2, label: "Turn insight into word of mouth.\nSeed trusted communities. Launch only once the \"this is different\" moment is repeatable.", theme: "blue" },
+            { from: 3, to: 3, label: "Scale what already retains.\nAdd creator partnerships, referrals, and paid once continuity already sticks.", theme: "green" },
           ],
         },
       ],
