@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import StoryContainer from "@/components/story/StoryContainer";
 
-const TOTAL = 10;
+const TOTAL = 11;
 const COVER = 0;
 const DECK_HEADER_BADGE_CLASS =
   "mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40";
@@ -15,7 +15,7 @@ const DECK_SUBTITLE_CLASS =
   "mt-3 max-w-4xl text-[clamp(0.88rem,1.1vw,1rem)] leading-[1.65] text-slate-400";
 
 // ── Slide 1 — Problem + Solution ─────────────────────────────────────────────
-function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void }) {
+function Slide01ProblemSolution() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -28,9 +28,9 @@ function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void })
   }, []);
 
   const rows = [
-    { physical: "Mapped",  physicalDetail: "GPS, roads, infrastructure",       inner: "Adrift", innerDetail: "6,200 thoughts a day. No map. No compass. No center." },
-    { physical: "Managed", physicalDetail: "Calendars, schedules, commitments", inner: "Fragmented", innerDetail: "Jumping priorities, chasing the urgent. No thread holds." },
-    { physical: "Tracked", physicalDetail: "Steps, sleep, spending",            inner: "Invisible",  innerDetail: "Patterns never surface. The person you're becoming stays hidden." },
+    { physical: "Mapped",  physicalDetail: "GPS, roads, infrastructure",       inner: "Bad Decisions", innerDetail: "No context from last week. Same mistakes. Loops that never close." },
+    { physical: "Managed", physicalDetail: "Calendars, schedules, commitments", inner: "Inconsistent Execution", innerDetail: "Strong start, lost thread. Priorities shift. Nothing compounds." },
+    { physical: "Tracked", physicalDetail: "Steps, sleep, spending",            inner: "No Self-Knowledge",  innerDetail: "Patterns stay invisible. Growth stalls. The same year, repeated." },
   ];
 
   return (
@@ -40,11 +40,11 @@ function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void })
         {/* Hook */}
         <div className="cd1-item shrink-0">
           <h2 className={DECK_TITLE_CLASS}>
-            6,200 thoughts a day.<sup className="text-[0.5em] align-super text-white/30">1</sup>{" "}
-            <span className="text-white/40">Most scattered, forgotten.</span>
+            Why do even smart people make bad decisions{" "}
+            <span className="text-white/40">and execute inconsistently?</span>
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            We built infrastructure for everything except the mind.
+            Not because they lack intelligence. Because thinking without continuity fragments under pressure. Every tool tracks the outside world. None of them integrate the inside.
           </p>
         </div>
 
@@ -74,7 +74,7 @@ function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void })
                 <div className="bg-white/[0.06]" />
                 <div className={`flex items-center gap-3 px-6 py-3.5 ${i % 2 === 0 ? "" : "bg-white/[0.015]"}`}>
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400/40" />
-                  <span className="text-[0.85rem] font-semibold text-white/65">{r.inner}</span>
+                  <span className="w-[9.5rem] shrink-0 text-[0.85rem] font-semibold text-white/65">{r.inner}</span>
                   <span className="text-[0.82rem] text-slate-500">{r.innerDetail}</span>
                 </div>
               </div>
@@ -85,11 +85,11 @@ function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void })
           {/* Result row */}
           <div className="grid grid-cols-[1fr_1px_1fr]">
             <div className="bg-emerald-950/25 px-6 py-3.5">
-              <span className="text-[0.82rem] font-semibold text-emerald-300/60">Result: Order. Progress that compounds. A clear record of what changed.</span>
+              <span className="text-[0.82rem] font-semibold text-emerald-300/60">Result: Order. Progress that compounds.</span>
             </div>
             <div className="bg-white/[0.06]" />
             <div className="bg-rose-950/25 px-6 py-3.5">
-              <span className="text-[0.82rem] font-semibold text-rose-300/60">Result: You feel busy. You move fast. You arrive nowhere.</span>
+              <span className="text-[0.82rem] font-semibold text-rose-300/60">Result: Bad decisions. Broken execution. The same year, again.</span>
             </div>
           </div>
         </div>
@@ -100,52 +100,31 @@ function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void })
 
           {/* Bridge as intro */}
           <p className="mb-5 text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.75] text-slate-500">
-            Sakhi does for your mind what fitness trackers did for your body.{" "}
-            <span className="text-white">It surfaces the patterns you cannot see alone. A mirror that compounds, letting you stop reacting to life and start shaping it.</span>
+            <span className="text-white font-semibold">Sakhi does for your mind what fitness trackers did for your body.</span>{" "}
+            It helps users continue the threads of what they are thinking through, so reflection deepens and decisions improve instead of reset.
           </p>
 
           <div className="border-t border-[#8cb7ff]/10 pt-5">
             <h3 className="text-[clamp(1rem,1.5vw,1.25rem)] font-bold leading-[1.25] tracking-[-0.03em] text-white">
-              The first AI that builds a living model of you.
+              An AI that remembers the thread, not just the prompt.
             </h3>
             <ul className="mt-4 grid gap-2.5 sm:grid-cols-3">
               {[
-                "Remembers what you said, what you meant, and what you're becoming.",
-                "Not a chatbot. Not a journal. A Life Intelligence that compounds over time.",
-                "Surfaces what you are becoming before you would notice it yourself.",
+                "Turns scattered thoughts into clear threads you can follow.",
+                "Lets you pick up where you left off, so reflection and decisions don't reset.",
+                "Reveals what keeps repeating before it becomes another mistake.",
               ].map((t) => (
                 <li key={t} className="flex gap-2.5 text-[0.82rem] leading-[1.55] text-slate-400">
                   <span className="mt-[0.4em] h-1 w-1 shrink-0 rounded-full bg-[#8cb7ff]/40" />{t}
                 </li>
               ))}
             </ul>
-            <div className="mt-5 flex justify-center border-t border-[#8cb7ff]/10 pt-4">
-              <button
-                type="button"
-                onClick={onWatchStory}
-                className="group inline-flex items-center gap-3 transition-opacity"
-              >
-                {/* Mini Sakhi orb with ping ring */}
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
-                  <span className="absolute inset-0 rounded-full bg-[#8ab0ff]/20 animate-ping" />
-                  <span className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#8ab0ff]/30 bg-[radial-gradient(circle_at_38%_32%,rgba(140,183,255,0.28),rgba(80,120,210,0.18)_48%,rgba(3,11,24,0.85)_78%)] shadow-[0_0_22px_rgba(100,148,255,0.28)] transition-shadow group-hover:shadow-[0_0_36px_rgba(100,148,255,0.50)]">
-                    <span className="pointer-events-none absolute inset-[13%] rounded-full border border-white/[0.09]" />
-                    <svg width="6" height="8" viewBox="0 0 6 8" fill="currentColor" className="relative z-10 translate-x-px text-[#8ab0ff]/90" aria-hidden="true">
-                      <path d="M0 0l6 4L0 8V0z" />
-                    </svg>
-                  </span>
-                </span>
-                <span className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff] transition-colors group-hover:text-white">
-                  Watch Sakhi Story
-                </span>
-              </button>
-            </div>
           </div>
         </div>
 
         {/* Footnote */}
         <div className="cd1-item shrink-0 border-t border-white/[0.05] pt-3 text-[0.68rem] leading-[1.5] text-white/20">
-          <sup>1</sup> Tseng & Poppenk. <em>Nature Communications</em>, 2020. doi:10.1038/s41467-020-17255-9
+          6,200 thoughts a day. Most scattered, forgotten. &nbsp;<sup>1</sup> Tseng &amp; Poppenk. <em>Nature Communications</em>, 2020. doi:10.1038/s41467-020-17255-9
         </div>
 
       </div>
@@ -153,7 +132,127 @@ function Slide01ProblemSolution({ onWatchStory }: { onWatchStory?: () => void })
   );
 }
 
-// ── Slide 2 — The Long Game ───────────────────────────────────────────────────
+// ── Slide 2 — How Sakhi Solves It ────────────────────────────────────────────
+function Slide02HowItSolves({ onWatchStory }: { onWatchStory?: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ctx = gsap.context(() => {
+      gsap.set(".cd-sol-item", { opacity: 0, y: 18 });
+      gsap.timeline({ defaults: { ease: "power2.out" } })
+        .to(".cd-sol-item", { opacity: 1, y: 0, stagger: 0.1, duration: 0.6 }, 0.2);
+    }, ref);
+    return () => ctx.revert();
+  }, []);
+
+  const steps = [
+    {
+      tag: "Capture",
+      heading: "Start anywhere.",
+      body: "Thoughts, dilemmas, decisions, and open loops enter naturally. No structure required.",
+      accent: "#f59e0b",
+      dim: "rgba(245,158,11,0.07)",
+      border: "rgba(245,158,11,0.18)",
+      image: "/story/chat.png",
+    },
+    {
+      tag: "Thread",
+      heading: "Thinking stays connected.",
+      body: "Scattered thinking becomes visible threads that continue across time, so you can pick up where you left off.",
+      accent: "#8cb7ff",
+      dim: "rgba(140,183,255,0.07)",
+      border: "rgba(140,183,255,0.20)",
+      image: "/story/life-occupancy.PNG",
+    },
+    {
+      tag: "Reflect",
+      heading: "Patterns surface when it matters.",
+      body: "When you return, Sakhi brings back the patterns, tensions, and prior thinking that matter most.",
+      accent: "#2dd4bf",
+      dim: "rgba(45,212,191,0.07)",
+      border: "rgba(45,212,191,0.18)",
+      image: "/story/continuity.PNG",
+    },
+  ];
+
+  return (
+    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-12 pb-5 sm:px-10 lg:px-14">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 overflow-hidden">
+
+        {/* Header */}
+        <div className="cd-sol-item shrink-0">
+          <div className={DECK_HEADER_BADGE_CLASS}>
+            <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />How Sakhi Solves It
+          </div>
+          <h2 className={DECK_TITLE_CLASS}>
+            Turn scattered thinking into a thread you can continue.
+          </h2>
+          <p className="mt-2 max-w-4xl text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.6] text-slate-400">
+            Sakhi captures what matters, organizes it into threads, and brings it back when it matters. So thinking compounds instead of resets.
+          </p>
+        </div>
+
+        {/* Mechanism blocks */}
+        <div className="cd-sol-item grid min-h-0 flex-1 gap-4 lg:grid-cols-3">
+          {steps.map((s, i) => (
+            <div
+              key={s.tag}
+              className="flex min-h-0 flex-col rounded-2xl border px-5 py-4"
+              style={{ background: s.dim, borderColor: s.border }}
+            >
+              <div className="mb-2 flex shrink-0 items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold" style={{ borderColor: s.accent, color: s.accent }}>{i + 1}</span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.3em]" style={{ color: s.accent }}>{s.tag}</span>
+              </div>
+              <h3 className="shrink-0 text-[clamp(0.88rem,1.2vw,1rem)] font-bold leading-[1.25] tracking-[-0.02em] text-white">
+                {s.heading}
+              </h3>
+              <p className="mt-1.5 shrink-0 text-[0.78rem] leading-[1.55] text-slate-400">{s.body}</p>
+              <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.06] flex items-start justify-center bg-white/[0.02]">
+                <Image
+                  src={s.image}
+                  alt={s.tag}
+                  width={600}
+                  height={400}
+                  className="h-full w-full object-contain object-top"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom bar */}
+        <div className="cd-sol-item shrink-0 flex items-center justify-between gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-3">
+          <p className="text-[0.82rem] leading-[1.55] text-slate-400">
+            Unlike ChatGPT or Notes, Sakhi is not session-based.{" "}
+            <span className="font-semibold text-white">It is thread-based. That is the product difference.</span>
+          </p>
+          <button
+            type="button"
+            onClick={onWatchStory}
+            className="group inline-flex shrink-0 items-center gap-3 transition-opacity"
+          >
+            <span className="relative flex h-8 w-8 shrink-0 items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-[#8ab0ff]/20 animate-ping" />
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-[#8ab0ff]/30 bg-[radial-gradient(circle_at_38%_32%,rgba(140,183,255,0.28),rgba(80,120,210,0.18)_48%,rgba(3,11,24,0.85)_78%)] shadow-[0_0_22px_rgba(100,148,255,0.28)] transition-shadow group-hover:shadow-[0_0_36px_rgba(100,148,255,0.50)]">
+                <span className="pointer-events-none absolute inset-[13%] rounded-full border border-white/[0.09]" />
+                <svg width="5" height="7" viewBox="0 0 6 8" fill="currentColor" className="relative z-10 translate-x-px text-[#8ab0ff]/90">
+                  <path d="M0 0l6 4L0 8V0z" />
+                </svg>
+              </span>
+            </span>
+            <span className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff] transition-colors group-hover:text-white">
+              See Sakhi in Action
+            </span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ── Slide 3 — The Long Game ───────────────────────────────────────────────────
 function Slide02LongGame() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -167,9 +266,9 @@ function Slide02LongGame() {
   }, []);
 
   const pillars = [
-    { label: "Today", heading: "Your thinking partner", body: "Talk to Sakhi. It remembers everything: what you said, what you meant, what you keep returning to." },
-    { label: "Tomorrow", heading: "Your personal context layer", body: "Sakhi becomes the lens through which you interact with every AI. It carries your values, your priorities, your history. Every tool you touch already knows you. Context stops being something you repeat." },
-    { label: "The vision", heading: "The inversion no frontier lab is building", body: "Every AI lab is racing to be your interface. Sakhi starts from the other direction, from inside your mind, outward. That inversion is the moat no frontier lab is building." },
+    { label: "Today", heading: "A continuity product people return to", body: "Sakhi helps users think across sessions, not just within one. It captures what matters, keeps threads alive, and makes reflection useful over time." },
+    { label: "Tomorrow", heading: "A personal continuity layer", body: "Sakhi becomes the system that holds your ongoing context: what you care about, what you are navigating, what keeps repeating, and how your thinking evolves." },
+    { label: "The Vision", heading: "Infrastructure for the inner life", body: "Every AI system will get smarter. The missing layer is the one that knows you across time — your threads, patterns, priorities, and becoming. That is the layer Sakhi is building." },
   ];
 
   return (
@@ -198,19 +297,14 @@ function Slide02LongGame() {
                 {p.heading}
               </h3>
               <p className="mt-3 flex-1 text-[0.83rem] leading-[1.65] text-slate-400">{p.body}</p>
-              {i === 2 && (
-                <p className="mt-5 text-[0.78rem] font-semibold tracking-[-0.01em] text-[#8cb7ff]/60">
-                  The one that knows you well enough to decide which AI you need. That is a different company.
-                </p>
-              )}
             </div>
           ))}
         </div>
 
         <div className="cd-lg-item shrink-0 rounded-2xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.03] px-6 py-4">
           <p className="text-[clamp(0.88rem,1.05vw,1rem)] leading-[1.65] text-slate-400">
-            The physical world got GPS, hospitals, financial rails.{" "}
-            <span className="text-white/60">The inner world gets Sakhi. The infrastructure layer for the continuity of a human mind.</span>
+            The physical world has infrastructure.{" "}
+            <span className="text-white/60">The inner world does not. Sakhi is built to become it.</span>
           </p>
         </div>
 
@@ -234,8 +328,8 @@ function Slide02Market() {
 
   const tam = [
     { label: "TAM", size: "500M+", detail: "Professionals, caregivers, and high-agency individuals managing complex lives", market: "$80B by 2030²" },
-    { label: "SAM", size: "75M", detail: "Professionals & caregivers, 25–55, in the US & UK already paying for productivity software", market: "$9.0B³" },
-    { label: "SOM", size: "100K", detail: "Target users in 18 months. 10K paying at $20/mo = $2.4M ARR at Seed", market: "$2.4M ARR" },
+    { label: "SAM", size: "75M", detail: "Professionals and caregivers in the US & UK already paying for tools that improve work, life, or mental clarity", market: "$9.0B³" },
+    { label: "SOM", size: "100K", detail: "Initial wedge over 18 months: 100K target users, with 10K paid at $20/mo = $2.4M ARR", market: "$2.4M ARR" },
   ];
 
   const comps = [
@@ -250,17 +344,35 @@ function Slide02Market() {
       <div className="mx-auto max-w-6xl space-y-7">
         <div className="cd2-item">
           <div className={DECK_HEADER_BADGE_CLASS}>
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" />Market Opportunity
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" />Why Now
           </div>
           <h2 className={DECK_TITLE_CLASS}>
             The number isn&apos;t the story. The timing is.
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            LLMs just became capable enough to hold context at depth. People are willing to talk to an AI in ways they never were before. And they are overwhelmed enough to pay for relief. That window didn&apos;t exist three years ago.
+            This is not just a large market. It is a newly opened window, where technical capability, user behavior, and unmet need have finally converged.
           </p>
           <p className="mt-3 text-[clamp(0.88rem,1.1vw,1rem)] font-semibold leading-[1.65] text-white/60">
-            Nobody has walked through it yet.
+            The primitives are here. The category is still open.
           </p>
+        </div>
+
+        {/* Why Now */}
+        <div className="cd2-item grid gap-4 sm:grid-cols-3">
+          {[
+            { num: "1", label: "The primitives are finally here", tag: "Model Shift", body: "AI can now hold conversations that are richer in thought and nuance, making a continuity layer possible for the first time." },
+            { num: "2", label: "People now think out loud with AI", tag: "Behavior Shift", body: "People now externalize thoughts, dilemmas, and emotions into AI as a natural behavior. Something that barely existed 2–3 years ago." },
+            { num: "3", label: "No one owns continuity", tag: "Category Gap", body: "Notes apps store. AI chats respond. Companion apps engage. Nobody compounds thought over time." },
+          ].map((w) => (
+            <div key={w.num} className="rounded-2xl border border-[#8cb7ff]/12 bg-[#8cb7ff]/[0.04] px-5 py-5">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#8cb7ff]/40 text-[9px] font-bold text-[#8cb7ff]/80">{w.num}</span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff]/70">{w.tag}</span>
+              </div>
+              <div className="text-[0.88rem] font-semibold leading-[1.3] tracking-[-0.01em] text-white">{w.label}</div>
+              <p className="mt-2 text-[0.78rem] leading-[1.55] text-slate-400">{w.body}</p>
+            </div>
+          ))}
         </div>
 
         {/* TAM / SAM / SOM */}
@@ -277,7 +389,7 @@ function Slide02Market() {
 
         {/* Comparable signals */}
         <div className="cd2-item">
-          <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Comparable signals</div>
+          <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Behavioral Proof</div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {comps.map((c) => (
               <div key={c.name} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5">
@@ -290,7 +402,7 @@ function Slide02Market() {
 
         <div className="cd2-item rounded-2xl border border-[#8cb7ff]/15 bg-[#8cb7ff]/[0.04] px-5 py-4">
           <p className="text-[clamp(0.88rem,1.05vw,1rem)] leading-[1.65] text-[#8cb7ff]/70">
-            Nobody owns the continuity layer. That&apos;s the gap. The gap is the company.
+            Nobody owns the continuity layer. That gap is the company.
           </p>
         </div>
 
@@ -338,6 +450,9 @@ function Slide03Gap() {
           <h2 className={DECK_TITLE_CLASS}>
             Everyone stores. Nobody remembers.
           </h2>
+          <p className={DECK_SUBTITLE_CLASS}>
+            Today&apos;s tools either answer, archive, or relate. None build a compounding model of the person.
+          </p>
         </div>
 
         {/* Column labels — same row, aligned above their panels */}
@@ -486,9 +601,9 @@ function Slide04WhyWeWin() {
 
   const moat = [
     { label: "Continuity Engine", tag: "Core infrastructure", body: "Other AI remembers what you said. Sakhi sharpens your living model with every return. Threads stay live. Patterns build. Judgment compounds." },
-    { label: "Personalization Flywheel", tag: "Compounding Moat", body: "Your patterns, your language, your contradictions. A compounding mirror cannot be exported or replicated. Switching cost earned, not engineered." },
-    { label: "Life Occupancy", tag: "Visible in product", body: "The app already maps what has actually occupied your life across time. This is not conceptual deckware." },
-    { label: "Continuity Arc", tag: "Visible in product", body: "Moments become an explorable arc, so users can revisit how a thread evolved." },
+    { label: "Compounding Understanding", tag: "Moat", body: "Your patterns, your language, your contradictions. A compounding model cannot be exported or replicated. Switching cost earned, not engineered." },
+    { label: "Life Occupancy", tag: "Product Expression", body: "Sakhi shows what has actually occupied your mind and life across time, not just what you said most recently." },
+    { label: "Continuity Arc", tag: "Product Expression", body: "Threads become explorable arcs, so users can revisit how a thought, dilemma, or decision evolved over time." },
   ];
 
   const proofPanels = [
@@ -516,7 +631,7 @@ function Slide04WhyWeWin() {
             <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />Why We Win
           </div>
           <h2 className={DECK_TITLE_CLASS}>
-            The compounding mirror Sakhi builds is the moat.
+            The continuity model Sakhi builds is the moat.
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
             Not the interface. Not the features. The understanding of who you are becoming, built across time. That is not a feature. It is a foundation.
@@ -579,8 +694,8 @@ function Slide04Revenue() {
   }, []);
 
   const tiers = [
-    { name: "Free", price: "$0", color: "border-white/8 bg-white/[0.02]", tag: "Experience Sakhi", features: ["Start seeing your life more clearly", "30-day active memory window", "3 Deep Reflects/mo. Then the model stops growing."] },
-    { name: "Pro", price: "$20/mo", color: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.05]", tag: "Build your living model", features: ["Your model builds and compounds over time", "Understand what's really going on across weeks, not moments", "See patterns, cycles, and decisions clearly", "Full Arc. Full history. Unlimited Deep Reflect.", "Annual plan: $180/yr"] },
+    { name: "Free", price: "$0", color: "border-white/8 bg-white/[0.02]", tag: "Experience Sakhi", features: ["Start seeing your life more clearly", "30-day active memory window", "3 Deep Reflects/mo. Limited continuity. Your model does not fully compound.."] },
+    { name: "Pro", price: "$20/mo", color: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.05]", tag: "Build your living model", features: ["Your thinking compounds instead of resetting.", "Understand what's really going on across weeks, not moments", "See patterns, cycles, and decisions clearly", "Full Arc. Full history. Unlimited Deep Reflect.", "Annual plan: $180/yr"] },
     { name: "Collective", price: "$30/user/mo", color: "border-amber-400/12 bg-amber-400/[0.04]", tag: "Year 2, expansion", features: ["Shared intelligence across people who matter", "Each person builds their own model", "Shared context across relationships. Think together, not in fragments.", "Privacy-first by design"] },
   ];
 
@@ -605,7 +720,7 @@ function Slide04Revenue() {
             <span className="h-1.5 w-1.5 rounded-full bg-violet-400/70" />Revenue Model
           </div>
           <h2 className={DECK_TITLE_CLASS}>
-            Simple. Subscription-first. No ads. No data selling.
+            Simple. Subscription-first. Value compounds over time.
           </h2>
         </div>
 
@@ -628,7 +743,7 @@ function Slide04Revenue() {
             </div>
           ))}
         </div>
-        <p className="cd4-item mt-2 text-[0.75rem] text-slate-500">Your model is the asset. <span className="text-white/40">The longer you use Sakhi, the sharper it gets.</span></p>
+        <p className="cd4-item mt-6 text-[clamp(1rem,1.4vw,1.25rem)] font-bold leading-[1.4] tracking-[-0.02em] text-white">Sakhi is not a subscription for usage.<br /><span className="text-[#8cb7ff]">It is a subscription for accumulated intelligence.</span></p>
 
         <div className="cd4-item mt-5 grid gap-4 sm:grid-cols-2">
           {/* Unit economics */}
@@ -646,9 +761,9 @@ function Slide04Revenue() {
             <p className="mt-1.5 text-[0.68rem] leading-[1.5] text-white/20"><sup>8</sup> Blended CAC reflects full channel mix: organic ($0–12), creator partnerships ($8–15), and paid acquisition ($10–20) scaling through Month 18. Gross margin assumes frontier model (GPT-4o / Claude Sonnet) for all substantive interactions; improves as inference costs decline and caching matures.</p>
           </div>
 
-          {/* Growth trajectory */}
+          {/* Initial Wedge */}
           <div>
-            <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Growth trajectory</div>
+            <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Initial Wedge</div>
             <div className="space-y-2.5">
               {trajectory.map((t) => (
                 <div key={t.period} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
@@ -684,21 +799,20 @@ function Slide05Ask() {
   }, []);
 
   const milestones = [
-    "Continuity Engine V2: deeper memory, cross-session inference",
-    "Sensing layer: calendar, communication, health data. Sakhi understands what is happening, not just what you say.",
-    "iOS and Android live with proven Day-30 retention.",
-    "10,000 active users, 2,000+ paying",
-    "60%+ Day-90 retention",
-    "$40K MRR run rate",
+    "Continuity Engine V2 live with deeper memory and cross-session inference.",
+    "Sakhi moves from self-report to real-life signal understanding. Not just what you say, but what is actually happening.",
+    "iOS and Android live with real Day-30 retention.",
+    "10,000 active users and 2,000+ paying.",
+    "60%+ Day-90 retention, proving continuity is habit-forming.",
+    "$40K MRR run-rate, proving people pay for accumulated intelligence.",
   ];
 
   const allocation = [
-    { pct: "28%", amount: "$350K", label: "People", detail: "Core team: engineering, AI/ML, growth" },
-    { pct: "20%", amount: "$254K", label: "Engineering", detail: "LLM API, infra, AI tools, design, QA, equipment, observability" },
-    { pct: "14%", amount: "$171K", label: "GTM", detail: "First cohort, content, community, creator partnerships, paid experiments" },
-    { pct: "6%",  amount: "$75K",  label: "Legal + Compliance", detail: "C-Corp, India entity, IP, SAFE, GDPR, HealthKit" },
-    { pct: "4%",  amount: "$50K",  label: "Operations", detail: "Payroll, accounting, tools, co-working" },
-    { pct: "28%", amount: "$350K", label: "Runway + Buffer", detail: "18-month total runway. Buffer for Seed timing." },
+    { pct: "48%", amount: "$600K", label: "Product + Engineering", detail: "Core team, infra, AI, design, QA" },
+    { pct: "22%", amount: "$275K", label: "Growth", detail: "Content, community, partnerships, paid" },
+    { pct: "6%",  amount: "$75K",  label: "Compliance + Legal", detail: "C-Corp, India entity, IP, GDPR, HealthKit" },
+    { pct: "4%",  amount: "$50K",  label: "Operations", detail: "Payroll, tools, accounting, admin" },
+    { pct: "20%", amount: "$250K", label: "Runway + Buffer", detail: "18-month total runway. Buffer for Seed timing." },
   ];
 
   return (
@@ -710,8 +824,8 @@ function Slide05Ask() {
           </div>
           <div className="text-[clamp(3.5rem,7vw,6rem)] font-bold leading-none tracking-[-0.07em] text-white">$1,250,000</div>
           <p className="mt-3 text-[clamp(0.95rem,1.3vw,1.2rem)] text-slate-400">
-            Raising $1.25M to prove{" "}
-            <span className="text-white/60">the world&apos;s most underbuilt infrastructure is the continuity of a human mind.</span>
+            Raising $1.25M to prove that{" "}
+            <span className="text-white/60">continuity can become a retained consumer behavior and a real subscription business.</span>
           </p>
         </div>
 
@@ -727,8 +841,9 @@ function Slide05Ask() {
                 </div>
               ))}
             </div>
-            <div className="mt-4 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.04] px-4 py-3 text-[0.82rem] font-semibold text-emerald-300/70">
-              Seed target at Month 12–15: $4–5M at $15–20M valuation
+            <div className="mt-4 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.04] px-4 py-3.5">
+              <p className="text-[0.95rem] font-bold tracking-[-0.01em] text-emerald-300/90">This round is designed to earn the Seed.</p>
+              <p className="mt-1 text-[0.75rem] font-semibold text-emerald-300/50">Target: Month 12–15 &nbsp;|&nbsp; $4–5M at $15–20M valuation</p>
             </div>
           </div>
 
@@ -888,9 +1003,9 @@ function SlideGTM() {
   }, []);
 
   const phases = [
-    { label: "Launch", sublabel: "Months 1 to 2", period: "Find the moment", accent: "rgba(251,191,36,0.55)", dim: "rgba(251,191,36,0.08)" },
-    { label: "Deepen", sublabel: "Months 3 to 6", period: "Continuity compounds", accent: "rgba(140,183,255,0.55)", dim: "rgba(140,183,255,0.07)" },
-    { label: "Scale", sublabel: "Months 7 to 12", period: "Distribution", accent: "rgba(45,212,191,0.55)", dim: "rgba(45,212,191,0.08)" },
+    { label: "Launch", sublabel: "Months 1 to 2", period: "Find the first pull", accent: "rgba(251,191,36,0.55)", dim: "rgba(251,191,36,0.08)" },
+    { label: "Deepen", sublabel: "Months 3 to 6", period: "Make continuity habit-forming", accent: "rgba(140,183,255,0.55)", dim: "rgba(140,183,255,0.07)" },
+    { label: "Scale", sublabel: "Months 7 to 12", period: "Turn retention into distribution", accent: "rgba(45,212,191,0.55)", dim: "rgba(45,212,191,0.08)" },
   ];
 
   // from/to are 1-indexed phase numbers
@@ -900,12 +1015,12 @@ function SlideGTM() {
       accent: "#f59e0b",
       rows: [
         {
-          name: "Outcome",
+          name: "User Impact",
           dot: "#f59e0b",
           bars: [
-            { from: 1, to: 1, label: "User feels heard across sessions for the first time. Nothing is lost. They come back because the conversation did not end.", theme: "amber" },
-            { from: 2, to: 2, label: "Clarity on something they have been carrying. A decision gets easier. A pattern becomes visible. They tell someone: this is different.", theme: "blue" },
-            { from: 3, to: 3, label: "User sees the shape of their own life. What has actually mattered. How they have been changing. This is when they refer, retain, and pay.", theme: "green" },
+            { from: 1, to: 1, label: "The first experience feels different.\nThey feel understood across sessions. The conversation does not reset.", theme: "amber" },
+            { from: 2, to: 2, label: "A thread becomes personally useful.\nClarity builds. Decisions get easier. They return because it helps.", theme: "blue" },
+            { from: 3, to: 3, label: "Their life becomes more visible over time.\nPatterns, change, and progress become tangible. This is when retention, referral, and payment kick in.", theme: "green" },
           ],
         },
       ],
@@ -918,24 +1033,24 @@ function SlideGTM() {
           name: "Product",
           dot: "#a78bfa",
           bars: [
-            { from: 1, to: 1, label: "Harden the foundation: reliability, privacy, and security. Topic recognition live. When you return to something, Sakhi picks up where it left off.", theme: "amber" },
-            { from: 2, to: 2, label: "Continuity Engine V2. Sakhi infers across threads, classifies them across multiple dimensions, and creates continuity from multiple parameters. That is how separate moments become compounding context, and why the model gets sharper with every return.", theme: "blue" },
-            { from: 3, to: 3, label: "Calendar, communication, and health signals enrich the model. Life Occupancy and Continuity Arc live. Context without effort.", theme: "green" },
+            { from: 1, to: 1, label: "Nail the return experience.\nReliable continuity, privacy, and topic recognition. When they come back, Sakhi picks up the thread.", theme: "amber" },
+            { from: 2, to: 2, label: "Threads become a system.\nSakhi organizes scattered moments into living continuity. This is where compounding starts.", theme: "blue" },
+            { from: 3, to: 3, label: "The model expands beyond conversation.\nCalendar, communication, and behavioral signal enrich the thread. Context becomes ambient, not manual.", theme: "green" },
           ],
         },
       ],
     },
     {
-      label: "Marketing",
+      label: "Distribution",
       accent: "#8cb7ff",
       rows: [
         {
-          name: "Channels",
+          name: "Distribution",
           dot: "#8cb7ff",
           bars: [
-            { from: 1, to: 1, label: "Reach 25 to 50 users through DMs, referrals, and warm communities.\n\nTarget users who share a common trait.\n\nRun high-touch onboarding.", theme: "amber" },
-            { from: 2, to: 2, label: "Seed communities like Indie Hackers, YC, and Ness Labs.\n\nLaunch on Product Hunt.\n\nRun a referral program that rewards users with more Sakhi.\n\nDrive word of mouth.", theme: "blue" },
-            { from: 3, to: 3, label: "Build content and SEO over 6 to 12 months.\n\nLaunch creator partnerships.\n\nRun paid experiments.", theme: "green" },
+            { from: 1, to: 1, label: "Start with 25–50 high-intensity users already carrying unresolved threads.\nHigh-touch onboarding. Learn what creates return.", theme: "amber" },
+            { from: 2, to: 2, label: "Turn insight into word of mouth.\nSeed trusted communities.\nLaunch only once the \"this is different\" moment is repeatable.", theme: "blue" },
+            { from: 3, to: 3, label: "Layer distribution onto retention.\nContent, creators, referrals, and paid only work once continuity already sticks.", theme: "green" },
           ],
         },
       ],
@@ -943,8 +1058,8 @@ function SlideGTM() {
   ];
 
   const milestones = [
-    { col: 1, label: "Pre-seed raised", color: "rgba(255,255,255,0.55)" },
-    { col: 2, label: "Continuity compounds", color: "#8cb7ff" },
+    { col: 1, label: "50 users → strong pull", color: "rgba(255,255,255,0.55)" },
+    { col: 2, label: "Retention becomes visible", color: "#8cb7ff" },
     { col: 3, label: "2,000 paying", color: "#2dd4bf" },
   ];
 
@@ -967,7 +1082,7 @@ function SlideGTM() {
           </div>
           <h2 className={DECK_TITLE_CLASS}>Go-to-Market Motion</h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Depth before scale. The right 50 users unlock the next 50,000.
+            Growth follows continuity, not acquisition.
           </p>
         </div>
 
@@ -984,9 +1099,9 @@ function SlideGTM() {
                   {/* Tick */}
                   <div className="absolute left-0 top-0 h-2 w-px" style={{ background: p.accent }} />
                   <div className="relative">
-                    <div className="text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: p.accent }}>{p.label}</div>
-                    <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-white/30">{p.sublabel}</div>
-                    <div className="mt-0.5 text-[7px] text-white/18">{p.period}</div>
+                    <div className="text-[12px] font-bold uppercase tracking-[0.24em]" style={{ color: p.accent }}>{p.label}</div>
+                    <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/30">{p.sublabel}</div>
+                    <div className="mt-0.5 text-[8px] text-white/18">{p.period}</div>
                   </div>
                 </div>
               ))}
@@ -1014,7 +1129,7 @@ function SlideGTM() {
               <div key={lane.label} className="space-y-2.5">
                 <div className="flex items-center gap-2">
                   <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: lane.accent, boxShadow: `0 0 8px ${lane.accent}80` }} />
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45">{lane.label}</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">{lane.label}</div>
                 </div>
                 <div className="space-y-2.5">
                   {lane.rows.map((row) => (
@@ -1039,7 +1154,7 @@ function SlideGTM() {
                                   boxShadow: s.glow,
                                 }}
                               >
-                                {bar.label && <p className="whitespace-pre-line text-[0.74rem] leading-[1.5]" style={{ color: s.text }}>{bar.label}</p>}
+                                {bar.label && <p className="whitespace-pre-line text-[0.82rem] leading-[1.55]" style={{ color: s.text }}>{bar.label}</p>}
                               </div>
                             );
                           })}
@@ -1070,7 +1185,7 @@ function SlideGTM() {
               {milestones.map((m) => (
                 <div key={m.col} className="gtm-milestone flex flex-col items-center gap-1.5 pt-1">
                   <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: m.color, boxShadow: `0 0 8px ${m.color}` }} />
-                  <div className="text-center text-[7.5px] font-semibold leading-[1.3] tracking-[0.06em]" style={{ color: m.color }}>{m.label}</div>
+                  <div className="text-center text-[9px] font-semibold leading-[1.3] tracking-[0.06em]" style={{ color: m.color }}>{m.label}</div>
                 </div>
               ))}
             </div>
@@ -1180,7 +1295,7 @@ function Slide10Beginning() {
 
         <div className="cd-end-item mt-5">
           <p className="text-[clamp(1rem,1.4vw,1.2rem)] leading-relaxed text-white/45">
-            If this resonates, let&apos;s build this together.
+            If this resonates, let&apos;s build the continuity layer together.
           </p>
         </div>
 
@@ -1188,13 +1303,13 @@ function Slide10Beginning() {
           <div className="flex-1 rounded-[28px] border border-white/10 bg-white/[0.04] px-7 py-7 text-left">
             <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff]/65">Collaborate</p>
             <p className="mt-4 text-[0.9rem] leading-relaxed text-white/55">
-              If you believe we should shape our lives, not just react to them, come build this with us.
+              If you believe the inner life deserves real infrastructure, come build this with us.
             </p>
           </div>
           <div className="flex-1 rounded-[28px] border border-white/10 bg-white/[0.04] px-7 py-7 text-left">
             <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff]/65">Invest</p>
             <p className="mt-4 text-[0.9rem] leading-relaxed text-white/55">
-              For investors who see this space the way we do, lets connect.
+              For investors who see continuity as the next consumer AI layer, let&apos;s talk.
             </p>
           </div>
         </div>
@@ -1224,22 +1339,23 @@ function Slide10Beginning() {
 
 const SLIDE_LABELS = [
   "Problem + Solution",
-  "The Long Game",
-  "Market",
+  "How Sakhi Solves It",
+  "Why Now",
   "Why It Doesn't Exist",
   "Why We Win",
   "Revenue",
   "The Ask",
   "Go to Market",
   "Founders",
+  "The Long Game",
   "The Beginning",
 ];
 
 function renderSlide(step: number, onEnter: () => void, onWatchStory?: () => void, onWatchFounders?: () => void) {
   switch (step) {
     case 0: return <SlideCover onEnter={onEnter} onWatchFounders={onWatchFounders} />;
-    case 1: return <Slide01ProblemSolution onWatchStory={onWatchStory} />;
-    case 2: return <Slide02LongGame />;
+    case 1: return <Slide01ProblemSolution />;
+    case 2: return <Slide02HowItSolves onWatchStory={onWatchStory} />;
     case 3: return <Slide02Market />;
     case 4: return <Slide03Gap />;
     case 5: return <Slide04WhyWeWin />;
@@ -1247,7 +1363,8 @@ function renderSlide(step: number, onEnter: () => void, onWatchStory?: () => voi
     case 7: return <Slide05Ask />;
     case 8: return <SlideGTM />;
     case 9: return <Slide06FoundersCompact />;
-    case 10: return <Slide10Beginning />;
+    case 10: return <Slide02LongGame />;
+    case 11: return <Slide10Beginning />;
     default: return null;
   }
 }
