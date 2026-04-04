@@ -773,9 +773,9 @@ const FOUNDERS_COMPACT = [
     quote:
       "I've spent 20+ years helping organizations make better decisions. I realized we haven't solved this for individuals.",
     beats: [
-      "Worked alongside CEOs and COOs, building systems that turned ambiguity into structured decisions.",
-      "Personal Inflection Point: caregiving, leadership, and life complexity, all at once. Continuity was missing.",
-      "Insight to Sakhi: timing and personalization beat generic advice. Could this be a system?",
+      { tag: "The Foundation", text: "Worked alongside CEOs and COOs, building systems that turned ambiguity into structured decisions." },
+      { tag: "Personal Inflection Point", text: "Caregiving, leadership, and life complexity, all at once. Continuity was missing." },
+      { tag: "Insight to Sakhi", text: "Timing and personalization beat generic advice. Could this be a system?" },
     ],
     closing: "\"Sakhi is the system I wish existed when I needed it most.\"",
     accent: "#c4d2ff",
@@ -789,10 +789,10 @@ const FOUNDERS_COMPACT = [
     quote:
       "I'm a systems thinker at heart, grounded in deep technical expertise and driven to simplify complexity.",
     beats: [
-      "Evolution: engineering first. Kept moving toward what actually makes systems work.",
-      "Realization: systems succeed because people trust and use them. Not just because they are built well.",
-      "Expansion: engineering, product, product marketing. Yoga and meditation deepened how he reads human behavior over time.",
-      "Convergence: technical depth, systems thinking, and lived understanding of people. All of it builds Sakhi.",
+      { tag: "Evolution", text: "Engineering first. Kept moving toward what actually makes systems work." },
+      { tag: "Realization", text: "Systems succeed because people trust and use them. Not just because they are built well." },
+      { tag: "Expansion", text: "Engineering, product, product marketing. Yoga and meditation deepened how he reads human behavior over time." },
+      { tag: "Convergence", text: "Technical depth, systems thinking, and lived understanding of people. All of it builds Sakhi." },
     ],
     closing: "\"That gives me the clarity to build Sakhi.\"",
     accent: "#bfe3ff",
@@ -847,8 +847,13 @@ function Slide06FoundersCompact() {
                   </p>
                   <div className="mt-4 space-y-2.5">
                     {founder.beats.map((beat) => (
-                      <div key={beat} className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[0.78rem] leading-[1.5] text-slate-300">
-                        {beat}
+                      <div key={typeof beat === "string" ? beat : beat.tag} className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[0.78rem] leading-[1.5] text-slate-300">
+                        {typeof beat === "string" ? beat : (
+                          <>
+                            <span className="mr-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.18em]" style={{ color: founder.accent }}>{beat.tag}</span>
+                            <span className="text-slate-300">{beat.text}</span>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
