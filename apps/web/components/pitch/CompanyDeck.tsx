@@ -89,7 +89,7 @@ function Slide01ProblemSolution() {
             </div>
             <div className="bg-white/[0.06]" />
             <div className="bg-rose-950/25 px-6 py-3.5">
-              <span className="text-[0.82rem] font-semibold text-rose-300/60">Result: Bad decisions. Broken execution. The same year, again.</span>
+              <span className="text-[0.82rem] font-semibold text-rose-300/60">Result: Money leaks. Performance slips. Clarity fades. Self-trust erodes.</span>
             </div>
           </div>
         </div>
@@ -222,29 +222,11 @@ function Slide02HowItSolves({ onWatchStory }: { onWatchStory?: () => void }) {
         </div>
 
         {/* Bottom bar */}
-        <div className="cd-sol-item shrink-0 flex items-center justify-between gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-3">
+        <div className="cd-sol-item shrink-0 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-3">
           <p className="text-[0.82rem] leading-[1.55] text-slate-400">
             Unlike ChatGPT or Notes, Sakhi is not session-based.{" "}
             <span className="font-semibold text-white">It is thread-based. That is the product difference.</span>
           </p>
-          <button
-            type="button"
-            onClick={onWatchStory}
-            className="group inline-flex shrink-0 items-center gap-3 transition-opacity"
-          >
-            <span className="relative flex h-8 w-8 shrink-0 items-center justify-center">
-              <span className="absolute inset-0 rounded-full bg-[#8ab0ff]/20 animate-ping" />
-              <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-[#8ab0ff]/30 bg-[radial-gradient(circle_at_38%_32%,rgba(140,183,255,0.28),rgba(80,120,210,0.18)_48%,rgba(3,11,24,0.85)_78%)] shadow-[0_0_22px_rgba(100,148,255,0.28)] transition-shadow group-hover:shadow-[0_0_36px_rgba(100,148,255,0.50)]">
-                <span className="pointer-events-none absolute inset-[13%] rounded-full border border-white/[0.09]" />
-                <svg width="5" height="7" viewBox="0 0 6 8" fill="currentColor" className="relative z-10 translate-x-px text-[#8ab0ff]/90">
-                  <path d="M0 0l6 4L0 8V0z" />
-                </svg>
-              </span>
-            </span>
-            <span className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff] transition-colors group-hover:text-white">
-              See Sakhi in Action
-            </span>
-          </button>
         </div>
 
       </div>
@@ -266,9 +248,9 @@ function Slide02LongGame() {
   }, []);
 
   const pillars = [
-    { label: "Today", heading: "A continuity product people return to", body: "Sakhi helps users think across sessions, not just within one. It captures what matters, keeps threads alive, and makes reflection useful over time." },
-    { label: "Tomorrow", heading: "A personal continuity layer", body: "Sakhi becomes the system that holds your ongoing context: what you care about, what you are navigating, what keeps repeating, and how your thinking evolves." },
-    { label: "The Vision", heading: "Infrastructure for the inner life", body: "Every AI system will get smarter. The missing layer is the one that knows you across time — your threads, patterns, priorities, and becoming. That is the layer Sakhi is building." },
+    { label: "Today", heading: "A continuity product people return to", body: "Sakhi helps users think across sessions, not just within one. It captures what matters, keeps threads alive, and makes reflection useful over time.", detail: "The product is already live. Users return because the context does not reset." },
+    { label: "Tomorrow", heading: "A personal continuity layer", body: "Sakhi becomes the system that holds your ongoing context: what you care about, what you are navigating, what keeps repeating, and how your thinking evolves.", detail: "Every AI tool you use already knows where you are." },
+    { label: "The Vision", heading: "Infrastructure for the inner life", body: "Every AI system will get smarter. The missing layer is the one that knows you across time — your threads, patterns, priorities, and becoming. That is the layer Sakhi is building.", detail: "Not a feature. A foundation." },
   ];
 
   return (
@@ -285,7 +267,7 @@ function Slide02LongGame() {
           </h2>
         </div>
 
-        <div className="cd-lg-item grid flex-1 gap-5 lg:grid-cols-3">
+        <div className="cd-lg-item grid gap-5 lg:grid-cols-3">
           {pillars.map((p, i) => (
             <div key={p.label} className={`flex flex-col rounded-2xl border px-6 py-6 ${
               i === 2
@@ -296,7 +278,8 @@ function Slide02LongGame() {
               <h3 className={`text-[clamp(1rem,1.4vw,1.2rem)] font-bold leading-[1.2] tracking-[-0.03em] ${i === 2 ? "text-[#c8d8ff]" : "text-white/80"}`}>
                 {p.heading}
               </h3>
-              <p className="mt-3 flex-1 text-[0.83rem] leading-[1.65] text-slate-400">{p.body}</p>
+              <p className="mt-3 text-[0.83rem] leading-[1.65] text-slate-400">{p.body}</p>
+              <p className={`mt-4 text-[0.78rem] font-semibold leading-[1.4] ${i === 2 ? "text-[#8cb7ff]/55" : "text-white/30"}`}>{p.detail}</p>
             </div>
           ))}
         </div>
@@ -601,9 +584,9 @@ function Slide04WhyWeWin() {
 
   const moat = [
     { label: "Continuity Engine", tag: "Core infrastructure", body: "Other AI remembers what you said. Sakhi sharpens your living model with every return. Threads stay live. Patterns build. Judgment compounds." },
+    { label: "Continuity Arc", tag: "Product Expression", body: "Threads become explorable arcs, so users can revisit how a thought, dilemma, or decision evolved over time." },
     { label: "Compounding Understanding", tag: "Moat", body: "Your patterns, your language, your contradictions. A compounding model cannot be exported or replicated. Switching cost earned, not engineered." },
     { label: "Life Occupancy", tag: "Product Expression", body: "Sakhi shows what has actually occupied your mind and life across time, not just what you said most recently." },
-    { label: "Continuity Arc", tag: "Product Expression", body: "Threads become explorable arcs, so users can revisit how a thought, dilemma, or decision evolved over time." },
   ];
 
   const proofPanels = [
@@ -799,12 +782,10 @@ function Slide05Ask() {
   }, []);
 
   const milestones = [
-    "Continuity Engine V2 live with deeper memory and cross-session inference.",
-    "Sakhi moves from self-report to real-life signal understanding. Not just what you say, but what is actually happening.",
-    "iOS and Android live with real Day-30 retention.",
-    "10,000 active users and 2,000+ paying.",
-    "60%+ Day-90 retention, proving continuity is habit-forming.",
-    "$40K MRR run-rate, proving people pay for accumulated intelligence.",
+    { tag: "Product", heading: "Launch a continuity product ready to serve 10K+ users", body: "With Continuity Engine V2, sensing layer, and mobile product live — moving from memory to real-life context." },
+    { tag: "Retention / Behavior", heading: "Prove continuity becomes a retained behavior", body: "Strong Day-30 and 60%+ Day-90 retention in a defined ICP, showing users come back because their context compounds." },
+    { tag: "Monetization", heading: "Validate willingness to pay for accumulated intelligence", body: "10,000 active users, 2,000+ paying, and $40K+ MRR run-rate." },
+    { tag: "Fundraise Bridge", heading: "Earn the Seed by proving continuity is both habit-forming and monetizable", body: "Target: Month 12–15 | $4–5M at $15–20M valuation" },
   ];
 
   const allocation = [
@@ -832,18 +813,15 @@ function Slide05Ask() {
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Milestones */}
           <div className="cd5-item">
-            <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">What we prove with this raise (Month 12)</div>
+            <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">What this round proves (in 12 months)</div>
             <div className="space-y-2.5">
               {milestones.map((m, i) => (
-                <div key={i} className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
-                  <span className="mt-[0.3em] h-1.5 w-1.5 shrink-0 rounded-full bg-[#8cb7ff]/60" />
-                  <p className="text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.5] text-slate-300">{m}</p>
+                <div key={i} className={`rounded-xl border px-4 py-3.5 ${i === 3 ? "border-emerald-400/15 bg-emerald-400/[0.04]" : "border-white/[0.07] bg-white/[0.02]"}`}>
+                  <div className={`mb-1 text-[8px] font-semibold uppercase tracking-[0.22em] ${i === 3 ? "text-emerald-300/60" : "text-[#8cb7ff]/60"}`}>{m.tag}</div>
+                  <p className={`text-[clamp(0.82rem,1vw,0.9rem)] font-semibold leading-[1.4] ${i === 3 ? "text-emerald-300/90" : "text-white/85"}`}>{m.heading}</p>
+                  <p className={`mt-1 text-[0.78rem] leading-[1.5] ${i === 3 ? "text-emerald-300/55" : "text-slate-400"}`}>{m.body}</p>
                 </div>
               ))}
-            </div>
-            <div className="mt-4 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.04] px-4 py-3.5">
-              <p className="text-[0.95rem] font-bold tracking-[-0.01em] text-emerald-300/90">This round is designed to earn the Seed.</p>
-              <p className="mt-1 text-[0.75rem] font-semibold text-emerald-300/50">Target: Month 12–15 &nbsp;|&nbsp; $4–5M at $15–20M valuation</p>
             </div>
           </div>
 
@@ -1082,7 +1060,7 @@ function SlideGTM() {
           </div>
           <h2 className={DECK_TITLE_CLASS}>Go-to-Market Motion</h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Growth follows continuity, not acquisition.
+            Depth before scale. The right 50 users unlock the next 50,000.
           </p>
         </div>
 
@@ -1099,9 +1077,9 @@ function SlideGTM() {
                   {/* Tick */}
                   <div className="absolute left-0 top-0 h-2 w-px" style={{ background: p.accent }} />
                   <div className="relative">
-                    <div className="text-[12px] font-bold uppercase tracking-[0.24em]" style={{ color: p.accent }}>{p.label}</div>
-                    <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/30">{p.sublabel}</div>
-                    <div className="mt-0.5 text-[8px] text-white/18">{p.period}</div>
+                    <div className="text-[clamp(0.7rem,1vw,0.85rem)] font-bold uppercase tracking-[0.24em]" style={{ color: p.accent }}>{p.label}</div>
+                    <div className="mt-1 text-[clamp(0.6rem,0.75vw,0.72rem)] font-semibold uppercase tracking-[0.14em] text-white/30">{p.sublabel}</div>
+                    <div className="mt-0.5 text-[clamp(0.6rem,0.72vw,0.7rem)] text-white/35">{p.period}</div>
                   </div>
                 </div>
               ))}
