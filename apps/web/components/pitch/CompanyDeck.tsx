@@ -287,7 +287,7 @@ function Slide02LongGame() {
         <div className="cd-lg-item shrink-0 rounded-2xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.03] px-6 py-4">
           <p className="text-[clamp(0.88rem,1.05vw,1rem)] leading-[1.65] text-slate-400">
             The physical world has infrastructure.{" "}
-            <span className="text-white/60">The inner world does not. Sakhi is built to become it.</span>
+            <span className="text-white/60">The mind has none. Sakhi is built to become it.</span>
           </p>
         </div>
 
