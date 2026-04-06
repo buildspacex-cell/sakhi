@@ -1233,17 +1233,6 @@ function SlideCover({ onEnter, onWatchFounders }: { onEnter: () => void; onWatch
             <path d="M9 6l6 6-6 6" />
           </svg>
         </button>
-        <span className="text-white/15">|</span>
-        <button
-          type="button"
-          onClick={onWatchFounders}
-          className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/50 transition hover:text-white/80"
-        >
-          From the Founders
-          <svg viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 3l14 9-14 9V3z" />
-          </svg>
-        </button>
       </div>
     </div>
   );
