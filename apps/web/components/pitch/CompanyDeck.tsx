@@ -49,14 +49,15 @@ function Slide01ProblemSolution() {
         </div>
 
         {/* Gap — aligned rows */}
-        <div className="cd1-item shrink-0 overflow-hidden rounded-2xl border border-white/[0.07]">
+        <div className="cd1-item shrink-0 overflow-x-auto rounded-2xl border border-white/[0.07]">
+          <div className="min-w-[520px]">
           {/* Column headers */}
           <div className="grid grid-cols-[1fr_1px_1fr]">
-            <div className="bg-emerald-950/20 px-6 py-3">
+            <div className="bg-emerald-950/20 px-4 py-3 sm:px-6">
               <span className="text-[9px] font-semibold uppercase tracking-[0.35em] text-emerald-400/60">The Physical World</span>
             </div>
             <div className="bg-white/[0.06]" />
-            <div className="bg-rose-950/20 px-6 py-3">
+            <div className="bg-rose-950/20 px-4 py-3 sm:px-6">
               <span className="text-[9px] font-semibold uppercase tracking-[0.35em] text-rose-400/50">The Inner Life</span>
             </div>
           </div>
@@ -66,16 +67,16 @@ function Slide01ProblemSolution() {
           {rows.map((r, i) => (
             <div key={r.physical}>
               <div className="grid grid-cols-[1fr_1px_1fr]">
-                <div className={`flex items-center gap-3 px-6 py-3.5 ${i % 2 === 0 ? "" : "bg-white/[0.015]"}`}>
+                <div className={`flex items-center gap-2 px-4 py-3 sm:gap-3 sm:px-6 sm:py-3.5 ${i % 2 === 0 ? "" : "bg-white/[0.015]"}`}>
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/40" />
-                  <span className="text-[0.85rem] font-semibold text-white/65">{r.physical}</span>
-                  <span className="text-[0.82rem] text-slate-500">{r.physicalDetail}</span>
+                  <span className="text-[0.8rem] font-semibold text-white/65 sm:text-[0.85rem]">{r.physical}</span>
+                  <span className="hidden text-[0.78rem] text-slate-500 sm:inline">{r.physicalDetail}</span>
                 </div>
                 <div className="bg-white/[0.06]" />
-                <div className={`flex items-center gap-3 px-6 py-3.5 ${i % 2 === 0 ? "" : "bg-white/[0.015]"}`}>
+                <div className={`flex items-center gap-2 px-4 py-3 sm:gap-3 sm:px-6 sm:py-3.5 ${i % 2 === 0 ? "" : "bg-white/[0.015]"}`}>
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400/40" />
-                  <span className="w-[9.5rem] shrink-0 text-[0.85rem] font-semibold text-white/65">{r.inner}</span>
-                  <span className="text-[0.82rem] text-slate-500">{r.innerDetail}</span>
+                  <span className="shrink-0 text-[0.8rem] font-semibold text-white/65 sm:w-[9.5rem] sm:text-[0.85rem]">{r.inner}</span>
+                  <span className="text-[0.78rem] text-slate-500 sm:text-[0.82rem]">{r.innerDetail}</span>
                 </div>
               </div>
               <div className="h-px bg-white/[0.04]" />
@@ -84,13 +85,14 @@ function Slide01ProblemSolution() {
 
           {/* Result row */}
           <div className="grid grid-cols-[1fr_1px_1fr]">
-            <div className="bg-emerald-950/25 px-6 py-3.5">
-              <span className="text-[0.82rem] font-semibold text-emerald-300/60">Result: Order. Progress that compounds.</span>
+            <div className="bg-emerald-950/25 px-4 py-3 sm:px-6 sm:py-3.5">
+              <span className="text-[0.78rem] font-semibold text-emerald-300/60 sm:text-[0.82rem]">Result: Order. Progress that compounds.</span>
             </div>
             <div className="bg-white/[0.06]" />
-            <div className="bg-rose-950/25 px-6 py-3.5">
-              <span className="text-[0.82rem] font-semibold text-rose-300/60">Result: Money leaks. Performance slips. Clarity fades. Self-trust erodes.</span>
+            <div className="bg-rose-950/25 px-4 py-3 sm:px-6 sm:py-3.5">
+              <span className="text-[0.78rem] font-semibold text-rose-300/60 sm:text-[0.82rem]">Result: Money leaks. Performance slips. Clarity fades. Self-trust erodes.</span>
             </div>
+          </div>
           </div>
         </div>
 
@@ -133,7 +135,7 @@ function Slide01ProblemSolution() {
 }
 
 // ── Slide 2 — How Sakhi Solves It ────────────────────────────────────────────
-function Slide02HowItSolves({ onWatchStory }: { onWatchStory?: () => void }) {
+function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -176,8 +178,8 @@ function Slide02HowItSolves({ onWatchStory }: { onWatchStory?: () => void }) {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-12 pb-5 sm:px-10 lg:px-14">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 overflow-hidden">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-12 pb-20 sm:px-10 sm:pb-6 lg:px-14 lg:pb-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4">
 
         {/* Header */}
         <div className="cd-sol-item shrink-0">
@@ -193,11 +195,11 @@ function Slide02HowItSolves({ onWatchStory }: { onWatchStory?: () => void }) {
         </div>
 
         {/* Mechanism blocks */}
-        <div className="cd-sol-item grid min-h-0 flex-1 gap-4 lg:grid-cols-3">
+        <div className="cd-sol-item grid gap-4 lg:grid-cols-3">
           {steps.map((s, i) => (
             <div
               key={s.tag}
-              className="flex min-h-0 flex-col rounded-2xl border px-5 py-4"
+              className="flex flex-col rounded-2xl border px-5 py-4"
               style={{ background: s.dim, borderColor: s.border }}
             >
               <div className="mb-2 flex shrink-0 items-center gap-2">
@@ -208,7 +210,7 @@ function Slide02HowItSolves({ onWatchStory }: { onWatchStory?: () => void }) {
                 {s.heading}
               </h3>
               <p className="mt-1.5 shrink-0 text-[0.78rem] leading-[1.55] text-slate-400">{s.body}</p>
-              <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.06] flex items-start justify-center bg-white/[0.02]">
+              <div className="mt-3 h-[220px] sm:h-[260px] lg:h-[200px] xl:h-[260px] overflow-hidden rounded-xl border border-white/[0.06] flex items-start justify-center bg-white/[0.02]">
                 <Image
                   src={s.image}
                   alt={s.tag}
@@ -1065,12 +1067,13 @@ function SlideGTM() {
         </div>
 
         {/* Gantt */}
-        <div className="gtm-item">
+        <div className="gtm-item overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="min-w-[640px]">
 
           {/* Phase header row */}
           <div className="flex items-end pb-3">
             <div className="grid flex-1 grid-cols-3">
-              {phases.map((p, i) => (
+              {phases.map((p) => (
                 <div key={p.label} className="relative px-3">
                   {/* Phase column tint */}
                   <div className="pointer-events-none absolute inset-x-1 -bottom-3 top-0 rounded-t-xl" style={{ background: p.dim }} />
@@ -1169,6 +1172,7 @@ function SlideGTM() {
             </div>
           </div>
         </div>
+        </div>
 
       </div>
     </div>
@@ -1198,10 +1202,10 @@ function SlideCover({ onEnter, onWatchFounders }: { onEnter: () => void; onWatch
 
       {/* Orb */}
       <div className="relative mb-5 flex items-center justify-center">
-        <div className="cov-ring absolute h-[420px] w-[420px] rounded-full border border-white/[0.04]" />
-        <div className="cov-ring absolute h-[320px] w-[320px] rounded-full border border-white/[0.07]" />
-        <div className="cov-ring absolute h-[236px] w-[236px] rounded-full border border-white/[0.10]" />
-        <div className="cov-orb relative flex h-[168px] w-[168px] items-center justify-center rounded-full border border-[#8ab0ff]/25 bg-[radial-gradient(circle_at_38%_32%,rgba(140,183,255,0.22),rgba(80,120,210,0.14)_48%,rgba(3,11,24,0.85)_78%)] shadow-[0_0_80px_rgba(100,148,255,0.18),0_0_160px_rgba(80,120,255,0.08)]" style={{ opacity: 0, scale: "0.85" }}>
+        <div className="cov-ring absolute h-[min(420px,88vw)] w-[min(420px,88vw)] rounded-full border border-white/[0.04]" />
+        <div className="cov-ring absolute h-[min(320px,67vw)] w-[min(320px,67vw)] rounded-full border border-white/[0.07]" />
+        <div className="cov-ring absolute h-[min(236px,50vw)] w-[min(236px,50vw)] rounded-full border border-white/[0.10]" />
+        <div className="cov-orb relative flex h-[min(168px,36vw)] w-[min(168px,36vw)] items-center justify-center rounded-full border border-[#8ab0ff]/25 bg-[radial-gradient(circle_at_38%_32%,rgba(140,183,255,0.22),rgba(80,120,210,0.14)_48%,rgba(3,11,24,0.85)_78%)] shadow-[0_0_80px_rgba(100,148,255,0.18),0_0_160px_rgba(80,120,255,0.08)] animate-[sakhi-pulse_3s_ease-in-out_infinite]" style={{ opacity: 0, scale: "0.85" }}>
           <div className="pointer-events-none absolute inset-[14%] rounded-full border border-white/[0.09]" />
           <span className="relative z-10 text-[12px] font-semibold tracking-[0.42em] text-[#8ab0ff]/90">SAKHI</span>
         </div>
@@ -1222,7 +1226,7 @@ function SlideCover({ onEnter, onWatchFounders }: { onEnter: () => void; onWatch
         <button
           type="button"
           onClick={onEnter}
-          className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/40 transition hover:text-white/70"
+          className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/65 transition hover:text-white"
         >
           View Company Deck
           <svg viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -1233,7 +1237,7 @@ function SlideCover({ onEnter, onWatchFounders }: { onEnter: () => void; onWatch
         <button
           type="button"
           onClick={onWatchFounders}
-          className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 transition hover:text-white/60"
+          className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/50 transition hover:text-white/80"
         >
           From the Founders
           <svg viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -1422,7 +1426,7 @@ export function CompanyDeck() {
     <div ref={containerRef} className="fixed inset-0 overflow-hidden bg-[#020617] text-white">
       {/* Slide content */}
       <div ref={contentRef} className="absolute inset-0">
-        {renderSlide(step, () => goTo(1), openStory, openStory)}
+        {renderSlide(step, () => goTo(1), openStory, () => window.open("https://youtu.be/Zxa3yQA-jTU", "_blank"))}
       </div>
 
       {/* Top bar */}

@@ -46,3 +46,8 @@ body {
   transform-origin: left center;
   box-shadow: 0 0 14px rgba(180, 198, 255, 0.18);
 }
+
+@keyframes sakhi-pulse {
+  0%, 100% { box-shadow: 0 0 80px rgba(100,148,255,0.18), 0 0 160px rgba(80,120,255,0.08); }
+  50%       { box-shadow: 0 0 110px rgba(100,148,255,0.38), 0 0 200px rgba(80,120,255,0.18); }
+}
