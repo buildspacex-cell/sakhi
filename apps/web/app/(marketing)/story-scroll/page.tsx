@@ -1,5 +1,5 @@
-import LegacyStoryPage from "@/components/story/LegacyStoryPage";
+import { notFound } from "next/navigation";
 
 export default function StoryScrollPage() {
-  return <LegacyStoryPage />;
+  notFound();
 }

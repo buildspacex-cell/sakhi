@@ -1,5 +1,5 @@
-import StoryContainer from "@/components/story/StoryContainer";
+import { notFound } from "next/navigation";
 
 export default function StoryPage() {
-  return <StoryContainer autoPlay />;
+  notFound();
 }

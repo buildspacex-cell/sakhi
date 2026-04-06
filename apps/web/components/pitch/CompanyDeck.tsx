@@ -1301,10 +1301,10 @@ function Slide10Beginning() {
             For Collaboration or Investment
           </p>
           <a
-            href="mailto:founders@sakhiintelligence.com"
+            href="mailto:sakhiadmin@gmail.com"
             className="mt-3 inline-flex items-center gap-2 text-[1.1rem] font-medium text-white/75 transition-colors hover:text-white"
           >
-            founders@sakhiintelligence.com
+            sakhiadmin@gmail.com
             <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 opacity-50" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.5l11-11m0 0H7.5m8 0v8" />
             </svg>
@@ -1433,7 +1433,7 @@ export function CompanyDeck() {
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-3 sm:px-7">
         {/* Logo + slide label */}
         <div className="flex items-center gap-3">
-          <span className="text-[11px] font-semibold tracking-[0.38em] text-[#8ab0ff]/70">SAKHI</span>
+          <button type="button" onClick={() => goTo(0)} className="text-[11px] font-semibold tracking-[0.38em] text-[#8ab0ff]/70 transition hover:text-[#8ab0ff]">SAKHI</button>
           {step > 0 && (
             <>
               <span className="text-white/20">/</span>
@@ -1480,38 +1480,34 @@ export function CompanyDeck() {
       )}
 
       {/* Prev */}
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        disabled={step === COVER || transitioning}
-        aria-label="Previous slide"
-        className={`absolute bottom-6 left-5 z-20 flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition sm:bottom-8 sm:left-7 ${
-          step === COVER
-            ? "cursor-not-allowed border-white/8 bg-[#020617]/30 text-white/18"
-            : "border-white/12 bg-[#020617]/76 text-white/78 shadow-[0_18px_40px_rgba(0,0,0,0.28)] hover:border-white/22 hover:text-white"
-        }`}
-      >
-        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
-      </button>
+      {step > COVER && (
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          disabled={transitioning}
+          aria-label="Previous slide"
+          className="absolute bottom-6 left-5 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-[#020617]/76 text-white/78 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-md transition hover:border-white/22 hover:text-white sm:bottom-8 sm:left-7"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+      )}
 
       {/* Next */}
-      <button
-        type="button"
-        onClick={() => navigate(1)}
-        disabled={step === TOTAL || transitioning}
-        aria-label="Next slide"
-        className={`absolute bottom-6 right-5 z-20 flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition sm:bottom-8 sm:right-7 ${
-          step === TOTAL
-            ? "cursor-not-allowed border-white/8 bg-[#020617]/30 text-white/18"
-            : "border-white/12 bg-[#020617]/76 text-white/78 shadow-[0_18px_40px_rgba(0,0,0,0.28)] hover:border-white/22 hover:text-white"
-        }`}
-      >
-        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 6l6 6-6 6" />
-        </svg>
-      </button>
+      {step > COVER && step < TOTAL && (
+        <button
+          type="button"
+          onClick={() => navigate(1)}
+          disabled={transitioning}
+          aria-label="Next slide"
+          className="absolute bottom-6 right-5 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-[#020617]/76 text-white/78 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-md transition hover:border-white/22 hover:text-white sm:bottom-8 sm:right-7"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
+      )}
 
       {/* Bottom step counter — hidden on cover */}
       {step > 0 && (

@@ -21,11 +21,38 @@ function getProtectedMvpRoot(pathname: string) {
   return null;
 }
 
+// ── Public access lock ────────────────────────────────────────────────────────
+// Only /company-deck is publicly accessible. All other app routes return 404.
+// To re-enable a route, add its prefix to ALLOWED_PREFIXES below.
+// DO NOT delete any route files — this is the only change needed to restore access.
+//
+// Routes currently locked (restore by adding to ALLOWED_PREFIXES):
+//   /experience, /auth, /soul, /journal, /demo, /lab, /mvp, /mvp-release,
+//   /pitch, /story, /story-scroll, /dashboard, /chat, /session, /system,
+//   /debug, /breath, /alignment, /contract, /calibration, /link, /landing, /
+//
+const ALLOWED_PREFIXES = [
+  "/company-deck",
+  "/api",
+];
+
+function isAllowed(pathname: string): boolean {
+  return ALLOWED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function middleware(request: NextRequest) {
-  const protectedRoot = getProtectedMvpRoot(request.nextUrl.pathname);
+  const { pathname } = request.nextUrl;
+
+  // Block all routes not in the allow-list
+  if (!isAllowed(pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  const protectedRoot = getProtectedMvpRoot(pathname);
 
   if (protectedRoot) {
-    if (request.nextUrl.pathname === `${protectedRoot}/unlock`) {
+    if (pathname === `${protectedRoot}/unlock`) {
       return NextResponse.next();
     }
 
