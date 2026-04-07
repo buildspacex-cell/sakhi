@@ -35,6 +35,7 @@ const ALLOWED_PREFIXES = [
   "/company-deck",
   "/api",
   "/story",
+  "/founder-story",
 ];
 
 function isAllowed(pathname: string): boolean {

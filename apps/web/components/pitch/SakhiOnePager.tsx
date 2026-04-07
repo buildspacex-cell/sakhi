@@ -25,7 +25,7 @@ export default function SakhiOnePager() {
 
             {/* Problem */}
             <section>
-              <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-rose-400/70">Problem</div>
+              <div className="mb-2 inline-flex items-center rounded-full border border-rose-400/20 bg-rose-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-rose-400/70">Problem</div>
               <p className="text-[0.88rem] leading-[1.65] text-slate-400">
                 Why do even smart people make bad decisions and execute inconsistently? Not from lack of intelligence, but because their thinking fragments. Every tool tracks the outside world. None integrate the inside.
               </p>
@@ -34,7 +34,7 @@ export default function SakhiOnePager() {
 
             {/* Solution */}
             <section>
-              <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/70">Solution</div>
+              <div className="mb-2 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/70">Solution</div>
               <p className="text-[0.88rem] leading-[1.65] text-slate-400">
                 Sakhi captures what matters, keeps threads alive, and brings them back when they matter. It is thread-based, not session-based. Thinking compounds instead of resets.
               </p>
@@ -42,7 +42,7 @@ export default function SakhiOnePager() {
 
             {/* Why Now */}
             <section>
-              <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-emerald-400/70">Why Now</div>
+              <div className="mb-2 inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-emerald-400/70">Why Now</div>
               <div className="space-y-2">
                 {[
                   { tag: "Model Shift", body: "AI can now hold conversations rich enough to make a continuity layer possible." },
@@ -59,14 +59,27 @@ export default function SakhiOnePager() {
 
             {/* Founders */}
             <section>
-              <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Founders</div>
+              <div className="mb-2">
+                <a
+                  href="/founder-story" target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#8cb7ff]/25 bg-[#8cb7ff]/[0.06] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8cb7ff]/70 animate-[cta-pulse_2.5s_ease-in-out_infinite] [animation-delay:2s] transition hover:border-[#8cb7ff]/50 hover:text-[#8cb7ff]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-current shrink-0" aria-hidden="true">
+                    <path d="M8 6.5v11l9-5.5-9-5.5Z" />
+                  </svg>
+                  Meet Founders
+                </a>
+              </div>
               <div className="space-y-2">
                 {[
-                  { name: "Vidhya", role: "CEO", bio: "20+ years partnering with CEOs and COOs at a $4B public company and a SaaS firm serving large enterprises. Sakhi is the system she wished existed." },
+                  { name: "Vidhya Padmanabhan", role: "CEO", bio: "20+ years partnering with executives and C-suite at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions." },
                   { name: "Ravi Shankar", role: "CTO", bio: "Engineering, product, and AI systems thinker. Technical depth meets lived human understanding." },
                 ].map((f) => (
-                  <div key={f.name} className="flex gap-2.5 text-[0.84rem] leading-[1.5]">
-                    <span className="shrink-0 font-semibold text-white/70">{f.name} <span className="text-white/30 font-normal">· {f.role}</span></span>
+                  <div key={f.name} className="flex gap-4 text-[0.84rem] leading-[1.5]">
+                    <div className="w-[7.5rem] shrink-0">
+                      <div className="font-semibold text-white/70">{f.name}</div>
+                      <div className="text-[0.75rem] font-normal text-white/30">{f.role}</div>
+                    </div>
                     <span className="text-slate-500">{f.bio}</span>
                   </div>
                 ))}
@@ -80,7 +93,7 @@ export default function SakhiOnePager() {
 
             {/* Business Model */}
             <section>
-              <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-violet-400/70">Business Model</div>
+              <div className="mb-2 inline-flex items-center rounded-full border border-violet-400/20 bg-violet-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-violet-400/70">Business Model</div>
               <div className="space-y-2">
                 {[
                   { tier: "Free", desc: "Limited continuity. Model does not fully compound." },
@@ -100,7 +113,7 @@ export default function SakhiOnePager() {
 
             {/* Metrics */}
             <section>
-              <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-amber-400/70">12-Month Targets</div>
+              <div className="mb-2 inline-flex items-center rounded-full border border-amber-400/20 bg-amber-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-amber-400/70">12-Month Targets</div>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { val: "10K+", label: "Active users" },
@@ -118,7 +131,7 @@ export default function SakhiOnePager() {
 
             {/* The Ask */}
             <section className="rounded-2xl border border-[#8cb7ff]/15 bg-[#8cb7ff]/[0.04] px-5 py-4">
-              <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/60">Pre-Seed Ask</div>
+              <div className="mb-1 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/60">Pre-Seed Ask</div>
               <div className="text-[2.1rem] font-bold leading-none tracking-[-0.06em] text-white">$1,250,000</div>
               <p className="mt-2 text-[0.84rem] leading-[1.6] text-slate-400">To prove continuity can become a retained consumer behavior and a real subscription business.</p>
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -134,38 +147,36 @@ export default function SakhiOnePager() {
                   </div>
                 ))}
               </div>
+              {/* CTAs below the ask */}
+              <div className="mt-4 flex items-center gap-3 border-t border-white/[0.07] pt-4">
+                <a
+                  href="/story" target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#8cb7ff]/25 bg-[#8cb7ff]/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8cb7ff]/70 animate-[cta-pulse_2.5s_ease-in-out_infinite] transition hover:border-[#8cb7ff]/50 hover:text-[#8cb7ff]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 3l14 9-14 9V3z" /></svg>
+                  What&apos;s Sakhi
+                </a>
+                <a
+                  href="/company-deck" target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#8cb7ff]/25 bg-[#8cb7ff]/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8cb7ff]/70 animate-[cta-pulse_2.5s_ease-in-out_infinite] [animation-delay:1s] transition hover:border-[#8cb7ff]/50 hover:text-[#8cb7ff]"
+                >
+                  Company Deck
+                  <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                </a>
+              </div>
             </section>
 
           </div>
         </div>
 
-        {/* Full-width footer */}
-        <div className="shrink-0 border-t border-white/[0.07] pt-5 flex items-center justify-between gap-6">
-          <p className="text-[0.8rem] leading-[1.6] text-slate-500 max-w-lg">
-            <span className="text-white/55">Every LLM wants to be your interface.</span>{" "}
-            Sakhi becomes your thinking layer. The physical world has infrastructure. The mind has none. Sakhi is built to become it.
+        {/* Vision statement — gradient rule + elevated text */}
+        <div className="shrink-0 pt-1 pb-2">
+          {/* Gradient separator */}
+          <div className="mb-4 h-px w-full" style={{ background: "linear-gradient(to right, transparent, #8cb7ff55 30%, #a78bfa55 55%, #8cb7ff55 70%, transparent)" }} />
+          <p className="text-center text-[clamp(1.8rem,3vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white/60">
+            The physical world has infrastructure. The mind has none.{" "}
+            <span className="text-[#8cb7ff]">Sakhi is built to become your infrastructure for thinking.</span>
           </p>
-          <div className="flex items-center gap-4 shrink-0">
-            <a
-              href="/story"
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45 transition hover:border-white/25 hover:text-white/70"
-            >
-              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 3l14 9-14 9V3z" /></svg>
-              Watch Sakhi Story
-            </a>
-            <span className="text-white/15">·</span>
-            <a href="mailto:sakhiadmin@gmail.com" className="text-[0.88rem] font-medium text-white/55 transition hover:text-white">
-              sakhiadmin@gmail.com
-            </a>
-            <span className="text-white/15">·</span>
-            <a
-              href="/company-deck"
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#8cb7ff]/25 bg-[#8cb7ff]/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8cb7ff]/80 transition hover:border-[#8cb7ff]/50 hover:text-[#8cb7ff]"
-            >
-              View Full Deck
-              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-            </a>
-          </div>
         </div>
 
       </div>

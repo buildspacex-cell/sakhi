@@ -2,14 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import Scene1Chaos from "@/components/story/Scene1Chaos";
-import Scene2Breakdown from "@/components/story/Scene2Breakdown";
-import Scene3Reveal from "@/components/story/Scene3Reveal";
-import Scene4Continuity from "@/components/story/Scene4Continuity";
-// import Scene4bHealthArc from "@/components/story/Scene4bHealthArc";
-import Scene5Email from "@/components/story/Scene5Email";
-import Scene6Vision from "@/components/story/Scene6Vision";
-import { useStoryTimeline } from "@/components/story/useStoryTimeline";
+import Scene6Transition from "@/components/story/Scene6Transition";
+import Scene6Close from "@/components/story/Scene6Close";
+import Scene7Close from "@/components/story/Scene7Close";
+import { useFounderStoryTimeline } from "@/components/story/useFounderStoryTimeline";
 
 function PlayIcon() {
   return (
@@ -59,14 +55,14 @@ function FullscreenExitIcon() {
   );
 }
 
-export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolean }) {
+export default function FounderStoryContainer({ autoPlay = false }: { autoPlay?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsVisible, setControlsVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { isPaused, isComplete, progress, duration, togglePlayback, restart, seekTo } =
-    useStoryTimeline(containerRef);
+    useFounderStoryTimeline(containerRef);
 
   const elapsed = Math.round(progress * duration);
   const remaining = Math.max(0, Math.round(duration) - elapsed);
@@ -74,14 +70,8 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
 
   const revealControls = useCallback(() => {
     setControlsVisible(true);
-
-    if (hideControlsTimeoutRef.current) {
-      clearTimeout(hideControlsTimeoutRef.current);
-    }
-
-    hideControlsTimeoutRef.current = setTimeout(() => {
-      setControlsVisible(false);
-    }, 1800);
+    if (hideControlsTimeoutRef.current) clearTimeout(hideControlsTimeoutRef.current);
+    hideControlsTimeoutRef.current = setTimeout(() => setControlsVisible(false), 1800);
   }, []);
 
   const toggleFullscreen = useCallback(() => {
@@ -93,9 +83,7 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
   }, []);
 
   useEffect(() => {
-    const onFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
@@ -113,11 +101,11 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
 
   useEffect(() => {
     return () => {
-      if (hideControlsTimeoutRef.current) {
-        clearTimeout(hideControlsTimeoutRef.current);
-      }
+      if (hideControlsTimeoutRef.current) clearTimeout(hideControlsTimeoutRef.current);
     };
   }, []);
+
+  void remaining;
 
   return (
     <div
@@ -126,12 +114,11 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
       onMouseMove={revealControls}
       onMouseEnter={revealControls}
       onMouseLeave={() => {
-        if (hideControlsTimeoutRef.current) {
-          clearTimeout(hideControlsTimeoutRef.current);
-        }
+        if (hideControlsTimeoutRef.current) clearTimeout(hideControlsTimeoutRef.current);
         setControlsVisible(false);
       }}
     >
+      {/* Playback controls */}
       <div
         className={`absolute inset-x-0 bottom-5 z-[120] px-4 transition-all duration-300 sm:bottom-7 sm:px-6 ${
           controlsVisible
@@ -144,7 +131,7 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
             type="button"
             onClick={togglePlayback}
             onFocus={revealControls}
-            aria-label={isComplete ? "Play story again" : isPaused ? "Play story" : "Pause story"}
+            aria-label={isComplete ? "Play again" : isPaused ? "Play" : "Pause"}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/6 text-slate-100 transition hover:bg-white/10"
           >
             {isComplete || isPaused ? <PlayIcon /> : <PauseIcon />}
@@ -153,7 +140,7 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
             type="button"
             onClick={() => { restart(); }}
             onFocus={revealControls}
-            aria-label="Restart story"
+            aria-label="Restart"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-transparent text-slate-300 transition hover:border-white/18 hover:text-white"
           >
             <RestartIcon />
@@ -164,12 +151,8 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
             max={1000}
             step={1}
             value={Math.round(progress * 1000)}
-            onInput={(event) => {
-              seekTo(Number(event.currentTarget.value) / 1000);
-            }}
-            onChange={(event) => {
-              seekTo(Number(event.currentTarget.value) / 1000);
-            }}
+            onInput={(e) => seekTo(Number(e.currentTarget.value) / 1000)}
+            onChange={(e) => seekTo(Number(e.currentTarget.value) / 1000)}
             onFocus={revealControls}
             aria-label="Story timeline"
             className="h-1 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-[#c7d3ff]"
@@ -191,28 +174,15 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
         </div>
       </div>
 
-      <div id="scene-1" className="scene absolute inset-0 z-10">
-        <Scene1Chaos />
+      {/* Scenes 7–10 */}
+      <div id="scene-7" className="scene absolute inset-0 z-[65]">
+        <Scene6Transition />
       </div>
-      <div id="scene-2" className="scene absolute inset-0 z-20 opacity-0">
-        <Scene2Breakdown />
+      <div id="scene-8" className="scene absolute inset-0 z-[70] opacity-0">
+        <Scene6Close />
       </div>
-      <div id="scene-3" className="scene absolute inset-0 z-30 opacity-0">
-        <Scene3Reveal />
-      </div>
-      <div id="scene-4" className="scene absolute inset-0 z-40 opacity-0">
-        <Scene4Continuity />
-      </div>
-      {/* Health arc — parked, uncomment to restore
-      <div id="scene-4b" className="scene absolute inset-0 z-[45] opacity-0">
-        <Scene4bHealthArc />
-      </div>
-      */}
-      <div id="scene-5" className="scene absolute inset-0 z-50 opacity-0">
-        <Scene5Email />
-      </div>
-      <div id="scene-6" className="scene absolute inset-0 z-[60] opacity-0">
-        <Scene6Vision />
+      <div id="scene-9" className="scene absolute inset-0 z-[75] opacity-0">
+        <Scene7Close />
       </div>
     </div>
   );

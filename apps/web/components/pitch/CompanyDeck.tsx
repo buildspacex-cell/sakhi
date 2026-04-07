@@ -178,8 +178,8 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
   ];
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-12 pb-20 sm:px-10 sm:pb-6 lg:px-14 lg:pb-8">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4">
+    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-12 pb-4 sm:px-10 sm:pt-14 sm:pb-5 lg:px-14 lg:pt-12 lg:pb-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 min-h-0">
 
         {/* Header */}
         <div className="cd-sol-item shrink-0">
@@ -189,34 +189,38 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
           <h2 className={DECK_TITLE_CLASS}>
             Turn scattered thinking into a thread you can continue.
           </h2>
-          <p className="mt-2 max-w-4xl text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.6] text-slate-400">
+          <p className="mt-1.5 max-w-4xl text-[clamp(0.78rem,0.95vw,0.9rem)] leading-[1.55] text-slate-400">
             Sakhi captures what matters, organizes it into threads, and brings it back when it matters. So thinking compounds instead of resets.
           </p>
         </div>
 
-        {/* Mechanism blocks */}
-        <div className="cd-sol-item grid gap-4 lg:grid-cols-3">
+        {/* Mechanism blocks — flex-1 + min-h-0 so they fill remaining height */}
+        <div className="cd-sol-item grid min-h-0 flex-1 gap-3 lg:grid-cols-3">
           {steps.map((s, i) => (
             <div
               key={s.tag}
-              className="flex flex-col rounded-2xl border px-5 py-4"
+              className="flex min-h-0 flex-col rounded-2xl border px-4 py-4"
               style={{ background: s.dim, borderColor: s.border }}
             >
+              {/* Tag + number */}
               <div className="mb-2 flex shrink-0 items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold" style={{ borderColor: s.accent, color: s.accent }}>{i + 1}</span>
                 <span className="text-[9px] font-semibold uppercase tracking-[0.3em]" style={{ color: s.accent }}>{s.tag}</span>
               </div>
-              <h3 className="shrink-0 text-[clamp(0.88rem,1.2vw,1rem)] font-bold leading-[1.25] tracking-[-0.02em] text-white">
+              {/* Text */}
+              <h3 className="shrink-0 text-[clamp(0.85rem,1.1vw,1rem)] font-bold leading-[1.25] tracking-[-0.02em] text-white">
                 {s.heading}
               </h3>
-              <p className="mt-1.5 shrink-0 text-[0.78rem] leading-[1.55] text-slate-400">{s.body}</p>
-              <div className="mt-3 h-[220px] sm:h-[260px] lg:h-[200px] xl:h-[260px] overflow-hidden rounded-xl border border-white/[0.06] flex items-start justify-center bg-white/[0.02]">
+              <p className="mt-1.5 shrink-0 text-[clamp(0.72rem,0.85vw,0.82rem)] leading-[1.5] text-slate-400">{s.body}</p>
+              {/* Image — fills remaining card space */}
+              <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
                 <Image
                   src={s.image}
                   alt={s.tag}
                   width={600}
-                  height={400}
+                  height={800}
                   className="h-full w-full object-contain object-top"
+                  style={{ maxHeight: "100%" }}
                 />
               </div>
             </div>
@@ -224,8 +228,8 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
         </div>
 
         {/* Bottom bar */}
-        <div className="cd-sol-item shrink-0 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-3">
-          <p className="text-[0.82rem] leading-[1.55] text-slate-400">
+        <div className="cd-sol-item shrink-0 rounded-xl border border-white/[0.07] bg-white/[0.02] px-5 py-2.5">
+          <p className="text-[clamp(0.74rem,0.88vw,0.84rem)] leading-[1.5] text-slate-400">
             Unlike ChatGPT or Notes, Sakhi is not session-based.{" "}
             <span className="font-semibold text-white">It is thread-based. That is the product difference.</span>
           </p>
@@ -425,8 +429,8 @@ function Slide03Gap() {
   ];
 
   return (
-    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 pt-14 pb-20 sm:px-10 sm:pt-14 sm:pb-6 lg:px-14 lg:pt-12 lg:pb-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4">
+    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-12 pb-4 sm:px-10 sm:pt-14 sm:pb-5 lg:px-14 lg:pt-12 lg:pb-5">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-3 min-h-0">
 
         <div className="cd3-item shrink-0">
           <div className={DECK_HEADER_BADGE_CLASS}>
@@ -440,20 +444,16 @@ function Slide03Gap() {
           </p>
         </div>
 
-        {/* Column labels — same row, aligned above their panels */}
-        <div className="cd3-item grid shrink-0 gap-4 lg:grid-cols-2">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/60">Landscape</div>
-          <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/60">Capability map</div>
-        </div>
-
-        {/* Two-column layout */}
-        <div className="cd3-item grid gap-4 lg:grid-cols-2">
+        {/* Two-column layout — fills remaining height */}
+        <div className="cd3-item grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
 
           {/* Left — table */}
-          <div className="rounded-xl border border-white/[0.08]">
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/[0.08]">
+            <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50 px-3 pt-2 pb-1.5 shrink-0 border-b border-white/[0.06]">Landscape</div>
+            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <table className="w-full text-left text-[0.7rem]">
-              <thead>
-                <tr className="border-b border-white/[0.07] bg-white/[0.03]">
+              <thead className="sticky top-0">
+                <tr className="border-b border-white/[0.07] bg-[#020617]">
                   <th className="px-3 py-1.5 text-[7px] font-semibold uppercase tracking-[0.22em] text-white/25">Company</th>
                   <th className="px-3 py-1.5 text-[7px] font-semibold uppercase tracking-[0.22em] text-white/25">What it does</th>
                   <th className="px-3 py-1.5 text-[7px] font-semibold uppercase tracking-[0.22em] text-amber-400/50">What it misses</th>
@@ -462,20 +462,23 @@ function Slide03Gap() {
               <tbody>
                 {competitors.map((c, i) => (
                   <tr key={c.name} className={`border-b border-white/[0.05] ${i % 2 === 0 ? "" : "bg-white/[0.015]"}`}>
-                    <td className="px-3 py-1.5">
+                    <td className="px-3 py-2.5">
                       <div className="text-[0.72rem] font-semibold text-white">{c.name}</div>
                       <div className="text-[0.65rem] text-slate-500">{c.category}</div>
                     </td>
-                    <td className="px-3 py-1.5 text-[0.72rem] text-slate-400">{c.does}</td>
-                    <td className="px-3 py-1.5 text-[0.72rem] text-amber-200/60">{c.misses}</td>
+                    <td className="px-3 py-2.5 text-[0.72rem] text-slate-400">{c.does}</td>
+                    <td className="px-3 py-2.5 text-[0.72rem] text-amber-200/60">{c.misses}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Right — capability matrix */}
-          <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] min-h-[420px]">
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
+            <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50 px-3 pt-2 pb-1.5 shrink-0 border-b border-white/[0.06]">Capability map</div>
+          <div className="relative min-h-0 flex-1">
               {/* Axis labels */}
               <div className="absolute left-1/2 top-2.5 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-[#8cb7ff]/90">Understands your life</div>
               <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-[7px] font-semibold uppercase tracking-[0.25em] text-white/50">Surface-level only</div>
@@ -550,13 +553,14 @@ function Slide03Gap() {
                 <span className="h-2.5 w-2.5 rounded-full bg-[#8cb7ff]/80 shadow-[0_0_14px_rgba(140,183,255,0.55)]" />
                 <span className="text-[9px] font-semibold text-[#8cb7ff]">Sakhi</span>
               </div>
-            </div>
+            </div>{/* end relative flex-1 */}
+          </div>{/* end capability map column */}
 
-        </div>
+        </div>{/* end two-column grid */}
 
         {/* Qualification statement */}
-        <div className="cd3-item shrink-0 rounded-xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.03] px-5 py-3.5">
-          <p className="text-[0.78rem] leading-[1.65] text-slate-400">
+        <div className="cd3-item shrink-0 rounded-xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.03] px-4 py-2.5">
+          <p className="text-[clamp(0.72rem,0.85vw,0.8rem)] leading-[1.6] text-slate-400">
             <span className="text-white/70">All five retrieve. Sakhi infers.</span>{" "}
             Replika, Pi, Dot, Kin, and Personal.ai are building toward the top-right.{" "}
             The difference: an archive of what you said versus a compounding model of who you are becoming.
@@ -861,7 +865,7 @@ function Slide05Ask() {
 // ── Slide 6 — Compact founders narrative ─────────────────────────────────────
 const FOUNDERS_COMPACT = [
   {
-    name: "Vidhya",
+    name: "Vidhya Padmanabhan",
     role: "Co-Founder & CEO",
     image: "/story/v-pic-20260327.png",
     imageStyle: {},
@@ -869,7 +873,7 @@ const FOUNDERS_COMPACT = [
     quote:
       "I've spent 20+ years helping organizations make better decisions. I realized we haven't solved this for individuals.",
     beats: [
-      { tag: "The Foundation", text: "20+ years partnering with CEOs and COOs at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions." },
+      { tag: "The Foundation", text: "20+ years partnering with CEOs and COOs at a $4B public company and a high-growth SaaS firm serving large enterprises." },
       { tag: "Personal Inflection Point", text: "Caregiving, leadership, and life complexity, all at once. Continuity was missing." },
       { tag: "Insight to Sakhi", text: "Timing and personalization beat generic advice. Could this be a system?" },
     ],

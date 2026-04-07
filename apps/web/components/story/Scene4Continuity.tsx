@@ -459,7 +459,7 @@ export default function Scene4Continuity() {
           </div>
         </div>
 
-        <div className="continuity-output-stage absolute inset-x-0 bottom-6 px-6 sm:bottom-8 sm:px-10 lg:bottom-10">
+        <div className="continuity-output-stage absolute inset-0 flex flex-col items-center justify-center px-6 sm:px-10 lg:px-14">
           <OccupancyBoard />
           <StartupArcZoom />
         </div>

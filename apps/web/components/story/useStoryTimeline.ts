@@ -32,7 +32,7 @@ export const useStoryTimeline = (
 
     const ctx = gsap.context(() => {
       gsap.set("#scene-1", { opacity: 1 });
-      gsap.set(["#scene-2", "#scene-3", "#scene-4", "#scene-5", "#scene-6", "#scene-7", "#scene-8", "#scene-9", "#scene-10"], {
+      gsap.set(["#scene-2", "#scene-3", "#scene-4", "#scene-5", "#scene-6"], {
         opacity: 0,
       });
       gsap.set(".thought-field", { opacity: 0.42, scale: 0.96 });
@@ -102,32 +102,6 @@ export const useStoryTimeline = (
         transformOrigin: "center center",
       });
       gsap.set(".vision-signoff", { opacity: 0, y: 20 });
-      gsap.set(".builders-bridge-kicker", { opacity: 0, y: 14 });
-      gsap.set(".builders-bridge-line", { opacity: 0, y: 22, scale: 0.985 });
-      gsap.set(".founder-opening", { opacity: 0, y: 24 });
-      gsap.set(".founder-detail-kicker", { opacity: 0, y: 16 });
-      gsap.set(".founder-portrait", { opacity: 0, y: 20, scale: 0.98 });
-      gsap.set(".founder-meta", { opacity: 0, y: 14 });
-      gsap.set(".founder-arc-shell", { opacity: 0, y: 22, scale: 0.985 });
-      gsap.set(".founder-arc-glow", { opacity: 0.06, scaleX: 0, transformOrigin: "left center" });
-      gsap.set(".founder-arc-link", { opacity: 0.18, scaleX: 0, transformOrigin: "left center" });
-      gsap.set(".founder-arc-mobile-line", { opacity: 0.08, scaleY: 0, transformOrigin: "center top" });
-      gsap.set(".founder-arc-head", { opacity: 0, y: 18, filter: "blur(6px)" });
-      gsap.set(".founder-arc-body", { opacity: 0, y: 18 });
-      gsap.set(".founder-arc-step", { opacity: 0, y: 24 });
-      gsap.set(".founder-final", { opacity: 0, y: 20 });
-      gsap.set(".ravi-opening", { opacity: 0, y: 24 });
-      gsap.set(".ravi-detail-kicker", { opacity: 0, y: 16 });
-      gsap.set(".ravi-visual", { opacity: 0, y: 20, scale: 0.98 });
-      gsap.set(".ravi-meta", { opacity: 0, y: 14 });
-      gsap.set(".ravi-arc-shell", { opacity: 0, y: 22, scale: 0.985 });
-      gsap.set(".ravi-arc-glow", { opacity: 0.06, scaleX: 0, transformOrigin: "left center" });
-      gsap.set(".ravi-arc-link", { opacity: 0.18, scaleX: 0, transformOrigin: "left center" });
-      gsap.set(".ravi-arc-mobile-line", { opacity: 0.08, scaleY: 0, transformOrigin: "center top" });
-      gsap.set(".ravi-arc-head", { opacity: 0, y: 18, filter: "blur(6px)" });
-      gsap.set(".ravi-arc-body", { opacity: 0, y: 18 });
-      gsap.set(".ravi-arc-step", { opacity: 0, y: 24 });
-      gsap.set(".ravi-final", { opacity: 0, y: 20 });
       /* health arc gsap.set — parked with scene
       gsap.set(".health-occupancy-board", { opacity: 0, y: 26, scale: 0.97 });
       gsap.set(".health-occupancy-shell", { opacity: 0, y: 16 });
@@ -347,47 +321,47 @@ export const useStoryTimeline = (
         .from(".bridge-1", { opacity: 0, y: 18, duration: PACE.lineReveal }, "<+0.4")
         .call(() => narrate("You wind down for the day."), undefined, "<")
         .to(".thought-persistent:not(.thought-signal):not(.thought-thread):not(.thought-idea)", {
-          y: "+=45", opacity: 0.22, duration: 2.4,
+          y: "+=45", opacity: 0.22, duration: 1.2,
           stagger: { each: 0.04, from: "random" }, ease: "power1.inOut",
         }, "<+0.1")
 
         // "The signal fades with it" — signal thoughts blur and fade
-        .from(".bridge-2", { opacity: 0, y: 18, duration: PACE.lineReveal }, "+=2.0")
+        .from(".bridge-2", { opacity: 0, y: 18, duration: PACE.lineReveal }, "+=0.5")
         .call(() => narrate("The signal fades with it."), undefined, "<")
         .to(".thought-signal", {
-          opacity: 0, filter: "blur(10px)", y: "+=30", scale: 0.88, duration: 1.4,
-          stagger: { each: 0.12, from: "random" }, ease: "power2.in",
+          opacity: 0, filter: "blur(10px)", y: "+=30", scale: 0.88, duration: 0.9,
+          stagger: { each: 0.08, from: "random" }, ease: "power2.in",
         }, "<+0.05")
 
         // "By morning, the thread is gone" — thread thoughts stretch then vanish
-        .from(".bridge-3", { opacity: 0, y: 18, duration: PACE.lineRevealLong }, "+=2.0")
+        .from(".bridge-3", { opacity: 0, y: 18, duration: PACE.lineRevealLong }, "+=0.5")
         .call(() => narrate("By morning, the thread is gone."), undefined, "<")
         .to(".thought-thread", {
-          scaleX: 2.4, opacity: 0, filter: "blur(8px)", duration: 1.6,
-          stagger: { each: 0.14, from: "random" }, ease: "power2.in",
+          scaleX: 2.4, opacity: 0, filter: "blur(8px)", duration: 0.9,
+          stagger: { each: 0.08, from: "random" }, ease: "power2.in",
         }, "<+0.05")
 
         // "Thoughts reset" — remaining general thoughts scatter and fall
-        .from(".break-1", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=2.0")
+        .from(".break-1", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=0.5")
         .call(() => narrate("Thoughts reset."), undefined, "<")
         .to(".thought-persistent:not(.thought-signal):not(.thought-thread):not(.thought-idea)", {
-          y: "+=150", opacity: 0, filter: "blur(8px)", scale: 0.82, duration: 2.0,
-          stagger: { each: 0.06, from: "random" }, ease: "power2.in",
+          y: "+=150", opacity: 0, filter: "blur(8px)", scale: 0.82, duration: 1.0,
+          stagger: { each: 0.04, from: "random" }, ease: "power2.in",
         }, "<+0.05")
 
         // "Good ideas die" — amber idea sparks implode dramatically
-        .from(".break-2", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=2.0")
+        .from(".break-2", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=0.5")
         .call(() => narrate("Good ideas die."), undefined, "<")
         .to(".thought-idea", {
-          scale: 0, opacity: 0, filter: "blur(14px)", duration: 1.2,
-          stagger: { each: 0.12, from: "random" }, ease: "back.in(1.2)",
+          scale: 0, opacity: 0, filter: "blur(14px)", duration: 0.8,
+          stagger: { each: 0.08, from: "random" }, ease: "back.in(1.2)",
         }, "<+0.05")
 
         // "Continuity is lost" — vignette clears, scene-1 shell fades
-        .from(".break-3", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=2.0")
+        .from(".break-3", { opacity: 0, y: 20, duration: PACE.lineRevealLong }, "+=0.5")
         .call(() => narrate("Continuity is lost."), undefined, "<")
-        .to(".thought-vignette", { opacity: 0, duration: 1.8, ease: "power1.in" }, "<")
-        .to("#scene-1", { opacity: 0, duration: 1.0, ease: "power1.in" }, "<+0.9")
+        .to(".thought-vignette", { opacity: 0, duration: 1.0, ease: "power1.in" }, "<")
+        .to("#scene-1", { opacity: 0, duration: 0.7, ease: "power1.in" }, "<+0.5")
 
         .to("#scene-2", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.mediumHold })
         .to("#scene-3", { opacity: 1, duration: PACE.sceneFade }, "-=0.14")
@@ -798,300 +772,16 @@ export const useStoryTimeline = (
         .call(() => narrate("I act for you."), undefined, "<")
         .to({}, { duration: 2.2 })
         .to(".vision-signoff", { opacity: 1, y: 0, duration: 0.72 })
-        .to({}, { duration: 2.5 })
-        .to("#scene-6", { opacity: 0, duration: PACE.sceneFadeLong })
-        .to("#scene-7", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
-        .to(".builders-bridge-kicker", {
-          opacity: 1,
-          y: 0,
-          duration: 0.5,
-        })
-        .to(".builders-bridge-line", {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.9,
-        }, "-=0.18")
-        .call(() => narrate("The minds behind."), undefined, "<")
-        .to({}, { duration: 3.0 })
-        .to("#scene-7", { opacity: 0, duration: PACE.sceneFadeLong })
-        .to("#scene-8", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
-        .to(".founder-portrait", {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.75,
-        })
-        .to(".founder-meta", {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-        }, "-=0.42")
-        .to(".founder-opening", {
-          opacity: 1,
-          y: 0,
-          duration: 0.95,
-        }, "-=0.2")
-        .call(() => narrate("I've spent 20 years helping organizations make better decisions. I realized we haven't solved this for individuals."), undefined, "<")
-        .to({}, { duration: 5.0 })
-        .to(".founder-opening", {
-          opacity: 0,
-          duration: 0.5,
-        })
-        .to(".founder-detail-kicker", {
-          opacity: 1,
-          y: 0,
-          duration: 0.55,
-        }, "-=0.15")
-        .to(".founder-arc-shell", {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.72,
-        }, "-=0.08")
-        .to(".founder-arc-glow", {
-          opacity: 0.32,
-          scaleX: 1,
-          duration: 0.9,
-        }, "-=0.38")
-        .to(".founder-arc-mobile-line", {
-          opacity: 0.72,
-          scaleY: 1,
-          duration: 0.82,
-        }, "<+0.08")
-        .to(".founder-arc-head-1", {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          duration: 0.52,
-        }, "-=0.5")
-        .call(() => narrate("Operator at Scale."), undefined, "<")
-        .to(".founder-arc-step-1", {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-        }, "-=0.28")
-        .to(".founder-arc-body-1", {
-          opacity: 1,
-          y: 0,
-          duration: 0.56,
-        }, "-=0.12")
-        .call(() => narrate("Worked alongside CEOs and COOs, building systems that turned ambiguity into structured decisions."), undefined, "<")
-        .to(".founder-arc-link-1", {
-          opacity: 0.92,
-          scaleX: 1,
-          duration: 0.42,
-        }, "+=4.5")
-        .to(".founder-arc-head-2", {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          duration: 0.52,
-        }, "-=0.08")
-        .call(() => narrate("Personal Inflection Point."), undefined, "<")
-        .to(".founder-arc-step-2", {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-        }, "-=0.2")
-        .to(".founder-arc-body-2", {
-          opacity: 1,
-          y: 0,
-          duration: 0.56,
-        }, "-=0.12")
-        .call(() => narrate("In 2024, caregiving, leadership, and life complexity collided. What was missing was continuity at the level of a real human life."), undefined, "<")
-        .to(".founder-arc-link-2", {
-          opacity: 0.92,
-          scaleX: 1,
-          duration: 0.42,
-        }, "+=4.5")
-        .to(".founder-arc-head-3", {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          duration: 0.52,
-        }, "-=0.08")
-        .call(() => narrate("Insight to Sakhi."), undefined, "<")
-        .to(".founder-arc-step-3", {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-        }, "-=0.2")
-        .to(".founder-arc-body-3", {
-          opacity: 1,
-          y: 0,
-          duration: 0.56,
-        }, "-=0.12")
-        .call(() => narrate("Small, personalized interventions changed everything. The question became: can this be built as a system?"), undefined, "<")
-        .to(".founder-final", {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-        }, "+=4.5")
-        .call(() => narrate("Sakhi is the system I wish existed when I needed it most."), undefined, "<")
-        .to({}, { duration: 3.5 })
-        .to("#scene-8", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.shortHold })
-        .to("#scene-9", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
-        .to(".ravi-visual", {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.75,
-        })
-        .to(".ravi-meta", {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-        }, "-=0.42")
-        .to(".ravi-opening", {
-          opacity: 1,
-          y: 0,
-          duration: 1,
-        }, "-=0.2")
-        .call(() => narrate("I'm a systems thinker at heart, grounded in deep technical expertise and driven to simplify complexity."), undefined, "<")
-        .to({}, { duration: 5.0 })
-        .to(".ravi-opening", {
-          opacity: 0,
-          duration: 0.5,
-        })
-        .to(".ravi-detail-kicker", {
-          opacity: 1,
-          y: 0,
-          duration: 0.55,
-        }, "-=0.15")
-        .to(".ravi-arc-shell", {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.72,
-        }, "-=0.08")
-        .to(".ravi-arc-glow", {
-          opacity: 0.32,
-          scaleX: 1,
-          duration: 0.9,
-        }, "-=0.38")
-        .to(".ravi-arc-mobile-line", {
-          opacity: 0.72,
-          scaleY: 1,
-          duration: 0.82,
-        }, "<+0.08")
-        .to(".ravi-arc-head-1", {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          duration: 0.52,
-        }, "-=0.5")
-        .call(() => narrate("Evolution."), undefined, "<")
-        .to(".ravi-arc-step-1", {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-        }, "-=0.28")
-        .to(".ravi-arc-body-1", {
-          opacity: 1,
-          y: 0,
-          duration: 0.56,
-        }, "-=0.12")
-        .call(() => narrate("I started with engineering, building systems and applications, then kept moving closer to the question of what actually makes systems work."), undefined, "<")
-        .to(".ravi-arc-link-1", {
-          opacity: 0.92,
-          scaleX: 1,
-          duration: 0.42,
-        }, "+=4.5")
-        .to(".ravi-arc-head-2", {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          duration: 0.52,
-        }, "-=0.08")
-        .call(() => narrate("Realization."), undefined, "<")
-        .to(".ravi-arc-step-2", {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-        }, "-=0.2")
-        .to(".ravi-arc-body-2", {
-          opacity: 1,
-          y: 0,
-          duration: 0.56,
-        }, "-=0.12")
-        .call(() => narrate("Systems do not succeed just because they are built well. They succeed because people understand them, trust them, and use them."), undefined, "<")
-        .to(".ravi-arc-link-2", {
-          opacity: 0.92,
-          scaleX: 1,
-          duration: 0.42,
-        }, "+=4.5")
-        .to(".ravi-arc-head-3", {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          duration: 0.52,
-        }, "-=0.08")
-        .call(() => narrate("Expansion."), undefined, "<")
-        .to(".ravi-arc-step-3", {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-        }, "-=0.2")
-        .to(".ravi-arc-body-3", {
-          opacity: 1,
-          y: 0,
-          duration: 0.56,
-        }, "-=0.12")
-        .call(() => narrate("That pulled me across engineering, product, and product marketing, while yoga and meditation deepened how I think about human behavior over time."), undefined, "<")
-        .to(".ravi-arc-link-3", {
-          opacity: 0.92,
-          scaleX: 1,
-          duration: 0.42,
-        }, "+=4.5")
-        .to(".ravi-arc-head-4", {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          duration: 0.52,
-        }, "-=0.08")
-        .call(() => narrate("Convergence."), undefined, "<")
-        .to(".ravi-arc-step-4", {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-        }, "-=0.2")
-        .to(".ravi-arc-body-4", {
-          opacity: 1,
-          y: 0,
-          duration: 0.56,
-        }, "-=0.08")
-        .call(() => narrate("Technical depth, systems thinking, product narrative, and lived understanding of people now converge in building Sakhi."), undefined, "<")
-        .to(".ravi-final", {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-        }, "+=4.8")
-        .call(() => narrate("That gives me the clarity to build Sakhi."), undefined, "<")
-        .to({}, { duration: 3.5 })
-        .to("#scene-9", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.shortHold })
-        .to("#scene-10", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
-        .from(".close-line", {
-          opacity: 0,
-          y: 20,
-          scale: 0.98,
-          stagger: 1.8,
-          duration: PACE.lineRevealLong,
-        })
-        .call(() => narrate("This is just the beginning. If this resonates, let's build this together."), undefined, "<")
-        .from(".card", {
-          opacity: 0,
-          y: 30,
-          stagger: 0.18,
-          duration: PACE.lineRevealLong,
-        });
+        .to({}, { duration: 2.5 });
     }, containerRef);
-
+    // ── founder story continues at /founder-story ────────────────────────────
     return () => {
       timelineRef.current = null;
       ctx.revert();
     };
   }, [containerRef, speechRef]);
+
+  // (founder story is at /founder-story — useFounderStoryTimeline)
 
   const togglePlayback = useCallback(() => {
     const timeline = timelineRef.current;
