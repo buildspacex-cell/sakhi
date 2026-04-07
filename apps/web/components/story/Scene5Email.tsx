@@ -27,7 +27,7 @@ const productPanels: ProductPanel[] = [
   },
   {
     key: "reflection",
-    label: "Reflection",
+    label: "Life Occupancy",
     headline: "Your life becomes visible.",
     lead: "Across time and topics, everything connects.",
     details: [
@@ -55,11 +55,10 @@ const productPanels: ProductPanel[] = [
     key: "privacy",
     label: "Privacy",
     headline: "What you share stays yours.",
-    lead: "Your conversations are yours, not ours.",
+    lead: "Private by design. Yours to control.",
     details: [
-      "End-to-end encrypted.",
-      "No one reads your conversations.",
-      "Not even Sakhi.",
+      "Your conversations are encrypted end-to-end.",
+      "You decide what Sakhi remembers.",
     ],
     src: "/story/vidz-space.png",
     alt: "Sakhi privacy and account screen",

@@ -10,8 +10,11 @@ export default function SakhiOnePager() {
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.38em] text-[#8ab0ff]/70">Sakhi · Pre-Seed · 2026</div>
             <h1 className="text-[clamp(1.8rem,3vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white">
-              The continuity layer for the human mind.
+              Sakhi is the continuity layer for the human mind.
             </h1>
+            <p className="mt-2 text-[clamp(0.8rem,1vw,0.9rem)] text-slate-400 tracking-[-0.01em]">
+              An AI that remembers the thread, not just the prompt.
+            </p>
           </div>
         </div>
 
@@ -27,16 +30,17 @@ export default function SakhiOnePager() {
             <section>
               <div className="mb-2 inline-flex items-center rounded-full border border-rose-400/20 bg-rose-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-rose-400/70">Problem</div>
               <p className="text-[0.88rem] leading-[1.65] text-slate-400">
-                Why do even smart people make bad decisions and execute inconsistently? Not from lack of intelligence, but because their thinking fragments. Every tool tracks the outside world. None integrate the inside.
+                Why do even smart people make bad decisions and execute inconsistently? Not from lack of intelligence, but because their thinking fragments.
               </p>
-              <p className="mt-2 text-[0.85rem] font-semibold text-white/60">Money leaks. Clarity fades. Self-trust erodes.</p>
+              <p className="mt-2 text-[0.85rem] font-semibold text-white/60">Money leaks. Performance slips. Clarity fades. Self-trust erodes.</p>
+              <p className="mt-2 text-[0.85rem] font-semibold text-white/40">Every tool tracks the outside world. None integrate the inside.</p>
             </section>
 
             {/* Solution */}
             <section>
               <div className="mb-2 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/70">Solution</div>
               <p className="text-[0.88rem] leading-[1.65] text-slate-400">
-                Sakhi captures what matters, keeps threads alive, and brings them back when they matter. It is thread-based, not session-based. Thinking compounds instead of resets.
+                Sakhi captures what matters, keeps threads alive, and brings them back when they matter. It is thread-based, not session-based. Your thinking compounds.
               </p>
             </section>
 
@@ -55,6 +59,7 @@ export default function SakhiOnePager() {
                   </div>
                 ))}
               </div>
+              <p className="mt-2 text-[0.78rem] text-slate-500 italic">Nobody owns the continuity layer. That gap is the company.</p>
             </section>
 
             {/* Founders */}
@@ -72,7 +77,7 @@ export default function SakhiOnePager() {
               </div>
               <div className="space-y-2">
                 {[
-                  { name: "Vidhya Padmanabhan", role: "CEO", bio: "20+ years partnering with executives and C-suite at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions." },
+                  { name: "Vidhya Padmanabhan", role: "CEO", bio: "20+ years partnering with executives and C-suite at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions. Sakhi is the system she wished existed when she needed it most." },
                   { name: "Ravi Shankar", role: "CTO", bio: "Engineering, product, and AI systems thinker. Technical depth meets lived human understanding." },
                 ].map((f) => (
                   <div key={f.name} className="flex gap-4 text-[0.84rem] leading-[1.5]">
@@ -175,7 +180,7 @@ export default function SakhiOnePager() {
           <div className="mb-4 h-px w-full" style={{ background: "linear-gradient(to right, transparent, #8cb7ff55 30%, #a78bfa55 55%, #8cb7ff55 70%, transparent)" }} />
           <p className="text-center text-[clamp(1.8rem,3vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white/60">
             The physical world has infrastructure. The mind has none.{" "}
-            <span className="text-[#8cb7ff]">Sakhi is built to become your infrastructure for thinking.</span>
+            <span className="text-[#8cb7ff]">Sakhi is built to become it.</span>
           </p>
         </div>
 

@@ -46,6 +46,9 @@ function Slide01ProblemSolution() {
           <p className={DECK_SUBTITLE_CLASS}>
             Not because they lack intelligence. Because thinking without continuity fragments under pressure. Every tool tracks the outside world. None of them integrate the inside.
           </p>
+          <p className="mt-3 text-[clamp(0.88rem,1.05vw,1rem)] font-semibold tracking-[-0.02em] text-white/40">
+            The mind has no infrastructure.
+          </p>
         </div>
 
         {/* Gap — aligned rows */}
@@ -190,7 +193,7 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
             Turn scattered thinking into a thread you can continue.
           </h2>
           <p className="mt-1.5 max-w-4xl text-[clamp(0.78rem,0.95vw,0.9rem)] leading-[1.55] text-slate-400">
-            Sakhi captures what matters, organizes it into threads, and brings it back when it matters. So thinking compounds instead of resets.
+            Sakhi captures what matters, organizes it into threads, and brings it back when it matters. Not as an interface — as the layer beneath it.
           </p>
         </div>
 
@@ -269,7 +272,7 @@ function Slide02LongGame() {
           </div>
           <h2 className={DECK_TITLE_CLASS}>
             <span className="text-white/35">Every LLM wants to be your interface.</span><br />
-            Sakhi becomes your thinking layer.
+            Sakhi is the continuity layer for the human mind.
           </h2>
         </div>
 
@@ -329,9 +332,11 @@ function Slide02Market() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 overflow-y-auto px-6 pt-14 pb-4 sm:px-12 sm:pt-14 sm:pb-7 lg:px-16 lg:pt-12 lg:pb-10">
-      <div className="mx-auto max-w-6xl space-y-7">
-        <div className="cd2-item">
+    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-12 pb-3 sm:px-12 sm:pt-14 sm:pb-4 lg:px-16 lg:pt-12 lg:pb-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 min-h-0">
+
+        {/* Header */}
+        <div className="cd2-item shrink-0">
           <div className={DECK_HEADER_BADGE_CLASS}>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" />Why Now
           </div>
@@ -341,64 +346,62 @@ function Slide02Market() {
           <p className={DECK_SUBTITLE_CLASS}>
             This is not just a large market. It is a newly opened window, where technical capability, user behavior, and unmet need have finally converged.
           </p>
-          <p className="mt-3 text-[clamp(0.88rem,1.1vw,1rem)] font-semibold leading-[1.65] text-white/60">
-            The primitives are here. The category is still open.
-          </p>
         </div>
 
-        {/* Why Now */}
-        <div className="cd2-item grid gap-4 sm:grid-cols-3">
+        {/* Why Now cards */}
+        <div className="cd2-item shrink-0 grid gap-3 sm:grid-cols-3">
           {[
             { num: "1", label: "The primitives are finally here", tag: "Model Shift", body: "AI can now hold conversations that are richer in thought and nuance, making a continuity layer possible for the first time." },
             { num: "2", label: "People now think out loud with AI", tag: "Behavior Shift", body: "People now externalize thoughts, dilemmas, and emotions into AI as a natural behavior. Something that barely existed 2–3 years ago." },
             { num: "3", label: "No one owns continuity", tag: "Category Gap", body: "Notes apps store. AI chats respond. Companion apps engage. Nobody compounds thought over time." },
           ].map((w) => (
-            <div key={w.num} className="rounded-2xl border border-[#8cb7ff]/12 bg-[#8cb7ff]/[0.04] px-5 py-5">
-              <div className="mb-2 flex items-center gap-2">
+            <div key={w.num} className="rounded-2xl border border-[#8cb7ff]/12 bg-[#8cb7ff]/[0.04] px-4 py-4">
+              <div className="mb-1.5 flex items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#8cb7ff]/40 text-[9px] font-bold text-[#8cb7ff]/80">{w.num}</span>
                 <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8cb7ff]/70">{w.tag}</span>
               </div>
-              <div className="text-[0.88rem] font-semibold leading-[1.3] tracking-[-0.01em] text-white">{w.label}</div>
-              <p className="mt-2 text-[0.78rem] leading-[1.55] text-slate-400">{w.body}</p>
+              <div className="text-[0.85rem] font-semibold leading-[1.25] tracking-[-0.01em] text-white">{w.label}</div>
+              <p className="mt-1.5 text-[0.75rem] leading-[1.5] text-slate-400">{w.body}</p>
             </div>
           ))}
         </div>
 
         {/* TAM / SAM / SOM */}
-        <div className="cd2-item grid gap-4 sm:grid-cols-3">
+        <div className="cd2-item shrink-0 grid gap-3 sm:grid-cols-3">
           {tam.map((t) => (
-            <div key={t.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-6">
+            <div key={t.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
               <div className="text-[9px] font-semibold uppercase tracking-[0.3em] text-emerald-400/70">{t.label}</div>
-              <div className="mt-2 text-[clamp(2.4rem,4vw,3.6rem)] font-bold leading-none tracking-[-0.06em] text-white">{t.size}</div>
-              <p className="mt-3 whitespace-pre-line text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.55] text-slate-400">{t.detail}</p>
-              <div className="mt-4 text-[9px] font-semibold uppercase tracking-[0.22em] text-emerald-400/60">{t.market}</div>
+              <div className="mt-1 text-[clamp(1.6rem,2.8vw,2.4rem)] font-bold leading-none tracking-[-0.06em] text-white">{t.size}</div>
+              <p className="mt-1.5 whitespace-pre-line text-[0.72rem] leading-[1.45] text-slate-400">{t.detail}</p>
+              <div className="mt-2 text-[9px] font-semibold uppercase tracking-[0.22em] text-emerald-400/60">{t.market}</div>
             </div>
           ))}
         </div>
 
         {/* Comparable signals */}
-        <div className="cd2-item">
-          <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Behavioral Proof</div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="cd2-item shrink-0">
+          <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Behavioral Proof</div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {comps.map((c) => (
-              <div key={c.name} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5">
-                <div className="text-[0.85rem] font-semibold tracking-[-0.02em] text-white/80">{c.name}</div>
-                <p className="mt-1.5 text-[0.75rem] leading-[1.5] text-slate-500">{c.signal}</p>
+              <div key={c.name} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
+                <div className="text-[0.8rem] font-semibold tracking-[-0.02em] text-white/80">{c.name}</div>
+                <p className="mt-1 text-[0.72rem] leading-[1.45] text-slate-500">{c.signal}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="cd2-item rounded-2xl border border-[#8cb7ff]/15 bg-[#8cb7ff]/[0.04] px-5 py-4">
-          <p className="text-[clamp(0.88rem,1.05vw,1rem)] leading-[1.65] text-[#8cb7ff]/70">
+        <div className="cd2-item shrink-0 rounded-2xl border border-[#8cb7ff]/15 bg-[#8cb7ff]/[0.04] px-4 py-3">
+          <p className="text-[0.85rem] leading-[1.55] text-[#8cb7ff]/70">
             Nobody owns the continuity layer. That gap is the company.
           </p>
         </div>
 
-        <div className="cd2-item border-t border-white/[0.05] pt-3 text-[0.68rem] leading-[1.5] text-white/20">
-          <p><sup>2</sup> Combined TAM: Precedence Research, <em>Mental Health Apps Market</em>, 2023; Grand View Research, <em>Productivity Management Software Market</em>, 2023. &nbsp;<sup>3</sup> BLS, <em>Occupational Employment Statistics</em>, 2023 (US management &amp; professional occupations, age 25–55: ~63M); ONS, <em>Labour Force Survey</em>, 2023 (UK: ~12M). SAM reflects subset already paying for a productivity or wellness subscription.</p>
-          <p><sup>4</sup> Notion Series C at $10B valuation, Oct 2021 (The Information). &nbsp;<sup>5</sup> Automattic acquisition of Day One, 2021. &nbsp;<sup>6</sup> Rewind AI funding rounds, TechCrunch, 2022–2023. &nbsp;<sup>7</sup> Replika public user count, Luka Inc. press, 2023.</p>
+        <div className="cd2-item shrink-0 max-h-[2.8rem] overflow-y-auto border-t border-white/[0.05] pt-1.5 text-[0.6rem] leading-[1.4] text-white/18 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <p><sup>2</sup> Combined TAM: Precedence Research, <em>Mental Health Apps Market</em>, 2023; Grand View Research, <em>Productivity Management Software Market</em>, 2023. &nbsp;<sup>3</sup> BLS, <em>Occupational Employment Statistics</em>, 2023 (US: ~63M); ONS, <em>Labour Force Survey</em>, 2023 (UK: ~12M). SAM reflects subset already paying for a productivity or wellness subscription.</p>
+          <p><sup>4</sup> Notion Series C at $10B valuation, Oct 2021. &nbsp;<sup>5</sup> Automattic acquisition of Day One, 2021. &nbsp;<sup>6</sup> Rewind AI funding rounds, TechCrunch, 2022–2023. &nbsp;<sup>7</sup> Replika public user count, Luka Inc. press, 2023.</p>
         </div>
+
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-const foundersEmail = "founders@sakhiintelligence.com";
+const foundersEmail = "sakhiadmin@gmail.com";
 
 export default function Scene8Close() {
   return (
