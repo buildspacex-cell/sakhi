@@ -62,7 +62,7 @@ export default function SakhiOnePager() {
               <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/30">Founders</div>
               <div className="space-y-2">
                 {[
-                  { name: "Vidhya", role: "CEO", bio: "20+ years building decision systems at a $4B public company and a SaaS firm serving large enterprises. Sakhi is the system she wished existed." },
+                  { name: "Vidhya", role: "CEO", bio: "20+ years partnering with CEOs and COOs at a $4B public company and a SaaS firm serving large enterprises. Sakhi is the system she wished existed." },
                   { name: "Ravi Shankar", role: "CTO", bio: "Engineering, product, and AI systems thinker. Technical depth meets lived human understanding." },
                 ].map((f) => (
                   <div key={f.name} className="flex gap-2.5 text-[0.84rem] leading-[1.5]">
