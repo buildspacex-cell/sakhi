@@ -869,7 +869,7 @@ const FOUNDERS_COMPACT = [
     quote:
       "I've spent 20+ years helping organizations make better decisions. I realized we haven't solved this for individuals.",
     beats: [
-      { tag: "The Foundation", text: "Worked alongside CEOs and COOs at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions." },
+      { tag: "The Foundation", text: "20+ years partnering with CEOs and COOs at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions." },
       { tag: "Personal Inflection Point", text: "Caregiving, leadership, and life complexity, all at once. Continuity was missing." },
       { tag: "Insight to Sakhi", text: "Timing and personalization beat generic advice. Could this be a system?" },
     ],
