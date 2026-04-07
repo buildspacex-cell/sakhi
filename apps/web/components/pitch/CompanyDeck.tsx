@@ -314,7 +314,7 @@ function Slide02Market() {
   const tam = [
     { label: "TAM", size: "500M+", detail: "People navigating ongoing, unresolved threads across work, relationships, health, and self-direction.", market: "$80B by 2030²" },
     { label: "SAM", size: "75M", detail: "US & UK adults already trying to manage ongoing decisions, clarity, and mental load with existing tools.", market: "$9.0B³" },
-    { label: "SOM", size: "100K", detail: "Initial wedge: founders, operators, and high-agency professionals managing unresolved threads across work and life.\n100K target users in 18 months → 10K paid → $2.4M ARR", market: "$2.4M ARR" },
+    { label: "SOM", size: "100K", detail: "Initial wedge: founders, operators, and high-agency professionals managing unresolved threads across work and life.\n100K target users in 18 months → 10K paid → $2.0–2.4M ARR", market: "$2.0–2.4M ARR" },
   ];
 
   const comps = [
@@ -685,9 +685,9 @@ function Slide04Revenue() {
   ];
 
   const trajectory = [
-    { period: "Month 12", users: "2,000 paying", arr: "$480K ARR" },
-    { period: "Month 18", users: "10,000 paying", arr: "$2.4M ARR" },
-    { period: "Month 24", users: "50,000 paying", arr: "$12M ARR", note: "Collective launch + referral loop" },
+    { period: "Month 12", users: "2,000+ paying", arr: "$35–40K MRR" },
+    { period: "Month 18", users: "10,000+ paying", arr: "$2.0–2.4M ARR" },
+    { period: "Month 24", users: "50,000+ paying", arr: "$10–12M ARR", note: "Collective launch + referral loop" },
   ];
 
   const unitEcon = [
@@ -763,6 +763,7 @@ function Slide04Revenue() {
                 </div>
               ))}
             </div>
+            <p className="mt-2 text-[0.68rem] leading-[1.5] text-white/22">Ranges reflect blended conversion and churn assumptions. Lower bound assumes 10–15% monthly churn on paying cohorts; upper bound assumes improving retention as the continuity model matures.</p>
           </div>
         </div>
       </div>
@@ -786,7 +787,7 @@ function Slide05Ask() {
   const milestones = [
     { tag: "Product", heading: "Launch a continuity product ready to serve 10K+ users", body: "With Continuity Engine V2, sensing layer, and mobile product live — moving from memory to real-life context." },
     { tag: "Retention / Behavior", heading: "Prove continuity becomes a retained behavior", body: "Strong Day-30 and 60%+ Day-90 retention in a defined ICP, showing users come back because their context compounds." },
-    { tag: "Monetization", heading: "Validate willingness to pay for accumulated intelligence", body: "10,000 active users, 2,000+ paying, and $40K+ MRR run-rate." },
+    { tag: "Monetization", heading: "Validate willingness to pay for accumulated intelligence", body: "10,000 active users, 2,000+ paying, and $35–40K MRR run-rate." },
     { tag: "Fundraise Bridge", heading: "Earn the Seed by proving continuity is both habit-forming and monetizable", body: "Target: Month 12–15 | $4–5M at $15–20M valuation" },
   ];
 
@@ -868,7 +869,7 @@ const FOUNDERS_COMPACT = [
     quote:
       "I've spent 20+ years helping organizations make better decisions. I realized we haven't solved this for individuals.",
     beats: [
-      { tag: "The Foundation", text: "Worked alongside CEOs and COOs, building systems that turned ambiguity into structured decisions." },
+      { tag: "The Foundation", text: "Worked alongside CEOs and COOs at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions." },
       { tag: "Personal Inflection Point", text: "Caregiving, leadership, and life complexity, all at once. Continuity was missing." },
       { tag: "Insight to Sakhi", text: "Timing and personalization beat generic advice. Could this be a system?" },
     ],
@@ -1040,7 +1041,7 @@ function SlideGTM() {
   const milestones = [
     { col: 1, label: "50 users → strong pull", color: "rgba(255,255,255,0.55)" },
     { col: 2, label: "Retention becomes visible", color: "#8cb7ff" },
-    { col: 3, label: "2,000 paying", color: "#2dd4bf" },
+    { col: 3, label: "2,000+ paying", color: "#2dd4bf" },
   ];
 
   const barStyles = {
