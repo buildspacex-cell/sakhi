@@ -147,9 +147,7 @@ export default function SakhiOnePager() {
           </p>
           <div className="flex items-center gap-4 shrink-0">
             <a
-              href="https://youtu.be/Zxa3yQA-jTU"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/story"
               className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45 transition hover:border-white/25 hover:text-white/70"
             >
               <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 3l14 9-14 9V3z" /></svg>

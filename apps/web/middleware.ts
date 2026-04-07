@@ -34,6 +34,7 @@ function getProtectedMvpRoot(pathname: string) {
 const ALLOWED_PREFIXES = [
   "/company-deck",
   "/api",
+  "/story",
 ];
 
 function isAllowed(pathname: string): boolean {
