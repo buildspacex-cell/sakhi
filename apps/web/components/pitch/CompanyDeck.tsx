@@ -105,8 +105,7 @@ function Slide01ProblemSolution() {
 
           {/* Bridge as intro */}
           <p className="mb-5 text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.75] text-slate-500">
-            <span className="text-white font-semibold">Sakhi does for your mind what fitness trackers did for your body.</span>{" "}
-            It helps users continue the threads of what they are thinking through, so reflection deepens and decisions improve instead of reset.
+            Sakhi captures what matters, keeps threads alive, and brings it back when it matters. Thread-based, not session-based.
           </p>
 
           <div className="border-t border-[#8cb7ff]/10 pt-5">
@@ -259,7 +258,7 @@ function Slide02LongGame() {
   const pillars = [
     { label: "Today", heading: "A continuity product people return to", body: "Sakhi helps users think across sessions, not just within one. It captures what matters, keeps threads alive, and makes reflection useful over time.", detail: "The product is already live. Users return because the context does not reset." },
     { label: "Tomorrow", heading: "A personal continuity layer", body: "Sakhi becomes the system that holds your ongoing context: what you care about, what you are navigating, what keeps repeating, and how your thinking evolves.", detail: "Every AI tool you use already knows where you are." },
-    { label: "The Vision", heading: "Infrastructure for the inner life", body: "Every AI system will get smarter. The missing layer is the one that knows you across time — your threads, patterns, priorities, and becoming. That is the layer Sakhi is building.", detail: "Not a feature. A foundation." },
+    { label: "The Vision", heading: "Infrastructure for the inner life", body: "Every AI system will get smarter. The missing layer is the one that knows you across time: your threads, patterns, priorities, and becoming. That is the layer Sakhi is building.", detail: "Not a feature. A foundation." },
   ];
 
   return (
@@ -792,7 +791,7 @@ function Slide05Ask() {
   }, []);
 
   const milestones = [
-    { tag: "Product", heading: "Launch a continuity product ready to serve 10K+ users", body: "With Continuity Engine V2, sensing layer, and mobile product live — moving from memory to real-life context." },
+    { tag: "Product", heading: "Launch a continuity product ready to serve 10K+ users", body: "With Continuity Engine V2, sensing layer, and mobile product live, moving from memory to real-life context." },
     { tag: "Retention / Behavior", heading: "Prove continuity becomes a retained behavior", body: "Strong Day-30 and 60%+ Day-90 retention in a defined ICP, showing users come back because their context compounds." },
     { tag: "Monetization", heading: "Validate willingness to pay for accumulated intelligence", body: "10,000 active users, 2,000+ paying, and $35–40K MRR run-rate." },
     { tag: "Fundraise Bridge", heading: "Earn the Seed by proving continuity is both habit-forming and monetizable", body: "Target: Month 12–15 | $4–5M at $15–20M valuation" },

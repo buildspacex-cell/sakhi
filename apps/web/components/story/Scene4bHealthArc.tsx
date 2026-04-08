@@ -14,7 +14,7 @@ const healthStages: readonly HealthStage[] = [
   {
     label: "Where It Began",
     title: "First signal",
-    body: "Skipped the gym. Told myself it was temporary — just a busy week.",
+    body: "Skipped the gym. Told myself it was temporary. Just a busy week.",
     meta: "Day 4",
     emphasis: "major",
   },
@@ -33,7 +33,7 @@ const healthStages: readonly HealthStage[] = [
   {
     label: "Phase 4",
     title: "Sleep slips",
-    body: "Seven hours became five. Body adjusted — or seemed to.",
+    body: "Seven hours became five. Body adjusted. Or seemed to.",
     meta: "Day 29",
   },
   {
@@ -69,7 +69,7 @@ const healthStages: readonly HealthStage[] = [
   {
     label: "Phase 10",
     title: "Naming it",
-    body: "'Am I burning out?' — first time the word appeared in the journal.",
+    body: "'Am I burning out?' The first time the word appeared in the journal.",
     meta: "Day 122 · ↔ Career · Sleep",
   },
   {
@@ -157,7 +157,7 @@ function HealthOccupancyView() {
               Signal Occupancy
             </div>
             <p className="mt-1.5 max-w-[30rem] text-[0.9rem] leading-[1.65] tracking-[-0.015em] text-white/44">
-              By month 6, health occupies the largest share — threading into career, sleep, and stress.
+              By month 6, health occupies the largest share, threading into career, sleep, and stress.
             </p>
           </div>
 
