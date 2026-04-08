@@ -83,11 +83,12 @@ function UnmuteIcon() {
   );
 }
 
-export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolean }) {
+export default function StoryContainer({ autoPlay: _autoPlay = false }: { autoPlay?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsVisible, setControlsVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [started, setStarted] = useState(false);
 
   const { isPaused, isComplete, progress, duration, togglePlayback, restart, seekTo } =
     useStoryTimeline(containerRef);
@@ -96,7 +97,6 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
   const audioRef = useRef<HTMLAudioElement>(null);
   const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const audioUnlockedRef = useRef(false);
 
   const fadeVolume = useCallback((targetVol: number) => {
     const audio = audioRef.current;
@@ -117,22 +117,11 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
     }, stepMs);
   }, []);
 
-  // Unlock and start audio on first click anywhere on the page
-  const unlockAudio = useCallback(() => {
-    if (audioUnlockedRef.current) return;
+  // Sync play/pause with story
+  useEffect(() => {
+    if (!started) return;
     const audio = audioRef.current;
     if (!audio) return;
-    audioUnlockedRef.current = true;
-    audio.volume = 0;
-    audio.play().then(() => {
-      if (!isMuted) fadeVolume(TARGET_VOLUME);
-    }).catch(() => {});
-  }, [isMuted, fadeVolume]);
-
-  // Sync play/pause with story after audio is unlocked
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !audioUnlockedRef.current) return;
     if (!isPaused && !isComplete) {
       if (!isMuted) {
         audio.play().catch(() => {});
@@ -142,13 +131,12 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
       fadeVolume(0);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPaused, isComplete]);
+  }, [isPaused, isComplete, started]);
 
   const toggleMute = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
     if (isMuted) {
-      audioUnlockedRef.current = true;
       audio.volume = 0;
       audio.play().catch(() => {});
       fadeVolume(TARGET_VOLUME);
@@ -159,10 +147,22 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
     }
   }, [isMuted, fadeVolume]);
 
-  const handleTogglePlayback = useCallback(() => {
-    unlockAudio();
+  // Start everything: audio + story
+  const handleStart = useCallback((withSound: boolean) => {
+    const audio = audioRef.current;
+    setIsMuted(!withSound);
+    setStarted(true);
+    if (audio && withSound) {
+      audio.volume = 0;
+      audio.play().catch(() => {});
+      fadeVolume(TARGET_VOLUME);
+    }
     togglePlayback();
-  }, [togglePlayback, unlockAudio]);
+  }, [togglePlayback, fadeVolume]);
+
+  const handleTogglePlayback = useCallback(() => {
+    togglePlayback();
+  }, [togglePlayback]);
 
   useEffect(() => {
     return () => {
@@ -171,19 +171,12 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
   }, []);
 
   const elapsed = Math.round(progress * duration);
-  const remaining = Math.max(0, Math.round(duration) - elapsed);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const revealControls = useCallback(() => {
     setControlsVisible(true);
-
-    if (hideControlsTimeoutRef.current) {
-      clearTimeout(hideControlsTimeoutRef.current);
-    }
-
-    hideControlsTimeoutRef.current = setTimeout(() => {
-      setControlsVisible(false);
-    }, 1800);
+    if (hideControlsTimeoutRef.current) clearTimeout(hideControlsTimeoutRef.current);
+    hideControlsTimeoutRef.current = setTimeout(() => setControlsVisible(false), 1800);
   }, []);
 
   const toggleFullscreen = useCallback(() => {
@@ -195,29 +188,14 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
   }, []);
 
   useEffect(() => {
-    const onFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
-  const autoPlayedRef = useRef(false);
-  useEffect(() => {
-    if (!autoPlay || autoPlayedRef.current) return;
-    const timer = setTimeout(() => {
-      autoPlayedRef.current = true;
-      togglePlayback();
-    }, 2000);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoPlay, togglePlayback]);
-
   useEffect(() => {
     return () => {
-      if (hideControlsTimeoutRef.current) {
-        clearTimeout(hideControlsTimeoutRef.current);
-      }
+      if (hideControlsTimeoutRef.current) clearTimeout(hideControlsTimeoutRef.current);
     };
   }, []);
 
@@ -225,32 +203,60 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
     <div
       ref={containerRef}
       className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-[#020617] via-[#020617] to-[#0b1220] text-white"
-      onClick={unlockAudio}
       onMouseMove={revealControls}
       onMouseEnter={revealControls}
       onMouseLeave={() => {
-        if (hideControlsTimeoutRef.current) {
-          clearTimeout(hideControlsTimeoutRef.current);
-        }
+        if (hideControlsTimeoutRef.current) clearTimeout(hideControlsTimeoutRef.current);
         setControlsVisible(false);
       }}
     >
       {/* Background audio */}
       <audio ref={audioRef} src={AUDIO_SRC} loop preload="auto" />
 
-      {/* Mute / unmute button — top-right, always visible */}
-      <button
-        type="button"
-        onClick={toggleMute}
-        aria-label={isMuted ? "Unmute music" : "Mute music"}
-        className="absolute right-5 top-5 z-[130] flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/40 backdrop-blur-sm transition hover:border-white/20 hover:text-white/70 sm:right-6 sm:top-6"
-      >
-        {isMuted ? <MuteIcon /> : <UnmuteIcon />}
-      </button>
+      {/* Start screen overlay */}
+      {!started && (
+        <div className="absolute inset-0 z-[200] flex flex-col items-center justify-center bg-[#020617]">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-[#8ab0ff]/50">Sakhi</p>
+          <h1 className="mb-2 text-center text-[clamp(1.4rem,2.5vw,2rem)] font-bold tracking-[-0.04em] text-white">
+            The continuity layer for the human mind.
+          </h1>
+          <p className="mb-10 text-[0.82rem] text-slate-500">Best experienced with sound.</p>
+
+          <div className="flex flex-col items-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => handleStart(true)}
+              className="flex items-center gap-2.5 rounded-full bg-[#8cb7ff]/10 border border-[#8cb7ff]/25 px-6 py-3 text-[0.85rem] font-semibold text-[#8cb7ff] transition hover:bg-[#8cb7ff]/20 hover:border-[#8cb7ff]/40"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current shrink-0"><path d="M8 6.5v11l9-5.5-9-5.5Z" /></svg>
+              Play with sound
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStart(false)}
+              className="text-[0.78rem] text-slate-500 transition hover:text-slate-300 underline underline-offset-4"
+            >
+              Play without sound
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mute / unmute button — top-right, visible after start */}
+      {started && (
+        <button
+          type="button"
+          onClick={toggleMute}
+          aria-label={isMuted ? "Unmute music" : "Mute music"}
+          className="absolute right-5 top-5 z-[130] flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/40 backdrop-blur-sm transition hover:border-white/20 hover:text-white/70 sm:right-6 sm:top-6"
+        >
+          {isMuted ? <MuteIcon /> : <UnmuteIcon />}
+        </button>
+      )}
 
       <div
         className={`absolute inset-x-0 bottom-5 z-[120] px-4 transition-all duration-300 sm:bottom-7 sm:px-6 ${
-          controlsVisible
+          controlsVisible && started
             ? "translate-y-0 opacity-100"
             : "translate-y-3 opacity-0 pointer-events-none"
         }`}
