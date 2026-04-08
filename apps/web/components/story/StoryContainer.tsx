@@ -95,7 +95,8 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
   // ── Audio ────────────────────────────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement>(null);
   const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioStartedRef = useRef(false);
 
   const fadeVolume = useCallback((targetVol: number) => {
     const audio = audioRef.current;
@@ -116,15 +117,17 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
     }, stepMs);
   }, []);
 
-  // Sync play/pause with story
+  // Sync play/pause with story — audio only starts after first user interaction
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     if (!isPaused && !isComplete) {
-      audio.play().catch(() => {});
-      if (!isMuted) fadeVolume(TARGET_VOLUME);
+      if (audioStartedRef.current && !isMuted) {
+        audio.play().catch(() => {});
+        fadeVolume(TARGET_VOLUME);
+      }
     } else {
-      fadeVolume(0);
+      if (audioStartedRef.current) fadeVolume(0);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPaused, isComplete]);
@@ -133,8 +136,9 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
     const audio = audioRef.current;
     if (!audio) return;
     if (isMuted) {
-      audio.play().catch(() => {});
+      audioStartedRef.current = true;
       audio.volume = 0;
+      audio.play().catch(() => {});
       fadeVolume(TARGET_VOLUME);
       setIsMuted(false);
     } else {
@@ -142,6 +146,18 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
       setIsMuted(true);
     }
   }, [isMuted, fadeVolume]);
+
+  // Start audio on first story play interaction
+  const handleTogglePlayback = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio && !audioStartedRef.current && !isMuted) {
+      audioStartedRef.current = true;
+      audio.volume = 0;
+      audio.play().catch(() => {});
+      fadeVolume(TARGET_VOLUME);
+    }
+    togglePlayback();
+  }, [togglePlayback, isMuted, fadeVolume]);
 
   useEffect(() => {
     return () => {
@@ -236,7 +252,7 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
         <div className="mx-auto flex w-full max-w-4xl items-center gap-3 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(8,11,20,0.82),rgba(4,7,14,0.92))] px-3 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:gap-4 sm:px-4">
           <button
             type="button"
-            onClick={togglePlayback}
+            onClick={handleTogglePlayback}
             onFocus={revealControls}
             aria-label={isComplete ? "Play story again" : isPaused ? "Play story" : "Pause story"}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/6 text-slate-100 transition hover:bg-white/10"
