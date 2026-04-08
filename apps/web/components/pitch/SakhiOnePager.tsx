@@ -33,17 +33,17 @@ export default function SakhiOnePager() {
                 Why do even smart people make bad decisions and execute inconsistently? Not from lack of intelligence, but because their thinking fragments.
               </p>
               <p className="mt-2 text-[0.85rem] font-semibold text-white/60">Money leaks. Performance slips. Clarity fades. Self-trust erodes.</p>
-              <p className="mt-2 text-[0.85rem] font-semibold text-white/40">Every tool tracks the outside world. None integrate the inside.</p>
+              <p className="mt-2 text-[0.85rem] font-semibold text-white/40">Every tool compounds progress in the outside world. None compound your thinking.</p>
             </section>
 
             {/* Solution */}
             <section>
               <div className="mb-2 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/70">Solution</div>
               <p className="text-[0.88rem] font-semibold leading-[1.65] text-white/65">
-                The layer that holds your thinking together.
+                Sakhi keeps your thoughts connected across time.
               </p>
               <p className="mt-2 text-[0.88rem] leading-[1.65] text-slate-400">
-                Sakhi captures what matters, keeps threads alive, and brings them back when they matter. It is thread-based, not session-based.
+                It captures what matters, brings it back when it matters, and helps you continue instead of restart.
               </p>
               <p className="mt-2 text-[0.85rem] font-semibold text-[#8cb7ff]/80">
                 Your thinking compounds.
@@ -60,7 +60,7 @@ export default function SakhiOnePager() {
                   { tag: "Category Gap", body: "Notes apps store. AI chats respond. Nobody compounds thought over time." },
                 ].map((w) => (
                   <div key={w.tag} className="flex gap-2 text-[0.84rem] leading-[1.5]">
-                    <span className="shrink-0 font-semibold text-emerald-400/70">{w.tag}:</span>
+                    <span className="w-[6.75rem] shrink-0 font-semibold text-emerald-400/70">{w.tag}:</span>
                     <span className="text-slate-400">{w.body}</span>
                   </div>
                 ))}
@@ -68,48 +68,14 @@ export default function SakhiOnePager() {
               <p className="mt-2 text-[0.78rem] text-slate-500 italic">Nobody owns the continuity layer. That gap is the company.</p>
             </section>
 
-            {/* Founders */}
-            <section>
-              <div className="mb-2">
-                <a
-                  href="/founder-story" target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#8cb7ff]/25 bg-[#8cb7ff]/[0.06] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8cb7ff]/70 animate-[cta-pulse_2.5s_ease-in-out_infinite] [animation-delay:2s] transition hover:border-[#8cb7ff]/50 hover:text-[#8cb7ff]"
-                >
-                  <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-current shrink-0" aria-hidden="true">
-                    <path d="M8 6.5v11l9-5.5-9-5.5Z" />
-                  </svg>
-                  Meet Founders
-                </a>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { name: "Vidhya Padmanabhan", role: "CEO", bio: "20+ years partnering with executives and C-suite at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions. Sakhi is the system she wished existed when she needed it most." },
-                  { name: "Ravi Shankar", role: "CTO", bio: "Engineering, product, and AI systems thinker. Technical depth meets lived human understanding." },
-                ].map((f) => (
-                  <div key={f.name} className="flex flex-col gap-0.5 text-[0.84rem] leading-[1.5] sm:flex-row sm:gap-4">
-                    <div className="shrink-0 sm:w-[7.5rem]">
-                      <span className="font-semibold text-white/70">{f.name}</span>
-                      <span className="ml-2 text-[0.75rem] text-white/30 sm:ml-0 sm:block">{f.role}</span>
-                    </div>
-                    <span className="text-slate-500">{f.bio}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-          </div>
-
-          {/* RIGHT COLUMN */}
-          <div className="flex flex-col gap-5">
-
             {/* Business Model */}
             <section>
               <div className="mb-2 inline-flex items-center rounded-full border border-violet-400/20 bg-violet-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-violet-400/70">Business Model</div>
               <div className="space-y-2">
                 {[
-                  { tier: "Free", desc: "Limited continuity. Model does not fully compound." },
-                  { tier: "Pro · $20/mo", desc: "Full continuity. Thinking compounds instead of resets." },
-                  { tier: "Collective · $30/user/mo", desc: "Shared intelligence across people. Year 2." },
+                  { tier: "Free", desc: "Limited continuity." },
+                  { tier: "Pro · $20/mo", desc: "Full continuity across time. Your thinking compounds." },
+                  { tier: "Collective · $30/user/mo", desc: "Continuity across people. Year 2." },
                 ].map((t) => (
                   <div key={t.tier} className="flex gap-2.5 text-[0.84rem] leading-[1.5]">
                     <span className="shrink-0 font-semibold text-white/65 w-[9.5rem]">{t.tier}</span>
@@ -118,9 +84,14 @@ export default function SakhiOnePager() {
                 ))}
               </div>
               <p className="mt-3 text-[0.84rem] font-semibold text-[#8cb7ff]/70">
-                Not a subscription for usage. A subscription for accumulated intelligence.
+                Not a subscription for usage. A subscription for thinking that compounds.
               </p>
             </section>
+
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div className="flex flex-col gap-5">
 
             {/* Metrics */}
             <section>
@@ -158,7 +129,36 @@ export default function SakhiOnePager() {
                   </div>
                 ))}
               </div>
-              {/* CTAs below the ask */}
+            </section>
+
+            {/* Founders */}
+            <section>
+              <div className="mb-2">
+                <a
+                  href="/founder-story" target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#8cb7ff]/25 bg-[#8cb7ff]/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8cb7ff]/70 animate-[cta-pulse_2.5s_ease-in-out_infinite] [animation-delay:2s] transition hover:border-[#8cb7ff]/50 hover:text-[#8cb7ff]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current shrink-0" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 3l14 9-14 9V3z" />
+                  </svg>
+                  Meet Founders
+                </a>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { name: "Vidhya Padmanabhan", role: "CEO", bio: "20+ years partnering with executives and C-suite at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions. Sakhi is the system she wished existed when she needed it most." },
+                  { name: "Ravi Shankar", role: "CTO", bio: "Engineering, product, and AI systems thinker. Technical depth meets lived human understanding." },
+                ].map((f) => (
+                  <div key={f.name} className="flex flex-col gap-0.5 text-[0.84rem] leading-[1.5] sm:flex-row sm:gap-4">
+                    <div className="shrink-0 sm:w-[7.5rem]">
+                      <span className="font-semibold text-white/70">{f.name}</span>
+                      <span className="ml-2 text-[0.75rem] text-white/30 sm:ml-0 sm:block">{f.role}</span>
+                    </div>
+                    <span className="text-slate-500">{f.bio}</span>
+                  </div>
+                ))}
+              </div>
+              {/* CTAs below the founders */}
               <div className="mt-4 flex items-center gap-3 border-t border-white/[0.07] pt-4">
                 <a
                   href="/story" target="_blank" rel="noopener noreferrer"
