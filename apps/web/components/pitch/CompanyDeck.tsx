@@ -104,8 +104,11 @@ function Slide01ProblemSolution() {
           <div className="mb-4 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/55">Solution</div>
 
           {/* Bridge as intro */}
-          <p className="mb-5 text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.75] text-slate-500">
+          <p className="text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.75] text-slate-500">
             Sakhi captures what matters, keeps threads alive, and brings it back when it matters. Thread-based, not session-based.
+          </p>
+          <p className="mt-2 mb-5 text-[clamp(0.82rem,1vw,0.95rem)] font-semibold text-[#8cb7ff]/80">
+            Your thinking compounds.
           </p>
 
           <div className="border-t border-[#8cb7ff]/10 pt-5">
