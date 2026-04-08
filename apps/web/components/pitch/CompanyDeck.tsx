@@ -44,7 +44,7 @@ function Slide01ProblemSolution() {
             <span className="text-white/40">and execute inconsistently?</span>
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Not because they lack intelligence. Because thinking without continuity fragments under pressure. Every tool tracks the outside world. None of them integrate the inside.
+            Not because they lack intelligence. Because thinking without continuity fragments under pressure. Every tool compounds progress in the outside world. None compound your thinking.
           </p>
           <p className="mt-3 text-[clamp(0.88rem,1.05vw,1rem)] font-semibold tracking-[-0.02em] text-white/40">
             The mind has no infrastructure.
@@ -105,7 +105,7 @@ function Slide01ProblemSolution() {
 
           {/* Bridge as intro */}
           <p className="text-[clamp(0.82rem,1vw,0.95rem)] leading-[1.75] text-slate-500">
-            Sakhi captures what matters, keeps threads alive, and brings it back when it matters. Thread-based, not session-based.
+            Sakhi keeps your thoughts connected across time. It brings back what matters when it matters.
           </p>
           <p className="mt-2 mb-5 text-[clamp(0.82rem,1vw,0.95rem)] font-semibold text-[#8cb7ff]/80">
             Your thinking compounds.
@@ -117,9 +117,9 @@ function Slide01ProblemSolution() {
             </h3>
             <ul className="mt-4 grid gap-2.5 sm:grid-cols-3">
               {[
-                "Turns scattered thoughts into clear threads you can follow.",
-                "Lets you pick up where you left off, so reflection and decisions don't reset.",
-                "Reveals what keeps repeating before it becomes another mistake.",
+                "Pick up where you left off instead of starting over.",
+                "See what keeps repeating across time.",
+                "Make clearer decisions with connected context.",
               ].map((t) => (
                 <li key={t} className="flex gap-2.5 text-[0.82rem] leading-[1.55] text-slate-400">
                   <span className="mt-[0.4em] h-1 w-1 shrink-0 rounded-full bg-[#8cb7ff]/40" />{t}
@@ -165,7 +165,7 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
     {
       tag: "Thread",
       heading: "Thinking stays connected.",
-      body: "Scattered thinking becomes visible threads that continue across time, so you can pick up where you left off.",
+      body: "Scattered thinking becomes a thread you can continue across time.",
       accent: "#8cb7ff",
       dim: "rgba(140,183,255,0.07)",
       border: "rgba(140,183,255,0.20)",
@@ -174,7 +174,7 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
     {
       tag: "Reflect",
       heading: "Patterns surface when it matters.",
-      body: "When you return, Sakhi brings back the patterns, tensions, and prior thinking that matter most.",
+      body: "When you return, Sakhi brings back the patterns and prior thinking that matter most.",
       accent: "#2dd4bf",
       dim: "rgba(45,212,191,0.07)",
       border: "rgba(45,212,191,0.18)",
@@ -192,10 +192,10 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
             <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />How Sakhi Solves It
           </div>
           <h2 className={DECK_TITLE_CLASS}>
-            Turn scattered thinking into a thread you can continue.
+            How Sakhi turns thinking into a thread you can continue.
           </h2>
           <p className="mt-1.5 max-w-4xl text-[clamp(0.78rem,0.95vw,0.9rem)] leading-[1.55] text-slate-400">
-            Sakhi captures what matters, organizes it into threads, and brings it back when it matters. The layer that holds your thinking together.
+            It captures what matters, organizes it into a thread, and brings it back when it matters.
           </p>
         </div>
 
@@ -259,9 +259,9 @@ function Slide02LongGame() {
   }, []);
 
   const pillars = [
-    { label: "Today", heading: "A continuity product people return to", body: "Sakhi helps users think across sessions, not just within one. It captures what matters, keeps threads alive, and makes reflection useful over time.", detail: "The product is already live. Users return because the context does not reset." },
-    { label: "Tomorrow", heading: "A personal continuity layer", body: "Sakhi becomes the system that holds your ongoing context: what you care about, what you are navigating, what keeps repeating, and how your thinking evolves.", detail: "Every AI tool you use already knows where you are." },
-    { label: "The Vision", heading: "Infrastructure for the inner life", body: "Every AI system will get smarter. The missing layer is the one that knows you across time: your threads, patterns, priorities, and becoming. That is the layer Sakhi is building.", detail: "Not a feature. A foundation." },
+    { label: "Today", heading: "A continuity product people return to", body: "Sakhi helps people continue their thinking across time, not just within one session. It brings back what matters, so returning feels natural instead of starting over.", detail: "People return because the context continues over time." },
+    { label: "Tomorrow", heading: "A continuity layer across life", body: "Sakhi becomes the system that holds your ongoing context: what you care about, what you are navigating, what keeps repeating, and how your thinking evolves.", detail: "Every AI tool you use already knows where you are." },
+    { label: "The Vision", heading: "Infrastructure for the human mind", body: "Every AI system will get smarter. The missing layer is the one that knows you across time: your threads, patterns, priorities, and becoming. That is the layer Sakhi is building.", detail: "Not a feature. A foundation." },
   ];
 
   return (
@@ -355,7 +355,7 @@ function Slide02Market() {
           {[
             { num: "1", label: "The primitives are finally here", tag: "Model Shift", body: "AI can now hold conversations that are richer in thought and nuance, making a continuity layer possible for the first time." },
             { num: "2", label: "People now think out loud with AI", tag: "Behavior Shift", body: "People now externalize thoughts, dilemmas, and emotions into AI as a natural behavior. Something that barely existed 2–3 years ago." },
-            { num: "3", label: "No one owns continuity", tag: "Category Gap", body: "Notes apps store. AI chats respond. Companion apps engage. Nobody compounds thought over time." },
+            { num: "3", label: "No one owns continuity", tag: "Category Gap", body: "Notes apps store. AI chats respond. Nobody compounds thought over time." },
           ].map((w) => (
             <div key={w.num} className="rounded-2xl border border-[#8cb7ff]/12 bg-[#8cb7ff]/[0.04] px-4 py-4">
               <div className="mb-1.5 flex items-center gap-2">
@@ -445,7 +445,7 @@ function Slide03Gap() {
             Everyone stores. Nobody remembers.
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Today&apos;s tools either answer, archive, or relate. None build a compounding model of the person.
+            Today&apos;s tools either answer, archive, or relate. None help your thinking compound across time.
           </p>
         </div>
 
@@ -568,7 +568,7 @@ function Slide03Gap() {
           <p className="text-[clamp(0.72rem,0.85vw,0.8rem)] leading-[1.6] text-slate-400">
             <span className="text-white/70">All five retrieve. Sakhi infers.</span>{" "}
             Replika, Pi, Dot, Kin, and Personal.ai are building toward the top-right.{" "}
-            The difference: an archive of what you said versus a compounding model of who you are becoming.
+            The difference is an archive of what you said versus a model that helps your thinking compound across time.
           </p>
         </div>
 
@@ -594,10 +594,10 @@ function Slide04WhyWeWin() {
   }, []);
 
   const moat = [
-    { label: "Continuity Engine", tag: "Core infrastructure", body: "Other AI remembers what you said. Sakhi sharpens your living model with every return. Threads stay live. Patterns build. Judgment compounds." },
-    { label: "Continuity Arc", tag: "Product Expression", body: "Threads become explorable arcs, so users can revisit how a thought, dilemma, or decision evolved over time." },
-    { label: "Compounding Understanding", tag: "Moat", body: "Your patterns, your language, your contradictions. A compounding model cannot be exported or replicated. Switching cost earned, not engineered." },
-    { label: "Life Occupancy", tag: "Product Expression", body: "Sakhi shows what has actually occupied your mind and life across time, not just what you said most recently." },
+    { label: "Continuity Engine", tag: "Core infrastructure", body: "Sakhi does not just remember what you said. It builds continuity across time, so your context gets stronger every time you return." },
+    { label: "Continuity Arc", tag: "Product expression", body: "A thought, decision, or dilemma does not disappear. You can see how it evolved across time." },
+    { label: "Thinking That Compounds", tag: "Moat", body: "The more you use Sakhi, the more useful it becomes. Your patterns, decisions, and context build on each other instead of resetting." },
+    { label: "Life Occupancy", tag: "Product expression", body: "Sakhi shows what has actually occupied your mind and life across time, not just what you said most recently." },
   ];
 
   const proofPanels = [
@@ -628,7 +628,7 @@ function Slide04WhyWeWin() {
             The continuity model Sakhi builds is the moat.
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Not the interface. Not the features. The understanding of who you are becoming, built across time. That is not a feature. It is a foundation.
+            Not the interface. Not the features. The continuity Sakhi builds across time is what makes the product more useful every time someone returns.
           </p>
         </div>
 
@@ -688,9 +688,9 @@ function Slide04Revenue() {
   }, []);
 
   const tiers = [
-    { name: "Free", price: "$0", color: "border-white/8 bg-white/[0.02]", tag: "Experience Sakhi", features: ["Start seeing your life more clearly", "30-day active memory window", "3 Deep Reflects/mo. Limited continuity. Your model does not fully compound.."] },
-    { name: "Pro", price: "$20/mo", color: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.05]", tag: "Build your living model", features: ["Your thinking compounds instead of resetting.", "Understand what's really going on across weeks, not moments", "See patterns, cycles, and decisions clearly", "Full Arc. Full history. Unlimited Deep Reflect.", "Annual plan: $180/yr"] },
-    { name: "Collective", price: "$30/user/mo", color: "border-amber-400/12 bg-amber-400/[0.04]", tag: "Year 2, expansion", features: ["Shared intelligence across people who matter", "Each person builds their own model", "Shared context across relationships. Think together, not in fragments.", "Privacy-first by design"] },
+    { name: "Free", price: "$0", color: "border-white/8 bg-white/[0.02]", tag: "Limited continuity", features: ["Start seeing your life more clearly", "30-day active memory window", "3 Deep Reflects/mo. Limited continuity. Your model does not fully compound.."] },
+    { name: "Pro", price: "$20/mo", color: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.05]", tag: "Full continuity across time", features: ["Your thinking compounds instead of resetting.", "Understand what's really going on across weeks, not moments", "See patterns, cycles, and decisions clearly", "Full Arc. Full history. Unlimited Deep Reflect.", "Annual plan: $180/yr"] },
+    { name: "Collective", price: "$30/user/mo", color: "border-amber-400/12 bg-amber-400/[0.04]", tag: "Continuity across people", features: ["Continuity across people. Year 2.", "Each person builds their own model", "Shared context across relationships. Think together, not in fragments.", "Privacy-first by design"] },
   ];
 
   const trajectory = [
@@ -737,7 +737,7 @@ function Slide04Revenue() {
             </div>
           ))}
         </div>
-        <p className="cd4-item mt-6 text-[clamp(1rem,1.4vw,1.25rem)] font-bold leading-[1.4] tracking-[-0.02em] text-white">Sakhi is not a subscription for usage.<br /><span className="text-[#8cb7ff]">It is a subscription for accumulated intelligence.</span></p>
+        <p className="cd4-item mt-6 text-[clamp(1rem,1.4vw,1.25rem)] font-bold leading-[1.4] tracking-[-0.02em] text-white">Sakhi is not a subscription for usage.<br /><span className="text-[#8cb7ff]">It is a subscription for thinking that compounds.</span></p>
 
         <div className="cd4-item mt-5 grid gap-4 sm:grid-cols-2">
           {/* Unit economics */}
@@ -796,7 +796,7 @@ function Slide05Ask() {
   const milestones = [
     { tag: "Product", heading: "Launch a continuity product ready to serve 10K+ users", body: "With Continuity Engine V2, sensing layer, and mobile product live, moving from memory to real-life context." },
     { tag: "Retention / Behavior", heading: "Prove continuity becomes a retained behavior", body: "Strong Day-30 and 60%+ Day-90 retention in a defined ICP, showing users come back because their context compounds." },
-    { tag: "Monetization", heading: "Validate willingness to pay for accumulated intelligence", body: "10,000 active users, 2,000+ paying, and $35–40K MRR run-rate." },
+    { tag: "Monetization", heading: "Validate willingness to pay for thinking that compounds", body: "10,000 active users, 2,000+ paying, and $35–40K MRR run-rate." },
     { tag: "Fundraise Bridge", heading: "Earn the Seed by proving continuity is both habit-forming and monetizable", body: "Target: Month 12–15 | $4–5M at $15–20M valuation" },
   ];
 
