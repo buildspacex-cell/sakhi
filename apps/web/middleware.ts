@@ -33,6 +33,7 @@ function getProtectedMvpRoot(pathname: string) {
 //
 const ALLOWED_PREFIXES = [
   "/company-deck",
+  "/technicals",
   "/api",
   "/story",
   "/founder-story",
