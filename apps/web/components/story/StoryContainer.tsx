@@ -12,7 +12,6 @@ import Scene6Vision from "@/components/story/Scene6Vision";
 import { useStoryTimeline } from "@/components/story/useStoryTimeline";
 
 const AUDIO_SRC = "/audio/sakhi-ambient.mp3";
-const FADE_DURATION = 1200; // ms
 const TARGET_VOLUME = 0.45;
 
 function PlayIcon() {
@@ -95,84 +94,43 @@ export default function StoryContainer({ autoPlay: _autoPlay = false }: { autoPl
 
   // ── Audio ────────────────────────────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement>(null);
-  const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const isMutedRef = useRef(false);
-
-  const fadeVolume = useCallback((targetVol: number, onDone?: () => void) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (fadeRef.current) clearInterval(fadeRef.current);
-    const steps = 30;
-    const stepMs = FADE_DURATION / steps;
-    const start = audio.volume;
-    const delta = (targetVol - start) / steps;
-    let count = 0;
-    fadeRef.current = setInterval(() => {
-      count++;
-      audio.volume = Math.min(1, Math.max(0, start + delta * count));
-      if (count >= steps) {
-        if (fadeRef.current) clearInterval(fadeRef.current);
-        onDone?.();
-      }
-    }, stepMs);
-  }, []);
 
   const toggleMute = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (isMutedRef.current) {
-      isMutedRef.current = false;
+    if (isMuted) {
+      audio.muted = false;
       setIsMuted(false);
-      audio.volume = 0;
-      audio.play().catch(() => {});
-      fadeVolume(TARGET_VOLUME);
     } else {
-      isMutedRef.current = true;
+      audio.muted = true;
       setIsMuted(true);
-      fadeVolume(0, () => audio.pause());
     }
-  }, [fadeVolume]);
+  }, [isMuted]);
 
-  // Start everything: audio + story — called directly from click, so audio.play() is allowed
   const handleStart = useCallback((withSound: boolean) => {
-    isMutedRef.current = !withSound;
     setIsMuted(!withSound);
     setStarted(true);
-    if (withSound) {
-      const audio = audioRef.current;
-      if (audio) {
-        audio.volume = 0;
-        audio.play().then(() => {
-          fadeVolume(TARGET_VOLUME);
-        }).catch(() => {});
-      }
+    const audio = audioRef.current;
+    if (audio) {
+      audio.muted = !withSound;
+      audio.volume = TARGET_VOLUME;
+      audio.play().catch(() => {});
     }
     togglePlayback();
-  }, [togglePlayback, fadeVolume]);
+  }, [togglePlayback]);
 
-  // Sync audio with story play/pause after started
   const handleTogglePlayback = useCallback(() => {
     const audio = audioRef.current;
-    if (audio && !isMutedRef.current) {
+    if (audio) {
       if (isPaused) {
-        // About to resume
-        audio.volume = 0;
         audio.play().catch(() => {});
-        fadeVolume(TARGET_VOLUME);
       } else {
-        // About to pause
-        fadeVolume(0, () => audio.pause());
+        audio.pause();
       }
     }
     togglePlayback();
-  }, [togglePlayback, fadeVolume, isPaused]);
-
-  useEffect(() => {
-    return () => {
-      if (fadeRef.current) clearInterval(fadeRef.current);
-    };
-  }, []);
+  }, [togglePlayback, isPaused]);
 
   const elapsed = Math.round(progress * duration);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
