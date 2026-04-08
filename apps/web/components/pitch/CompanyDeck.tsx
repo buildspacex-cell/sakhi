@@ -1221,6 +1221,13 @@ function SlideCover({ onEnter, onWatchFounders }: { onEnter: () => void; onWatch
 
       {/* Text */}
       <div className="relative z-10 flex flex-col items-center gap-2 text-center">
+        <div
+          className="cov-tag mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40"
+          style={{ opacity: 0, transform: "translateY(10px)" }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-[#8ab0ff]/70" />
+          Base Investor Version
+        </div>
         <p className="cov-title text-[clamp(1.3rem,2.2vw,2rem)] font-semibold leading-none tracking-[-0.03em] text-white/35" style={{ opacity: 0, transform: "translateY(12px)" }}>
           Stop Reacting.
         </p>

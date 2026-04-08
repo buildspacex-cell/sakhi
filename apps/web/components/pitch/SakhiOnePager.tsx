@@ -8,7 +8,7 @@ export default function SakhiOnePager() {
         {/* Header */}
         <div className="flex items-end justify-between shrink-0">
           <div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.38em] text-[#8ab0ff]/70">Sakhi · Pre-Seed · 2026</div>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.38em] text-[#8ab0ff]/70">Sakhi · Base Investor Version · 2026</div>
             <h1 className="text-[clamp(1.8rem,3vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white">
               Sakhi is the continuity layer for the human mind.
             </h1>

@@ -132,6 +132,10 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
         setControlsVisible(false);
       }}
     >
+      <div className="pointer-events-none absolute left-5 top-5 z-[120] rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40 sm:left-6 sm:top-6">
+        Base Investor Version
+      </div>
+
       <div
         className={`absolute inset-x-0 bottom-5 z-[120] px-4 transition-all duration-300 sm:bottom-7 sm:px-6 ${
           controlsVisible
