@@ -46,9 +46,6 @@ function Slide01ProblemSolution() {
           <p className={DECK_SUBTITLE_CLASS}>
             Not because they lack intelligence. Because thinking without continuity fragments under pressure. Every tool compounds progress in the outside world. None compound your thinking.
           </p>
-          <p className="mt-3 text-[clamp(0.88rem,1.05vw,1rem)] font-semibold tracking-[-0.02em] text-white/40">
-            The mind has no infrastructure.
-          </p>
         </div>
 
         {/* Gap — aligned rows */}
