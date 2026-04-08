@@ -2,17 +2,17 @@
 
 export default function SakhiOnePager() {
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex flex-col px-8 py-8 sm:px-12 sm:py-10">
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6">
+    <div className="min-h-screen bg-[#020617] text-white flex flex-col px-5 py-6 sm:px-8 sm:py-8 md:px-12 md:py-10">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 md:gap-6">
 
         {/* Header */}
         <div className="flex items-end justify-between shrink-0">
           <div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.38em] text-[#8ab0ff]/70">Sakhi · Pre-Seed · 2026</div>
-            <h1 className="text-[clamp(1.8rem,3vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#8ab0ff]/70 sm:text-[11px] sm:tracking-[0.38em]">Sakhi · Pre-Seed · 2026</div>
+            <h1 className="text-[clamp(1.5rem,4vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.04em] text-white sm:tracking-[-0.05em]">
               Sakhi is the continuity layer for the human mind.
             </h1>
-            <p className="mt-2 text-[clamp(0.8rem,1vw,0.9rem)] text-slate-400 tracking-[-0.01em]">
+            <p className="mt-2 text-[0.82rem] text-slate-400 tracking-[-0.01em] sm:text-[clamp(0.8rem,1vw,0.9rem)]">
               An AI that remembers the thread, not just the prompt.
             </p>
           </div>
@@ -20,8 +20,8 @@ export default function SakhiOnePager() {
 
         <div className="h-px bg-white/[0.07] shrink-0" />
 
-        {/* Two-column body */}
-        <div className="grid flex-1 grid-cols-2 gap-x-10 gap-y-5">
+        {/* Body — single col on mobile, two cols on md+ */}
+        <div className="grid flex-1 grid-cols-1 gap-y-5 md:grid-cols-2 md:gap-x-10 md:gap-y-5">
 
           {/* LEFT COLUMN */}
           <div className="flex flex-col gap-5">
@@ -86,10 +86,10 @@ export default function SakhiOnePager() {
                   { name: "Vidhya Padmanabhan", role: "CEO", bio: "20+ years partnering with executives and C-suite at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions. Sakhi is the system she wished existed when she needed it most." },
                   { name: "Ravi Shankar", role: "CTO", bio: "Engineering, product, and AI systems thinker. Technical depth meets lived human understanding." },
                 ].map((f) => (
-                  <div key={f.name} className="flex gap-4 text-[0.84rem] leading-[1.5]">
-                    <div className="w-[7.5rem] shrink-0">
-                      <div className="font-semibold text-white/70">{f.name}</div>
-                      <div className="text-[0.75rem] font-normal text-white/30">{f.role}</div>
+                  <div key={f.name} className="flex flex-col gap-0.5 text-[0.84rem] leading-[1.5] sm:flex-row sm:gap-4">
+                    <div className="shrink-0 sm:w-[7.5rem]">
+                      <span className="font-semibold text-white/70">{f.name}</span>
+                      <span className="ml-2 text-[0.75rem] text-white/30 sm:ml-0 sm:block">{f.role}</span>
                     </div>
                     <span className="text-slate-500">{f.bio}</span>
                   </div>
@@ -125,7 +125,7 @@ export default function SakhiOnePager() {
             {/* Metrics */}
             <section>
               <div className="mb-2 inline-flex items-center rounded-full border border-amber-400/20 bg-amber-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-amber-400/70">12-Month Targets</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                 {[
                   { val: "10K+", label: "Active users" },
                   { val: "2K+", label: "Paying" },
@@ -145,7 +145,7 @@ export default function SakhiOnePager() {
               <div className="mb-1 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/60">Pre-Seed Ask</div>
               <div className="text-[2.1rem] font-bold leading-none tracking-[-0.06em] text-white">$1,250,000</div>
               <p className="mt-2 text-[0.84rem] leading-[1.6] text-slate-400">To prove continuity can become a retained consumer behavior and a real subscription business.</p>
-              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+              <div className="mt-3 grid grid-cols-1 gap-y-1.5 sm:grid-cols-2 sm:gap-x-4">
                 {[
                   { label: "Product + Engineering", amt: "$600K · 48%" },
                   { label: "Growth", amt: "$275K · 22%" },
@@ -184,7 +184,7 @@ export default function SakhiOnePager() {
         <div className="shrink-0 pt-1 pb-2">
           {/* Gradient separator */}
           <div className="mb-4 h-px w-full" style={{ background: "linear-gradient(to right, transparent, #8cb7ff55 30%, #a78bfa55 55%, #8cb7ff55 70%, transparent)" }} />
-          <p className="text-center text-[clamp(1.8rem,3vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white/60">
+          <p className="text-center text-[clamp(1.2rem,3vw,2.6rem)] font-bold leading-[1.1] tracking-[-0.04em] text-white/60 sm:leading-[1.05] sm:tracking-[-0.05em]">
             The physical world has infrastructure. The mind has none.{" "}
             <span className="text-[#8cb7ff]">Sakhi is built to become it.</span>
           </p>
