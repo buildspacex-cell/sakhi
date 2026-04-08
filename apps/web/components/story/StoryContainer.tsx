@@ -97,8 +97,9 @@ export default function StoryContainer({ autoPlay: _autoPlay = false }: { autoPl
   const audioRef = useRef<HTMLAudioElement>(null);
   const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const isMutedRef = useRef(false);
 
-  const fadeVolume = useCallback((targetVol: number) => {
+  const fadeVolume = useCallback((targetVol: number, onDone?: () => void) => {
     const audio = audioRef.current;
     if (!audio) return;
     if (fadeRef.current) clearInterval(fadeRef.current);
@@ -112,57 +113,60 @@ export default function StoryContainer({ autoPlay: _autoPlay = false }: { autoPl
       audio.volume = Math.min(1, Math.max(0, start + delta * count));
       if (count >= steps) {
         if (fadeRef.current) clearInterval(fadeRef.current);
-        if (targetVol === 0) audio.pause();
+        onDone?.();
       }
     }, stepMs);
   }, []);
 
-  // Sync play/pause with story
-  useEffect(() => {
-    if (!started) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (!isPaused && !isComplete) {
-      if (!isMuted) {
-        audio.play().catch(() => {});
-        fadeVolume(TARGET_VOLUME);
-      }
-    } else {
-      fadeVolume(0);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPaused, isComplete, started]);
-
   const toggleMute = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (isMuted) {
+    if (isMutedRef.current) {
+      isMutedRef.current = false;
+      setIsMuted(false);
       audio.volume = 0;
       audio.play().catch(() => {});
       fadeVolume(TARGET_VOLUME);
-      setIsMuted(false);
     } else {
-      fadeVolume(0);
+      isMutedRef.current = true;
       setIsMuted(true);
+      fadeVolume(0, () => audio.pause());
     }
-  }, [isMuted, fadeVolume]);
+  }, [fadeVolume]);
 
-  // Start everything: audio + story
+  // Start everything: audio + story — called directly from click, so audio.play() is allowed
   const handleStart = useCallback((withSound: boolean) => {
-    const audio = audioRef.current;
+    isMutedRef.current = !withSound;
     setIsMuted(!withSound);
     setStarted(true);
-    if (audio && withSound) {
-      audio.volume = 0;
-      audio.play().catch(() => {});
-      fadeVolume(TARGET_VOLUME);
+    if (withSound) {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.volume = 0;
+        audio.play().then(() => {
+          fadeVolume(TARGET_VOLUME);
+        }).catch(() => {});
+      }
     }
     togglePlayback();
   }, [togglePlayback, fadeVolume]);
 
+  // Sync audio with story play/pause after started
   const handleTogglePlayback = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio && !isMutedRef.current) {
+      if (isPaused) {
+        // About to resume
+        audio.volume = 0;
+        audio.play().catch(() => {});
+        fadeVolume(TARGET_VOLUME);
+      } else {
+        // About to pause
+        fadeVolume(0, () => audio.pause());
+      }
+    }
     togglePlayback();
-  }, [togglePlayback]);
+  }, [togglePlayback, fadeVolume, isPaused]);
 
   useEffect(() => {
     return () => {
@@ -220,9 +224,7 @@ export default function StoryContainer({ autoPlay: _autoPlay = false }: { autoPl
           <h1 className="mb-2 text-center text-[clamp(1.4rem,2.5vw,2rem)] font-bold tracking-[-0.04em] text-white">
             The continuity layer for the human mind.
           </h1>
-          <p className="mb-10 text-[0.82rem] text-slate-500">Best experienced with sound.</p>
-
-          <div className="flex flex-col items-center gap-3 sm:flex-row">
+          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
             <button
               type="button"
               onClick={() => handleStart(true)}
