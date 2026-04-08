@@ -11,6 +11,10 @@ import Scene5Email from "@/components/story/Scene5Email";
 import Scene6Vision from "@/components/story/Scene6Vision";
 import { useStoryTimeline } from "@/components/story/useStoryTimeline";
 
+const AUDIO_SRC = "/audio/sakhi-ambient.mp3";
+const FADE_DURATION = 1200; // ms
+const TARGET_VOLUME = 0.45;
+
 function PlayIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current">
@@ -59,6 +63,26 @@ function FullscreenExitIcon() {
   );
 }
 
+function MuteIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+  );
+}
+
+function UnmuteIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+    </svg>
+  );
+}
+
 export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,6 +91,63 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
 
   const { isPaused, isComplete, progress, duration, togglePlayback, restart, seekTo } =
     useStoryTimeline(containerRef);
+
+  // ── Audio ────────────────────────────────────────────────────────────────
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const fadeVolume = useCallback((targetVol: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (fadeRef.current) clearInterval(fadeRef.current);
+    const steps = 30;
+    const stepMs = FADE_DURATION / steps;
+    const start = audio.volume;
+    const delta = (targetVol - start) / steps;
+    let count = 0;
+    fadeRef.current = setInterval(() => {
+      count++;
+      audio.volume = Math.min(1, Math.max(0, start + delta * count));
+      if (count >= steps) {
+        if (fadeRef.current) clearInterval(fadeRef.current);
+        if (targetVol === 0) audio.pause();
+      }
+    }, stepMs);
+  }, []);
+
+  // Sync play/pause with story
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!isPaused && !isComplete) {
+      audio.play().catch(() => {});
+      if (!isMuted) fadeVolume(TARGET_VOLUME);
+    } else {
+      fadeVolume(0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPaused, isComplete]);
+
+  const toggleMute = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isMuted) {
+      audio.play().catch(() => {});
+      audio.volume = 0;
+      fadeVolume(TARGET_VOLUME);
+      setIsMuted(false);
+    } else {
+      fadeVolume(0);
+      setIsMuted(true);
+    }
+  }, [isMuted, fadeVolume]);
+
+  useEffect(() => {
+    return () => {
+      if (fadeRef.current) clearInterval(fadeRef.current);
+    };
+  }, []);
 
   const elapsed = Math.round(progress * duration);
   const remaining = Math.max(0, Math.round(duration) - elapsed);
@@ -132,6 +213,18 @@ export default function StoryContainer({ autoPlay = false }: { autoPlay?: boolea
         setControlsVisible(false);
       }}
     >
+      {/* Background audio */}
+      <audio ref={audioRef} src={AUDIO_SRC} loop preload="auto" />
+
+      {/* Mute / unmute button — top-right, always visible */}
+      <button
+        type="button"
+        onClick={toggleMute}
+        aria-label={isMuted ? "Unmute music" : "Mute music"}
+        className="absolute right-5 top-5 z-[130] flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/40 backdrop-blur-sm transition hover:border-white/20 hover:text-white/70 sm:right-6 sm:top-6"
+      >
+        {isMuted ? <MuteIcon /> : <UnmuteIcon />}
+      </button>
 
       <div
         className={`absolute inset-x-0 bottom-5 z-[120] px-4 transition-all duration-300 sm:bottom-7 sm:px-6 ${
