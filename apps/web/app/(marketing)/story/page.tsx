@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import StoryContainer from "@/components/story/StoryContainer";
 
 export const metadata: Metadata = {
-  title: "Sakhi — Base Investor Version · Story",
-  description: "Sakhi base investor version story.",
+  title: "Sakhi — Story · Pre-Seed 2026",
+  description: "Sakhi story. Pre-seed 2026.",
 };
 
 export default function StoryPage() {

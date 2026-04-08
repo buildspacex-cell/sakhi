@@ -8,7 +8,7 @@ export default function SakhiOnePager() {
         {/* Header */}
         <div className="flex items-end justify-between shrink-0">
           <div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.38em] text-[#8ab0ff]/70">Sakhi · Base Investor Version · 2026</div>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.38em] text-[#8ab0ff]/70">Sakhi · Pre-Seed · 2026</div>
             <h1 className="text-[clamp(1.8rem,3vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.05em] text-white">
               Sakhi is the continuity layer for the human mind.
             </h1>
@@ -39,8 +39,14 @@ export default function SakhiOnePager() {
             {/* Solution */}
             <section>
               <div className="mb-2 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/70">Solution</div>
-              <p className="text-[0.88rem] leading-[1.65] text-slate-400">
-                Sakhi captures what matters, keeps threads alive, and brings them back when they matter. It is thread-based, not session-based. Your thinking compounds.
+              <p className="text-[0.88rem] font-semibold leading-[1.65] text-white/65">
+                The layer that holds your thinking together.
+              </p>
+              <p className="mt-2 text-[0.88rem] leading-[1.65] text-slate-400">
+                Sakhi captures what matters, keeps threads alive, and brings them back when they matter. It is thread-based, not session-based.
+              </p>
+              <p className="mt-2 text-[0.85rem] font-semibold text-[#8cb7ff]/80">
+                Your thinking compounds.
               </p>
             </section>
 

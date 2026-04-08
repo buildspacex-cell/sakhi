@@ -193,7 +193,7 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
             Turn scattered thinking into a thread you can continue.
           </h2>
           <p className="mt-1.5 max-w-4xl text-[clamp(0.78rem,0.95vw,0.9rem)] leading-[1.55] text-slate-400">
-            Sakhi captures what matters, organizes it into threads, and brings it back when it matters. Not as an interface — as the layer beneath it.
+            Sakhi captures what matters, organizes it into threads, and brings it back when it matters. The layer that holds your thinking together.
           </p>
         </div>
 
@@ -1221,13 +1221,6 @@ function SlideCover({ onEnter, onWatchFounders }: { onEnter: () => void; onWatch
 
       {/* Text */}
       <div className="relative z-10 flex flex-col items-center gap-2 text-center">
-        <div
-          className="cov-tag mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40"
-          style={{ opacity: 0, transform: "translateY(10px)" }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-[#8ab0ff]/70" />
-          Base Investor Version
-        </div>
         <p className="cov-title text-[clamp(1.3rem,2.2vw,2rem)] font-semibold leading-none tracking-[-0.03em] text-white/35" style={{ opacity: 0, transform: "translateY(12px)" }}>
           Stop Reacting.
         </p>
