@@ -34,6 +34,7 @@ export default function SakhiOnePager() {
               </p>
               <p className="mt-2 text-[0.85rem] font-semibold text-white/60">Money leaks. Performance slips. Clarity fades. Self-trust erodes.</p>
               <p className="mt-2 text-[0.85rem] font-semibold text-white/40">Every tool compounds progress in the outside world. None compound your thinking.</p>
+              <p className="mt-2 text-[0.82rem] text-slate-500">The problem is not capture. It is losing the thread when you return.</p>
             </section>
 
             {/* Solution */}

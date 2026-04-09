@@ -345,6 +345,9 @@ function Slide02Market() {
           <p className={DECK_SUBTITLE_CLASS}>
             This is not just a large market. It is a newly opened window, where technical capability, user behavior, and unmet need have finally converged.
           </p>
+          <p className="mt-3 max-w-4xl text-[0.84rem] leading-[1.6] text-slate-500">
+            We are starting with founders and high-agency operators managing unresolved decisions across work and life, because they feel the cost of fragmented thinking earliest and most often.
+          </p>
         </div>
 
         {/* Why Now cards */}
@@ -814,7 +817,7 @@ function Slide05Ask() {
           </div>
           <div className="text-[clamp(3.5rem,7vw,6rem)] font-bold leading-none tracking-[-0.07em] text-white">$1,250,000</div>
           <p className="mt-3 text-[clamp(0.95rem,1.3vw,1.2rem)] text-slate-400">
-            Raising $1.25M to prove that{" "}
+            Raising $1.25M to test one core thesis:{" "}
             <span className="text-white/60">continuity can become a retained consumer behavior and a real subscription business.</span>
           </p>
         </div>
