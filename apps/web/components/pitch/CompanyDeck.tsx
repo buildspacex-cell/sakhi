@@ -110,13 +110,13 @@ function Slide01ProblemSolution() {
 
           <div className="border-t border-[#8cb7ff]/10 pt-5">
             <h3 className="text-[clamp(1rem,1.5vw,1.25rem)] font-bold leading-[1.25] tracking-[-0.03em] text-white">
-              An AI that remembers the thread, not just the prompt.
+              An AI that holds the continuity of your life.
             </h3>
             <ul className="mt-4 grid gap-2.5 sm:grid-cols-3">
               {[
-                "Pick up where you left off instead of starting over.",
-                "See what keeps repeating across time.",
-                "Make clearer decisions with connected context.",
+                "Your life stays connected across time, not just within one session.",
+                "Patterns and threads surface without you having to narrate them.",
+                "Clearer decisions because the context is already there.",
               ].map((t) => (
                 <li key={t} className="flex gap-2.5 text-[0.82rem] leading-[1.55] text-slate-400">
                   <span className="mt-[0.4em] h-1 w-1 shrink-0 rounded-full bg-[#8cb7ff]/40" />{t}
@@ -634,13 +634,16 @@ function Slide04WhyWeWin() {
 
         <div className="mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-10">
           <div className="grid gap-3 sm:grid-cols-2">
-            {moat.map((m) => (
-              <div key={m.label} className="cd4w-card rounded-2xl border border-[#8cb7ff]/10 bg-[#8cb7ff]/[0.04] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-                <div className="text-[0.92rem] font-bold tracking-[-0.02em] text-white">{m.label}</div>
-                <div className="mt-1 text-[8px] font-semibold uppercase tracking-[0.22em] text-[#8cb7ff]/40">{m.tag}</div>
-                <p className="mt-3 text-[0.81rem] leading-[1.65] text-slate-400">{m.body}</p>
-              </div>
-            ))}
+            {moat.map((m) => {
+              const isProduct = m.tag.toLowerCase() === "product expression";
+              return (
+                <div key={m.label} className={`cd4w-card rounded-2xl border px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ${isProduct ? "border-teal-400/20 bg-[linear-gradient(135deg,rgba(94,234,212,0.08),rgba(45,212,191,0.04))]" : "border-white/[0.07] bg-white/[0.03]"}`}>
+                  <div className="text-[0.92rem] font-bold tracking-[-0.02em] text-white">{m.label}</div>
+                  <div className={`mt-1 text-[8px] font-semibold uppercase tracking-[0.22em] ${isProduct ? "text-teal-400/70" : "text-white/25"}`}>{m.tag}</div>
+                  <p className="mt-3 text-[0.81rem] leading-[1.65] text-slate-400">{m.body}</p>
+                </div>
+              );
+            })}
           </div>
 
           <div className="relative flex min-h-[29rem] items-center justify-center rounded-[34px] border border-white/[0.07] bg-[linear-gradient(160deg,rgba(13,18,31,0.98),rgba(7,10,20,0.96))] px-6 py-8 shadow-[0_36px_120px_rgba(0,0,0,0.32)]">
@@ -1024,7 +1027,7 @@ function SlideGTM() {
           dot: "#a78bfa",
           bars: [
             { from: 1, to: 1, label: "Make return feel magical.\nWhen users come back, Sakhi remembers what matters and picks up the thread without friction.", theme: "amber" },
-            { from: 2, to: 2, label: "Threads become personally useful.\nSakhi connects moments into patterns, so users return not just to talk, but to understand.", theme: "blue" },
+            { from: 2, to: 2, label: "Continuity becomes the product.\nSakhi connects moments into patterns. Each return builds on the last. The model of the person deepens.", theme: "blue" },
             { from: 3, to: 3, label: "The model expands beyond conversation.\nCalendar, communication, and behavioral signal enrich the thread. Context becomes ambient, not manual.", theme: "green" },
           ],
         },
