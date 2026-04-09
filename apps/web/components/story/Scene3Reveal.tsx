@@ -58,7 +58,7 @@ export default function Scene3Reveal() {
                 ))}
 
                 <div className="intro-resolved absolute inset-0 flex items-center justify-center opacity-0">
-                  <div className="grid w-full max-w-5xl gap-6 md:grid-cols-[1fr_1.15fr_1fr] md:items-center">
+                  <div className="grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-[1fr_1.15fr_1fr] md:items-center">
                     {pillars.map((pillar, index) => (
                       <div
                         key={`${pillar}-resolved`}
@@ -71,7 +71,7 @@ export default function Scene3Reveal() {
                         }
                       >
                         <div className={`intro-resolved-item intro-resolved-item-${index + 1}`}>
-                          <p className="text-pretty text-[clamp(1.15rem,1.55vw,1.65rem)] leading-[1.2] tracking-[-0.03em] text-slate-100/88">
+                          <p className="text-balancetext-[clamp(1.15rem,1.55vw,1.65rem)] leading-[1.2] tracking-[-0.03em] text-slate-100/88">
                             {pillar}
                           </p>
                         </div>
@@ -94,7 +94,7 @@ export default function Scene3Reveal() {
                 ))}
               </div>
 
-              <div className="intro-parked-row mt-3 grid gap-4 md:grid-cols-[1fr_1.15fr_1fr] md:items-start">
+              <div className="intro-parked-row mt-3 grid grid-cols-1 gap-4 md:grid-cols-[1fr_1.15fr_1fr] md:items-start">
                 {pillars.map((pillar, index) => (
                   <div
                     key={`${pillar}-parked`}
@@ -107,7 +107,7 @@ export default function Scene3Reveal() {
                     }
                   >
                     <div className={`intro-parked intro-parked-${index + 1} opacity-0`}>
-                      <p className="text-pretty text-[clamp(0.95rem,1.15vw,1.2rem)] leading-[1.25] tracking-[-0.025em] text-slate-200/72">
+                      <p className="text-balancetext-[clamp(0.95rem,1.15vw,1.2rem)] leading-[1.25] tracking-[-0.025em] text-slate-200/72">
                         {pillar}
                       </p>
                     </div>

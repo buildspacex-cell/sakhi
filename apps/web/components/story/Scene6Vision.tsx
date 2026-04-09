@@ -23,7 +23,7 @@ export default function Scene6Vision() {
         </div>
 
         <div className="vision-pillars-stage mt-10 w-full max-w-6xl">
-          <div className="grid grid-cols-3 gap-4 items-start">
+          <div className="grid grid-cols-1 gap-6 items-start sm:grid-cols-3 sm:gap-4">
             {pillarLines.map((line, index) => (
               <div
                 key={line}
@@ -31,17 +31,17 @@ export default function Scene6Vision() {
                   index === 0
                     ? "text-left"
                     : index === 1
-                      ? "text-center"
-                      : "text-right"
+                      ? "sm:text-center"
+                      : "sm:text-right"
                 }
               >
                 <div className={`vision-pillar-card vision-pillar-card-${index + 1} flex h-full flex-col`}>
-                  {/* Voice line — big, dominant, sized to always fit one line per column */}
-                  <p className={`vision-pillar-voice vision-pillar-voice-${index + 1} whitespace-nowrap text-[clamp(1.6rem,2.8vw,3.2rem)] font-semibold leading-[1.06] tracking-[-0.055em] text-white opacity-0`}>
+                  {/* Voice line — big, dominant */}
+                  <p className={`vision-pillar-voice vision-pillar-voice-${index + 1} text-[clamp(1.4rem,2.2vw,2.4rem)] font-semibold leading-[1.06] tracking-[-0.055em] text-white opacity-0`}>
                     {voiceLines[index]}
                   </p>
                   {/* Pillar description — small, supporting */}
-                  <p className="vision-pillar-desc mt-3 text-pretty text-[clamp(0.82rem,1vw,1rem)] leading-[1.4] tracking-[-0.02em] text-slate-300/72">
+                  <p className="vision-pillar-desc mt-3 text-balance text-[clamp(0.82rem,1vw,1rem)] leading-[1.4] tracking-[-0.02em] text-slate-300/72">
                     {line}
                   </p>
                 </div>

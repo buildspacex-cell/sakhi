@@ -49,7 +49,7 @@ function Slide01ProblemSolution() {
         </div>
 
         {/* Gap — aligned rows */}
-        <div className="cd1-item shrink-0 overflow-x-auto rounded-2xl border border-white/[0.07]">
+        <div className="cd1-item shrink-0 overflow-x-auto rounded-2xl border border-white/[0.07] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="min-w-[520px]">
           {/* Column headers */}
           <div className="grid grid-cols-[1fr_1px_1fr]">
@@ -1077,8 +1077,8 @@ function SlideGTM() {
         </div>
 
         {/* Gantt */}
-        <div className="gtm-item overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="min-w-[640px]">
+        <div className="gtm-item overflow-x-auto rounded-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="min-w-[580px]">
 
           {/* Phase header row */}
           <div className="flex items-end pb-3">

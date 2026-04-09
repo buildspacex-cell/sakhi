@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Scene1Chaos from "@/components/story/Scene1Chaos";
 import Scene2Breakdown from "@/components/story/Scene2Breakdown";
 import Scene3Reveal from "@/components/story/Scene3Reveal";
-import Scene4Continuity from "@/components/story/Scene4Continuity";
 // import Scene4bHealthArc from "@/components/story/Scene4bHealthArc";
 import Scene5Email from "@/components/story/Scene5Email";
 import Scene6Vision from "@/components/story/Scene6Vision";
@@ -132,6 +131,16 @@ export default function StoryContainer({ autoPlay: _autoPlay = false }: { autoPl
     togglePlayback();
   }, [togglePlayback, isPaused]);
 
+  // Stop audio when story ends
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isComplete) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  }, [isComplete]);
+
   const elapsed = Math.round(progress * duration);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -208,7 +217,7 @@ export default function StoryContainer({ autoPlay: _autoPlay = false }: { autoPl
           type="button"
           onClick={toggleMute}
           aria-label={isMuted ? "Unmute music" : "Mute music"}
-          className="absolute right-5 top-5 z-[130] flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/40 backdrop-blur-sm transition hover:border-white/20 hover:text-white/70 sm:right-6 sm:top-6"
+          className="absolute z-[130] flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/40 backdrop-blur-sm transition hover:border-white/20 hover:text-white/70" style={{ right: "max(1.25rem, env(safe-area-inset-right, 0px) + 1rem)", top: "max(1.25rem, env(safe-area-inset-top, 0px) + 1rem)" }}
         >
           {isMuted ? <MuteIcon /> : <UnmuteIcon />}
         </button>
@@ -281,9 +290,6 @@ export default function StoryContainer({ autoPlay: _autoPlay = false }: { autoPl
       </div>
       <div id="scene-3" className="scene absolute inset-0 z-30 opacity-0">
         <Scene3Reveal />
-      </div>
-      <div id="scene-4" className="scene absolute inset-0 z-40 opacity-0">
-        <Scene4Continuity />
       </div>
       {/* Health arc — parked, uncomment to restore
       <div id="scene-4b" className="scene absolute inset-0 z-[45] opacity-0">

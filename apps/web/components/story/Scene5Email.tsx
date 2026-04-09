@@ -86,7 +86,7 @@ export default function Scene5Email() {
             className={`product-panel product-panel-${index + 1} absolute inset-0 flex items-center justify-center px-8 pb-28 pt-14 opacity-0 sm:px-12 sm:pb-32 sm:pt-16 lg:px-16 lg:pb-36 lg:pt-[4.5rem] xl:px-24 xl:pb-40 xl:pt-20`}
           >
             <div
-              className="relative flex w-full max-w-[1280px] items-center justify-between gap-[clamp(32px,4vw,64px)] overflow-hidden rounded-[42px] border border-[rgba(189,206,225,0.14)] bg-[linear-gradient(155deg,rgba(16,23,39,0.95),rgba(7,11,21,0.84))] px-[clamp(40px,5vw,72px)] py-[clamp(36px,4vw,56px)] shadow-[0_48px_140px_rgba(0,0,0,0.48)] backdrop-blur-[24px]"
+              className="relative flex w-full max-w-[1280px] flex-col items-center justify-between gap-8 overflow-hidden rounded-[28px] border border-[rgba(189,206,225,0.14)] bg-[linear-gradient(155deg,rgba(16,23,39,0.95),rgba(7,11,21,0.84))] px-6 py-8 shadow-[0_48px_140px_rgba(0,0,0,0.48)] backdrop-blur-[24px] sm:flex-row sm:gap-[clamp(32px,4vw,64px)] sm:rounded-[42px] sm:px-[clamp(40px,5vw,72px)] sm:py-[clamp(36px,4vw,56px)]"
               style={{ minHeight: "min(76vh, 780px)" }}
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_18%,rgba(84,122,142,0.18),transparent_32%),radial-gradient(circle_at_86%_82%,rgba(153,112,58,0.12),transparent_25%)]" />
@@ -128,7 +128,7 @@ export default function Scene5Email() {
                 ) : null}
               </div>
 
-              <div className={`product-panel-phone product-panel-phone-${index + 1} relative z-10 flex flex-none translate-y-3 flex-col items-center self-center`}>
+              <div className={`product-panel-phone product-panel-phone-${index + 1} relative z-10 hidden flex-none translate-y-3 flex-col items-center self-center sm:flex`}>
                 <div
                   className="relative z-[1] flex flex-col items-center rounded-[44px] border border-[rgba(189,206,225,0.12)] bg-[linear-gradient(180deg,rgba(18,28,45,0.78),rgba(8,13,24,0.54))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_20px_60px_rgba(0,0,0,0.28)]"
                   style={{
@@ -140,7 +140,7 @@ export default function Scene5Email() {
                   <div
                     className="relative overflow-hidden rounded-[36px] border border-[rgba(203,213,225,0.16)] bg-[#040914] shadow-[0_36px_90px_rgba(0,0,0,0.55)]"
                     style={{
-                      width: "min(clamp(295px, 28vw, 400px), calc((100vh - 290px) * 0.5625))",
+                      width: "min(clamp(180px, 38vw, 400px), calc((100vh - 220px) * 0.5625))",
                     }}
                   >
                     <Image
