@@ -1,7 +1,7 @@
 "use client";
 
 const pillars = [
-  "Keeps the thread, not just the prompt.",
+  "Holds the continuity of your life.",
   "Makes your life visible across time.",
   "Helps your thinking compound.",
 ] as const;
@@ -32,15 +32,21 @@ export default function Scene3Reveal() {
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center text-center">
           <div className="w-full max-w-5xl">
             <div className="text-[clamp(4.2rem,10vw,8rem)] font-semibold leading-[0.92] tracking-[-0.075em] text-white">
-              <div className="intro-line-1 text-white/84">Stop reacting.</div>
-              <div className="intro-line-2 mt-1 text-white/14">Start shaping.</div>
+              <div className="intro-line-1 text-white/30">Stop reacting.</div>
+              <div className="intro-line-2 mt-1 text-white/84">Start shaping.</div>
             </div>
           </div>
 
-          <div className="intro-explainer mt-14 w-full max-w-3xl">
-            <p className="mx-auto max-w-2xl text-[clamp(1.2rem,2.1vw,1.7rem)] leading-[1.5] tracking-[-0.03em] text-slate-300">
-              Sakhi keeps the thread, so your thinking becomes clearer over time.
-            </p>
+          <div className="intro-orb-wrap mt-10 flex items-center justify-center opacity-0">
+            <div className="relative flex items-center justify-center">
+              <div className="intro-orb-ring absolute h-[180px] w-[180px] rounded-full border border-white/[0.04]" />
+              <div className="intro-orb-ring absolute h-[136px] w-[136px] rounded-full border border-white/[0.07]" />
+              <div className="intro-orb-ring absolute h-[100px] w-[100px] rounded-full border border-white/[0.10]" />
+              <div className="intro-orb relative flex h-[72px] w-[72px] items-center justify-center rounded-full border border-[#8ab0ff]/25 bg-[radial-gradient(circle_at_38%_32%,rgba(140,183,255,0.22),rgba(80,120,210,0.14)_48%,rgba(3,11,24,0.85)_78%)] shadow-[0_0_40px_rgba(100,148,255,0.18)] animate-[sakhi-pulse_3s_ease-in-out_infinite]">
+                <div className="pointer-events-none absolute inset-[14%] rounded-full border border-white/[0.09]" />
+                <span className="relative z-10 text-[8px] font-semibold tracking-[0.42em] text-[#8ab0ff]/90">SAKHI</span>
+              </div>
+            </div>
           </div>
 
           <div className="intro-system mt-8 w-full">
@@ -71,7 +77,7 @@ export default function Scene3Reveal() {
                         }
                       >
                         <div className={`intro-resolved-item intro-resolved-item-${index + 1}`}>
-                          <p className="text-balancetext-[clamp(1.15rem,1.55vw,1.65rem)] leading-[1.2] tracking-[-0.03em] text-slate-100/88">
+                          <p className="text-balance text-[clamp(1.4rem,2vw,2rem)] leading-[1.2] tracking-[-0.03em] text-slate-100/88">
                             {pillar}
                           </p>
                         </div>
@@ -107,7 +113,7 @@ export default function Scene3Reveal() {
                     }
                   >
                     <div className={`intro-parked intro-parked-${index + 1} opacity-0`}>
-                      <p className="text-balancetext-[clamp(0.95rem,1.15vw,1.2rem)] leading-[1.25] tracking-[-0.025em] text-slate-200/72">
+                      <p className="text-balance text-[clamp(1.1rem,1.4vw,1.5rem)] leading-[1.25] tracking-[-0.025em] text-slate-200/72">
                         {pillar}
                       </p>
                     </div>

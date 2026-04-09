@@ -46,6 +46,7 @@ export const useStoryTimeline = (
       gsap.set(".intro-line-1", { opacity: 0, y: 0, scale: 1 });
       gsap.set(".intro-line-2", { opacity: 0, y: 24, scale: 0.982 });
       gsap.set(".intro-explainer", { opacity: 0, y: 28 });
+      gsap.set(".intro-orb-wrap", { opacity: 0, y: 12 });
       gsap.set(".intro-system", { opacity: 0, y: 28 });
       gsap.set(".intro-active", { opacity: 0, scale: 0.992, x: "3vw" });
       gsap.set(".intro-parked", { opacity: 0, y: 10, scale: 0.985 });
@@ -90,10 +91,7 @@ export const useStoryTimeline = (
         filter: "blur(2px)",
       });
       gsap.set(".product-panel-caption", { opacity: 0, y: 14 });
-      gsap.set(".vision-promise-line-1", { opacity: 0, y: 0, scale: 1 });
-      gsap.set(".vision-promise-line-2", { opacity: 0, y: 24, scale: 0.982 });
-      gsap.set(".vision-pillars-stage", { opacity: 0, y: 20 });
-      gsap.set(".vision-pillar-card", { opacity: 0, y: 18 });
+      gsap.set(".vision-orb-wrap", { opacity: 0, y: 20 });
       gsap.set(".vision-pillar-voice", {
         opacity: 0,
         y: 0,
@@ -408,39 +406,32 @@ export const useStoryTimeline = (
           duration: PACE.lineReveal,
         }, "<")
         .call(() => narrate("Stop reacting."), undefined, "<")
-        .to(".intro-line-1", {
-          opacity: 0,
-          y: -30,
-          scale: 0.984,
-          duration: 0.65,
-        }, "+=1.8")
+        .to({}, { duration: 1.8 })
         .to(".intro-line-2", {
           opacity: 1,
           y: 0,
           scale: 1,
           duration: PACE.lineRevealLong,
-        }, "-=0.24")
+        })
         .call(() => narrate("Start shaping."), undefined, "<")
-        .to({}, { duration: 2.0 })
-        .to(".intro-explainer", {
+        .to(".intro-orb-wrap", {
           opacity: 1,
           y: 0,
-          duration: PACE.lineReveal,
-        })
-        .call(() => narrate("Sakhi keeps the thread, so your thinking becomes clearer over time."), undefined, "<")
-        .to({}, { duration: 3.2 })
+          duration: 0.7,
+          ease: "power2.out",
+        }, "+=1.6")
         .to(".intro-system", {
           opacity: 1,
           y: 0,
           duration: PACE.lineReveal,
-        })
+        }, "<+0.3")
         .to(".intro-active-1", {
           opacity: 1,
           x: "0vw",
           scale: 1,
           duration: PACE.lineReveal,
         }, "-=0.14")
-        .call(() => narrate("Keeps the thread, not just the prompt."), undefined, "<")
+        .call(() => narrate("Holds the continuity of your life."), undefined, "<")
         .to(".intro-progress-1", {
           scaleX: 1,
           duration: 0.48,
@@ -503,11 +494,6 @@ export const useStoryTimeline = (
           scale: 1,
           duration: 0.42,
         }, "<")
-        .to(".intro-explainer", {
-          opacity: 0.2,
-          y: -12,
-          duration: 0.7,
-        }, `+=${PACE.shortHold}`)
         .to(".intro-progress-wrap", {
           opacity: 0,
           y: -18,
@@ -532,7 +518,7 @@ export const useStoryTimeline = (
           stagger: 0.08,
           duration: 0.5,
         }, "<+0.04")
-        .to("#scene-3", { opacity: 0, duration: PACE.sceneFadeLong, delay: 2.5 })
+        .to("#scene-3", { opacity: 0, duration: PACE.sceneFadeLong, delay: 5.0 })
         /* ── Scene 4b: Health Signal Arc — parked ───────────────────────
         .to("#scene-4b", { opacity: 1, duration: PACE.sceneFade }, "-=0.12")
         .to(".health-output-stage", { opacity: 1, y: 0, duration: 0.42 }, "<")
@@ -585,46 +571,11 @@ export const useStoryTimeline = (
         })
         .to("#scene-5", { opacity: 0, duration: PACE.sceneFadeLong, delay: PACE.shortHold })
         .to("#scene-6", { opacity: 1, duration: PACE.sceneFade }, "-=0.15")
-        .to(".vision-promise-line-1", {
-          opacity: 1,
-          y: 0,
-          duration: 0.82,
-        })
-        .call(() => narrate("An AI that remembers the thread,"), undefined, "<")
-        .to({}, { duration: 2.0 })
-        .to(".vision-promise-line-2", {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: PACE.lineRevealLong,
-        })
-        .call(() => narrate("not just the prompt."), undefined, "<")
-        .to({}, { duration: 2.0 })
-        .to(".vision-pillars-stage", {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-        }, "-=0.12")
-        .to(".vision-pillar-card", {
-          opacity: 1,
-          y: 0,
-          stagger: 0.12,
-          duration: 0.62,
-        }, "<+0.06")
-        .to({}, { duration: 2.0 })
-        // Voice lines pop in per column — connection to each pillar is explicit
-        .add(createVisionVoiceReveal(1))
-        .call(() => narrate("The thread stays."), undefined, "<")
-        .to({}, { duration: 1.8 })
-        .add(createVisionVoiceReveal(2))
-        .call(() => narrate("Life becomes visible."), undefined, "<")
-        .to({}, { duration: 1.8 })
-        .add(createVisionVoiceReveal(3))
-        .call(() => narrate("Thinking compounds."), undefined, "<")
-        .to({}, { duration: 2.2 })
-        .to(".vision-signoff", { opacity: 1, y: 0, duration: 0.72 })
+        .to(".vision-orb-wrap", { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, "<+0.2")
+        .call(() => narrate("Sakhi."), undefined, "<")
+        .to(".vision-signoff", { opacity: 1, y: 0, duration: 0.7 }, "+=0.8")
         .call(() => narrate("The physical world has infrastructure. The mind has none. Sakhi is built to become it."), undefined, "<")
-        .to({}, { duration: 2.5 });
+        .to({}, { duration: 3.0 });
     }, containerRef);
     // ── founder story continues at /founder-story ────────────────────────────
     return () => {

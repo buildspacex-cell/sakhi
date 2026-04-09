@@ -1,58 +1,26 @@
 "use client";
 
-const pillarLines = [
-  "Across time, not just within one session.",
-  "What has occupied your life becomes visible.",
-  "Your thinking compounds instead of resetting.",
-] as const;
-
-const voiceLines = ["The thread stays.", "Life becomes visible.", "Thinking compounds."] as const;
-
 export default function Scene6Vision() {
   return (
-    <div className="relative flex h-full w-full items-center overflow-hidden px-6 pb-[calc(env(safe-area-inset-bottom)+4.75rem)] pt-[calc(env(safe-area-inset-top)+5.75rem)] sm:px-10 sm:pb-[calc(env(safe-area-inset-bottom)+4.75rem)] sm:pt-[calc(env(safe-area-inset-top)+5rem)] lg:px-16 lg:pb-24 lg:pt-24 xl:px-24">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(162,179,255,0.16),transparent_24%),radial-gradient(circle_at_20%_70%,rgba(108,128,255,0.1),transparent_28%),radial-gradient(circle_at_78%_72%,rgba(112,205,255,0.08),transparent_30%)]" />
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_46%,rgba(30,50,100,0.5),rgba(3,11,24,0.0)_68%)]" />
 
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center text-center">
-        {/* Small supporting headline */}
-        <div className="vision-promise w-full">
-          <div className="text-[clamp(1.5rem,2.4vw,2.4rem)] font-medium leading-[1.3] tracking-[-0.03em] text-slate-300/80">
-            <div className="vision-promise-line-1">An AI that remembers the thread,</div>
-            <div className="vision-promise-line-2">not just the prompt.</div>
+      <div className="relative flex flex-col items-center text-center">
+        {/* Orb */}
+        <div className="vision-orb-wrap relative flex items-center justify-center" style={{ opacity: 0 }}>
+          <div className="vision-orb-ring absolute h-[min(420px,72vw)] w-[min(420px,72vw)] rounded-full border border-white/[0.04]" />
+          <div className="vision-orb-ring absolute h-[min(320px,55vw)] w-[min(320px,55vw)] rounded-full border border-white/[0.07]" />
+          <div className="vision-orb-ring absolute h-[min(236px,40vw)] w-[min(236px,40vw)] rounded-full border border-white/[0.10]" />
+          <div className="relative flex h-[min(168px,28vw)] w-[min(168px,28vw)] items-center justify-center rounded-full border border-[#8ab0ff]/25 bg-[radial-gradient(circle_at_38%_32%,rgba(140,183,255,0.22),rgba(80,120,210,0.14)_48%,rgba(3,11,24,0.85)_78%)] shadow-[0_0_80px_rgba(100,148,255,0.18),0_0_160px_rgba(80,120,255,0.08)]">
+            <div className="pointer-events-none absolute inset-[14%] rounded-full border border-white/[0.09]" />
+            <span className="relative z-10 text-[clamp(8px,1.2vw,12px)] font-semibold tracking-[0.42em] text-[#8ab0ff]/90">SAKHI</span>
           </div>
         </div>
 
-        <div className="vision-pillars-stage mt-10 w-full max-w-6xl">
-          <div className="grid grid-cols-1 gap-6 items-start sm:grid-cols-3 sm:gap-4">
-            {pillarLines.map((line, index) => (
-              <div
-                key={line}
-                className={
-                  index === 0
-                    ? "text-left"
-                    : index === 1
-                      ? "sm:text-center"
-                      : "sm:text-right"
-                }
-              >
-                <div className={`vision-pillar-card vision-pillar-card-${index + 1} flex h-full flex-col`}>
-                  {/* Voice line — big, dominant */}
-                  <p className={`vision-pillar-voice vision-pillar-voice-${index + 1} text-[clamp(1.4rem,2.2vw,2.4rem)] font-semibold leading-[1.06] tracking-[-0.055em] text-white opacity-0`}>
-                    {voiceLines[index]}
-                  </p>
-                  {/* Pillar description — small, supporting */}
-                  <p className="vision-pillar-desc mt-3 text-balance text-[clamp(0.82rem,1vw,1rem)] leading-[1.4] tracking-[-0.02em] text-slate-300/72">
-                    {line}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="vision-signoff mt-10 max-w-4xl opacity-0">
-          <p className="vision-signoff-label text-balance text-[clamp(1.25rem,1.9vw,1.9rem)] font-semibold leading-[1.28] tracking-[-0.04em] text-white/86">
-            The physical world has infrastructure.{" "}
+        {/* Signoff */}
+        <div className="vision-signoff mt-12 max-w-3xl px-6" style={{ opacity: 0 }}>
+          <p className="vision-signoff-label text-balance text-[clamp(1.1rem,1.9vw,1.9rem)] font-semibold leading-[1.28] tracking-[-0.04em] text-white/86">
+            The physical world has infrastructure.<br />
             <span className="text-[#c8d4ff]">The mind has none. Sakhi is built to become it.</span>
           </p>
         </div>

@@ -13,7 +13,7 @@ export default function SakhiOnePager() {
               Sakhi is the continuity layer for the human mind.
             </h1>
             <p className="mt-2 text-[0.82rem] text-slate-400 tracking-[-0.01em] sm:text-[clamp(0.8rem,1vw,0.9rem)]">
-              An AI that remembers the thread, not just the prompt.
+              Your thinking compounds. Your life stays connected, across time.
             </p>
           </div>
         </div>
