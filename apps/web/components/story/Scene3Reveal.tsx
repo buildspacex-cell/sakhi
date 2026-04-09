@@ -1,9 +1,9 @@
 "use client";
 
 const pillars = [
-  "Builds a living model of you. It evolves over time.",
-  "Makes your life visible. Across time, as a whole.",
-  "Helps you act decisively. It learns from what follows.",
+  "Keeps the thread, not just the prompt.",
+  "Makes your life visible across time.",
+  "Helps your thinking compound.",
 ] as const;
 
 export default function Scene3Reveal() {
@@ -12,7 +12,7 @@ export default function Scene3Reveal() {
       <div className="sakhi-stage absolute inset-0 flex items-center justify-center px-8 py-10 sm:px-12 lg:px-16 xl:px-24">
         <div className="w-full max-w-6xl text-center">
           <div className="sakhi-headline mx-auto max-w-[11ch] text-balance text-5xl font-semibold leading-[0.98] tracking-[-0.06em] text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.08)] sm:text-6xl lg:text-8xl">
-            Sakhi makes it all come together.
+            Sakhi keeps it all connected.
           </div>
         </div>
       </div>
@@ -39,8 +39,7 @@ export default function Scene3Reveal() {
 
           <div className="intro-explainer mt-14 w-full max-w-3xl">
             <p className="mx-auto max-w-2xl text-[clamp(1.2rem,2.1vw,1.7rem)] leading-[1.5] tracking-[-0.03em] text-slate-300">
-              Sakhi learns how you think and evolves with you, so your decisions
-              become clearer over time.
+              Sakhi keeps the thread, so your thinking becomes clearer over time.
             </p>
           </div>
 

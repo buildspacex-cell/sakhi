@@ -371,7 +371,7 @@ export const useStoryTimeline = (
           scale: 0.95,
           duration: 1,
         })
-        .call(() => narrate("Sakhi makes it all come together."), undefined, "<")
+        .call(() => narrate("Sakhi keeps it all connected."), undefined, "<")
         .to(".sakhi-headline", {
           opacity: 0,
           y: -18,
@@ -427,7 +427,7 @@ export const useStoryTimeline = (
           y: 0,
           duration: PACE.lineReveal,
         })
-        .call(() => narrate("Sakhi learns how you think and evolves with you."), undefined, "<")
+        .call(() => narrate("Sakhi keeps the thread, so your thinking becomes clearer over time."), undefined, "<")
         .to({}, { duration: 3.2 })
         .to(".intro-system", {
           opacity: 1,
@@ -440,7 +440,7 @@ export const useStoryTimeline = (
           scale: 1,
           duration: PACE.lineReveal,
         }, "-=0.14")
-        .call(() => narrate("Builds a living model of you. It evolves over time."), undefined, "<")
+        .call(() => narrate("Keeps the thread, not just the prompt."), undefined, "<")
         .to(".intro-progress-1", {
           scaleX: 1,
           duration: 0.48,
@@ -463,7 +463,7 @@ export const useStoryTimeline = (
           scale: 1,
           duration: PACE.lineReveal,
         }, "-=0.14")
-        .call(() => narrate("Makes your life visible. Across time, as a whole."), undefined, "<")
+        .call(() => narrate("Makes your life visible across time."), undefined, "<")
         .to(".intro-progress-2", {
           scaleX: 1,
           duration: 0.48,
@@ -486,7 +486,7 @@ export const useStoryTimeline = (
           scale: 1,
           duration: PACE.lineReveal,
         }, "-=0.14")
-        .call(() => narrate("Helps you act decisively. It learns from what follows."), undefined, "<")
+        .call(() => narrate("Helps your thinking compound."), undefined, "<")
         .to(".intro-progress-3", {
           scaleX: 1,
           duration: 0.48,
@@ -739,7 +739,7 @@ export const useStoryTimeline = (
           y: 0,
           duration: 0.82,
         })
-        .call(() => narrate("Sakhi makes your life seen,"), undefined, "<")
+        .call(() => narrate("An AI that remembers the thread,"), undefined, "<")
         .to({}, { duration: 2.0 })
         .to(".vision-promise-line-2", {
           opacity: 1,
@@ -747,7 +747,7 @@ export const useStoryTimeline = (
           scale: 1,
           duration: PACE.lineRevealLong,
         })
-        .call(() => narrate("understood, and actionable."), undefined, "<")
+        .call(() => narrate("not just the prompt."), undefined, "<")
         .to({}, { duration: 2.0 })
         .to(".vision-pillars-stage", {
           opacity: 1,
@@ -763,15 +763,16 @@ export const useStoryTimeline = (
         .to({}, { duration: 2.0 })
         // Voice lines pop in per column — connection to each pillar is explicit
         .add(createVisionVoiceReveal(1))
-        .call(() => narrate("I see you."), undefined, "<")
+        .call(() => narrate("The thread stays."), undefined, "<")
         .to({}, { duration: 1.8 })
         .add(createVisionVoiceReveal(2))
-        .call(() => narrate("I understand you."), undefined, "<")
+        .call(() => narrate("Life becomes visible."), undefined, "<")
         .to({}, { duration: 1.8 })
         .add(createVisionVoiceReveal(3))
-        .call(() => narrate("I act for you."), undefined, "<")
+        .call(() => narrate("Thinking compounds."), undefined, "<")
         .to({}, { duration: 2.2 })
         .to(".vision-signoff", { opacity: 1, y: 0, duration: 0.72 })
+        .call(() => narrate("The physical world has infrastructure. The mind has none. Sakhi is built to become it."), undefined, "<")
         .to({}, { duration: 2.5 });
     }, containerRef);
     // ── founder story continues at /founder-story ────────────────────────────

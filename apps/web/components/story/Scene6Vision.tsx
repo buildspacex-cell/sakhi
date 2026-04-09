@@ -1,12 +1,12 @@
 "use client";
 
 const pillarLines = [
-  "Build a living model of you evolving over time.",
-  "Make your life visible across time, as a whole.",
-  "Help you act decisively and learn from what follows.",
+  "Across time, not just within one session.",
+  "What has occupied your life becomes visible.",
+  "Your thinking compounds instead of resetting.",
 ] as const;
 
-const voiceLines = ["I see you.", "I understand you.", "I act for you."] as const;
+const voiceLines = ["The thread stays.", "Life becomes visible.", "Thinking compounds."] as const;
 
 export default function Scene6Vision() {
   return (
@@ -17,8 +17,8 @@ export default function Scene6Vision() {
         {/* Small supporting headline */}
         <div className="vision-promise w-full">
           <div className="text-[clamp(1.5rem,2.4vw,2.4rem)] font-medium leading-[1.3] tracking-[-0.03em] text-slate-300/80">
-            <div className="vision-promise-line-1">Sakhi makes your life seen,</div>
-            <div className="vision-promise-line-2">understood, and actionable.</div>
+            <div className="vision-promise-line-1">An AI that remembers the thread,</div>
+            <div className="vision-promise-line-2">not just the prompt.</div>
           </div>
         </div>
 
@@ -50,9 +50,10 @@ export default function Scene6Vision() {
           </div>
         </div>
 
-        <div className="vision-signoff mt-10 opacity-0">
-          <p className="vision-signoff-label text-[0.95rem] font-medium uppercase tracking-[0.28em] text-[#c8d4ff]/78">
-            - Sakhi
+        <div className="vision-signoff mt-10 max-w-4xl opacity-0">
+          <p className="vision-signoff-label text-balance text-[clamp(1.25rem,1.9vw,1.9rem)] font-semibold leading-[1.28] tracking-[-0.04em] text-white/86">
+            The physical world has infrastructure.{" "}
+            <span className="text-[#c8d4ff]">The mind has none. Sakhi is built to become it.</span>
           </p>
         </div>
       </div>

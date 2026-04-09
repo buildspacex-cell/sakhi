@@ -58,7 +58,6 @@ const productPanels: ProductPanel[] = [
     lead: "Private by design. Yours to control.",
     details: [
       "Your conversations are encrypted end-to-end.",
-      "You decide what Sakhi remembers.",
     ],
     src: "/story/vidz-space.png",
     alt: "Sakhi privacy and account screen",
