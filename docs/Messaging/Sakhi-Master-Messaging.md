@@ -1,6 +1,6 @@
 # Sakhi — Master Messaging Document
 
-**Version 1.0 · April 2026 · Confidential**
+**Version 1.2 · April 2026 · Confidential**
 
 This is the single source of truth for every word spoken or written about Sakhi. Every surface, every audience, every context starts here.
 
@@ -25,14 +25,14 @@ Four layers. Each has one job. They do not compete with each other. Use them in 
 ### Category
 > **Sakhi is the continuity layer for the human mind.**
 
-The full category claim. Used as a headline, cover line, or first sentence wherever the company needs to be positioned. Do not shorten it, soften it, or make it clever. Its power is in its plainness. This line is identical across all three artifacts — deck cover, one-pager header, and the vision slide in the story.
+The full category claim. Used as a headline, cover line, or first sentence wherever the company needs to be positioned. Do not shorten it, soften it, or make it clever. Its power is in its plainness. This line is identical across all three artifacts — deck cover, one-pager header, and the story opening.
 
 ---
 
 ### Product
-> **An AI that remembers the thread, not just the prompt.**
+> **An AI that holds the continuity of your life.**
 
-What the product does in one sentence. "The thread" is the core product concept — the thing that persists across sessions, carries context forward, and makes thinking compound. Use this line wherever someone needs to understand what Sakhi does immediately.
+What the product does in one sentence. "Continuity of your life" is the core product claim — not recall, not memory, not chat. It holds what is building across time: patterns, decisions, commitments, who you are becoming. Use this line wherever someone needs to understand what Sakhi does immediately.
 
 ---
 
@@ -46,7 +46,16 @@ What the user gets. Not features, not capabilities — the result. "Compounds" i
 ### Vision
 > **The physical world has infrastructure. The mind has none. Sakhi is built to become it.**
 
-The civilisational closer. Not a product promise — an observation about what is missing from the world, and what Sakhi is building toward. Always a closer. It earns its weight only after the problem has been felt or the argument has been made. Used as the final line in the one-pager, the vision slide close in the deck, and the story closing scene.
+The civilisational closer. Not a product promise — an observation about what is missing from the world, and what Sakhi is building toward. Always a closer. It earns its weight only after the problem has been felt or the argument has been made.
+
+**Displayed as two lines:**
+> The physical world has infrastructure.
+> The mind has none. Sakhi is built to become it.
+
+**Where it appears:**
+- One-pager: footer, standalone, styled in Sakhi blue
+- Company deck: vision slide closing statement
+- Story: final scene signoff, beneath the Sakhi orb
 
 ---
 
@@ -72,13 +81,18 @@ Used consistently across all three artifacts. Two moves: name the fragmentation,
 
 Used consistently across all three artifacts.
 
-> Sakhi captures what matters, keeps threads alive, and brings them back when they matter. It is thread-based, not session-based. Your thinking compounds.
+> Sakhi holds the continuity of your life across time. It keeps your thinking connected, surfaces what matters, and sharpens your living model with every return. Your thinking compounds.
 
 **One-line form (for tight spaces):**
-> An AI that remembers the thread, not just the prompt.
+> An AI that holds the continuity of your life.
 
 **Category-positioning form (used in How It Solves slide):**
 > Not as an interface — as the layer beneath it.
+
+**Supporting lines:**
+> Your life stays connected across time, not just within one session.
+> Patterns surface without you having to narrate them.
+> Clearer decisions because the context is already there.
 
 ---
 
@@ -105,11 +119,6 @@ Three forces. Used identically across all three artifacts.
 
 **When to use it:** As a closer. After the problem has been felt or argued. Never as an opener.
 
-**Where it appears:**
-- One-pager: footer, standalone, styled in Sakhi blue
-- Company deck: Vision slide closing statement
-- Story: Final scene signoff
-
 **The two-word distillation:** Mind Infrastructure.
 
 ---
@@ -120,11 +129,44 @@ These are the product names used in the story and deck. Use them consistently. D
 
 | Concept | Name | What it means |
 |---|---|---|
-| The core capability | **Continuity Engine** | The infrastructure layer that holds threads alive across time |
+| The core capability | **Continuity Engine** | The infrastructure layer — powered by Kala, the temporal governance kernel — that holds the continuity of your life across time |
 | What the user sees across time | **Life Occupancy** | What has actually occupied your mind and life — not just what you said recently |
 | How a thread evolves | **Continuity Arc** | An explorable arc showing how a thought, dilemma, or decision developed over time |
+| The data moat | **Compounding Mirror** | The model Sakhi builds of you — your patterns, language, contradictions, your life — that cannot be exported, replicated, or started over |
 | The conversation entry point | **Conversation** | Where thinking enters Sakhi |
+| The temporal kernel | **Kala** | The temporal intelligence and governance layer beneath the Continuity Engine. Tracks drift, detects patterns, governs what Sakhi does. |
 | The privacy model | **Private by design. Yours to control.** | Encrypted end-to-end. You decide what Sakhi remembers. |
+
+---
+
+## The Moat
+
+Used in the Why We Win slide. Four pillars, two types.
+
+| Pillar | Type | What it means |
+|---|---|---|
+| **Continuity Engine** | Core Infrastructure | Other AI remembers what you said. Sakhi sharpens your living model with every return. Threads stay live. Patterns build. Judgment compounds. |
+| **Personalization Flywheel** | Data Moat | Your patterns, your language, your contradictions. Your life. A compounding mirror cannot be exported, replicated, or started over. Switching cost that is earned, not engineered. |
+| **Continuity Arc** | Product Expression | A thought, decision, or dilemma does not disappear. You can see how it evolved across time. |
+| **Life Occupancy** | Product Expression | Sakhi shows what has actually occupied your mind and life across time, not just what you said most recently. |
+
+**Product Expression cards** (Continuity Arc + Life Occupancy) are visually distinguished in teal — the same color as the app screens they correspond to.
+
+**The headline:**
+> The compounding mirror Sakhi builds is the moat.
+> Not the interface. Not the features. The understanding of who you are becoming, built across time, that exists nowhere else.
+
+---
+
+## The Market
+
+| Segment | Size | Basis |
+|---|---|---|
+| **TAM** | 500M+ | Knowledge workers, caregivers and professionals with complex mental load globally |
+| **SAM** | 75M | Professionals and caregivers, 25–55, in the US and UK already paying for productivity software. BLS Occupational Employment Statistics 2023 (~63M US); ONS Labour Force Survey 2023 (~12M UK). |
+| **SOM** | 100K | Target users in 18 months. 10K paying at $20/mo = $2.4M ARR before Seed. |
+
+**India** is a Phase 2 expansion — a 10× SAM opportunity — once localization and tiered pricing are in place. Not included in the current SAM.
 
 ---
 
@@ -141,7 +183,7 @@ Used consistently across the one-pager and company deck.
 | Collective | $30/user/mo | Shared intelligence across people. Year 2. |
 
 **Pricing line:**
-> Not a subscription for usage. A subscription for accumulated intelligence.
+> Not a subscription for usage. A subscription for thinking that compounds.
 
 ### 12-Month Targets
 
@@ -161,23 +203,16 @@ Used consistently across the one-pager and company deck.
 
 **Purpose:** To prove continuity can become a retained consumer behavior and a real subscription business.
 
-**Allocation:**
+**Allocation (high to low, Runway last):**
 
 | Line | Amount | % |
 |---|---|---|
-| Product + Engineering | $600K | 48% |
-| Growth | $275K | 22% |
-| Runway + Buffer | $250K | 20% |
-| Legal + Ops | $125K | 10% |
-
-**Unit Economics:**
-
-| Metric | Target |
-|---|---|
-| Blended CAC | $20–35 |
-| ARPU | $240/yr |
-| LTV:CAC (Yr 1) | 7–12× |
-| Gross Margin (Yr 2) | 50–65% |
+| People | $350K | 28% |
+| Engineering | $254K | 20% |
+| GTM | $171K | 14% |
+| Legal + Compliance | $75K | 6% |
+| Operations | $50K | 4% |
+| Runway + Buffer | $350K | 28% |
 
 ---
 
@@ -188,8 +223,10 @@ Used across the one-pager and company deck. These are the canonical bios.
 **Vidhya Padmanabhan · Co-Founder & CEO**
 > 20+ years partnering with executives and C-suite at a $4B public company and a high-growth SaaS firm serving large enterprises, building systems that turned ambiguity into structured decisions. Sakhi is the system she wished existed when she needed it most.
 
-**Her quote:**
-> "I've spent 20+ years helping organizations make better decisions. I realized we haven't solved this for individuals."
+**Her arc (compact form):**
+- Operator at Scale: worked alongside CEOs and COOs, building systems that turned ambiguity into structured decisions.
+- Personal Inflection Point: in 2024, caregiving, leadership, and life complexity collided. What was missing was continuity at the level of a real human life.
+- Insight to Sakhi: small, personalized interventions changed everything. Timing and personalization mattered more than generic advice. Could this be a system?
 
 **Her closing:**
 > "Sakhi is the system I wish existed when I needed it most."
@@ -199,80 +236,14 @@ Used across the one-pager and company deck. These are the canonical bios.
 **Ravi Shankar · Co-Founder & CTO**
 > Engineering, product, and AI systems thinker. Technical depth meets lived human understanding.
 
-**His quote:**
-> "I'm a systems thinker at heart, grounded in deep technical expertise and driven to simplify complexity."
+**His arc (compact form):**
+- Evolution: engineering first. Kept moving toward what actually makes systems work.
+- Realization: systems succeed because people trust and use them. Not just because they are built well.
+- Expansion: engineering, product, product marketing. Yoga and meditation deepened how he reads human behavior over time.
+- Convergence: technical depth, systems thinking, and lived understanding of people. All of it builds Sakhi.
 
 **His closing:**
 > "That gives me the clarity to build Sakhi."
-
----
-
-## The Moat
-
-Used in the Why We Win slide. Four pillars.
-
-| Pillar | Type | What it means |
-|---|---|---|
-| **Continuity Engine** | Core Infrastructure | Other AI remembers what you said. Sakhi sharpens your living model with every return. |
-| **Continuity Arc** | Product Expression | Threads become explorable arcs, so users can revisit how a thought or decision evolved. |
-| **Compounding Understanding** | Moat | Your patterns, language, contradictions. A compounding model cannot be exported or replicated. Switching cost earned, not engineered. |
-| **Life Occupancy** | Product Expression | Sakhi shows what has actually occupied your mind and life across time, not just what you said most recently. |
-
----
-
-## The Pitch — Unique Elements
-
-The investor pitch is the fourth artifact. It is a single-voice, short-form spoken format — Vidhya's voice throughout. It opens with a visceral hook and closes with the raise. It has its own vocabulary that the written artifacts do not use because live pitching works differently from reading.
-
-### Full Pitch Text (Current Version)
-
-> Hi, I'm Vidhya, Founder and CEO of Sakhi. I'm here with Ravi, Co-founder and CTO.
->
-> Think about your browser right now — twenty or thirty open tabs. You can't close them because you aren't finished, but you're too distracted to move forward.
->
-> Our minds work the same way. We carry a 'mental debt' of open loops — half-finished ideas and decisions that drain our performance.
->
-> The physical world has infrastructure: GPS, Calendars, and spending logs. They create order and compound progress. But the mind has none. Sakhi is being built to become the infrastructure for the mind.
->
-> When we started solving this, we realized something simple. If you want to fix fragmentation, you have to solve for the person — not just the AI prompt. And what is a person? A person is two things. One, the content of your life, predominantly driven by your thoughts. And two, the sequence in which they unfold over time. Today's AI handles this in pieces, but not the whole. With Sakhi, we built for the whole.
->
-> You just talk to the app and it organizes your thoughts for you, so you don't have to keep track of everything. And then it connects it over time — so your thinking stays continuous. Like organizing all your open tabs and bringing them back to you in the right sequence. With organization and continuity, your thinking finally starts to compound.
->
-> The need is urgent. Knowledge workers lose up to 40% of their productivity just context-switching between these 'open tabs.'
->
-> We're building this because we've observed and experienced the cost of this 'invisible loss' first-hand. Between Ravi's technical expertise and my vision, and our joint interest in human behavior, we feel a deep sense of purpose to build the infrastructure of the mind that people deserve.
->
-> From concept in early January to having just released MVP, our initial user interactions confirm their excitement to have a place to offload mental debt.
->
-> We are raising $1.25M to move from MVP to a full market launch.
->
-> Join us in letting the world finally close their mental tabs and get back to working at ease.
-
----
-
-### Pitch Structure — The Arc
-
-| Movement | Lines | Job |
-|---|---|---|
-| **Hook** | Open tabs → mental debt → infrastructure analogy | Create immediate personal recognition, plant the infrastructure vocabulary |
-| **Insight** | Person = content + sequence. AI handles pieces, not the whole. | Name the mechanism: continuity requires solving for the whole person across time |
-| **Product** | Talk to the app. It organizes. It connects over time. Your thinking compounds. | Show how it works without feature language |
-| **Urgency** | 40% productivity loss from context-switching | Make the problem quantifiable |
-| **Purpose** | Invisible loss. Lived experience. Deep sense of purpose. | Make the founders human and credible |
-| **Traction** | MVP live. Users excited to offload mental debt. | Signal early validation |
-| **Ask** | $1.25M. MVP to full market launch. | Close with the raise |
-
-### Pitch-Only Vocabulary
-
-These phrases belong to the live pitch format. They are visceral and immediate — appropriate for a room, not a page.
-
-| Phrase | What it does |
-|---|---|
-| **Open tabs** | The hook analogy. Immediate recognition for any knowledge worker. |
-| **Mental debt** | Names the problem as accumulated cost, borrowing from "technical debt." |
-| **Invisible loss** | Names the consequence without requiring data. |
-| **Content + sequence** | Ravi's philosophical frame: a person is what they think and when they think it. |
-| **Offload mental debt** | The user's felt need — a place to put the weight down. |
 
 ---
 
@@ -284,9 +255,9 @@ These phrases belong to the live pitch format. They are visceral and immediate �
 | Position | Line |
 |---|---|
 | Header | Sakhi is the continuity layer for the human mind. |
-| Subhead | An AI that remembers the thread, not just the prompt. |
+| Subhead | Your thinking compounds. Your life stays connected, across time. |
 | Problem | Why do even smart people make bad decisions... |
-| Solution | Thread-based, not session-based. Your thinking compounds. |
+| Solution | Sakhi holds the continuity of your life across time. Your thinking compounds. |
 | Why Now | Three forces + "That gap is the company." |
 | Ask | $1,250,000 — to prove continuity becomes a retained behavior. |
 | Footer | The physical world has infrastructure. The mind has none. Sakhi is built to become it. |
@@ -299,16 +270,15 @@ These phrases belong to the live pitch format. They are visceral and immediate �
 | Slide | Core message |
 |---|---|
 | Cover | Stop Reacting. Start Shaping. |
-| Problem + Solution | The mind has no infrastructure. / Not as an interface — as the layer beneath it. |
-| How Sakhi Solves It | Capture → Thread → Reflect. Not an interface — the layer beneath it. |
+| Problem + Solution | The mind has no infrastructure. / An AI that holds the continuity of your life. |
+| How Sakhi Solves It | Your life stays connected. Patterns surface. Clearer decisions because the context is already there. |
 | Why Now | Model Shift · Behavior Shift · Category Gap. Nobody owns the continuity layer. |
 | Why It Doesn't Exist | Everyone stores. Nobody remembers. All five retrieve. Sakhi infers. |
-| Why We Win | The continuity model Sakhi builds is the moat. |
-| Revenue | Not a subscription for usage. A subscription for accumulated intelligence. |
+| Why We Win | The compounding mirror Sakhi builds is the moat. |
+| Revenue | Not a subscription for usage. A subscription for thinking that compounds. |
 | The Ask | $1.25M to prove continuity becomes a retained behavior and a real subscription business. |
 | Go to Market | Depth before scale. The right 50 users unlock the next 50,000. |
 | Founders | Built systems for companies. Now building one for humans. |
-| The Long Game | Every LLM wants to be your interface. Sakhi is the continuity layer for the human mind. |
 | Closing | The physical world has infrastructure. The mind has none. Sakhi is built to become it. |
 
 ---
@@ -318,11 +288,23 @@ These phrases belong to the live pitch format. They are visceral and immediate �
 
 | Scene | Emotional job | Core line |
 |---|---|---|
-| 1–3 | Establish the problem emotionally | The fragmentation. The forgetting. |
-| 4 | Show continuity made visible | Life Occupancy — what has actually occupied your mind |
+| 1 | Establish the chaos — fragmented thinking | The thoughts. The weight. The forgetting. |
+| 2 | Name the breakdown | By morning, the thread is gone. |
+| 3 | Name the alternative | Stop reacting. Start shaping. / Sakhi holds the continuity of your life, so your thinking compounds over time. |
+| 4 (parked) | Life signal layer | — |
 | 5 | Show the product working | Conversation → Life Occupancy → Continuity Arc → Privacy |
-| 6 | Name the category as recognition | Sakhi keeps the thread alive, so your thinking compounds. |
-| Signoff | Land the analogy | The physical world has infrastructure. The mind has none. Sakhi is built to become it. |
+| 6 | Land the category | Sakhi orb + The physical world has infrastructure. The mind has none. Sakhi is built to become it. |
+
+**Scene 3 structure:**
+1. "Stop reacting." fades in (dim)
+2. "Start shaping." fades in bright alongside it
+3. Sakhi orb fades in
+4. Three pillar animations: Holds the continuity of your life · Makes your life visible across time · Helps your thinking compound
+5. Static pillar grid resolves
+
+**Scene 6 structure:**
+- Sakhi orb appears (same as company deck cover)
+- Signoff fades in below: "The physical world has infrastructure. / The mind has none. Sakhi is built to become it."
 
 ---
 
@@ -352,24 +334,28 @@ These phrases belong to the live pitch format. They are visceral and immediate �
 
 | Word | Why |
 |---|---|
-| **Thread** | The core product concept. Persists, connects, can be picked up. The opposite of a session. |
-| **Continuity** | The category concept. Forward motion, not passive memory. |
+| **Continuity** | The category concept. Forward motion, not passive memory. The anchor word across all artifacts. |
 | **Compounds** | The outcome word. Accumulation over time. Never swap for "improves" or "grows." |
+| **Compounding mirror** | The data moat concept. What Sakhi builds of you — specific to you, irreplaceable, earns switching cost. |
+| **Living model** | What Sakhi sharpens with every return — not static memory, an evolving model of who you are. |
 | **Layer** | Sakhi is beneath the interface, not the interface itself. |
 | **Infrastructure** | The analogy word. Reserve for vision close and investor conversations. |
 | **Fragments** | The problem word. Thinking fragments. Specific and visual. |
 | **Mind Infrastructure** | The two-word category name. |
+| **Temporal** | Used in technical contexts (Kala). Signals the time dimension that no competitor has. |
 
 ### Words to avoid
 
 | Word | Why |
 |---|---|
+| **Thread** | Previously the core product word. Now retired from primary positioning — it sounds like a memory feature, not a category claim. Acceptable in pitch vocabulary (live format) but not in written artifacts. |
+| **Remembers** | Use sparingly. Sakhi does inference, not just recall. "Holds" and "compounds" are stronger. |
 | **Assistant** | Wrong category — reactive, prompt-based, session-based. |
 | **Chatbot** | Consumer shorthand for the opposite of Sakhi. |
 | **Journal** | Passive archive. Sakhi is active continuity. |
 | **Session** | Implies reset. Sakhi is explicitly anti-session. |
 | **Tracks** | We use this to describe what other tools do. Not what Sakhi does. |
-| **Remember** | Use sparingly. Sakhi does inference, not just recall. |
+| **Memory** | Positions Sakhi as a memory company. We are a continuity company. Memory is what we are not. |
 
 ---
 
@@ -383,6 +369,8 @@ These phrases belong to the live pitch format. They are visceral and immediate �
 
 **Short sentences close hard.** Save explanations for the middle. Close with short sentences.
 
+**No em dashes in written artifacts.** Use periods. Short sentences land harder than clauses.
+
 ---
 
 ## What We Don't Say
@@ -392,6 +380,8 @@ These phrases belong to the live pitch format. They are visceral and immediate �
 - We do not position Sakhi as a wellness or mental health product. We are mind infrastructure.
 - We do not use the infrastructure analogy as an opener. It is always a closer.
 - We do not vary the category line by surface. One line, everywhere.
+- We do not include India in the SAM. It is a Phase 2 expansion story, not a current market claim.
+- We do not use "thread" as the primary product word in written artifacts. It reads as a memory feature. Use "continuity of your life" instead.
 
 ---
 
@@ -401,7 +391,7 @@ sakhiadmin@gmail.com · For collaboration or investment.
 
 ---
 
-*Sakhi · Master Messaging Document · v1.1 · April 2026*
+*Sakhi · Master Messaging Document · v1.2 · April 2026*
 *Single source of truth. All surfaces, all audiences, all contexts.*
 *Four artifacts: One-Pager · Company Deck · Story · Investor Pitch*
 *Internal use only. Not for distribution without founder review.*
