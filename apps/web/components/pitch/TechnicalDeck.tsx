@@ -8,9 +8,9 @@ import { FadeIn } from "@/components/pitch/FadeIn";
 type StatusLevel = "live" | "next" | "foundation";
 
 const STATUS_CONFIG: Record<StatusLevel, { label: string; dot: string; badge: string; text: string }> = {
-  live:       { label: "Live & Tested",  dot: "bg-emerald-400",  badge: "border-emerald-400/20 bg-emerald-400/[0.06]", text: "text-emerald-400/80" },
-  next:       { label: "Next Step",      dot: "bg-amber-400",    badge: "border-amber-400/20 bg-amber-400/[0.06]",     text: "text-amber-400/80" },
-  foundation: { label: "Baked In",       dot: "bg-[#8cb7ff]",    badge: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06]",    text: "text-[#8cb7ff]/80" },
+  live:       { label: "In MVP",      dot: "bg-emerald-400",  badge: "border-emerald-400/20 bg-emerald-400/[0.06]", text: "text-emerald-400/80" },
+  next:       { label: "Next Step",   dot: "bg-amber-400",    badge: "border-amber-400/20 bg-amber-400/[0.06]",     text: "text-amber-400/80" },
+  foundation: { label: "Foundation",  dot: "bg-[#8cb7ff]",    badge: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06]",    text: "text-[#8cb7ff]/80" },
 };
 
 // ── Stack ─────────────────────────────────────────────────────────────────────
@@ -39,37 +39,19 @@ type Section = {
 };
 
 const sections: Section[] = [
-  // ── LIVE ──────────────────────────────────────────────────────────────────
+  // ── IN MVP ────────────────────────────────────────────────────────────────
   {
-    id: "continuity",
+    id: "context",
     status: "live",
-    eyebrow: "Core Engine",
-    heading: "Continuity Engine",
-    summary: "The system that keeps threads alive across time. Every conversation contributes to a growing model of the person — what they are navigating, what keeps repeating, and what matters most.",
-    anchor: "An AI that remembers the thread, not just the prompt.",
+    eyebrow: "Conversation Layer",
+    heading: "Context Router — 13 Modules",
+    summary: "Every message passes through a two-tier routing system. Tier 1 is always-on and near-instant — a 360° scan of identity, emotion, friction, and rhythm. Tier 2 fires only the modules relevant to that specific message, keeping latency low and context complete.",
     modules: [
-      { name: "Topic compiler", detail: "Windowed compilation of live threads from journal entries and conversation turns." },
-      { name: "Arc retrieval", detail: "Deterministic continuity arc for any anchor — where a thread began, how it evolved, where it is now." },
-      { name: "Continuity pack", detail: "Injected into every turn: compact history, phase path, anchor moments, decision ledger." },
-      { name: "Deep Reflect", detail: "Async job flow — 4 modes: topic_reflection, deep_answer, whole_story, cross_context. Quality-gated LLM synthesis." },
-      { name: "Cross-topic signals", detail: "Embedding cosine similarity across all thread combinations. Detects when separate life areas are actually connected." },
-      { name: "Surface policy", detail: "Per-person policy controlling what continuity surfaces when. Mirror-only gate when detail is blocked." },
-    ],
-  },
-  {
-    id: "kala",
-    status: "live",
-    eyebrow: "Governance Kernel",
-    heading: "Kala",
-    summary: "A pure-computation governance kernel with zero external dependencies. Kala evaluates every proposed AI action against a constraint set before it is delivered — ensuring the system stays aligned with the person's stated values over time.",
-    modules: [
-      { name: "Constraint evaluation", detail: "11 operators (equals, range, threshold, rate-of-change, etc.), priority-based HARD/SOFT enforcement." },
-      { name: "Drift gating", detail: "Tracks drift % from baseline. Gates responses when drift crosses configured thresholds." },
-      { name: "Contradiction detection", detail: "5 typed categories. Surfaces when objectives conflict before they cause harm." },
-      { name: "Objective versioning", detail: "v1 → v2 → v3 with full lineage tracking. The system knows how a person's goals evolved." },
-      { name: "Temporal substrate", detail: "Timeline, moving averages, trend detection, pattern crystallization — all deterministic." },
-      { name: "Event ledger", detail: "Every governance decision logged to governance_events. Fully auditable." },
-      { name: "552 tests", detail: "Full coverage suite. Pure computation — no mocks, no external calls, reproducible everywhere." },
+      { name: "Tier 1 — 360° scan", detail: "Identity momentum, emotional state, moment mode, friction state, morning/evening cache, reflection status. ~0ms, pure functions." },
+      { name: "Tier 2 — Deep modules", detail: "Full LLM + DB sections only for active modules: identity, emotional_depth, moment, recommendations, scheduling, email, causal, micro_flow, vision, agentic." },
+      { name: "Deterministic classifier", detail: "Keyword/pattern classifier + intent routing + time-based routing (morning/evening rituals)." },
+      { name: "LLM fallback", detail: "GPT-4o-mini invoked only when classifier confidence < 0.5." },
+      { name: "Response latency", detail: "Synchronous response < 500ms. Background workers update intelligence for the next turn." },
     ],
   },
   {
@@ -84,36 +66,6 @@ const sections: Section[] = [
       { name: "Long-term (weeks–months)", detail: "Persistent patterns, values, identity themes, soul state. Stored in personal_model.long_term." },
       { name: "Hybrid search", detail: "pgvector semantic search + BM25 keyword scoring. Exact matches boosted 5.5× over pure semantic." },
       { name: "1536-dim embeddings", detail: "OpenAI text-embedding-3-small. Stored in PostgreSQL via pgvector extension." },
-    ],
-  },
-  {
-    id: "context",
-    status: "live",
-    eyebrow: "Intelligence Routing",
-    heading: "Context Router — 13 Modules",
-    summary: "Every message is routed through a tiered system. Tier 1 is always-on, cheap, deterministic — a 360° awareness scan. Tier 2 fires only the modules that are relevant, keeping prompt cost low while ensuring no context is missed.",
-    modules: [
-      { name: "Tier 1 — 360° scan", detail: "Identity momentum, emotional state, moment mode, friction state, morning/evening cache, reflection status. ~0ms, pure functions." },
-      { name: "Tier 2 — Deep modules", detail: "Full LLM + DB sections only for active modules: identity, emotional_depth, moment, recommendations, scheduling, email, causal, micro_flow, vision, agentic." },
-      { name: "Deterministic classifier", detail: "Keyword/pattern classifier + intent routing + time-based routing (morning/evening rituals)." },
-      { name: "LLM fallback", detail: "GPT-4o-mini invoked only when classifier confidence < 0.5." },
-      { name: "Response latency", detail: "Synchronous response < 500ms. Background workers update intelligence for the next turn." },
-    ],
-  },
-  {
-    id: "engines",
-    status: "live",
-    eyebrow: "Computation Layer",
-    heading: "34 Engines",
-    summary: "Standalone deterministic engines that produce pre-computed intelligence. Each has its own engine.py. They run in the background and feed the context system — so the main conversation pipeline reads from computed state rather than computing on-demand.",
-    modules: [
-      { name: "State & Identity", detail: "alignment, coherence, identity_drift, identity_momentum — tracks how a person is changing." },
-      { name: "Emotion & Soul", detail: "emotion_loop, empathy, microreg, inner_conflict, inner_dialogue — emotional attunement layer." },
-      { name: "Daily Flows", detail: "morning_ask, morning_momentum, morning_preview, evening_closure, daily_reflection — rhythm-aware intelligence." },
-      { name: "Narrative & Patterns", detail: "narrative, reflection_trace, pattern_sense, forecast, continuity — pattern detection and arc building." },
-      { name: "Micro Interventions", detail: "micro_journey, micro_momentum, micro_recovery, mini_flow — small targeted nudges." },
-      { name: "Planning & Action", detail: "focus_path, hands, nudge, tone, task_routing — execution and action routing." },
-      { name: "Reasoning", detail: "deliberation_scaffold, evidence_pack, moment_model — structured reasoning frameworks." },
     ],
   },
   {
@@ -134,6 +86,22 @@ const sections: Section[] = [
     ],
   },
   {
+    id: "engines",
+    status: "live",
+    eyebrow: "Computation Layer",
+    heading: "34 Engines",
+    summary: "Standalone deterministic engines that produce pre-computed intelligence. Each has its own engine.py. They run in the background and feed the context system — so the main conversation pipeline reads from computed state rather than computing on-demand.",
+    modules: [
+      { name: "State & Identity", detail: "alignment, coherence, identity_drift, identity_momentum — tracks how a person is changing." },
+      { name: "Emotion & Soul", detail: "emotion_loop, empathy, microreg, inner_conflict, inner_dialogue — emotional attunement layer." },
+      { name: "Daily Flows", detail: "morning_ask, morning_momentum, morning_preview, evening_closure, daily_reflection — rhythm-aware intelligence." },
+      { name: "Narrative & Patterns", detail: "narrative, reflection_trace, pattern_sense, forecast, continuity — pattern detection and arc building." },
+      { name: "Micro Interventions", detail: "micro_journey, micro_momentum, micro_recovery, mini_flow — small targeted nudges." },
+      { name: "Planning & Action", detail: "focus_path, hands, nudge, tone, task_routing — execution and action routing." },
+      { name: "Reasoning", detail: "deliberation_scaffold, evidence_pack, moment_model — structured reasoning frameworks." },
+    ],
+  },
+  {
     id: "personal-model",
     status: "live",
     eyebrow: "Data Model",
@@ -146,6 +114,38 @@ const sections: Section[] = [
       { name: "rhythm_state / energy_state", detail: "Chronobiological patterns. Time-of-day awareness baked into every response." },
       { name: "coherence_state / alignment_state", detail: "Are actions matching values? Is thinking coherent across domains? Tracked continuously." },
       { name: "30+ cache tables", detail: "Pre-computed context for morning, evening, micro-flow, reflection — so the main turn reads, not computes." },
+    ],
+  },
+  {
+    id: "continuity",
+    status: "live",
+    eyebrow: "Thread Engine",
+    heading: "Continuity Engine",
+    summary: "The system that keeps threads alive across time. Every conversation contributes to a growing model of the person — what they are navigating, what keeps repeating, and what matters most. Built on top of Kala's arc primitives but entirely distinct from it.",
+    anchor: "An AI that remembers the thread, not just the prompt.",
+    modules: [
+      { name: "Topic compiler", detail: "Windowed compilation of live threads from journal entries and conversation turns." },
+      { name: "Arc retrieval", detail: "Deterministic continuity arc for any anchor — where a thread began, how it evolved, where it is now." },
+      { name: "Continuity pack", detail: "Injected into every turn: compact history, phase path, anchor moments, decision ledger." },
+      { name: "Deep Reflect", detail: "Async job flow — 4 modes: topic_reflection, deep_answer, whole_story, cross_context. Quality-gated LLM synthesis." },
+      { name: "Cross-topic signals", detail: "Embedding cosine similarity across all thread combinations. Detects when separate life areas are actually connected." },
+      { name: "Surface policy", detail: "Per-person policy controlling what continuity surfaces when. Mirror-only gate when detail is blocked." },
+    ],
+  },
+  {
+    id: "kala",
+    status: "live",
+    eyebrow: "Governance Kernel",
+    heading: "Kala",
+    summary: "A pure-computation governance kernel, separate from the Continuity Engine. Kala evaluates every proposed AI action against a constraint set before it is delivered. Zero external dependencies. The Continuity Engine uses Kala's arc primitives, but Kala itself is a standalone layer concerned with alignment, drift, and contradiction — not thread-keeping.",
+    modules: [
+      { name: "Constraint evaluation", detail: "11 operators (equals, range, threshold, rate-of-change, etc.), priority-based HARD/SOFT enforcement." },
+      { name: "Drift gating", detail: "Tracks drift % from baseline. Gates responses when drift crosses configured thresholds." },
+      { name: "Contradiction detection", detail: "5 typed categories. Surfaces when objectives conflict before they cause harm." },
+      { name: "Objective versioning", detail: "v1 → v2 → v3 with full lineage tracking. The system knows how a person's goals evolved." },
+      { name: "Temporal substrate", detail: "Timeline, moving averages, trend detection, pattern crystallization — all deterministic." },
+      { name: "Event ledger", detail: "Every governance decision logged to governance_events. Fully auditable." },
+      { name: "552 tests", detail: "Full coverage suite. Pure computation — no mocks, no external calls, reproducible everywhere." },
     ],
   },
 
@@ -307,7 +307,7 @@ export function TechnicalDeck() {
             How it works.
           </h1>
           <p className="mt-3 max-w-2xl text-[0.9rem] leading-[1.7] text-slate-400">
-            What is live and tested in production, what is actively being built, and what is already baked in as the foundation for where this goes next.
+            What is in the MVP now, what is the next step, and what is already built as the foundation for where this goes.
           </p>
         </FadeIn>
 
