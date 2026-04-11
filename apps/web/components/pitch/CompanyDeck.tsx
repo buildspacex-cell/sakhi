@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import gsap from "gsap";
 import StoryContainer from "@/components/story/StoryContainer";
 
-const TOTAL = 11;
+const TOTAL = 12;
 const COVER = 0;
 const DECK_HEADER_BADGE_CLASS =
   "mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40";
@@ -14,7 +14,210 @@ const DECK_TITLE_CLASS =
 const DECK_SUBTITLE_CLASS =
   "mt-3 max-w-4xl text-[clamp(0.88rem,1.1vw,1rem)] leading-[1.65] text-slate-400";
 
-// ── Slide 1 — Problem + Solution ─────────────────────────────────────────────
+// ── Slide 1 — Three Moments (Stories) ────────────────────────────────────────
+function SlideStories() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ctx = gsap.context(() => {
+      gsap.set(".st-item", { opacity: 0, y: 20 });
+      gsap.timeline({ defaults: { ease: "power2.out" } })
+        .to(".st-item", { opacity: 1, y: 0, stagger: 0.12, duration: 0.65 }, 0.2);
+    }, ref);
+    return () => ctx.revert();
+  }, []);
+
+  type Story = {
+    domain: string;
+    tag: string;
+    trigger: string;
+    accent: string;
+    dim: string;
+    border: string;
+    dot: string;
+    scene: ReactNode;
+    moment: string;
+  };
+
+  const S = "text-[0.75rem] leading-[1.6] text-slate-500";
+  const DLG = "text-[0.75rem] leading-[1.6] text-slate-400 italic";
+  const PAYOFF = "text-[0.75rem] font-semibold text-white/60";
+
+  // Visual repeating pattern row
+  function PatternRow({
+    label,
+    accent,
+    items,
+    singleLineLabel = false,
+    noWrapItems = false,
+  }: {
+    label: string;
+    accent: string;
+    items: string[];
+    singleLineLabel?: boolean;
+    noWrapItems?: boolean;
+  }) {
+    return (
+      <div className="flex items-start gap-2">
+        <span
+          className={`mt-[0.35em] shrink-0 text-[9px] font-semibold ${
+            singleLineLabel ? "w-20 whitespace-nowrap tracking-[0.18em]" : "w-14 uppercase tracking-[0.22em]"
+          }`}
+          style={{ color: accent }}
+        >
+          {label}
+        </span>
+        <div className={`flex items-center gap-1 ${noWrapItems ? "whitespace-nowrap" : "flex-wrap"}`}>
+          {items.map((item, i) => (
+            <span key={i} className="flex items-center gap-1">
+              <span className="whitespace-nowrap text-[0.7rem] text-slate-400 font-medium">{item}</span>
+              {i < items.length - 1 && <span className="text-slate-600 text-[0.65rem]">&#8594;</span>}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const stories: Story[] = [
+    {
+      domain: "Health",
+      tag: "Health · Priya",
+      trigger: "Leaving a doctor's office still confused",
+      accent: "#2dd4bf",
+      dim: "rgba(45,212,191,0.06)",
+      border: "rgba(45,212,191,0.18)",
+      dot: "bg-teal-400/50",
+      scene: (
+        <div className="flex flex-col gap-2 flex-1">
+          <p className={S}>Priya describes what she&rsquo;s been feeling. Vaguely, because she doesn&rsquo;t have the pattern yet. Routine tests. Nothing conclusive.</p>
+          <p className={S}>That night, she opens Sakhi. Eight months of health, sleep, and energy threads, held together while she lived them. She sees it for the first time.</p>
+          <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
+            <PatternRow label="Month 1" accent="#2dd4bf" items={["Sleep down", "Fatigue up", "Cycle delay"]} singleLineLabel noWrapItems />
+            <PatternRow label="Month 3" accent="#2dd4bf" items={["Sleep down", "Fatigue up", "Cycle delay"]} singleLineLabel noWrapItems />
+            <PatternRow label="Month 6" accent="#2dd4bf" items={["Sleep down", "Fatigue up", "Cycle delay"]} singleLineLabel noWrapItems />
+            <p className="text-[0.68rem] text-teal-400/60 font-semibold mt-0.5">Same sequence. Every time.</p>
+          </div>
+          <p className={S}>She goes back.</p>
+          <p className={DLG}>&ldquo;Same pattern, three times. Can we test for thyroid?&rdquo;</p>
+          <p className={PAYOFF}>They test. Diagnosis confirmed. Nothing missed.</p>
+        </div>
+      ),
+      moment: "Seeing your own pattern, before anyone else does.",
+    },
+    {
+      domain: "Ambition",
+      tag: "Ambition · Marcus",
+      trigger: "Putting in effort, but not breaking through",
+      accent: "#f59e0b",
+      dim: "rgba(245,158,11,0.06)",
+      border: "rgba(245,158,11,0.18)",
+      dot: "bg-amber-400/50",
+      scene: (
+        <div className="flex flex-col gap-2 flex-1">
+          <p className={S}>Marcus has tried everything. Every variable, every protocol. Game performance still swings. He can&rsquo;t find the lever.</p>
+          <p className={S}>He opens Sakhi. Months of training logs, game reflections, sleep notes, held across time while he was living through them one session at a time.</p>
+          <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
+            <PatternRow label="Best games" accent="#f59e0b" items={["Strength cycle", "Sleep stable", "Peak output"]} />
+            <PatternRow label="Flat games" accent="#f59e0b" items={["Agility only", "Sleep variable", "No change"]} />
+            <p className="text-[0.68rem] text-amber-400/60 font-semibold mt-0.5">Agility alone never moved it.</p>
+          </div>
+          <p className={S}>The correlation he was missing wasn&rsquo;t about working harder. It was about what he was pairing.</p>
+          <p className={S}>He stops treating sleep as optional when strength work is high.</p>
+          <p className={PAYOFF}>His game shifts.</p>
+        </div>
+      ),
+      moment: "What actually works, finally visible.",
+    },
+    {
+      domain: "Life",
+      tag: "Life · Nadia",
+      trigger: "Holding everything together, until you can't",
+      accent: "#c084fc",
+      dim: "rgba(192,132,252,0.06)",
+      border: "rgba(192,132,252,0.18)",
+      dot: "bg-purple-400/50",
+      scene: (
+        <div className="flex flex-col gap-2 flex-1">
+          <p className={S}>Nadia leads a SaaS company. Two kids. Ageing parents.</p>
+          <p className={S}>Her father has an accident. TBI. Weeks in hospital. She doesn&rsquo;t stop. She just starts disappearing.</p>
+          <p className={S}>She opens Sakhi. &ldquo;Why do I feel like I&rsquo;m failing everything?&rdquo;</p>
+          <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
+            <PatternRow label="Before" accent="#c084fc" items={["All threads balanced", "Grounded", "Leading well"]} />
+            <PatternRow label="Now" accent="#c084fc" items={["Tilted to caregiving", "Sleep gone", "Everything slipping"]} />
+          </div>
+          <p className={S}>Three months ago, her 30-minute morning walks had become the thing that steadied her through a hard stretch at work. She had written about it once. Sakhi held it.</p>
+          <p className={DLG}>&ldquo;This brought you back before. It can again.&rdquo;</p>
+          <p className={PAYOFF}>Not generic advice. Her answer, from her own history.</p>
+        </div>
+      ),
+      moment: "The path back, found in your own history.",
+    },
+  ];
+
+  return (
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-12 pb-20 sm:px-10 sm:pt-14 sm:pb-8 lg:px-14 lg:pt-12 lg:pb-10">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5">
+
+        {/* Header */}
+        <div className="st-item shrink-0">
+          <p className="text-[clamp(0.82rem,1vw,0.9rem)] text-slate-500 leading-[1.6]">
+            Notes apps store. AI chats respond. Nobody compounds thought over time.
+          </p>
+          <h2 className={DECK_TITLE_CLASS}>
+            Sakhi is the continuity layer for the human mind.{" "}
+            <span className="text-white/30">Three moments that show what that means.</span>
+          </h2>
+        </div>
+
+        {/* Story cards */}
+        <div className="st-item grid gap-4 lg:grid-cols-3">
+          {stories.map((s) => (
+            <div
+              key={s.tag}
+              className="flex flex-col rounded-2xl border px-5 py-5 gap-4"
+              style={{ background: s.dim, borderColor: s.border }}
+            >
+              {/* Domain tag */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${s.dot}`} />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.32em]" style={{ color: s.accent }}>
+                  {s.tag}
+                </span>
+              </div>
+
+              {/* Trigger */}
+              <div className="shrink-0">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-white/25 mb-1.5">Trigger</p>
+                <p className="text-[0.82rem] font-semibold leading-[1.35] text-white/70">{s.trigger}</p>
+              </div>
+
+              {/* Scene */}
+              {s.scene}
+
+              {/* The shift */}
+              <div className="shrink-0 border-t pt-3.5" style={{ borderColor: s.border }}>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.28em] mb-1.5" style={{ color: s.accent }}>The shift</p>
+                <p className="text-[0.8rem] font-semibold leading-[1.4] text-white/80">{s.moment}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Closing line */}
+        <div className="st-item shrink-0 rounded-xl border border-white/[0.07] bg-white/[0.02] px-5 py-3">
+          <p className="text-[clamp(0.78rem,0.92vw,0.88rem)] leading-[1.55] text-slate-400">
+            Different lives. Different problems. One thing in common:{" "}
+            <span className="font-semibold text-white">nobody was holding the continuity. Sakhi does.</span>
+          </p>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ── Slide 2 — Problem + Solution ─────────────────────────────────────────────
 function Slide01ProblemSolution() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1193,7 +1396,7 @@ function SlideGTM() {
 }
 
 // ── Cover slide ───────────────────────────────────────────────────────────────
-function SlideCover({ onEnter, onWatchFounders }: { onEnter: () => void; onWatchFounders?: () => void }) {
+function SlideCover({ onEnter, onWatchFounders: _onWatchFounders }: { onEnter: () => void; onWatchFounders?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -1322,6 +1525,7 @@ function Slide10Beginning() {
 }
 
 const SLIDE_LABELS = [
+  "Three Moments",
   "Problem + Solution",
   "How Sakhi Solves It",
   "Why Now",
@@ -1338,17 +1542,18 @@ const SLIDE_LABELS = [
 function renderSlide(step: number, onEnter: () => void, onWatchStory?: () => void, onWatchFounders?: () => void) {
   switch (step) {
     case 0: return <SlideCover onEnter={onEnter} onWatchFounders={onWatchFounders} />;
-    case 1: return <Slide01ProblemSolution />;
-    case 2: return <Slide02HowItSolves onWatchStory={onWatchStory} />;
-    case 3: return <Slide02Market />;
-    case 4: return <Slide03Gap />;
-    case 5: return <Slide04WhyWeWin />;
-    case 6: return <Slide04Revenue />;
-    case 7: return <Slide05Ask />;
-    case 8: return <SlideGTM />;
-    case 9: return <Slide06FoundersCompact />;
-    case 10: return <Slide02LongGame />;
-    case 11: return <Slide10Beginning />;
+    case 1: return <SlideStories />;
+    case 2: return <Slide01ProblemSolution />;
+    case 3: return <Slide02HowItSolves onWatchStory={onWatchStory} />;
+    case 4: return <Slide02Market />;
+    case 5: return <Slide03Gap />;
+    case 6: return <Slide04WhyWeWin />;
+    case 7: return <Slide04Revenue />;
+    case 8: return <Slide05Ask />;
+    case 9: return <SlideGTM />;
+    case 10: return <Slide06FoundersCompact />;
+    case 11: return <Slide02LongGame />;
+    case 12: return <Slide10Beginning />;
     default: return null;
   }
 }
@@ -1445,6 +1650,11 @@ export function CompanyDeck() {
         </div>
         {/* Controls */}
         <div className="flex items-center gap-2">
+          {step > 0 && (
+            <div className="px-2 text-[11px] font-medium tracking-[0.22em] text-white/30">
+              {step} / {TOTAL}
+            </div>
+          )}
           <button
             type="button"
             onClick={toggleFullscreen}
@@ -1509,13 +1719,6 @@ export function CompanyDeck() {
             <path d="M9 6l6 6-6 6" />
           </svg>
         </button>
-      )}
-
-      {/* Bottom step counter — hidden on cover */}
-      {step > 0 && (
-        <div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2 text-[11px] font-medium tracking-[0.22em] text-white/20">
-          {step} / {TOTAL}
-        </div>
       )}
 
       {/* Story overlay */}

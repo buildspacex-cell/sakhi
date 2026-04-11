@@ -41,7 +41,7 @@ export default function HomePage() {
             margin: "0 0 36px 0",
           }}
         >
-          Who Sakhi is for — first
+          Who Sakhi is for first
         </h1>
 
         <ul style={{ listStyle: "none", padding: 0, margin: "0 0 48px 0" }}>
@@ -63,7 +63,7 @@ export default function HomePage() {
               marginBottom: "20px",
             }}
           >
-            Their weekly problem isn’t productivity — it’s losing clarity under sustained responsibility.
+            Their weekly problem isn’t productivity. It’s losing clarity under sustained responsibility.
           </li>
           <li
             style={{
