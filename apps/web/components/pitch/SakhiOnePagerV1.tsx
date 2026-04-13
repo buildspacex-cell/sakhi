@@ -144,7 +144,7 @@ export default function SakhiOnePagerV1() {
                 {[
                   { tag: "Model Shift", body: "AI can now hold conversations rich enough to make a continuity layer possible." },
                   { tag: "Behavior Shift", body: "People now externalize thoughts and decisions into AI as a natural behavior." },
-                  { tag: "Category Gap", body: "Notes apps store. AI chats respond. Nobody compounds thought over time." },
+                  { tag: "Category Gap", body: "Notes app stores. AI chat responds. Nobody compounds thought over time." },
                 ].map((w) => (
                   <div key={w.tag} className="flex gap-2 text-[0.83rem] leading-[1.5]">
                     <span className="w-[6.5rem] shrink-0 font-semibold text-emerald-400/70">{w.tag}:</span>
@@ -165,7 +165,7 @@ export default function SakhiOnePagerV1() {
                   { tier: "Collective · $30/user/mo", desc: "Continuity across people. Year 2." },
                 ].map((t) => (
                   <div key={t.tier} className="flex gap-2.5 text-[0.83rem] leading-[1.5]">
-                    <span className="shrink-0 font-semibold text-white/65 w-[9.5rem]">{t.tier}</span>
+                    <span className="shrink-0 font-semibold text-white/65 w-[7rem] sm:w-[9.5rem]">{t.tier}</span>
                     <span className="text-slate-500">{t.desc}</span>
                   </div>
                 ))}
@@ -173,6 +173,49 @@ export default function SakhiOnePagerV1() {
               <p className="mt-2 text-[0.83rem] font-semibold text-[#8cb7ff]/70">
                 Not a subscription for usage. A subscription for thinking that compounds.
               </p>
+            </section>
+
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div className="flex flex-col justify-between gap-4">
+
+            {/* Metrics */}
+            <section>
+              <div className="mb-1.5 inline-flex items-center rounded-full border border-amber-400/20 bg-amber-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-amber-400/70">12-Month Targets</div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { val: "10K+", label: "Active users" },
+                  { val: "2K+", label: "Paying" },
+                  { val: "$35–40K", label: "MRR" },
+                ].map((m) => (
+                  <div key={m.label} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-2 py-2 sm:px-3 sm:py-2.5 text-center">
+                    <div className="text-[1rem] sm:text-[1.2rem] font-bold tracking-[-0.04em] text-white">{m.val}</div>
+                    <div className="mt-0.5 text-[7px] sm:text-[8px] font-semibold uppercase tracking-[0.12em] sm:tracking-[0.16em] text-white/35">{m.label}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[0.76rem] text-slate-500">60%+ Day-90 retention. Seed: Month 12–15 · $4–5M · $15–20M valuation.</p>
+            </section>
+
+            {/* The Ask */}
+            <section className="rounded-2xl border border-[#8cb7ff]/15 bg-[#8cb7ff]/[0.04] px-4 py-3.5">
+              <div className="mb-1 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/60">Pre-Seed Ask</div>
+              <div className="text-[clamp(1.4rem,5vw,2rem)] font-bold leading-none tracking-[-0.06em] text-white">$1,250,000</div>
+              <p className="mt-1.5 text-[0.83rem] leading-[1.55] text-slate-400">To prove continuity becomes a retained consumer behavior and a real subscription business.</p>
+              <div className="mt-2.5 grid grid-cols-1 gap-y-1 sm:grid-cols-2 sm:gap-x-4">
+                {[
+                  { label: "Product + Engineering", amt: "$600K · 48%" },
+                  { label: "Growth", amt: "$275K · 22%" },
+                  { label: "Runway + Buffer", amt: "$250K · 20%" },
+                  { label: "Legal + Ops", amt: "$125K · 10%" },
+                ].map((a) => (
+                  <div key={a.label} className="flex justify-between text-[0.76rem]">
+                    <span className="text-slate-500">{a.label}</span>
+                    <span className="font-semibold text-white/45">{a.amt}</span>
+                  </div>
+                ))}
+              </div>
             </section>
 
             {/* CTAs */}
@@ -199,49 +242,6 @@ export default function SakhiOnePagerV1() {
                 <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current shrink-0" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
               </a>
             </div>
-
-          </div>
-
-          {/* RIGHT COLUMN */}
-          <div className="flex flex-col justify-between gap-4">
-
-            {/* Metrics */}
-            <section>
-              <div className="mb-1.5 inline-flex items-center rounded-full border border-amber-400/20 bg-amber-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-amber-400/70">12-Month Targets</div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { val: "10K+", label: "Active users" },
-                  { val: "2K+", label: "Paying" },
-                  { val: "$35–40K", label: "MRR" },
-                ].map((m) => (
-                  <div key={m.label} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 text-center">
-                    <div className="text-[1.2rem] font-bold tracking-[-0.04em] text-white">{m.val}</div>
-                    <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-white/35">{m.label}</div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-1.5 text-[0.76rem] text-slate-500">60%+ Day-90 retention. Seed: Month 12–15 · $4–5M · $15–20M valuation.</p>
-            </section>
-
-            {/* The Ask */}
-            <section className="rounded-2xl border border-[#8cb7ff]/15 bg-[#8cb7ff]/[0.04] px-4 py-3.5">
-              <div className="mb-1 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/60">Pre-Seed Ask</div>
-              <div className="text-[2rem] font-bold leading-none tracking-[-0.06em] text-white">$1,250,000</div>
-              <p className="mt-1.5 text-[0.83rem] leading-[1.55] text-slate-400">To prove continuity becomes a retained consumer behavior and a real subscription business.</p>
-              <div className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-1">
-                {[
-                  { label: "Product + Engineering", amt: "$600K · 48%" },
-                  { label: "Growth", amt: "$275K · 22%" },
-                  { label: "Runway + Buffer", amt: "$250K · 20%" },
-                  { label: "Legal + Ops", amt: "$125K · 10%" },
-                ].map((a) => (
-                  <div key={a.label} className="flex justify-between text-[0.76rem]">
-                    <span className="text-slate-500">{a.label}</span>
-                    <span className="font-semibold text-white/45">{a.amt}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
 
           </div>
         </div>

@@ -163,7 +163,7 @@ function SlideStories() {
         {/* Header */}
         <div className="st-item shrink-0">
           <p className="text-[clamp(0.82rem,1vw,0.9rem)] text-slate-500 leading-[1.6]">
-            Notes apps store. AI chats respond. Nobody compounds thought over time.
+            Notes app stores. AI chat responds. Nobody compounds thought over time.
           </p>
           <h2 className={DECK_TITLE_CLASS}>
             Sakhi is the continuity layer for the human mind.{" "}
@@ -253,8 +253,8 @@ function Slide01ProblemSolution() {
         </div>
 
         {/* Gap — aligned rows */}
-        <div className="cd1-item shrink-0 overflow-x-auto rounded-2xl border border-white/[0.07] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="min-w-[520px]">
+        <div className="cd1-item shrink-0 rounded-2xl border border-white/[0.07]">
+          <div>
           {/* Column headers */}
           <div className="grid grid-cols-[1fr_1px_1fr]">
             <div className="bg-emerald-950/20 px-4 py-3 sm:px-6">
@@ -559,7 +559,7 @@ function Slide02Market() {
           {[
             { num: "1", label: "The primitives are finally here", tag: "Model Shift", body: "AI can now hold conversations that are richer in thought and nuance, making a continuity layer possible for the first time." },
             { num: "2", label: "People now think out loud with AI", tag: "Behavior Shift", body: "People now externalize thoughts, dilemmas, and emotions into AI as a natural behavior. Something that barely existed 2–3 years ago." },
-            { num: "3", label: "No one owns continuity", tag: "Category Gap", body: "Notes apps store. AI chats respond. Nobody compounds thought over time." },
+            { num: "3", label: "No one owns continuity", tag: "Category Gap", body: "Notes app stores. AI chat responds. Nobody compounds thought over time." },
           ].map((w) => (
             <div key={w.num} className="rounded-2xl border border-[#8cb7ff]/12 bg-[#8cb7ff]/[0.04] px-4 py-4">
               <div className="mb-1.5 flex items-center gap-2">
@@ -1526,8 +1526,8 @@ function Slide10Beginning() {
 }
 
 const SLIDE_LABELS = [
-  "Three Moments",
   "Problem + Solution",
+  "Three Moments",
   "How Sakhi Solves It",
   "Why Now",
   "Why It Doesn't Exist",
@@ -1543,8 +1543,8 @@ const SLIDE_LABELS = [
 function renderSlide(step: number, onEnter: () => void, onWatchStory?: () => void, onWatchFounders?: () => void) {
   switch (step) {
     case 0: return <SlideCover onEnter={onEnter} onWatchFounders={onWatchFounders} />;
-    case 1: return <SlideStories />;
-    case 2: return <Slide01ProblemSolution />;
+    case 1: return <Slide01ProblemSolution />;
+    case 2: return <SlideStories />;
     case 3: return <Slide02HowItSolves onWatchStory={onWatchStory} />;
     case 4: return <Slide02Market />;
     case 5: return <Slide03Gap />;
