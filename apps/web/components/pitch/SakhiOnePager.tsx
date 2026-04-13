@@ -18,12 +18,11 @@ export default function SakhiOnePager() {
 
         <div className="h-px bg-white/[0.07] shrink-0" />
 
-        {/* Experience — full-width 3-col row */}
+        {/* Experience — two proof stories */}
         <section className="shrink-0">
           <div className="mb-2 inline-flex items-center rounded-full border border-teal-400/20 bg-teal-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-teal-400/70">Experience</div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.6fr_1fr]">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
 
-            {/* Health — hero story */}
             <div className="rounded-lg border border-teal-400/[0.15] bg-teal-400/[0.03] px-4 py-3.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-teal-400/50 shrink-0" />
@@ -62,59 +61,36 @@ export default function SakhiOnePager() {
               <p className="mt-2.5 text-[0.76rem] font-semibold text-teal-400/60">Continuity held eight months together. The answer was already there.</p>
             </div>
 
-            {/* Ambition + Life — compact stack */}
-            <div className="flex flex-col gap-2">
-
-              <div className="flex-1 rounded-lg border border-amber-400/[0.12] bg-amber-400/[0.02] px-3 py-2.5">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400/50 shrink-0" />
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-amber-400/70">Ambition · Marcus</span>
-                </div>
-                <p className="text-[0.75rem] leading-[1.5] text-slate-400">Every variable. Every protocol. Performance still swings.</p>
-                <div className="my-1.5 rounded border border-white/[0.05] bg-white/[0.02] px-2 py-1.5 flex flex-col gap-1">
-                  {[
-                    { label: "Best games", tags: ["Strength + sleep stable"] },
-                    { label: "Flat games", tags: ["Agility only"] },
-                  ].map((row) => (
-                    <div key={row.label} className="flex items-center gap-1.5">
-                      <span className="w-[4.2rem] shrink-0 text-[0.6rem] font-semibold text-amber-400/50">{row.label}</span>
-                      <div className="flex gap-1">
-                        {row.tags.map((tag) => (
-                          <span key={tag} className="rounded px-1.5 py-0.5 text-[0.6rem] font-medium bg-amber-400/[0.07] text-amber-300/60">{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[0.75rem] leading-[1.5] text-slate-400">Sleep stops being optional. His game shifts.</p>
-                <p className="mt-1.5 text-[0.7rem] font-semibold text-amber-400/60">Continuity across months found what one session never could.</p>
+            <div className="rounded-lg border border-purple-400/[0.12] bg-purple-400/[0.02] px-4 py-3.5">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-400/50 shrink-0" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-purple-400/70">Life · Nadia</span>
               </div>
-
-              <div className="flex-1 rounded-lg border border-purple-400/[0.12] bg-purple-400/[0.02] px-3 py-2.5">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400/50 shrink-0" />
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-purple-400/70">Life · Nadia</span>
-                </div>
-                <p className="text-[0.75rem] leading-[1.5] text-slate-400">Father. Accident. She doesn&apos;t stop. She just starts disappearing.</p>
-                <div className="my-1.5 rounded border border-white/[0.05] bg-white/[0.02] px-2 py-1.5 flex flex-col gap-1">
-                  {[
-                    { label: "Before", tags: ["Grounded", "Leading well"] },
-                    { label: "Now",    tags: ["Sleep gone", "Slipping"] },
-                  ].map((row) => (
-                    <div key={row.label} className="flex items-center gap-1.5">
-                      <span className="w-[4.2rem] shrink-0 text-[0.6rem] font-semibold text-purple-400/50">{row.label}</span>
-                      <div className="flex gap-1">
-                        {row.tags.map((tag) => (
-                          <span key={tag} className="rounded px-1.5 py-0.5 text-[0.6rem] font-medium bg-purple-400/[0.07] text-purple-300/60">{tag}</span>
-                        ))}
-                      </div>
+              <p className="text-[0.84rem] leading-[1.65] text-slate-400">
+                Her father suffers a TBI. Weeks in the ICU. Her days collapse into hospital rounds, doctor calls, and late-night updates. Work, kids, meals, sleep, all start slipping.
+              </p>
+              <p className="mt-2 text-[0.84rem] leading-[1.6] text-slate-400">
+                Then she starts waking at 2 a.m. with her heart racing. She doesn&apos;t understand why it&apos;s happening. She opens Sakhi: <span className="italic">&ldquo;I&apos;m not giving up. I&apos;m doing everything I can to keep things going. What&apos;s happening at night? Why do I wake up in a panic?&rdquo;</span>
+              </p>
+              <div className="my-2.5 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2 flex flex-col gap-1.5">
+                {[
+                  { label: "Before", tags: ["Work steady", "Kids covered", "Sleeping normally"] },
+                  { label: "Now", tags: ["ICU first", "Sleep gone", "Waking panicked"] },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-center gap-1.5">
+                    <span className="w-[4.8rem] shrink-0 text-[0.6rem] font-semibold text-purple-400/50">{row.label}</span>
+                    <div className="flex gap-1 flex-wrap">
+                      {row.tags.map((tag) => (
+                        <span key={tag} className="rounded px-1.5 py-0.5 text-[0.6rem] font-medium bg-purple-400/[0.07] text-purple-300/60">{tag}</span>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <p className="text-[0.75rem] leading-[1.5] text-slate-400">Morning walks had steadied her once. She wrote it. Sakhi held it. <span className="italic">&ldquo;This brought you back before.&rdquo;</span></p>
-                <p className="mt-1.5 text-[0.7rem] font-semibold text-purple-400/60">Continuity held what she wrote, until she needed it back.</p>
+                  </div>
+                ))}
               </div>
-
+              <p className="text-[0.84rem] leading-[1.6] text-slate-400">
+                Sakhi doesn&apos;t invent an answer. It brings back what helped the last time her system went off balance: morning walks, yoga, and the notes she wrote when she finally started to steady.
+              </p>
+              <p className="mt-2.5 text-[0.76rem] font-semibold text-purple-400/60">Continuity held the path back, until she needed it again.</p>
             </div>
 
           </div>

@@ -140,14 +140,15 @@ function SlideStories() {
       scene: (
         <div className="flex flex-col gap-2 flex-1">
           <p className={S}>Nadia leads a SaaS company. Two kids. Ageing parents.</p>
-          <p className={S}>Her father has an accident. TBI. Weeks in hospital. She doesn&rsquo;t stop. She just starts disappearing.</p>
-          <p className={S}>She opens Sakhi. &ldquo;Why do I feel like I&rsquo;m failing everything?&rdquo;</p>
+          <p className={S}>Her father has an accident. TBI. Weeks in the ICU. Her days collapse into hospital rounds, doctor calls, and late-night updates. Work, kids, meals, sleep, all start slipping.</p>
+          <p className={S}>Then she starts waking at 2 a.m. with her heart racing. She doesn&rsquo;t understand why it&rsquo;s happening.</p>
+          <p className={S}>She opens Sakhi. &ldquo;I&rsquo;m not giving up. I&rsquo;m doing everything I can to keep things going. What&rsquo;s happening at night? Why do I wake up in a panic?&rdquo;</p>
           <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
-            <PatternRow label="Before" accent="#c084fc" items={["All threads balanced", "Grounded", "Leading well"]} />
-            <PatternRow label="Now" accent="#c084fc" items={["Tilted to caregiving", "Sleep gone", "Everything slipping"]} />
+            <PatternRow label="Before" accent="#c084fc" items={["Work steady", "Kids covered", "Sleeping normally"]} />
+            <PatternRow label="Now" accent="#c084fc" items={["ICU first", "Sleep gone", "Waking panicked"]} />
           </div>
-          <p className={S}>Three months ago, her 30-minute morning walks had become the thing that steadied her through a hard stretch at work. She had written about it once. Sakhi held it.</p>
-          <p className={DLG}>&ldquo;This brought you back before. It can again.&rdquo;</p>
+          <p className={S}>Three months earlier, morning walks and yoga had steadied her during another stretch of overload. She had written about both. Sakhi brings them back.</p>
+          <p className={DLG}>&ldquo;The last time your system went off balance, walking and yoga helped steady you. Start there.&rdquo;</p>
           <p className={PAYOFF}>Not generic advice. Her answer, from her own history.</p>
         </div>
       ),
