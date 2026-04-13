@@ -18,6 +18,40 @@ export default function SakhiOnePager() {
 
         <div className="h-px bg-white/[0.07] shrink-0" />
 
+        {/* Problem + Solution — two columns */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8 shrink-0">
+
+          {/* Problem */}
+          <section>
+            <div className="mb-1.5 inline-flex items-center rounded-full border border-rose-400/20 bg-rose-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-rose-400/70">Problem</div>
+            <p className="text-[0.86rem] leading-[1.6] text-slate-400">
+              ChatGPT and Claude respond, and they remember context. But they don't carry your discussions forward over time.
+            </p>
+            <p className="mt-1.5 text-[0.86rem] leading-[1.6] text-slate-400">
+              Continuity depends on you. You have to maintain the thread.
+            </p>
+            <p className="mt-1.5 text-[0.86rem] leading-[1.6] text-slate-400">
+              Come back later, rewrite the prompt, restate the context. Sometimes it works. Often it doesn't.
+            </p>
+            <p className="mt-1.5 text-[0.84rem] font-semibold text-white/40">So nothing really builds. Patterns are missed, and the answer never really becomes yours.</p>
+          </section>
+
+          {/* Solution */}
+          <section>
+            <div className="mb-1.5 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/70">Solution</div>
+            <p className="text-[0.86rem] leading-[1.6] text-slate-400">
+              Sakhi carries the thread. Across days, across topics, it tracks where your discussions go and knows which parts matter to what you're asking now.
+            </p>
+            <p className="mt-1.5 text-[0.86rem] leading-[1.6] text-slate-400">
+              You don't restate. You don't restructure. You just continue.
+            </p>
+            <p className="mt-1.5 text-[0.84rem] font-semibold text-[#8cb7ff]/80">The answer becomes yours.</p>
+          </section>
+
+        </div>
+
+        <div className="h-px bg-white/[0.07] shrink-0" />
+
         {/* Experience — two proof stories */}
         <section className="shrink-0">
           <div className="mb-2 inline-flex items-center rounded-full border border-teal-400/20 bg-teal-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-teal-400/70">Experience</div>
@@ -104,24 +138,6 @@ export default function SakhiOnePager() {
           {/* LEFT COLUMN */}
           <div className="flex flex-col justify-between gap-4">
 
-            {/* Problem */}
-            <section>
-              <div className="mb-1.5 inline-flex items-center rounded-full border border-rose-400/20 bg-rose-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-rose-400/70">Problem</div>
-              <p className="text-[0.86rem] leading-[1.6] text-slate-400">
-                Smart people make bad decisions and execute inconsistently. Not from lack of intelligence — their thinking fragments. Money leaks. Performance slips. Clarity fades.
-              </p>
-              <p className="mt-1.5 text-[0.84rem] font-semibold text-white/40">Every tool compounds progress in the outside world. None compound your thinking.</p>
-            </section>
-
-            {/* Solution */}
-            <section>
-              <div className="mb-1.5 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/70">Solution</div>
-              <p className="text-[0.86rem] leading-[1.6] text-slate-400">
-                Sakhi keeps your thoughts connected across time. Captures what matters, brings it back when it matters, helps you continue instead of restart.
-              </p>
-              <p className="mt-1.5 text-[0.84rem] font-semibold text-[#8cb7ff]/80">Your thinking compounds.</p>
-            </section>
-
             {/* Why Now */}
             <section>
               <div className="mb-1.5 inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-emerald-400/70">Why Now</div>
@@ -138,6 +154,26 @@ export default function SakhiOnePager() {
                 ))}
               </div>
               <p className="mt-1.5 text-[0.76rem] text-slate-500 italic">Nobody owns the continuity layer. That gap is the company.</p>
+            </section>
+
+            {/* Business Model */}
+            <section>
+              <div className="mb-1.5 inline-flex items-center rounded-full border border-violet-400/20 bg-violet-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-violet-400/70">Business Model</div>
+              <div className="space-y-1.5">
+                {[
+                  { tier: "Free", desc: "Limited continuity." },
+                  { tier: "Pro · $20/mo", desc: "Full continuity across time. Your thinking compounds." },
+                  { tier: "Collective · $30/user/mo", desc: "Continuity across people. Year 2." },
+                ].map((t) => (
+                  <div key={t.tier} className="flex gap-2.5 text-[0.83rem] leading-[1.5]">
+                    <span className="shrink-0 font-semibold text-white/65 w-[9.5rem]">{t.tier}</span>
+                    <span className="text-slate-500">{t.desc}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[0.83rem] font-semibold text-[#8cb7ff]/70">
+                Not a subscription for usage. A subscription for thinking that compounds.
+              </p>
             </section>
 
             {/* CTAs */}
@@ -206,26 +242,6 @@ export default function SakhiOnePager() {
                   </div>
                 ))}
               </div>
-            </section>
-
-            {/* Business Model */}
-            <section>
-              <div className="mb-1.5 inline-flex items-center rounded-full border border-violet-400/20 bg-violet-400/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-violet-400/70">Business Model</div>
-              <div className="space-y-1.5">
-                {[
-                  { tier: "Free", desc: "Limited continuity." },
-                  { tier: "Pro · $20/mo", desc: "Full continuity across time. Your thinking compounds." },
-                  { tier: "Collective · $30/user/mo", desc: "Continuity across people. Year 2." },
-                ].map((t) => (
-                  <div key={t.tier} className="flex gap-2.5 text-[0.83rem] leading-[1.5]">
-                    <span className="shrink-0 font-semibold text-white/65 w-[9.5rem]">{t.tier}</span>
-                    <span className="text-slate-500">{t.desc}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-[0.83rem] font-semibold text-[#8cb7ff]/70">
-                Not a subscription for usage. A subscription for thinking that compounds.
-              </p>
             </section>
 
           </div>
