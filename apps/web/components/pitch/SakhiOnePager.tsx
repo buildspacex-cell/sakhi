@@ -51,7 +51,7 @@ export default function SakhiOnePager() {
             <div className="rounded-lg border border-teal-400/[0.15] bg-teal-400/[0.03] px-4 py-3.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-teal-400/50 shrink-0" />
-                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-teal-400/70">Health · Priya</span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-teal-400/70">Health · Sarah</span>
               </div>
               <p className="text-[0.84rem] leading-[1.65] text-slate-400">
                 She described what she&apos;d been feeling. Vaguely, because she didn&apos;t have the pattern yet. Routine tests. Nothing conclusive.
@@ -89,7 +89,7 @@ export default function SakhiOnePager() {
             <div className="rounded-lg border border-purple-400/[0.12] bg-purple-400/[0.02] px-4 py-3.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-purple-400/50 shrink-0" />
-                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-purple-400/70">Life · Nadia</span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-purple-400/70">Life · Kate</span>
               </div>
               <p className="text-[0.84rem] leading-[1.65] text-slate-400">
                 Her father suffers a TBI. Weeks in the ICU. Her days collapse into hospital rounds, doctor calls, and late-night updates. Work, kids, meals, sleep, all start slipping.

@@ -82,7 +82,7 @@ function SlideStories() {
   const stories: Story[] = [
     {
       domain: "Health",
-      tag: "Health · Priya",
+      tag: "Health · Sarah",
       trigger: "Leaving a doctor's office still confused",
       accent: "#2dd4bf",
       dim: "rgba(45,212,191,0.06)",
@@ -90,7 +90,7 @@ function SlideStories() {
       dot: "bg-teal-400/50",
       scene: (
         <div className="flex flex-col gap-2 flex-1">
-          <p className={S}>Priya describes what she&rsquo;s been feeling. Vaguely, because she doesn&rsquo;t have the pattern yet. Routine tests. Nothing conclusive.</p>
+          <p className={S}>Sarah describes what she&rsquo;s been feeling. Vaguely, because she doesn&rsquo;t have the pattern yet. Routine tests. Nothing conclusive.</p>
           <p className={S}>That night, she opens Sakhi. Eight months of health, sleep, and energy threads, held together while she lived them. She sees it for the first time.</p>
           <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
             <PatternRow label="Month 1" accent="#2dd4bf" items={["Sleep down", "Fatigue up", "Cycle delay"]} singleLineLabel noWrapItems />
@@ -131,7 +131,7 @@ function SlideStories() {
     },
     {
       domain: "Life",
-      tag: "Life · Nadia",
+      tag: "Life · Kate",
       trigger: "Holding everything together, until you can't",
       accent: "#c084fc",
       dim: "rgba(192,132,252,0.06)",
@@ -139,7 +139,7 @@ function SlideStories() {
       dot: "bg-purple-400/50",
       scene: (
         <div className="flex flex-col gap-2 flex-1">
-          <p className={S}>Nadia leads a SaaS company. Two kids. Ageing parents.</p>
+          <p className={S}>Kate leads a SaaS company. Two kids. Ageing parents.</p>
           <p className={S}>Her father has an accident. TBI. Weeks in the ICU. Her days collapse into hospital rounds, doctor calls, and late-night updates. Work, kids, meals, sleep, all start slipping.</p>
           <p className={S}>Then she starts waking at 2 a.m. with her heart racing. She doesn&rsquo;t understand why it&rsquo;s happening.</p>
           <p className={S}>She opens Sakhi. &ldquo;I&rsquo;m not giving up. I&rsquo;m doing everything I can to keep things going. What&rsquo;s happening at night? Why do I wake up in a panic?&rdquo;</p>
