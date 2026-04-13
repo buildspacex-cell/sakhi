@@ -231,12 +231,6 @@ function Slide01ProblemSolution() {
     return () => ctx.revert();
   }, []);
 
-  const rows = [
-    { physical: "Mapped",  physicalDetail: "GPS, roads, infrastructure",       inner: "Bad Decisions", innerDetail: "No context from last week. Same mistakes. Loops that never close." },
-    { physical: "Managed", physicalDetail: "Calendars, schedules, commitments", inner: "Inconsistent Execution", innerDetail: "Strong start, lost thread. Priorities shift. Nothing compounds." },
-    { physical: "Tracked", physicalDetail: "Steps, sleep, spending",            inner: "No Self-Knowledge",  innerDetail: "Patterns stay invisible. Growth stalls. The same year, repeated." },
-  ];
-
   return (
     <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-14 pb-20 sm:px-12 sm:pt-14 sm:pb-6 lg:px-16 lg:pt-12 lg:pb-8">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5">
@@ -258,13 +252,13 @@ function Slide01ProblemSolution() {
           <div className="grid grid-cols-3">
             {[
               { label: "Patterns missed", body: "Recurring signals across your discussions never surface. You repeat the same loops." },
-              { label: "Connections lost", body: "What you figured out last week doesn&apos;t inform what you&apos;re deciding today." },
-              { label: "Never becomes yours", body: "The answer is generic. It could be anyone&apos;s. Your sequence, your story, is invisible." },
+              { label: "Connections lost", body: "What you figured out last week doesn't inform what you're deciding today." },
+              { label: "Never becomes yours", body: "The answer is generic. It could be anyone's. Your sequence, your story, is invisible." },
             ].map((item, i) => (
               <div key={item.label} className={`px-5 py-4 ${i < 2 ? "border-r border-white/[0.06]" : ""}`}>
                 <span className="h-1.5 w-1.5 rounded-full bg-rose-400/40 block mb-2" />
                 <p className="text-[0.82rem] font-semibold text-white/65 mb-1">{item.label}</p>
-                <p className="text-[0.78rem] text-slate-500 leading-[1.55]" dangerouslySetInnerHTML={{ __html: item.body }} />
+                <p className="text-[0.78rem] text-slate-500 leading-[1.55]">{item.body}</p>
               </div>
             ))}
           </div>
