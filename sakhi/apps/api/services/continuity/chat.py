@@ -60,7 +60,7 @@ async def build_continuity_pack(
     user_text: str,
     *,
     topic_key: str | None = None,
-    window: str = "120d",
+    window: str = "180d",
     evidence_limit: int = 8,
     scope: str = CONTINUITY_SCOPE,
 ) -> dict[str, Any] | None:

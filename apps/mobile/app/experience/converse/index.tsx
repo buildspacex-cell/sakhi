@@ -21,8 +21,11 @@ import { trackSupportDebugEvent, type SupportDebugEventInput } from "../../../li
 import { Analytics } from "../../../lib/analytics/events";
 import { theme } from "../../../lib/theme/tokens";
 import { useAppPreferences } from "../../../lib/preferences/AppPreferencesContext";
+import { useOffload } from "../../../lib/offload/OffloadContext";
+import { MOBILE_CONTINUITY_PLAN } from "../../../lib/continuity/plan";
 import { useAppHaptics } from "../../../lib/feedback/useAppHaptics";
 import { LoadingBlock } from "../../../components/ui/LoadingBlock";
+import { SakhiBrandMark } from "../../../components/brand/SakhiBrandMark";
 
 interface Message {
   id: string;
@@ -140,11 +143,64 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function formatOffloadTimestamp(iso: string): string {
+  const created = new Date(iso);
+  if (Number.isNaN(created.getTime())) return "";
+
+  const diffMs = Date.now() - created.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return created.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function getOffloadStatusLabel(status: string): string {
+  switch (status) {
+    case "saved":
+      return "Saved";
+    case "saved_offline":
+      return "Saved offline";
+    case "syncing":
+      return "Syncing...";
+    case "synced":
+      return "Synced";
+    case "needs_retry":
+      return "Needs retry";
+    default:
+      return status;
+  }
+}
+
+function getModeMeta(mode: "talk" | "offload") {
+  if (mode === "offload") {
+    return {
+      title: "A quiet space to stay with what matters.",
+      backdrop: "offload" as const,
+      mode: "offload" as const,
+    };
+  }
+
+  return {
+    title: "A quiet space to stay with what matters.",
+    backdrop: "talk" as const,
+    mode: "talk" as const,
+  };
+}
+
 export default function ConversationScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ user?: string; name?: string }>();
+  const params = useLocalSearchParams<{ user?: string; name?: string; mode?: string }>();
   const { user, session, signOut, isLoading: isAuthLoading } = useAuth();
-  const { preferences } = useAppPreferences();
+  const { preferences, setLastEntryMode } = useAppPreferences();
+  const {
+    items: offloadItems,
+    connectivity,
+    isSyncing: isOffloadSyncing,
+    saveOffload,
+    syncPending,
+  } = useOffload();
   const haptics = useAppHaptics();
   const scrollViewRef = useRef<ScrollView>(null);
   const debugSequenceRef = useRef(0);
@@ -160,12 +216,15 @@ export default function ConversationScreen() {
   const [latestUserMessage, setLatestUserMessage] = useState("");
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isSavingOffload, setIsSavingOffload] = useState(false);
 
   const routePersonId = typeof params.user === "string" ? params.user.trim() : "";
   const routeName = typeof params.name === "string" ? params.name.trim() : "";
+  const routeMode = params.mode === "offload" ? "offload" : "talk";
   const personId = user?.personId || routePersonId;
   const authToken = session?.access_token || "";
   const backendConfigured = BACKEND_URL.length > 0;
+  const isOffloadMode = routeMode === "offload";
 
   const emitDebugEvent = useCallback(
     (event: SupportDebugEventInput) => {
@@ -185,12 +244,21 @@ export default function ConversationScreen() {
   );
 
   useEffect(() => {
+    if (preferences.lastEntryMode === routeMode) {
+      return;
+    }
+    setLastEntryMode(routeMode);
+  }, [preferences.lastEntryMode, routeMode, setLastEntryMode]);
+
+  useEffect(() => {
     emitDebugEvent({
       type: "screen_view",
-      name: "chat_opened",
-      screen: "chat",
-      route: "/mobile/chat",
-      metadata: { has_messages: messages.length > 0 },
+      name: isOffloadMode ? "offload_opened" : "chat_opened",
+      screen: isOffloadMode ? "offload" : "chat",
+      route: isOffloadMode ? "/mobile/offload" : "/mobile/chat",
+      metadata: {
+        has_messages: isOffloadMode ? offloadItems.length > 0 : messages.length > 0,
+      },
     });
     // fire once on screen mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -205,6 +273,9 @@ export default function ConversationScreen() {
   }, [messages]);
 
   useEffect(() => {
+    if (isOffloadMode) {
+      return;
+    }
     if (isAuthLoading) {
       return;
     }
@@ -279,7 +350,7 @@ export default function ConversationScreen() {
     return () => {
       cancelled = true;
     };
-  }, [authToken, isAuthLoading, personId]);
+  }, [authToken, isAuthLoading, isOffloadMode, personId]);
 
   const deepReflectSignal = activeContinuitySignal?.deep_reflect;
   const wholeStorySignal = activeContinuitySignal?.whole_story;
@@ -321,8 +392,6 @@ export default function ConversationScreen() {
     return "Good evening";
   };
 
-  const displayName = user?.fullName?.split(" ")[0] || routeName.split(" ")[0] || "";
-
   const ensureContinuityPolicyEnabled = useCallback(async () => {
     if (!personId) return;
     try {
@@ -340,8 +409,11 @@ export default function ConversationScreen() {
   }, [authToken, personId]);
 
   useEffect(() => {
+    if (isOffloadMode) {
+      return;
+    }
     void ensureContinuityPolicyEnabled();
-  }, [ensureContinuityPolicyEnabled]);
+  }, [ensureContinuityPolicyEnabled, isOffloadMode]);
 
   const pollDeepAnswer = useCallback(
     async (reflectionId: string, person: string): Promise<string | null> => {
@@ -628,7 +700,7 @@ export default function ConversationScreen() {
         body: JSON.stringify({
           person_id: personId,
           topic_key: activeContinuitySignal.topic_key,
-          window: "3650d",
+          window: MOBILE_CONTINUITY_PLAN.continuityWindow,
           mode,
           topic_keys: selectedTopics,
           user_query: latestUserMessage.trim(),
@@ -720,6 +792,7 @@ export default function ConversationScreen() {
   }, [
     activeContinuitySignal?.topic_key,
     authToken,
+    deepAnswerReady,
     hasDeepQuery,
     isRunningDeepAnswer,
     latestUserMessage,
@@ -753,10 +826,65 @@ export default function ConversationScreen() {
   );
 
   const hasMessages = messages.length > 0;
+  const displayName = user?.fullName?.split(" ")[0] || routeName.split(" ")[0] || "";
+  const isPrimaryEmpty = isOffloadMode ? offloadItems.length === 0 : !hasMessages;
+  const modeMeta = getModeMeta(routeMode);
+
+  const switchMode = useCallback((mode: "talk" | "offload") => {
+    if (mode === routeMode) return;
+    haptics.selection();
+    setLastEntryMode(mode);
+    router.replace(`/experience/converse?mode=${mode}` as never);
+  }, [haptics, routeMode, router, setLastEntryMode]);
+
+  const handleSaveOffload = useCallback(async () => {
+    const text = inputText.trim();
+    if (!text || !personId || isSavingOffload) return;
+    haptics.press();
+    setIsSavingOffload(true);
+    try {
+      const saved = await saveOffload(text);
+      if (saved) {
+        emitDebugEvent({
+          type: "action",
+          name: "offload_saved",
+          screen: "offload",
+          route: "/mobile/offload",
+          metadata: { sync_status: saved.syncStatus, input_length: text.length },
+        });
+        setInputText("");
+        if (saved.syncStatus === "needs_retry") {
+          void syncPending();
+        }
+      }
+    } finally {
+      setIsSavingOffload(false);
+    }
+  }, [emitDebugEvent, haptics, inputText, isSavingOffload, personId, saveOffload, syncPending]);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
+      <View pointerEvents="none" style={styles.backdropBase}>
+        <View
+          style={[
+            styles.backdropTint,
+            modeMeta.backdrop === "talk" ? styles.backdropTintTalk : styles.backdropTintOffload,
+          ]}
+        />
+        <View
+          style={[
+            styles.backdropGlow,
+            modeMeta.backdrop === "talk" ? styles.backdropGlowTalk : styles.backdropGlowOffload,
+          ]}
+        />
+        <View
+          style={[
+            styles.backdropWash,
+            modeMeta.backdrop === "talk" ? styles.backdropWashTalk : styles.backdropWashOffload,
+          ]}
+        />
+      </View>
 
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -765,6 +893,7 @@ export default function ConversationScreen() {
             {getGreeting()}
             {displayName ? `, ${displayName}` : ""}
           </Text>
+          <Text style={styles.headerSubcopy}>{modeMeta.title}</Text>
         </View>
         <Pressable
           style={styles.accountTrigger}
@@ -780,6 +909,23 @@ export default function ConversationScreen() {
         </Pressable>
       </View>
 
+      {!isOffloadMode && connectivity === "offline" ? (
+        <View style={styles.noticeBanner}>
+          <Text style={styles.noticeBannerText}>
+            You are offline. Switch to Offload to save this without a response.
+          </Text>
+          <Pressable onPress={() => switchMode("offload")}>
+            <Text style={styles.noticeBannerAction}>Switch</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {isOffloadMode && isOffloadSyncing ? (
+        <View style={styles.noticeBanner}>
+          <Text style={styles.noticeBannerText}>Back online. Syncing your offloads...</Text>
+        </View>
+      ) : null}
+
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -788,11 +934,41 @@ export default function ConversationScreen() {
         <ScrollView
           ref={scrollViewRef}
           style={styles.messagesArea}
-          contentContainerStyle={[styles.messagesContent, !hasMessages && styles.messagesContentEmpty]}
+          contentContainerStyle={[styles.messagesContent, isPrimaryEmpty && styles.messagesContentEmpty]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {!hasMessages && !backendConfigured ? (
+          {isOffloadMode ? (
+            offloadItems.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyPrompt}>A private place to put things down.</Text>
+                <Text style={styles.emptyHint}>Nothing is sent back to you here. Offloads are saved and processed quietly.</Text>
+              </View>
+            ) : (
+              <>
+                {offloadItems.map((item) => (
+                  <View key={item.clientId} style={styles.offloadCard}>
+                    <View style={styles.offloadCardHeader}>
+                      <Text style={styles.offloadTimestamp}>{formatOffloadTimestamp(item.createdAt)}</Text>
+                      <View style={[
+                        styles.offloadStatusPill,
+                        item.syncStatus === "needs_retry" && styles.offloadStatusPillWarning,
+                        item.syncStatus === "saved_offline" && styles.offloadStatusPillMuted,
+                      ]}>
+                        <Text style={styles.offloadStatusText}>{getOffloadStatusLabel(item.syncStatus)}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.offloadText}>{item.text}</Text>
+                    {item.syncStatus === "needs_retry" ? (
+                      <Pressable style={styles.offloadRetryButton} onPress={() => void syncPending()}>
+                        <Text style={styles.offloadRetryText}>Retry</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ))}
+              </>
+            )
+          ) : !hasMessages && !backendConfigured ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyPrompt}>This build is not configured yet.</Text>
               <Text style={styles.emptyHint}>Set `EXPO_PUBLIC_BACKEND_URL` before sending chat or opening reflection.</Text>
@@ -877,28 +1053,107 @@ export default function ConversationScreen() {
         </ScrollView>
 
         <View style={styles.inputArea}>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="What's on your mind?"
-              placeholderTextColor={palette.faint}
-              value={inputText}
-              onChangeText={setInputText}
-              onSubmitEditing={sendMessage}
-              returnKeyType="send"
-              multiline={false}
-              editable={!isSending}
-            />
-            {inputText.trim().length > 0 && (
-              <Pressable
-                style={[styles.sendButton, isSending && styles.sendButtonDisabled]}
-                onPress={sendMessage}
-                disabled={isSending}
-              >
-                <Ionicons name="arrow-up" size={20} color="#ffffff" />
-              </Pressable>
-            )}
+          <View
+            style={[
+              styles.footerModeRail,
+              isOffloadMode ? styles.footerModeRailOffload : styles.footerModeRailTalk,
+            ]}
+          >
+            <Pressable
+              style={[
+                styles.footerModePill,
+                !isOffloadMode && styles.footerModePillActive,
+                !isOffloadMode && styles.footerModePillTalkActive,
+              ]}
+              onPress={() => switchMode("talk")}
+            >
+              <View style={styles.footerModePillContent}>
+                <SakhiBrandMark size={18} mode="talk" active={!isOffloadMode} />
+                <Text
+                  style={[
+                    styles.footerModePillText,
+                    !isOffloadMode && styles.footerModePillTextActive,
+                  ]}
+                >
+                  Talk
+                </Text>
+              </View>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.footerModePill,
+                isOffloadMode && styles.footerModePillActive,
+                isOffloadMode && styles.footerModePillOffloadActive,
+              ]}
+              onPress={() => switchMode("offload")}
+            >
+              <View style={styles.footerModePillContent}>
+                <SakhiBrandMark size={18} mode="offload" active={isOffloadMode} />
+                <Text
+                  style={[
+                    styles.footerModePillText,
+                    isOffloadMode && styles.footerModePillTextActive,
+                  ]}
+                >
+                  Offload
+                </Text>
+              </View>
+            </Pressable>
           </View>
+
+          {isOffloadMode ? (
+            <View style={[styles.inputRow, styles.offloadInputRow]}>
+              <TextInput
+                style={[styles.textInput, styles.offloadTextInput]}
+                placeholder="What do you need to put down?"
+                placeholderTextColor={palette.faint}
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+                textAlignVertical="top"
+                editable={!isSavingOffload}
+              />
+              <Pressable
+                style={[
+                  styles.offloadSaveButton,
+                  (!inputText.trim() || isSavingOffload) && styles.sendButtonDisabled,
+                ]}
+                onPress={() => void handleSaveOffload()}
+                disabled={!inputText.trim() || isSavingOffload}
+              >
+                {isSavingOffload ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.offloadSaveButtonText}>
+                    {connectivity === "offline" ? "Save offline" : "Save"}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="What's on your mind?"
+                placeholderTextColor={palette.faint}
+                value={inputText}
+                onChangeText={setInputText}
+                onSubmitEditing={sendMessage}
+                returnKeyType="send"
+                multiline={false}
+                editable={!isSending}
+              />
+              {inputText.trim().length > 0 && (
+                <Pressable
+                  style={[styles.sendButton, isSending && styles.sendButtonDisabled]}
+                  onPress={sendMessage}
+                  disabled={isSending}
+                >
+                  <Ionicons name="arrow-up" size={20} color="#ffffff" />
+                </Pressable>
+              )}
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -924,7 +1179,9 @@ export default function ConversationScreen() {
             >
               <View style={styles.accountItemCopy}>
                 <Text style={styles.accountItemTitle}>Profile</Text>
-                <Text style={styles.accountItemSubtitle}>Reflection and topic story</Text>
+                <Text style={styles.accountItemSubtitle}>
+                  Reflection and topic story across your last {MOBILE_CONTINUITY_PLAN.continuityDays} days
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={palette.muted} />
             </Pressable>
@@ -996,6 +1253,50 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.bg,
   },
+  backdropBase: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+  },
+  backdropTint: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backdropTintTalk: {
+    backgroundColor: "rgba(15, 21, 36, 0.28)",
+  },
+  backdropTintOffload: {
+    backgroundColor: "rgba(23, 21, 16, 0.34)",
+  },
+  backdropGlow: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 200,
+    opacity: 1,
+  },
+  backdropGlowTalk: {
+    top: 56,
+    right: -64,
+    backgroundColor: "rgba(120, 171, 255, 0.2)",
+  },
+  backdropGlowOffload: {
+    top: 110,
+    left: -70,
+    backgroundColor: "rgba(196, 166, 105, 0.18)",
+  },
+  backdropWash: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 300,
+  },
+  backdropWashTalk: {
+    top: 0,
+    backgroundColor: "rgba(31, 49, 81, 0.24)",
+  },
+  backdropWashOffload: {
+    bottom: 0,
+    backgroundColor: "rgba(72, 58, 31, 0.2)",
+  },
   keyboardView: {
     flex: 1,
   },
@@ -1023,6 +1324,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "500",
     color: palette.fg,
+  },
+  headerSubcopy: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    color: palette.muted,
   },
   accountTrigger: {
     flexDirection: "row",
@@ -1103,6 +1410,31 @@ const styles = StyleSheet.create({
   accountItemDangerText: {
     color: "#f8bcc6",
   },
+  noticeBanner: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: theme.colors.surfaceMuted,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  noticeBannerText: {
+    flex: 1,
+    color: palette.muted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  noticeBannerAction: {
+    color: palette.accent,
+    fontSize: 12,
+    fontWeight: "700",
+  },
 
   messagesArea: {
     flex: 1,
@@ -1142,6 +1474,62 @@ const styles = StyleSheet.create({
     color: palette.muted,
     textAlign: "center",
     lineHeight: 20,
+  },
+  offloadCard: {
+    width: "100%",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.cardBg,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 12,
+    gap: 10,
+  },
+  offloadCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  offloadTimestamp: {
+    color: palette.muted,
+    fontSize: 12,
+  },
+  offloadStatusPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+    backgroundColor: palette.accentSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  offloadStatusPillMuted: {
+    borderColor: palette.border,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  offloadStatusPillWarning: {
+    borderColor: "rgba(239, 111, 126, 0.35)",
+    backgroundColor: "rgba(88, 33, 44, 0.36)",
+  },
+  offloadStatusText: {
+    color: palette.fg,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  offloadText: {
+    color: palette.fg,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  offloadRetryButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+  },
+  offloadRetryText: {
+    color: palette.accent,
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   bubble: {
@@ -1241,6 +1629,59 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: palette.border,
   },
+  footerModeRail: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  footerModeRailTalk: {
+    borderColor: "rgba(120, 171, 255, 0.2)",
+    backgroundColor: "rgba(18, 25, 39, 0.9)",
+  },
+  footerModeRailOffload: {
+    borderColor: "rgba(196, 166, 105, 0.22)",
+    backgroundColor: "rgba(31, 26, 19, 0.92)",
+  },
+  footerModePill: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    backgroundColor: "transparent",
+  },
+  footerModePillContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  footerModePillActive: {
+    borderColor: "rgba(245, 248, 255, 0.34)",
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  footerModePillTalkActive: {
+    backgroundColor: "rgba(120, 171, 255, 0.28)",
+    shadowColor: "#6b8dcc",
+  },
+  footerModePillOffloadActive: {
+    backgroundColor: "rgba(196, 166, 105, 0.3)",
+    shadowColor: "#8c7350",
+  },
+  footerModePillText: {
+    color: palette.subtle,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  footerModePillTextActive: {
+    color: palette.fg,
+  },
   deepActionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1318,6 +1759,17 @@ const styles = StyleSheet.create({
     color: palette.fg,
     paddingVertical: 0,
   },
+  offloadInputRow: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    borderRadius: 20,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  offloadTextInput: {
+    minHeight: 108,
+    paddingVertical: 0,
+  },
   sendButton: {
     width: 36,
     height: 36,
@@ -1329,5 +1781,19 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.55,
+  },
+  offloadSaveButton: {
+    minHeight: 44,
+    borderRadius: 999,
+    backgroundColor: palette.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    alignSelf: "flex-end",
+  },
+  offloadSaveButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

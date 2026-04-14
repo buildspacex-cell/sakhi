@@ -17,13 +17,14 @@ async def observe_entry(
     source: str = "conversation",
     clarity_hint: str | None = None,
     created_at: Any = None,
+    entry_id: str | None = None,
 ) -> Dict[str, Any]:
     """
     Minimal journaling observe helper.
     Persists the entry and returns the inserted row (best effort).
     """
 
-    entry_id = str(uuid.uuid4())
+    entry_id = entry_id or str(uuid.uuid4())
     db = await get_db()
     LOGGER.error("[observe_entry] start person_id=%s layer=journal", person_id)
     experience_ts = created_at or None

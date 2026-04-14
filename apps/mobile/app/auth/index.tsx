@@ -70,7 +70,7 @@ export default function AuthScreen() {
           router.replace(`/onboarding?user=${routeUser}&name=${routeName}` as never);
           return;
         }
-        router.replace(`/experience/converse?user=${routeUser}&name=${routeName}` as never);
+        router.replace("/" as never);
       } catch (error) {
         if (cancelled) {
           return;

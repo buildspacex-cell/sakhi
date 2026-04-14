@@ -13,7 +13,7 @@ sakhi-monorepo/
 ├── apps/
 │   ├── demo/                  # Next.js 14 cinematic roadmap demo (App Router)
 │   ├── web/                   # Next.js 14 frontend (App Router)
-│   └── mobile/                # React Native (Expo)
+│   └── mobile/                # React Native (Expo runtime, Fastlane iOS release path)
 ├── packages/
 │   └── narrative/             # Content-only narrative package (@sakhi/narrative)
 ├── sakhi/                     # Python backend (CANONICAL)
@@ -58,7 +58,7 @@ sakhi-monorepo/
 | Run migrations | `make db-migrate` |
 | Build web | `cd apps/web && pnpm build` |
 | Build demo | `cd apps/demo && pnpm build` |
-| Build iOS / TestFlight | `./scripts/ios-build.sh` |
+| Build iOS / TestFlight | `./scripts/ios-build.sh` (`fastlane beta`, not Expo/EAS build) |
 | Dev status dashboard | `make status` |
 | **Quick verification** | `make verify` |
 | **Ready to commit** | `make ready-to-commit` |

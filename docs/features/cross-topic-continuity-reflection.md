@@ -786,6 +786,36 @@ When `whole_story.ready` is false, the button can still appear if `deep_reflect.
 **Correlation lines in Life Occupancy bubble cloud:**
 When two bubbles have `combined_score >= 0.5`, a faint connecting line is drawn between them. Line opacity scales with score. Tapping the line surface shows: correlation type, score, and peak overlap period.
 
+**Sub-thread creation rule for Life Occupancy:**
+Not every detail should become its own bubble. A sub-thread should earn a visible bubble only when it behaves like a distinct, recurring life arena rather than a one-off detail inside a parent thread.
+
+Create a visible sub-thread only when all are true:
+- it is specific enough to stand on its own
+- it recurs across multiple moments over time
+- it carries distinct emotional, logistical, or identity weight
+- it is independently interpretable outside the parent thread
+
+Three product stages:
+- `mention`
+  - isolated detail, remains inside parent thread
+- `candidate_sub_thread`
+  - repeated motif, tracked internally but not surfaced yet
+- `visible_sub_thread`
+  - repeated, consequential, and stable enough to earn its own bubble
+
+Recommended visible threshold:
+- at least `3-5` distinct moments
+- spread across at least `2` different days or sessions
+- plus at least one recurring stake:
+  - planning / logistics
+  - emotional charge
+  - identity signal
+  - tradeoff with another thread
+
+Example:
+- `family` remains the parent thread
+- `daughter_basketball` becomes a visible sub-thread only after it repeatedly shows up as its own pressure, schedule, pride, conflict, or commitment pattern
+
 **"Full Picture" button in thread modal:**
 Below the existing `[ ✦ Basketball Story ]` button:
 ```

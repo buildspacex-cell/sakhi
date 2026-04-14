@@ -21,6 +21,7 @@ import { trackSupportDebugEvent, type SupportDebugEventInput } from "../../lib/s
 import { Analytics } from "../../lib/analytics/events";
 import { theme } from "../../lib/theme/tokens";
 import { useAppHaptics } from "../../lib/feedback/useAppHaptics";
+import { MOBILE_CONTINUITY_PLAN } from "../../lib/continuity/plan";
 import { IconButton } from "../../components/ui/IconButton";
 import { LoadingBlock } from "../../components/ui/LoadingBlock";
 
@@ -478,7 +479,7 @@ export default function TopicReflectionScreen() {
         const params = new URLSearchParams({
           person_id: personId,
           anchor,
-          window: "3650d",
+          window: MOBILE_CONTINUITY_PLAN.continuityWindow,
         });
         const res = await fetch(`${BACKEND_URL}/continuity/arc?${params.toString()}`, {
           cache: "no-store",
@@ -546,7 +547,10 @@ export default function TopicReflectionScreen() {
       route: "/continuity/topics",
       method: "GET",
     });
-    const params = new URLSearchParams({ person_id: personId, window: "3650d" });
+    const params = new URLSearchParams({
+      person_id: personId,
+      window: MOBILE_CONTINUITY_PLAN.continuityWindow,
+    });
     const res = await fetch(`${BACKEND_URL}/continuity/topics?${params.toString()}`, {
       cache: "no-store",
       headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
@@ -673,7 +677,7 @@ export default function TopicReflectionScreen() {
         body: JSON.stringify({
           person_id: personId,
           topic_key: selectedAnchor,
-          window: "3650d",
+          window: MOBILE_CONTINUITY_PLAN.continuityWindow,
           mode: "topic_reflection",
         }),
       });
@@ -1062,7 +1066,7 @@ export default function TopicReflectionScreen() {
           person_id: personId,
           topic_key: primaryTopic,
           topic_keys: myStoryTopicKeys,
-          window: "3650d",
+          window: MOBILE_CONTINUITY_PLAN.continuityWindow,
           mode: "cross_context",
         }),
       });
@@ -1149,8 +1153,13 @@ export default function TopicReflectionScreen() {
         <View style={styles.glassCard}>
           <Text style={styles.cardTitle}>Life Occupancy</Text>
           <Text style={styles.cardSubtitle}>
-            Bubble size reflects how much each thread has occupied your attention.
+            Bubble size reflects how much each thread has occupied your attention in the last {MOBILE_CONTINUITY_PLAN.continuityDays} days.
           </Text>
+          <View style={styles.planBadge}>
+            <Text style={styles.planBadgeText}>
+              {MOBILE_CONTINUITY_PLAN.badge} · {MOBILE_CONTINUITY_PLAN.title}
+            </Text>
+          </View>
 
           {loadingTopics ? (
             <View style={styles.loadingRow}>
@@ -1162,7 +1171,7 @@ export default function TopicReflectionScreen() {
             </View>
           ) : topics.length === 0 ? (
             <Text style={styles.emptyText}>
-              No topic arcs yet. Add more conversation turns and return here.
+              No topic arcs yet in your active {MOBILE_CONTINUITY_PLAN.continuityDays}-day window. Add more conversation turns and return here.
             </Text>
           ) : (
             <View style={styles.topicCloud}>
@@ -1200,7 +1209,9 @@ export default function TopicReflectionScreen() {
 
         <View style={styles.glassCard}>
           <Text style={styles.cardTitle}>My Story</Text>
-          <Text style={styles.cardSubtitle}>Cross-context reflection across your active topics.</Text>
+          <Text style={styles.cardSubtitle}>
+            Cross-context reflection across your active topics from the last {MOBILE_CONTINUITY_PLAN.continuityDays} days.
+          </Text>
           <View style={styles.storyActionBlock}>
             <Pressable
               style={[
@@ -1472,6 +1483,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
     lineHeight: 18,
+  },
+  planBadge: {
+    alignSelf: "flex-start",
+    marginTop: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  planBadgeText: {
+    color: palette.accentText,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   loadingRow: {
     paddingVertical: 22,

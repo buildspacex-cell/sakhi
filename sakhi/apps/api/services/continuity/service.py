@@ -55,6 +55,7 @@ def _topic_summary(topic: dict[str, Any]) -> dict[str, Any]:
         "end_ts": arc.get("end_ts"),
         "direction": features.get("direction"),
         "surface": topic.get("surface") or {},
+        "sub_threads": topic.get("sub_threads") or [],
     }
 
 

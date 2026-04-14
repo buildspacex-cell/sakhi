@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../lib/supabase";
@@ -18,11 +18,7 @@ export default function AuthCallback() {
   const params = useLocalSearchParams();
   const { hydrateLinkedProfile } = useAuth();
 
-  useEffect(() => {
-    handleCallback();
-  }, []);
-
-  const handleCallback = async () => {
+  const handleCallback = useCallback(async () => {
     try {
       // The tokens might be in the URL hash or as query params
       const accessToken = params.access_token as string;
@@ -69,7 +65,7 @@ export default function AuthCallback() {
           router.replace(`/onboarding?user=${routeUser}&name=${routeName}` as never);
           return;
         }
-        router.replace(`/experience/converse?user=${routeUser}&name=${routeName}` as never);
+        router.replace("/" as never);
       };
 
       if (accessToken && refreshToken) {
@@ -106,13 +102,17 @@ export default function AuthCallback() {
       console.error("Callback error:", err);
       router.replace("/auth" as never);
     }
-  };
+  }, [hydrateLinkedProfile, params.access_token, params.code, params.refresh_token, router]);
+
+  useEffect(() => {
+    void handleCallback();
+  }, [handleCallback]);
 
   return (
     <Screen>
       <View style={styles.container}>
-      <ActivityIndicator size="large" color={theme.colors.accent} />
-      <Text style={styles.text}>Completing sign in...</Text>
+        <ActivityIndicator size="large" color={theme.colors.accent} />
+        <Text style={styles.text}>Completing sign in...</Text>
       </View>
     </Screen>
   );

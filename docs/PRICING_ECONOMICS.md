@@ -28,6 +28,9 @@ More importantly: $20 is a behavioral signal. A user who pays $20/mo for Sakhi i
 **Annual plan: $180/yr (save 25%)**
 Annual billing is not a discount play. It is a continuity lock. A user who commits annually is more likely to do the work of building a real model — which is what makes Sakhi valuable for them. The product and the pricing reinforce the same behaviour.
 
+**Current beta implementation**
+The product is currently implementing pricing as a continuity-duration entitlement, not as a reply-depth entitlement. In beta, free users get `180 days` of active continuity across both `Talk to Sakhi` and `Offload`. Capture remains available; what expires on free is how far back Sakhi keeps the model actively connected. This beta window can later tighten to `30 days` without changing the underlying product contract.
+
 ---
 
 ## The Moat — Precise Language
@@ -151,8 +154,8 @@ Not every interaction needs GPT-4o. Memory retrieval, simple threading, and shor
 **2. Caching**
 Repeated memory reads (context loading at session start) are expensive and redundant. A caching layer for the top 20% of memory retrievals cuts cost by an estimated 25–30%. Engineering priority in Year 1.
 
-**3. Deep Reflect gating**
-Deep Reflect is the most expensive feature. On the free tier it is not available. On Pro it fires on meaningful reflection prompts, not casual chat. Rate logic is already in the architecture.
+**3. Continuity-window gating**
+The free tier keeps capture available but limits how far back Sakhi actively holds the model together. In beta this is `180 days`; later it can tighten to `30 days`. Pro is the tier that keeps full continuity across time. This controls expensive long-range reflection work without turning pricing into a confusing answer-depth feature.
 
 **4. Tiered pricing evolution**
 If a power user tier ($30–35/mo) is warranted by usage data, we introduce it. This is not a fallback — it is a natural evolution. High-engagement users who get high value should pay proportionally.
@@ -201,7 +204,7 @@ Current status: no live cohort data.
 - Day-30 retention as the first signal
 - Day-90 retention as the PMF indicator (target: 60%+)
 - Session frequency trend — does it increase or decrease after Month 2?
-- Deep Reflect engagement — users who use this feature at least 2x/month have the strongest retention hypothesis
+- Continuity-window pull — do users care that Sakhi holds their last `180 days`, and do they resist losing older active continuity?
 
 Until cohort data exists, retention is an architecture argument, not a proven number. We are building it in as a structural advantage, not relying on engagement tactics.
 

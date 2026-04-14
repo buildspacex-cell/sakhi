@@ -218,8 +218,9 @@ class TurnIn(BaseModel):
     text: str
     clarity_phrase: str | None = None
     capture_only: bool = False
-    source: str = "text"  # "text" or "voice"
+    source: str = "text"  # "text", "voice", or "offload"
     ts: str | None = None  # Optional experience timestamp (ISO 8601); defaults to now
+    client_id: str | None = None  # Stable device-generated id for idempotent capture retries
     # Vision support
     image_data: str | None = None  # Base64 encoded image
     image_mime_type: str | None = None  # e.g., "image/png"
@@ -294,6 +295,44 @@ def _build_public_continuity_signal(continuity_pack: Any) -> Dict[str, Any] | No
         if optional_value not in (None, [], {}, ""):
             payload[optional_key] = optional_value
     return payload
+
+
+_CAPTURE_ONLY_QUEUED_JOBS = [
+    "turn_memory_update",
+    "episodic_consolidation_v21",
+    "preference_learning",
+    "journal_enrich",
+    "intent_extraction",
+]
+
+
+def _build_capture_only_worker_payload(
+    *,
+    text: str,
+    ts_iso: str,
+    entry_id: str | None,
+    emotion: dict[str, Any],
+    intents: list[Any],
+    topics: list[Any],
+    plans: list[Any],
+    triage: dict[str, Any],
+    layer: str,
+) -> dict[str, Any]:
+    inferred_intent = intents[0] if intents else (topics[0] if topics else None)
+    return {
+        "text": text,
+        "ts": ts_iso,
+        "entry_id": entry_id,
+        "layer": layer,
+        "facets": {
+            "emotion": emotion,
+            "intents": intents,
+            "intent": inferred_intent,
+            "topics": topics,
+            "plans": plans,
+            "triage": triage,
+        },
+    }
 
 
 # NOTE: _load_internal_state now uses the shared deterministic_context_loader module.
@@ -752,6 +791,7 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
     logger.info("[turn_v2] user_id=%s text_len=%s capture_only=%s vision=%s", user_id, len(body.text or ""), minimal_mode, bool(vision_context))
 
     fast_ingest = {}  # Build 50: avoid ingest work in route; delegate to workers
+    observe_source = "offload" if body.source == "offload" else "conversation"
     try:
         turn_context = await orchestrate_turn(
             person_id=user_id,
@@ -760,6 +800,8 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             capture_only=body.capture_only,
             skip_llm=True,  # Defer LLM calls (enrich, embedding, intents) to workers
             ts=body.ts,
+            source=observe_source,
+            client_id=body.client_id,
         )
     except Exception as orch_exc:
         logger.error("[turn_v2] orchestrate_turn failed: %s", orch_exc)
@@ -817,6 +859,24 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
             logger.warning("[turn_v2] Failed to link media to entry: %s", link_exc)
 
     if body.capture_only:
+        ts_iso = body.ts or datetime.datetime.utcnow().isoformat()
+        try:
+            triage_local = extract(body.text, datetime.datetime.utcnow())
+        except Exception:
+            triage_local = {}
+
+        payload = _build_capture_only_worker_payload(
+            text=body.text,
+            ts_iso=ts_iso,
+            entry_id=str(entry_id) if entry_id else None,
+            emotion=emotion,
+            intents=stored_intents,
+            topics=topics,
+            plans=generated_plans,
+            triage=triage_local if isinstance(triage_local, dict) else {},
+            layer="offload" if body.source == "offload" else "conversation",
+        )
+
         schema_ok = False
         try:
             schema_ok = await _unified_ingest_schema_ok()
@@ -837,12 +897,28 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
         except Exception:
             pass
 
-        # Defer everything else to workers/schedulers.
+        disable_queue = os.getenv("SAKHI_DISABLE_QUEUE") == "1"
+        turn_id = str(entry_id or body.client_id or uuid4())
+        if disable_queue:
+            from sakhi.apps.worker.pipelines.turn_updates.runner import process_turn_job_async
+            for job_type in _CAPTURE_ONLY_QUEUED_JOBS:
+                try:
+                    await process_turn_job_async(
+                        job_type=job_type,
+                        turn_id=turn_id,
+                        person_id=user_id,
+                        payload=payload,
+                    )
+                except Exception as exc:
+                    logger.warning("[turn_v2:capture_only] inline job failed type=%s err=%s", job_type, exc)
+        else:
+            enqueue_turn_jobs(turn_id, user_id, _CAPTURE_ONLY_QUEUED_JOBS, payload)
+
         return {
             "reply": "",
             "entry_id": str(entry_id) if entry_id else None,
-            "layer": "conversation",
-            "queued_jobs": ["turn_memory_update", "turn_planner_update", "turn_rhythm_update", "turn_persona_update"],
+            "layer": payload["layer"],
+            "queued_jobs": _CAPTURE_ONLY_QUEUED_JOBS,
             "status": "recorded",
             "sessionId": user_id,
             "clarityHint": body.clarity_phrase,
@@ -853,7 +929,9 @@ async def turn_v2(body: TurnIn, request: Request, user: str | None = Query(defau
                 "embedding_table": "journal_embeddings",
                 "entry_written": bool(entry_id),
                 "embedding_enqueued": bool(entry_id),
-                "note": "Embedding is done once on write via background task/worker.",
+                "jobs_enqueued": True,
+                "source": observe_source,
+                "note": "Capture-only turns now enqueue the standard ingestion worker set without generating a reply.",
             },
         }
 

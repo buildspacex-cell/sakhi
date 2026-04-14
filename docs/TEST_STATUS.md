@@ -111,7 +111,7 @@ sakhi/tests/
 
 | Route | Status | Test File | Notes |
 |-------|--------|-----------|-------|
-| `turn_v2.py` | ✅ | `v2/test_turn_v2.py` | Main conversation endpoint |
+| `turn_v2.py` | ✅ | `v2/test_turn_v2.py`, `unit/routes/test_turn_v2_capture_only.py` | Main conversation endpoint, including capture-only offload ingestion coverage |
 | `health.py` | ✅ | `api/test_health.py` | Health checks |
 | `friction_framework.py` | ✅ | `friction_framework/test_friction_framework_integration.py` | Friction state |
 | `memory.py` | ✅ | `workers/test_memory_graph_wiring.py` | Memory recall |
@@ -168,6 +168,12 @@ sakhi/tests/
 | Observability redaction | ✅ | `unit/services/test_observability_redaction.py`, `unit/services/test_monitoring.py` | Redacts sensitive free-text keys in telemetry/monitoring payloads and strips inline secret/token data from formatted log/alert strings |
 | Env contract checker | ✅ | `unit/services/test_check_env.py` | Profile-based env contract validation (`local`, `prod_api`, `prod_web`, `ci`), alias handling, queue-mode Redis gating, and monitoring sink requirement checks |
 | Journal crypto foundation | ✅ | `unit/services/test_journal_crypto.py`, `unit/services/test_check_env.py` | Per-user encryption roundtrip/key isolation, encrypted-only default payload policy, fail-closed master key contract (`SAKHI_JOURNAL_MASTER_KEY`, 32+ chars), and strict-mode decrypt failure coverage |
+
+## Recent Additions (2026-04-10)
+
+| Area | Status | Test Files | Notes |
+|------|--------|------------|-------|
+| Turn v2 capture-only offload ingestion | ✅ | `unit/routes/test_turn_v2_capture_only.py` | Verifies capture-only worker payload shaping and confirms offload-source / `client_id` propagation through orchestration into journal observation for background-synced mobile Offload writes |
 | Auth-bound person routing | ✅ | `unit/services/test_person_resolver.py`, `unit/services/test_continuity_reflection.py` | Production person binding enforces authenticated ownership on person-scoped routes and deep-reflection status/result fetches are now person-scoped (id + person_id) |
 | Deterministic context loader | ✅ | `unit/services/test_deterministic_context_loader.py` | Confirms turn-time rhythm planner alignment is deferred by default and only loaded when explicitly enabled via feature flag |
 | Pipeline hardening | ✅ | `unit/services/test_pipeline_hardening.py` | Continuity fallback resilience, recommendation filtering hygiene, and weekly rhythm rollup safeguards (disabled-by-policy, missing-table skip, missing-events fallback) |

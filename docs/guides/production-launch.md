@@ -155,6 +155,7 @@ This script:
 - Uploads the archive to TestFlight
 
 We do **not** use Expo/EAS build for the iOS release path.
+If you need the repeatable mobile build instruction, use [docs/guides/testflight-publish.md](/Users/fanantics/Documents/Sakhi/docs/guides/testflight-publish.md) as the source of truth.
 
 ---
 

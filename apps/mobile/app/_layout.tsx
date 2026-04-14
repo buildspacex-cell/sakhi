@@ -7,6 +7,7 @@ import { PostHogProvider } from 'posthog-react-native';
 import { AuthProvider, useAuth } from '../lib/auth/AuthContext';
 import { posthog, identifyUser, resetUser } from '../lib/analytics/client';
 import { AppPreferencesProvider } from '../lib/preferences/AppPreferencesContext';
+import { OffloadProvider } from '../lib/offload/OffloadContext';
 import { theme } from '../lib/theme/tokens';
 
 // Keep splash visible until auth resolves
@@ -32,7 +33,7 @@ function AppContent() {
     if (!isLoading && !user) {
       resetUser();
     }
-  }, [isLoading, user?.personId]);
+  }, [isLoading, user, user?.personId]);
 
   useEffect(() => {
     if (isLoading || authExitIntent === 'none' || handlingExpiredRef.current) {
@@ -86,7 +87,9 @@ export default function RootLayout() {
     <PostHogProvider client={posthog}>
       <AuthProvider>
         <AppPreferencesProvider>
-          <AppContent />
+          <OffloadProvider>
+            <AppContent />
+          </OffloadProvider>
         </AppPreferencesProvider>
       </AuthProvider>
     </PostHogProvider>

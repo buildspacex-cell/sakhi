@@ -113,6 +113,7 @@ User message arrives (POST /v2/turn)
 - Continuity compilation now keeps bounded related-anchor evidence per moment, so one journal event can show up in both its main thread and one linked thread without collapsing the overlap into a single bucket
 - Simulation continuity compilation now adds a second-pass thread resolver for ambiguous follow-up journal entries, so topic threads can absorb continuation entries without forcing repeated keyword mentions; close runner-up threads can stay attached contextually instead of being dropped, unresolved entries stay visible for auditability, and topic depth now separates strict primary moments from thread-attached follow-ups (`effective_selected_count`) and projected linked overlap
 - Chat Deep Reflect now gates on topic-depth readiness (`continuity.deep_reflect`) and runs `mode=whole_story` in both mobile and web converse flows, weaving linked-thread context when `continuity.whole_story` is available instead of requiring it as a hard unlock gate
+- Mobile converse now supports a dual-mode entry contract: `Talk to Sakhi` keeps the live-response path, while `Offload` stores captures locally, works offline, and syncs them back through `capture_only` turn ingestion when connectivity returns; in the current beta, both modes feed one shared 180-day active continuity window for reflection/story surfaces
 - Active journal write paths now populate both `journal_entries.person_id` and `journal_entries.user_id`, with a backfill migration for legacy rows, so continuity compilation no longer depends on partially-populated journal identity columns
 - Mobile Reflection now splits story surfaces cleanly: `<topic> Story` remains topic-centric (`mode=topic_reflection`) while `Me Story` runs cross-context synthesis (`mode=cross_context`) across active linked threads
 - Mobile account header now uses a single account hub action (Profile, Settings, Support Console, Sign out), and Support Console now persists user-consented support bundles through backend APIs (`/support/report`, `/support/report/revoke`) with time-limited codes, metadata-only diagnostics snapshots, and a user-controlled live debug timeline session (`/support/session/start|event|stop`) that captures screen/action/API telemetry without journal/chat text
@@ -334,7 +335,7 @@ Standalone computational engines at `sakhi/apps/engine/`, each producing determi
 **Active MVP screens:**
 - Auth flow (Google/email login, OAuth callback)
 - Onboarding (name capture)
-- Conversation (canonical flow — mobile is source of truth)
+- Conversation (canonical flow — mobile is source of truth, with `Talk to Sakhi` and `Offload` modes)
 - Reflection (`/soul/topic-reflection`) for topic threads and My Story
 - Account hub and support flows
 

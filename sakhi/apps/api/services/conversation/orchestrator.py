@@ -42,6 +42,8 @@ async def orchestrate_turn(
     capture_only: bool = False,
     skip_llm: bool = False,
     ts: dt.datetime | str | None = None,
+    source: str = "conversation",
+    client_id: str | None = None,
 ) -> Dict[str, Any]:
     """
     Run the journaling + intent/memory pipeline for a single turn.
@@ -86,9 +88,10 @@ async def orchestrate_turn(
         entry = await observe_entry(
             person_id=person_id,
             text=text,
-            source="conversation",
+            source=source,
             clarity_hint=clarity_hint,
             created_at=turn_ts,
+            entry_id=client_id,
         )
         LOGGER.error("[orchestrate_turn] observe_entry done person_id=%s entry_id=%s", person_id, entry.get("id"))
     except Exception as exc:  # pragma: no cover - defensive

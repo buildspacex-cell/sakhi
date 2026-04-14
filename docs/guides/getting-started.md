@@ -176,7 +176,9 @@ Workers run in background. Faster responses, requires Redis.
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server-side) |
 | `NEXT_PUBLIC_API_BASE` | Yes | Python API URL (default: `http://localhost:8000`) |
 
-### Expo Mobile (`apps/mobile/.env.local`)
+### Mobile Runtime / Build Env (`apps/mobile/.env.local`)
+
+Expo is the runtime/config layer for the mobile app, but iOS release/TestFlight builds do **not** use Expo/EAS Build. The canonical shipping path is `./scripts/ios-build.sh` which runs Fastlane locally. See [testflight-publish.md](/Users/fanantics/Documents/Sakhi/docs/guides/testflight-publish.md).
 
 | Variable | Required | Description |
 |----------|----------|-------------|

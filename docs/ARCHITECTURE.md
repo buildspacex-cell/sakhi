@@ -129,7 +129,7 @@ User Message
 | Context loader | `sakhi/apps/api/services/turn/deterministic_context_loader.py` |
 | Worker runner | `sakhi/apps/worker/pipelines/turn_updates/runner.py` |
 
-Turn-level continuity now injects compact history structure (`history_compact` with sampled phase path, anchor moments, qualitative arc summary, and decision ledger) in addition to start/pivot/current arc signals, and frames prompt input in language-first sections: history + person understanding + current query.
+Turn-level continuity now injects compact history structure (`history_compact` with sampled phase path, anchor moments, qualitative arc summary, and decision ledger) in addition to start/pivot/current arc signals, and frames prompt input in language-first sections: history + person understanding + current query. The current beta mobile entitlement treats continuity as a time window rather than a feature gate: Talk + Offload both feed the same 180-day active continuity horizon, while older history remains stored but no longer shapes free reflection/story surfaces.
 Cross-topic correlation cache now warms bounded all-pairs topic combinations (not only selected-anchor pairs), uses embedding cosine for semantic score when journal vectors are available (with lexical fallback), and shares one life-dimensions read-through cache path between turn-time signals and deep-reflection packet composition.
 Turn-level rhythm planner alignment loading is deferred by default and only enabled when `SAKHI_ENABLE_RHYTHM_PLANNER_ALIGNMENT=1`.
 
@@ -206,7 +206,7 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 ### Core Conversation
 | Route | Purpose |
 |-------|---------|
-| `POST /v2/turn` | Main conversation endpoint (includes non-debug continuity signal when a continuity pack is active: `continuity.topic_key/topic_label`, `continuity.deep_reflect` readiness, and optional cross-topic signals: `candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`) |
+| `POST /v2/turn` | Main conversation endpoint (includes non-debug continuity signal when a continuity pack is active: `continuity.topic_key/topic_label`, `continuity.deep_reflect` readiness, and optional cross-topic signals: `candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`); also supports mobile `capture_only` ingestion for Offload so entries can be persisted and sent through post-turn workers without returning a visible Sakhi reply |
 | `GET /v2/conversation/history` | Conversation history |
 
 ### System Health
@@ -240,6 +240,7 @@ See [features/context-routing.md](features/context-routing.md) for full details.
 
 Web `/experience` continuity UX now mirrors mobile for user-facing parity:
 - `converse` uses dynamic in-chat Deep Reflect gating from the non-debug continuity signal.
+- mobile `converse` now contains two entry modes: `Talk to Sakhi` for live reply flows and `Offload` for capture-only, background-synced expression.
 - `reflection` provides topic bubbles, topic story, and cross-topic My Story actions.
 - account hub actions (Reflection, Settings, Support Console, Sign out) are available from chat without exposing the old debug panel in default flow.
 

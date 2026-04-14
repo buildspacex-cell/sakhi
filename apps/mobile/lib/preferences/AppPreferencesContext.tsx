@@ -7,6 +7,7 @@ type AppPreferences = {
   pushEnabled: boolean;
   hapticsEnabled: boolean;
   compactMode: boolean;
+  lastEntryMode: "talk" | "offload" | null;
 };
 
 type AppPreferencesContextValue = {
@@ -15,12 +16,14 @@ type AppPreferencesContextValue = {
   setPushEnabled: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
   setCompactMode: (value: boolean) => void;
+  setLastEntryMode: (value: "talk" | "offload" | null) => void;
 };
 
 const DEFAULT_PREFERENCES: AppPreferences = {
   pushEnabled: true,
   hapticsEnabled: true,
   compactMode: false,
+  lastEntryMode: null,
 };
 
 const AppPreferencesContext = createContext<AppPreferencesContextValue | null>(null);
@@ -70,6 +73,14 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
     (patch: Partial<AppPreferences>) => {
       setPreferences((current) => {
         const next = { ...current, ...patch };
+        const changed = Object.keys(patch).some((key) => (
+          current[key as keyof AppPreferences] !== next[key as keyof AppPreferences]
+        ));
+
+        if (!changed) {
+          return current;
+        }
+
         void persist(next);
         return next;
       });
@@ -84,6 +95,7 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
       setPushEnabled: (value) => updatePreference({ pushEnabled: value }),
       setHapticsEnabled: (value) => updatePreference({ hapticsEnabled: value }),
       setCompactMode: (value) => updatePreference({ compactMode: value }),
+      setLastEntryMode: (value) => updatePreference({ lastEntryMode: value }),
     }),
     [isReady, preferences, updatePreference],
   );

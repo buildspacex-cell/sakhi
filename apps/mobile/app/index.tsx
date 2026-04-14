@@ -3,13 +3,30 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../lib/auth/AuthContext";
+import { useAppPreferences } from "../lib/preferences/AppPreferencesContext";
 import { Screen } from "../components/ui/Screen";
 import { Button } from "../components/ui/Button";
+import { SakhiBrandMark, SakhiWordmark } from "../components/brand/SakhiBrandMark";
 import { theme } from "../lib/theme/tokens";
+
+const MODE_META = {
+  talk: {
+    title: "Talk to Sakhi",
+    body: "Have a conversation. Get a response.",
+    cta: "Start Talking",
+    mode: "talk" as const,
+  },
+  offload: {
+    title: "Offload",
+    body: "Just put it down. No response expected. Works offline too.",
+    cta: "Start Offloading",
+    mode: "offload" as const,
+  },
+};
 
 // =============================================================================
 // HOME SCREEN
@@ -17,21 +34,91 @@ import { theme } from "../lib/theme/tokens";
 
 export default function Index() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, session, user } = useAuth();
+  const { preferences, isReady: preferencesReady, setLastEntryMode } = useAppPreferences();
+  const hasResumableSession = !!session && !!user;
+  const lastEntryMode = preferences.lastEntryMode;
+  const shouldShowModeChooser = !isLoading && preferencesReady && isAuthenticated && !lastEntryMode;
 
-  // Auto-redirect returning users to the main app
+  // Resume returning users from any persisted auth session.
+  // If personId hydration is still catching up, the auth screen silently
+  // bootstraps the linked mobile profile instead of showing a fresh sign-in.
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.replace("/experience/converse" as never);
+    if (isLoading || !preferencesReady) {
+      return;
     }
-  }, [isLoading, isAuthenticated, router]);
+
+    if (isAuthenticated) {
+      if (lastEntryMode) {
+        router.replace(`/experience/converse?mode=${lastEntryMode}` as never);
+      }
+      return;
+    }
+
+    if (hasResumableSession) {
+      router.replace("/auth" as never);
+    }
+  }, [hasResumableSession, isAuthenticated, isLoading, lastEntryMode, preferencesReady, router]);
+
+  const startMode = (mode: "talk" | "offload") => {
+    setLastEntryMode(mode);
+    router.replace(`/experience/converse?mode=${mode}` as never);
+  };
 
   // Show loading while checking auth state
-  if (isLoading || isAuthenticated) {
+  if (
+    isLoading
+    || (isAuthenticated && !preferencesReady)
+    || (isAuthenticated && !!lastEntryMode)
+    || (hasResumableSession && !isAuthenticated)
+  ) {
     return (
       <Screen>
         <View style={styles.content}>
-          <ActivityIndicator size="large" color={theme.colors.accent} />
+          <View style={styles.loadingMark}>
+            <SakhiWordmark subtitle="Continuity for the mind" />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (shouldShowModeChooser) {
+    return (
+      <Screen showAurora>
+        <View style={styles.content}>
+          <View style={styles.textContainer}>
+            <Text style={styles.headline}>
+              This is a quiet space to unload your mind.
+            </Text>
+            <Text style={styles.subheadline}>
+              What do you need right now?
+            </Text>
+          </View>
+
+          <Pressable style={styles.modeCard} onPress={() => startMode("talk")}>
+            <View style={styles.modeCardHeader}>
+              <View style={styles.modeIconBadge}>
+                <SakhiBrandMark size={30} mode={MODE_META.talk.mode} active />
+              </View>
+              <Text style={styles.modeTitle}>{MODE_META.talk.title}</Text>
+            </View>
+            <Text style={styles.modeBody}>{MODE_META.talk.body}</Text>
+            <Text style={styles.modeCta}>{MODE_META.talk.cta}</Text>
+          </Pressable>
+
+          <Pressable style={styles.modeCard} onPress={() => startMode("offload")}>
+            <View style={styles.modeCardHeader}>
+              <View style={styles.modeIconBadge}>
+                <SakhiBrandMark size={30} mode={MODE_META.offload.mode} active />
+              </View>
+              <Text style={styles.modeTitle}>{MODE_META.offload.title}</Text>
+            </View>
+            <Text style={styles.modeBody}>{MODE_META.offload.body}</Text>
+            <Text style={styles.modeCta}>{MODE_META.offload.cta}</Text>
+          </Pressable>
+
+          <Text style={styles.modeHint}>You can switch anytime. Sakhi will remember what you used last.</Text>
         </View>
       </Screen>
     );
@@ -77,6 +164,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: theme.spacing["6xl"],
   },
+  loadingMark: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headline: {
     fontSize: theme.typography.hero.fontSize,
     fontWeight: "400",
@@ -101,5 +192,54 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: theme.colors.textMuted,
     letterSpacing: 2,
+  },
+  modeCard: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.sm,
+  },
+  modeCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  modeIconBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: theme.colors.text,
+  },
+  modeBody: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: theme.colors.textMuted,
+  },
+  modeCta: {
+    marginTop: theme.spacing.sm,
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.4,
+    color: theme.colors.accent,
+  },
+  modeHint: {
+    marginTop: theme.spacing.md,
+    maxWidth: 320,
+    fontSize: 13,
+    color: theme.colors.textFaint,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

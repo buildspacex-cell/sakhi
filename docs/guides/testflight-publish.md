@@ -2,6 +2,15 @@
 
 > Quick reference for building and publishing the Sakhi iOS app to TestFlight with the local Fastlane path.
 
+## Canonical rule
+
+The Sakhi mobile app uses Expo in the runtime/tooling layer, but the iOS release path is **not** Expo/EAS Build.
+
+- Use `./scripts/ios-build.sh`
+- That script runs the local Fastlane lane from `apps/mobile/ios`
+- TestFlight uploads go through Fastlane
+- Do not tell people to "use Expo build" for iOS release/TestFlight
+
 ## Prerequisites (one-time setup, already done)
 
 - Apple Developer account (Team: Ravi Shankar Individual, ID: 47HYXW7V93)
@@ -31,6 +40,8 @@
 - Runs `pod install`
 - Runs `fastlane beta` from `apps/mobile/ios`
 - Uploads the archive to TestFlight
+
+This is the canonical mobile build instruction for iOS release/TestFlight in this repo.
 
 ### Step 2: Testers get the update
 
@@ -90,7 +101,7 @@ Forbidden in release builds:
 | File | Purpose |
 |------|---------|
 | `apps/mobile/app.config.js` | Expo config (bundle ID, version, plugins, env vars) |
-| `scripts/ios-build.sh` | Canonical internal TestFlight build script |
+| `scripts/ios-build.sh` | Canonical internal iOS/TestFlight build script |
 | `apps/mobile/ios/fastlane/Fastfile` | Fastlane beta lane (`build_app` + `upload_to_testflight`) |
 | `apps/mobile/lib/config.ts` | Runtime config resolution (env vars → app config) |
 | `apps/mobile/lib/supabase.ts` | Supabase client initialization |

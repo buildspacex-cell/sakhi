@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "../../lib/auth/AuthContext";
 import { isAnalyticsOptedOut, optInAnalytics, optOutAnalytics } from "../../lib/analytics/client";
 import { useAppPreferences } from "../../lib/preferences/AppPreferencesContext";
+import { MOBILE_CONTINUITY_PLAN } from "../../lib/continuity/plan";
 import { theme } from "../../lib/theme/tokens";
 import { IconButton } from "../../components/ui/IconButton";
 import { Card } from "../../components/ui/Card";
@@ -146,8 +147,22 @@ export default function SettingsScreen() {
             />
           </View>
           <Card style={styles.infoCard} variant="muted">
-            <Text style={styles.infoText}>Use "Report an issue" to send the team a bug report.</Text>
+            <Text style={styles.infoText}>Use Report an issue to send the team a bug report.</Text>
             <Text style={styles.infoText}>Journal content is never included. You can revoke access anytime.</Text>
+          </Card>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Continuity Plan</Text>
+          <Text style={styles.sectionHint}>
+            During beta, free continuity is measured by time, not by reply type.
+          </Text>
+          <Card style={styles.infoCard} variant="muted">
+            <Text style={styles.identityLine}>
+              {MOBILE_CONTINUITY_PLAN.badge}: {MOBILE_CONTINUITY_PLAN.title}
+            </Text>
+            <Text style={styles.infoText}>{MOBILE_CONTINUITY_PLAN.summary}</Text>
+            <Text style={styles.infoText}>{MOBILE_CONTINUITY_PLAN.upgradeCopy}</Text>
           </Card>
         </Card>
 

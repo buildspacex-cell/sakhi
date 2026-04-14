@@ -922,14 +922,14 @@ function FollowUpScreen({ onStartConversation, onRefine }: FollowUpScreenProps) 
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={followUpStyles.header}>Let's refine this together</Text>
+        <Text style={followUpStyles.header}>Let us refine this together</Text>
 
         {/* Body Copy - more compact */}
         <Text style={followUpStyles.body}>
           This snapshot is based on a few early signals. Sakhi learns best over time, from conversation, choices, and patterns you share.
         </Text>
         <Text style={followUpStyles.bodySecondary}>
-          You're always in control of how this evolves.
+          You are always in control of how this evolves.
         </Text>
 
         {/* What Happens Next - compact */}
@@ -1640,7 +1640,6 @@ function SlimNameOnboardingScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   const authToken = session?.access_token || "";
-  const routePersonId = typeof params.user === "string" ? params.user.trim() : "";
   const canContinue = name.trim().length > 0 && !!authToken;
 
   const handleContinue = useCallback(async () => {
@@ -1662,9 +1661,6 @@ function SlimNameOnboardingScreen() {
         fullName: trimmedName,
         avatarUrl: profile.avatar_url,
       }, { supabaseUserId: user?.id });
-      const personId = profile.person_id || routePersonId;
-      const encodedName = encodeURIComponent(trimmedName);
-      const encodedUser = encodeURIComponent(personId);
 
       void supabase.auth.updateUser({
         data: {
@@ -1673,14 +1669,14 @@ function SlimNameOnboardingScreen() {
         },
       }).catch(() => {});
 
-      router.replace(`/experience/converse?user=${encodedUser}&name=${encodedName}` as never);
+      router.replace("/" as never);
     } catch (error) {
       console.error("Name setup failed:", error);
       Alert.alert("Could not continue", "Please try again.");
     } finally {
       setIsSaving(false);
     }
-  }, [authToken, hydrateLinkedProfile, name, routePersonId, router, user?.avatarUrl, user?.email, user?.id]);
+  }, [authToken, hydrateLinkedProfile, name, router, user?.avatarUrl, user?.email, user?.id]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -1737,7 +1733,7 @@ function SlimNameOnboardingScreen() {
   );
 }
 
-function LegacyOnboardingScreen() {
+export function LegacyOnboardingScreen() {
   const router = useRouter();
   const [currentScreen, setCurrentScreen] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
@@ -1826,7 +1822,7 @@ function LegacyOnboardingScreen() {
     if (refineMode) {
       if (refineScreen >= REFINE_SCREENS.length - 1) {
         // Refine complete - go to conversation
-        router.replace("/experience/converse" as never);
+        router.replace("/" as never);
       } else {
         setRefineScreen((prev) => prev + 1);
       }
@@ -1854,7 +1850,7 @@ function LegacyOnboardingScreen() {
     // Skip current question and move to next
     if (refineMode) {
       if (refineScreen >= REFINE_SCREENS.length - 1) {
-        router.replace("/experience/converse" as never);
+        router.replace("/" as never);
       } else {
         setRefineScreen((prev) => prev + 1);
       }
@@ -1881,7 +1877,7 @@ function LegacyOnboardingScreen() {
         }
       }).catch(() => {}); // don't block navigation
     }
-    router.replace("/experience/converse" as never);
+    router.replace("/" as never);
   }, [router, answers]);
 
   const handleRefine = useCallback(() => {
@@ -2072,7 +2068,7 @@ function LegacyOnboardingScreen() {
               {screen.skipAllowed && !refineMode && (
                 <Pressable
                   style={styles.skipButton}
-                  onPress={() => router.replace("/experience/converse" as never)}
+                  onPress={() => router.replace("/" as never)}
                 >
                   <Text style={styles.skipButtonText}>Skip for now</Text>
                 </Pressable>

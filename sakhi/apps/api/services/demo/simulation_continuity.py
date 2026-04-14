@@ -514,6 +514,7 @@ def _build_compiled_topic(
         "arc": built["arc"],
     }
     topic["surface"] = _build_topic_surface(topic)
+    topic["sub_threads"] = _detect_sub_threads(entry_tags, built["arc"].get("event_refs") or [])
     return topic
 
 
@@ -967,6 +968,129 @@ def _build_topic_surface(topic: dict[str, Any]) -> dict[str, Any]:
         "coherence_score": coherence_score,
         "blocked_reason": blocked_reason,
     }
+
+
+# ---------------------------------------------------------------------------
+# Sub-thread detection (Life Occupancy bubble creation rules)
+# ---------------------------------------------------------------------------
+
+_PLANNING_DECISION_STATES = frozenset({"questioning", "committed", "deferred"})
+_EMOTIONAL_FACET_KEYWORDS = frozenset({
+    "grief", "boundary", "confidence", "stress", "emotion", "anxiety", "guilt", "pride",
+})
+_IDENTITY_FACET_KEYWORDS = frozenset({
+    "identity", "self_trust", "leadership", "belonging", "recovery", "values", "role",
+})
+
+
+def _detect_stake_types(facet: str, moments: list[dict[str, Any]]) -> list[str]:
+    """Return which recurring stake types are present for a facet group.
+
+    Stake types (from spec):
+      planning_logistics — planning, scheduling, or decisional charge
+      emotional_charge   — emotional weight or stance tension
+      identity_signal    — identity, role, or values dimension
+      tradeoff           — entry has cross-thread tension (related_anchors present)
+    """
+    stakes: list[str] = []
+    facet_lower = facet.lower()
+
+    if any(m["decision_state"] in _PLANNING_DECISION_STATES for m in moments):
+        stakes.append("planning_logistics")
+
+    if (
+        any(kw in facet_lower for kw in _EMOTIONAL_FACET_KEYWORDS)
+        or any(m["stance"] == "away" for m in moments)
+    ):
+        stakes.append("emotional_charge")
+
+    if any(kw in facet_lower for kw in _IDENTITY_FACET_KEYWORDS):
+        stakes.append("identity_signal")
+
+    if any(bool(m["related_anchors"]) for m in moments):
+        stakes.append("tradeoff")
+
+    return stakes
+
+
+def _classify_sub_thread_stage(
+    *,
+    moment_count: int,
+    distinct_days: int,
+    stake_types: list[str],
+) -> str:
+    """Assign a sub-thread stage based on depth and recurring-stake criteria."""
+    if (
+        moment_count >= _THRESHOLDS.sub_thread_visible_min_moments
+        and distinct_days >= _THRESHOLDS.sub_thread_visible_min_days
+        and len(stake_types) >= _THRESHOLDS.sub_thread_visible_min_stakes
+    ):
+        return "visible_sub_thread"
+    if moment_count >= _THRESHOLDS.sub_thread_candidate_min_moments:
+        return "candidate_sub_thread"
+    return "mention"
+
+
+def _detect_sub_threads(
+    entry_tags: dict[str, dict[str, Any]],
+    event_refs: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Classify facets within a parent topic into sub-thread stages.
+
+    Three stages (from spec):
+      mention              — isolated occurrence, stays inside parent thread
+      candidate_sub_thread — recurring motif, tracked internally, not surfaced
+      visible_sub_thread   — recurring, consequential, stable → earns its own
+                             Life Occupancy bubble
+
+    Visible threshold (from spec): >= 3 distinct moments across >= 2 days,
+    plus at least one recurring stake type.
+    """
+    tag_by_key: dict[str, dict[str, Any]] = {
+        str(k): v for k, v in (entry_tags or {}).items()
+    }
+
+    facet_moments: dict[str, list[dict[str, Any]]] = {}
+    for ref in event_refs or []:
+        facet = str(ref.get("facet") or "").strip()
+        if not facet or facet == "unknown":
+            continue
+        entry_key = _compiled_entry_key(ref.get("day"), ref.get("ts"))
+        tag = tag_by_key.get(entry_key) or {}
+        facet_moments.setdefault(facet, []).append({
+            "day": int(ref.get("day") or 0),
+            "ts": str(ref.get("ts") or ""),
+            "source_ref": str(ref.get("source_ref") or ""),
+            "decision_state": str(ref.get("decision_state") or ""),
+            "stance": str(ref.get("stance") or ""),
+            "related_anchors": list(tag.get("related_anchors") or []),
+        })
+
+    _STAGE_ORDER = {"visible_sub_thread": 0, "candidate_sub_thread": 1, "mention": 2}
+    sub_threads: list[dict[str, Any]] = []
+    for facet, moments in facet_moments.items():
+        moment_count = len(moments)
+        distinct_days = len({m["day"] for m in moments})
+        stake_types = _detect_stake_types(facet, moments)
+        stage = _classify_sub_thread_stage(
+            moment_count=moment_count,
+            distinct_days=distinct_days,
+            stake_types=stake_types,
+        )
+        sub_threads.append({
+            "facet": facet,
+            "label": facet.replace("_", " ").title(),
+            "stage": stage,
+            "moment_count": moment_count,
+            "distinct_days": distinct_days,
+            "stake_types": stake_types,
+            "entry_refs": [m["source_ref"] for m in moments if m["source_ref"]],
+        })
+
+    sub_threads.sort(
+        key=lambda st: (_STAGE_ORDER.get(st["stage"], 3), -st["moment_count"], st["facet"])
+    )
+    return sub_threads
 
 
 def _compute_inputs_hash(

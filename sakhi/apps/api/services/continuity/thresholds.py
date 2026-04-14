@@ -29,6 +29,11 @@ class ContinuityThresholdProfile:
     surface_mirror_effective_min: int
     surface_detail_effective_min: int
     surface_detail_primary_min: int
+    # Sub-thread detection thresholds (Life Occupancy bubble creation rules)
+    sub_thread_candidate_min_moments: int = 2
+    sub_thread_visible_min_moments: int = 3
+    sub_thread_visible_min_days: int = 2
+    sub_thread_visible_min_stakes: int = 1
 
 
 @dataclass(frozen=True)
