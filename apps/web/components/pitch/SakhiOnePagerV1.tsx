@@ -9,10 +9,10 @@ export default function SakhiOnePagerV1() {
         <div className="shrink-0">
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#8ab0ff]/70 sm:text-[11px] sm:tracking-[0.38em]">Sakhi · Pre-Seed · 2026</div>
           <h1 className="text-[clamp(1.35rem,3.5vw,2.2rem)] font-bold leading-[1.05] tracking-[-0.04em] text-white sm:tracking-[-0.05em]">
-            Sakhi is the continuity layer for the human mind.
+            Sakhi is the continuity layer for how you think with AI.
           </h1>
           <p className="mt-2 text-[0.82rem] text-slate-400 tracking-[-0.01em] sm:text-[clamp(0.8rem,1vw,0.9rem)]">
-            Your thinking compounds. Your life stays connected, across time.
+            Your threads continue from where you left off. Your discussions compound.
           </p>
         </div>
 

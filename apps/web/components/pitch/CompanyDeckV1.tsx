@@ -166,7 +166,7 @@ function SlideStories() {
             Notes app stores. AI chat responds. Nobody compounds thought over time.
           </p>
           <h2 className={DECK_TITLE_CLASS}>
-            Sakhi is the continuity layer for the human mind.{" "}
+            Sakhi is the continuity layer for how you think with AI.{" "}
             <span className="text-white/30">Three moments that show what that means.</span>
           </h2>
         </div>
@@ -442,7 +442,7 @@ function Slide02LongGame() {
           </div>
           <h2 className={DECK_TITLE_CLASS}>
             <span className="text-white/35">Every LLM wants to be your interface.</span><br />
-            Sakhi is the continuity layer for the human mind.
+            Sakhi is the continuity layer for how you think with AI.
           </h2>
         </div>
 
