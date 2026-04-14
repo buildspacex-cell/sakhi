@@ -351,7 +351,7 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-12 pb-4 sm:px-10 sm:pt-14 sm:pb-5 lg:px-14 lg:pt-12 lg:pb-6">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-12 pb-8 sm:px-10 sm:pt-14 sm:pb-6 lg:px-14 lg:pt-12 lg:pb-8">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 min-h-0">
 
         {/* Header */}
@@ -433,7 +433,7 @@ function Slide02LongGame() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-14 pb-4 sm:px-12 sm:pt-14 sm:pb-7 lg:px-16 lg:pt-12 lg:pb-10">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-8 lg:px-16 lg:pt-12 lg:pb-10">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8">
 
         <div className="cd-lg-item shrink-0">
@@ -502,7 +502,7 @@ function Slide02Market() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-12 pb-3 sm:px-12 sm:pt-14 sm:pb-4 lg:px-16 lg:pt-12 lg:pb-4">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-12 pb-8 sm:px-12 sm:pt-14 sm:pb-6 lg:px-16 lg:pt-12 lg:pb-8">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 min-h-0">
 
         {/* Header */}
@@ -605,7 +605,7 @@ function Slide03Gap() {
   ];
 
   return (
-    <div ref={ref} className="absolute inset-0 flex flex-col px-6 pt-12 pb-4 sm:px-10 sm:pt-14 sm:pb-5 lg:px-14 lg:pt-12 lg:pb-5">
+    <div ref={ref} className="slide-scroll-panel absolute inset-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col px-6 pt-12 pb-8 sm:px-10 sm:pt-14 sm:pb-6 lg:px-14 lg:pt-12 lg:pb-8">
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-3 min-h-0">
 
         <div className="cd3-item shrink-0">
