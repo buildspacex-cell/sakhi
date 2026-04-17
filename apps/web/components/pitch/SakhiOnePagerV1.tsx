@@ -60,19 +60,19 @@ export default function SakhiOnePagerV1() {
             <div className="rounded-lg border border-teal-400/[0.15] bg-teal-400/[0.03] px-4 py-3.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-teal-400/50 shrink-0" />
-                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-teal-400/70">Health · Sarah</span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-teal-400/70">Strategy · Maya</span>
               </div>
               <p className="text-[0.84rem] leading-[1.65] text-slate-400">
-                She described what she&apos;d been feeling. Vaguely, because she didn&apos;t have the pattern yet. Routine tests. Nothing conclusive.
+                Maya is a founder deciding where to wedge first. ICP, pricing, and enterprise vs self-serve keep resurfacing across customer calls and AI sessions.
               </p>
               <p className="mt-2 text-[0.84rem] leading-[1.6] text-slate-400">
-                That night, she opened Sakhi. Eight months of health, sleep, and energy threads, held together while she lived them. She saw it for the first time.
+                She opens Sakhi. Weeks of strategy discussions, call notes, and drafts stay in one live thread instead of resetting every time.
               </p>
               <div className="my-2.5 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2 flex flex-col gap-1.5">
                 {[
-                  { month: "Month 1", items: ["Sleep down", "Fatigue up", "Cycle delay"] },
-                  { month: "Month 3", items: ["Sleep down", "Fatigue up", "Cycle delay"] },
-                  { month: "Month 6", items: ["Sleep down", "Fatigue up", "Cycle delay"] },
+                  { month: "Week 1", items: ["ICP broad", "Pricing fuzzy", "No wedge"] },
+                  { month: "Week 3", items: ["Team pain high", "Willingness high", "Same segment"] },
+                  { month: "Week 5", items: ["Operators first", "Workflow pain", "Wedge clear"] },
                 ].map((row) => (
                   <div key={row.month} className="flex items-start gap-2">
                     <span className="mt-[0.2em] w-[4.5rem] shrink-0 whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.12em] text-teal-400">{row.month}</span>
@@ -86,44 +86,45 @@ export default function SakhiOnePagerV1() {
                     </div>
                   </div>
                 ))}
-                <p className="text-[0.66rem] font-semibold text-teal-400/60 mt-0.5">Same sequence. Every time.</p>
+                <p className="text-[0.66rem] font-semibold text-teal-400/60 mt-0.5">Same signal, every pass.</p>
               </div>
               <p className="text-[0.84rem] leading-[1.6] text-slate-400">
-                She goes back. <span className="italic">&ldquo;Same pattern, three times. Can we test for thyroid?&rdquo;</span> They test. Diagnosis confirmed. Nothing missed.
+                She stops reopening the question. The signal is clear: operators with team workflow pain pull hardest.
               </p>
-              <p className="mt-2.5 text-[0.76rem] font-semibold text-teal-400/60">Continuity held eight months together. The answer was already there.</p>
+              <p className="mt-2.5 text-[0.76rem] font-semibold text-teal-400/60">Continuity held weeks of strategy work together. The wedge was already there.</p>
             </div>
 
-            <div className="rounded-lg border border-purple-400/[0.12] bg-purple-400/[0.02] px-4 py-3.5">
+            <div className="rounded-lg border border-amber-400/[0.12] bg-amber-400/[0.02] px-4 py-3.5">
               <div className="flex items-center gap-1.5 mb-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-purple-400/50 shrink-0" />
-                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-purple-400/70">Life · Kate</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400/50 shrink-0" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-amber-400/70">Execution · Daniel</span>
               </div>
               <p className="text-[0.84rem] leading-[1.65] text-slate-400">
-                Her father suffers a TBI. Weeks in the ICU. Her days collapse into hospital rounds, doctor calls, and late-night updates. Work, kids, meals, sleep, all start slipping.
+                Daniel is driving a launch. Timeline moved. Pricing changed. One blocker clears, another appears. AI helps on each task, but the state of the launch is scattered.
               </p>
               <p className="mt-2 text-[0.84rem] leading-[1.6] text-slate-400">
-                Then she starts waking at 2 a.m. with her heart racing. She doesn&apos;t understand why it&apos;s happening. She opens Sakhi: <span className="italic">&ldquo;I&apos;m not giving up. I&apos;m doing everything I can to keep things going. What&apos;s happening at night? Why do I wake up in a panic?&rdquo;</span>
+                He opens Sakhi: <span className="italic">&ldquo;What changed since Wednesday, and what is still open?&rdquo;</span> Instead of restarting the launch thread, he picks it up where it actually stands.
               </p>
               <div className="my-2.5 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2 flex flex-col gap-1.5">
                 {[
-                  { label: "Before", tags: ["Work steady", "Kids covered", "Sleeping normally"] },
-                  { label: "Now", tags: ["ICU first", "Sleep gone", "Waking panicked"] },
+                  { label: "Monday", tags: ["Pricing open", "Onboarding blocked"] },
+                  { label: "Wednesday", tags: ["Pricing locked", "Email flow blocked"] },
+                  { label: "Today", tags: ["Legal cleared", "Only email open"] },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center gap-1.5">
-                    <span className="w-[4.8rem] shrink-0 text-[0.6rem] font-semibold text-purple-400/50">{row.label}</span>
+                    <span className="w-[4.8rem] shrink-0 text-[0.6rem] font-semibold text-amber-400/50">{row.label}</span>
                     <div className="flex gap-1 flex-wrap">
                       {row.tags.map((tag) => (
-                        <span key={tag} className="rounded px-1.5 py-0.5 text-[0.6rem] font-medium bg-purple-400/[0.07] text-purple-300/60">{tag}</span>
+                        <span key={tag} className="rounded px-1.5 py-0.5 text-[0.6rem] font-medium bg-amber-400/[0.07] text-amber-300/60">{tag}</span>
                       ))}
                     </div>
                   </div>
                 ))}
               </div>
               <p className="text-[0.84rem] leading-[1.6] text-slate-400">
-                Sakhi doesn&apos;t invent an answer. It brings back what helped the last time her system went off balance: morning walks, yoga, and the notes she wrote when she finally started to steady.
+                Sakhi doesn&apos;t restart the launch. It brings back what changed, what is blocked, what was already decided, and what still needs ownership.
               </p>
-              <p className="mt-2.5 text-[0.76rem] font-semibold text-purple-400/60">Continuity held the path back, until she needed it again.</p>
+              <p className="mt-2.5 text-[0.76rem] font-semibold text-amber-400/60">Continuity held the execution state together. The launch stayed live.</p>
             </div>
 
           </div>

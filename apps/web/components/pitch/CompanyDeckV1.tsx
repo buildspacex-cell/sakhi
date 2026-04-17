@@ -81,78 +81,76 @@ function SlideStories() {
 
   const stories: Story[] = [
     {
-      domain: "Health",
-      tag: "Health · Sarah",
-      trigger: "Leaving a doctor's office still confused",
+      domain: "Strategy",
+      tag: "Strategy · Maya",
+      trigger: "Reopening the same strategy question again",
       accent: "#2dd4bf",
       dim: "rgba(45,212,191,0.06)",
       border: "rgba(45,212,191,0.18)",
       dot: "bg-teal-400/50",
       scene: (
         <div className="flex flex-col gap-2 flex-1">
-          <p className={S}>Sarah describes what she&rsquo;s been feeling. Vaguely, because she doesn&rsquo;t have the pattern yet. Routine tests. Nothing conclusive.</p>
-          <p className={S}>That night, she opens Sakhi. Eight months of health, sleep, and energy threads, held together while she lived them. She sees it for the first time.</p>
+          <p className={S}>Maya is a founder deciding where to wedge first. ICP, pricing, and enterprise vs self-serve keep resurfacing across customer calls and AI sessions.</p>
+          <p className={S}>She opens Sakhi. Weeks of strategy discussions, call notes, and drafts stay in one live thread instead of resetting every time.</p>
           <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
-            <PatternRow label="Month 1" accent="#2dd4bf" items={["Sleep down", "Fatigue up", "Cycle delay"]} singleLineLabel noWrapItems />
-            <PatternRow label="Month 3" accent="#2dd4bf" items={["Sleep down", "Fatigue up", "Cycle delay"]} singleLineLabel noWrapItems />
-            <PatternRow label="Month 6" accent="#2dd4bf" items={["Sleep down", "Fatigue up", "Cycle delay"]} singleLineLabel noWrapItems />
-            <p className="text-[0.68rem] text-teal-400/60 font-semibold mt-0.5">Same sequence. Every time.</p>
+            <PatternRow label="Week 1" accent="#2dd4bf" items={["ICP broad", "Pricing fuzzy", "No wedge"]} singleLineLabel noWrapItems />
+            <PatternRow label="Week 3" accent="#2dd4bf" items={["Team pain high", "Willingness high", "Same segment"]} singleLineLabel noWrapItems />
+            <PatternRow label="Week 5" accent="#2dd4bf" items={["Operators first", "Workflow pain", "Wedge clear"]} singleLineLabel noWrapItems />
+            <p className="text-[0.68rem] text-teal-400/60 font-semibold mt-0.5">Same signal, every pass.</p>
           </div>
-          <p className={S}>She goes back.</p>
-          <p className={DLG}>&ldquo;Same pattern, three times. Can we test for thyroid?&rdquo;</p>
-          <p className={PAYOFF}>They test. Diagnosis confirmed. Nothing missed.</p>
+          <p className={DLG}>&ldquo;The signal is consistent. Operators with team workflow pain pull hardest.&rdquo;</p>
+          <p className={PAYOFF}>She stops reopening the question. The wedge becomes clear.</p>
         </div>
       ),
-      moment: "Seeing your own pattern, before anyone else does.",
+      moment: "Strategy that compounds instead of resetting.",
     },
     {
-      domain: "Ambition",
-      tag: "Ambition · Marcus",
-      trigger: "Putting in effort, but not breaking through",
+      domain: "Execution",
+      tag: "Execution · Daniel",
+      trigger: "A launch moving faster than one thread can hold",
       accent: "#f59e0b",
       dim: "rgba(245,158,11,0.06)",
       border: "rgba(245,158,11,0.18)",
       dot: "bg-amber-400/50",
       scene: (
         <div className="flex flex-col gap-2 flex-1">
-          <p className={S}>Marcus has tried everything. Every variable, every protocol. Game performance still swings. He can&rsquo;t find the lever.</p>
-          <p className={S}>He opens Sakhi. Months of training logs, game reflections, sleep notes, held across time while he was living through them one session at a time.</p>
+          <p className={S}>Daniel is driving a launch. Timeline moved. Pricing changed. One blocker clears, another appears. AI helps on each task, but the state of the launch is scattered.</p>
+          <p className={S}>He opens Sakhi. It holds the live execution thread: what changed, what is blocked, what was already decided, and what still needs ownership.</p>
           <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
-            <PatternRow label="Best games" accent="#f59e0b" items={["Strength cycle", "Sleep stable", "Peak output"]} />
-            <PatternRow label="Flat games" accent="#f59e0b" items={["Agility only", "Sleep variable", "No change"]} />
-            <p className="text-[0.68rem] text-amber-400/60 font-semibold mt-0.5">Agility alone never moved it.</p>
+            <PatternRow label="Monday" accent="#f59e0b" items={["Pricing open", "Onboarding blocked", "Date tentative"]} />
+            <PatternRow label="Wednesday" accent="#f59e0b" items={["Pricing locked", "Onboarding fixed", "Email flow blocked"]} />
+            <PatternRow label="Today" accent="#f59e0b" items={["Copy ready", "Legal cleared", "Only email open"]} />
+            <p className="text-[0.68rem] text-amber-400/60 font-semibold mt-0.5">The thread stays current.</p>
           </div>
-          <p className={S}>The correlation he was missing wasn&rsquo;t about working harder. It was about what he was pairing.</p>
-          <p className={S}>He stops treating sleep as optional when strength work is high.</p>
-          <p className={PAYOFF}>His game shifts.</p>
+          <p className={DLG}>&ldquo;What changed since Wednesday, and what is still open?&rdquo;</p>
+          <p className={PAYOFF}>He moves the launch without rebuilding context.</p>
         </div>
       ),
-      moment: "What actually works, finally visible.",
+      moment: "Execution that stays live across time.",
     },
     {
-      domain: "Life",
-      tag: "Life · Kate",
-      trigger: "Holding everything together, until you can't",
+      domain: "Research",
+      tag: "Research · Elena",
+      trigger: "A research thread spread across too many chats",
       accent: "#c084fc",
       dim: "rgba(192,132,252,0.06)",
       border: "rgba(192,132,252,0.18)",
       dot: "bg-purple-400/50",
       scene: (
         <div className="flex flex-col gap-2 flex-1">
-          <p className={S}>Kate leads a SaaS company. Two kids. Ageing parents.</p>
-          <p className={S}>Her father has an accident. TBI. Weeks in the ICU. Her days collapse into hospital rounds, doctor calls, and late-night updates. Work, kids, meals, sleep, all start slipping.</p>
-          <p className={S}>Then she starts waking at 2 a.m. with her heart racing. She doesn&rsquo;t understand why it&rsquo;s happening.</p>
-          <p className={S}>She opens Sakhi. &ldquo;I&rsquo;m not giving up. I&rsquo;m doing everything I can to keep things going. What&rsquo;s happening at night? Why do I wake up in a panic?&rdquo;</p>
+          <p className={S}>Elena has spent weeks using AI to research a family move. Cities, schools, commute, budget, visas. The answers are good, but the thread is fragmented.</p>
+          <p className={S}>She opens Sakhi. It keeps the research as one evolving discussion: what she learned, what changed, and what still matters to the decision.</p>
           <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
-            <PatternRow label="Before" accent="#c084fc" items={["Work steady", "Kids covered", "Sleeping normally"]} />
-            <PatternRow label="Now" accent="#c084fc" items={["ICU first", "Sleep gone", "Waking panicked"]} />
+            <PatternRow label="Week 1" accent="#c084fc" items={["Schools", "Rent", "Visa timing"]} />
+            <PatternRow label="Week 2" accent="#c084fc" items={["Commute matters", "Budget tighter", "Shortlist shifts"]} />
+            <PatternRow label="Week 4" accent="#c084fc" items={["Two cities left", "School fit", "Decision near"]} />
+            <p className="text-[0.68rem] text-purple-400/60 font-semibold mt-0.5">The research accumulates.</p>
           </div>
-          <p className={S}>Three months earlier, morning walks and yoga had steadied her during another stretch of overload. She had written about both. Sakhi brings them back.</p>
-          <p className={DLG}>&ldquo;The last time your system went off balance, walking and yoga helped steady you. Start there.&rdquo;</p>
-          <p className={PAYOFF}>Not generic advice. Her answer, from her own history.</p>
+          <p className={DLG}>&ldquo;Which assumptions changed, and what still matters now?&rdquo;</p>
+          <p className={PAYOFF}>The research turns into a decision.</p>
         </div>
       ),
-      moment: "The path back, found in your own history.",
+      moment: "Research that accumulates instead of scattering.",
     },
   ];
 
