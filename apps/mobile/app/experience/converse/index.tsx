@@ -59,11 +59,40 @@ interface WholeStorySignal {
   correlation_score: number;
 }
 
+interface WhatChangedSignal {
+  from: string;
+  to: string;
+  confidence: number;
+  topic_key?: string;
+}
+
+interface OpenLoop {
+  id: string;
+  loop_type: "open_decision" | "conversation_commitment";
+  topic: string;
+}
+
+interface OpenLoopsData {
+  decisions: OpenLoop[];
+  commitments: OpenLoop[];
+  total: number;
+}
+
 interface ContinuitySignal {
   topic_key: string;
   topic_label?: string;
   deep_reflect?: DeepReflectSignal;
   whole_story?: WholeStorySignal;
+  what_changed?: WhatChangedSignal;
+  open_loops?: OpenLoopsData;
+}
+
+interface ContinuationPrompt {
+  has_continuation: boolean;
+  display?: string;
+  topic_key?: string;
+  decision_state?: string;
+  hours_since?: number;
 }
 
 const BACKEND_URL = (config.backendUrl || "").replace(/\/+$/, "");
@@ -176,7 +205,7 @@ function getOffloadStatusLabel(status: string): string {
 function getModeMeta(mode: "talk" | "offload") {
   if (mode === "offload") {
     return {
-      title: "A quiet space to stay with what matters.",
+      title: "Drop it. Sakhi picks it up.",
       backdrop: "offload" as const,
       mode: "offload" as const,
     };
@@ -214,9 +243,15 @@ export default function ConversationScreen() {
   const [, setDeepReflectionStatus] = useState("");
   const [activeContinuitySignal, setActiveContinuitySignal] = useState<ContinuitySignal | null>(null);
   const [latestUserMessage, setLatestUserMessage] = useState("");
+  const [continuationPrompt, setContinuationPrompt] = useState<ContinuationPrompt | null>(null);
+  const [showContinuationCard, setShowContinuationCard] = useState(false);
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingOffload, setIsSavingOffload] = useState(false);
+  const [openLoops, setOpenLoops] = useState<OpenLoopsData | null>(null);
+  const [dismissedLoopIds, setDismissedLoopIds] = useState<Set<string>>(new Set());
+  const [openLoopsPanelDismissed, setOpenLoopsPanelDismissed] = useState(false);
+  const paywallNudgeFiredRef = useRef(false);
 
   const routePersonId = typeof params.user === "string" ? params.user.trim() : "";
   const routeName = typeof params.name === "string" ? params.name.trim() : "";
@@ -351,6 +386,47 @@ export default function ConversationScreen() {
       cancelled = true;
     };
   }, [authToken, isAuthLoading, isOffloadMode, personId]);
+
+  useEffect(() => {
+    if (!personId || !BACKEND_URL || isOffloadMode || isHistoryLoading) return;
+    const fetchPrompt = async () => {
+      try {
+        const res = await fetch(
+          `${BACKEND_URL}/continuity/prompt?person_id=${encodeURIComponent(personId)}`,
+          { headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined },
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as ContinuationPrompt;
+        if (data.has_continuation) {
+          setContinuationPrompt(data);
+          setShowContinuationCard(true);
+        }
+      } catch {
+        // best-effort
+      }
+    };
+    void fetchPrompt();
+  }, [authToken, isHistoryLoading, isOffloadMode, personId]);
+
+  useEffect(() => {
+    if (!personId || !BACKEND_URL || isOffloadMode || isHistoryLoading) return;
+    const fetchOpenLoops = async () => {
+      try {
+        const res = await fetch(
+          `${BACKEND_URL}/continuity/open-loops?person_id=${encodeURIComponent(personId)}`,
+          { headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined },
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as OpenLoopsData;
+        if ((data.decisions?.length ?? 0) + (data.commitments?.length ?? 0) > 0) {
+          setOpenLoops(data);
+        }
+      } catch {
+        // best-effort
+      }
+    };
+    void fetchOpenLoops();
+  }, [authToken, isHistoryLoading, isOffloadMode, personId]);
 
   const deepReflectSignal = activeContinuitySignal?.deep_reflect;
   const wholeStorySignal = activeContinuitySignal?.whole_story;
@@ -506,6 +582,8 @@ export default function ConversationScreen() {
     setInputText("");
     setIsSending(true);
     setLatestUserMessage(text);
+    setShowContinuationCard(false);
+    setOpenLoopsPanelDismissed(true);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -554,6 +632,33 @@ export default function ConversationScreen() {
         });
         setActiveContinuitySignal(toContinuitySignal(data.continuity));
 
+        if (!paywallNudgeFiredRef.current && BACKEND_URL) {
+          try {
+            const pwRes = await fetch(
+              `${BACKEND_URL}/continuity/paywall-status?person_id=${encodeURIComponent(personId)}`,
+              { headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined },
+            );
+            if (pwRes.ok) {
+              const pw = await pwRes.json();
+              if (pw.show_upgrade_cta) {
+                paywallNudgeFiredRef.current = true;
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: `paywall-${Date.now()}`,
+                    role: "sakhi" as const,
+                    content: "You've built up real context here. Morning Review and What Changed are part of Sakhi Pro.",
+                    timestamp: new Date(),
+                    kind: "system" as const,
+                  },
+                ]);
+              }
+            }
+          } catch {
+            // best-effort
+          }
+        }
+
         if (data.reply) {
           const sakhiMessage: Message = {
             id: `sakhi-${Date.now()}`,
@@ -562,7 +667,23 @@ export default function ConversationScreen() {
             timestamp: new Date(),
             kind: "normal",
           };
-          setMessages((prev) => [...prev, sakhiMessage]);
+          setMessages((prev) => {
+            const next = [...prev, sakhiMessage];
+            // First-session nudge: at exactly 8 messages (4 exchanges), show return-value hint
+            if (next.length === 8) {
+              return [
+                ...next,
+                {
+                  id: `nudge-${Date.now()}`,
+                  role: "sakhi" as const,
+                  content: "I'm tracking where this thinking goes. Come back tomorrow and I'll show you what I noticed.",
+                  timestamp: new Date(),
+                  kind: "system" as const,
+                },
+              ];
+            }
+            return next;
+          });
         }
       } else {
         const statusText = await res.text().catch(() => "");
@@ -648,8 +769,8 @@ export default function ConversationScreen() {
     const mode = "whole_story";
     const selectedTopics = wholeStorySelectedTopics;
     const pendingMessage = linkedWholeStoryReady
-      ? "Deep Reflect is reading your whole story across linked threads..."
-      : "Deep Reflect is reading the full story of this thread...";
+      ? "Deep Dive is reading across your linked threads..."
+      : "Deep Dive is reading the full history of this thread...";
 
     const pendingId = `deep-pending-${Date.now()}`;
     haptics.strongPress();
@@ -759,7 +880,7 @@ export default function ConversationScreen() {
           {
             id: `deep-fail-${Date.now()}`,
             role: "sakhi",
-            content: "Deep Reflect did not complete this time. Please try again.",
+            content: "Deep Dive did not complete this time. Please try again.",
             timestamp: new Date(),
             kind: "system",
           },
@@ -779,7 +900,7 @@ export default function ConversationScreen() {
         {
           id: `deep-error-${Date.now()}`,
           role: "sakhi",
-          content: "Could not run Deep Reflect right now.",
+          content: "Could not run Deep Dive right now.",
           timestamp: new Date(),
           kind: "system",
         },
@@ -803,6 +924,16 @@ export default function ConversationScreen() {
     emitDebugEvent,
     haptics,
   ]);
+
+  const handleDismissLoop = useCallback((loopId: string) => {
+    setDismissedLoopIds((prev) => new Set(Array.from(prev).concat(loopId)));
+    if (BACKEND_URL) {
+      void fetch(`${BACKEND_URL}/continuity/open-loops/${loopId}/resolve`, {
+        method: "POST",
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+      });
+    }
+  }, [authToken]);
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
@@ -912,7 +1043,7 @@ export default function ConversationScreen() {
       {!isOffloadMode && connectivity === "offline" ? (
         <View style={styles.noticeBanner}>
           <Text style={styles.noticeBannerText}>
-            You are offline. Switch to Offload to save this without a response.
+            You are offline. Switch to Drop to save this without a response.
           </Text>
           <Pressable onPress={() => switchMode("offload")}>
             <Text style={styles.noticeBannerAction}>Switch</Text>
@@ -922,7 +1053,7 @@ export default function ConversationScreen() {
 
       {isOffloadMode && isOffloadSyncing ? (
         <View style={styles.noticeBanner}>
-          <Text style={styles.noticeBannerText}>Back online. Syncing your offloads...</Text>
+          <Text style={styles.noticeBannerText}>Back online. Syncing your drops...</Text>
         </View>
       ) : null}
 
@@ -941,8 +1072,8 @@ export default function ConversationScreen() {
           {isOffloadMode ? (
             offloadItems.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyPrompt}>A private place to put things down.</Text>
-                <Text style={styles.emptyHint}>Nothing is sent back to you here. Offloads are saved and processed quietly.</Text>
+                <Text style={styles.emptyPrompt}>Drop it. No response needed.</Text>
+                <Text style={styles.emptyHint}>Nothing is sent back to you here. Drops are saved and processed quietly.</Text>
               </View>
             ) : (
               <>
@@ -983,12 +1114,66 @@ export default function ConversationScreen() {
             </View>
           ) : !hasMessages ? (
             <View style={styles.emptyState}>
+              {!openLoopsPanelDismissed && openLoops &&
+               ((openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).length > 0) ||
+                (openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).length > 0)) ? (
+                <View style={styles.activeContextPanel}>
+                  <View style={styles.activeContextHeader}>
+                    <Text style={styles.activeContextTitle}>Open threads</Text>
+                    <Pressable onPress={() => setOpenLoopsPanelDismissed(true)} hitSlop={10}>
+                      <Text style={styles.activeContextDismissAll}>×</Text>
+                    </Pressable>
+                  </View>
+                  {openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).length > 0 ? (
+                    <View style={styles.activeContextSection}>
+                      <Text style={styles.activeContextSectionLabel}>Unresolved decisions</Text>
+                      {openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).map((loop) => (
+                        <View key={loop.id} style={styles.activeContextItem}>
+                          <Text style={styles.activeContextItemText}>{loop.topic}</Text>
+                          <Pressable onPress={() => handleDismissLoop(loop.id)} hitSlop={10}>
+                            <Text style={styles.activeContextItemCheck}>✓</Text>
+                          </Pressable>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                  {openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).length > 0 ? (
+                    <View style={styles.activeContextSection}>
+                      <Text style={styles.activeContextSectionLabel}>Commitments you made</Text>
+                      {openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).map((loop) => (
+                        <View key={loop.id} style={styles.activeContextItem}>
+                          <Text style={styles.activeContextItemText}>{loop.topic}</Text>
+                          <Pressable onPress={() => handleDismissLoop(loop.id)} hitSlop={10}>
+                            <Text style={styles.activeContextItemCheck}>✓</Text>
+                          </Pressable>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
               <Text style={styles.emptyPrompt}>A clear space to think out loud.</Text>
               <Text style={styles.emptyHint}>Start anywhere. Sakhi keeps context as you talk.</Text>
-              <Text style={styles.emptyHint}>Deep Reflect unlocks once your story runs long enough to draw from.</Text>
+              <Text style={styles.emptyHint}>Deep Dive unlocks once your thread runs long enough to draw from.</Text>
             </View>
           ) : (
             <>
+              {showContinuationCard && continuationPrompt ? (
+                <View style={styles.continuationCard}>
+                  <Text style={styles.continuationText}>{continuationPrompt.display}</Text>
+                  <View style={styles.continuationActions}>
+                    <Pressable
+                      onPress={() => setShowContinuationCard(false)}
+                      style={styles.continuationCta}
+                    >
+                      <Text style={styles.continuationCtaText}>Continue →</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setShowContinuationCard(false)}>
+                      <Text style={styles.continuationDismiss}>Dismiss</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
               {messages.map((msg) => {
                 const isUser = msg.role === "user";
                 const isSystem = msg.kind === "system";
@@ -1043,7 +1228,7 @@ export default function ConversationScreen() {
                   ) : (
                     <View style={styles.deepInlineContent}>
                       <Ionicons name="sparkles" size={13} color={palette.accentText} />
-                      <Text style={styles.deepInlineText}>Run Deep</Text>
+                      <Text style={styles.deepInlineText}>Deep Dive</Text>
                     </View>
                   )}
                 </Pressable>
@@ -1095,7 +1280,7 @@ export default function ConversationScreen() {
                     isOffloadMode && styles.footerModePillTextActive,
                   ]}
                 >
-                  Offload
+                  Drop
                 </Text>
               </View>
             </Pressable>
@@ -1105,7 +1290,7 @@ export default function ConversationScreen() {
             <View style={[styles.inputRow, styles.offloadInputRow]}>
               <TextInput
                 style={[styles.textInput, styles.offloadTextInput]}
-                placeholder="What do you need to put down?"
+                placeholder="Drop it here."
                 placeholderTextColor={palette.faint}
                 value={inputText}
                 onChangeText={setInputText}
@@ -1180,7 +1365,7 @@ export default function ConversationScreen() {
               <View style={styles.accountItemCopy}>
                 <Text style={styles.accountItemTitle}>Profile</Text>
                 <Text style={styles.accountItemSubtitle}>
-                  Reflection and topic story across your last {MOBILE_CONTINUITY_PLAN.continuityDays} days
+                  Threads and discussions from your last {MOBILE_CONTINUITY_PLAN.continuityDays} days
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={palette.muted} />
@@ -1237,6 +1422,8 @@ const palette = {
   faint: theme.colors.textFaint,
   border: theme.colors.border,
   cardBg: theme.colors.surface,
+  surfaceStrong: theme.colors.surfaceStrong,
+  surfaceMuted: theme.colors.surfaceMuted,
   accent: theme.colors.accent,
   accentText: theme.colors.accentText,
   accentInk: theme.colors.accentInk,
@@ -1458,6 +1645,39 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 26,
+  },
+  continuationCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(99,102,241,0.3)",
+    backgroundColor: "rgba(99,102,241,0.07)",
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  continuationText: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: theme.colors.text,
+  },
+  continuationActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginTop: 9,
+  },
+  continuationCta: {
+    paddingVertical: 2,
+  },
+  continuationCtaText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: theme.colors.accent,
+    letterSpacing: 0.3,
+  },
+  continuationDismiss: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
   },
   historySkeleton: {
     maxWidth: 280,
@@ -1795,5 +2015,65 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "700",
+  },
+  activeContextPanel: {
+    width: "100%",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.surfaceStrong,
+    padding: 14,
+    marginBottom: 20,
+    gap: 12,
+  },
+  activeContextHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  activeContextTitle: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    color: palette.muted,
+    fontWeight: "600",
+  },
+  activeContextDismissAll: {
+    fontSize: 20,
+    color: palette.muted,
+    lineHeight: 22,
+    paddingHorizontal: 4,
+  },
+  activeContextSection: {
+    gap: 6,
+  },
+  activeContextSectionLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    color: palette.muted,
+  },
+  activeContextItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.surfaceMuted,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  activeContextItemText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: palette.fg,
+  },
+  activeContextItemCheck: {
+    fontSize: 15,
+    color: palette.muted,
+    paddingHorizontal: 4,
   },
 });

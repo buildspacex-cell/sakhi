@@ -52,7 +52,7 @@ class TestBasePromptStructure:
     def test_prompt_contains_persona(self):
         result = build_prompt("Hello", _base_context(), _base_tone())
         assert "Sakhi" in result
-        assert "friend" in result
+        assert "thinking partner" in result
 
     def test_prompt_contains_user_message(self):
         result = build_prompt("How are you?", _base_context(), _base_tone())
@@ -64,10 +64,9 @@ class TestBasePromptStructure:
 
     def test_prompt_uses_response_contract(self):
         result = build_prompt("Need help prioritizing work this week.", _base_context(), _base_tone())
-        assert "Keep it focused. 60-120 words usually." in result
-        assert "Lead with something useful." in result
+        assert "40-80 words" in result
+        assert "Lead with the thing that matters." in result
         assert "Max 1 question." in result
-        assert "Ask only if it helps you understand better or give a more useful response." in result
 
     def test_prompt_contains_voice_directive(self):
         result = build_prompt("Hello", _base_context(), _base_tone())
@@ -81,7 +80,7 @@ class TestBasePromptStructure:
     def test_prompt_contains_response_modes(self):
         result = build_prompt("Hello", _base_context(), _base_tone())
         assert "[RESPONSE MODE — INTERNAL ONLY]" in result
-        assert "Default to help or guide" in result
+        assert "Default to resolve or confront" in result
         assert "Never ask more than 1 question" in result
 
     def test_cut_blocks_absent(self):
@@ -259,7 +258,72 @@ class TestConversationContext:
         assert "First message" not in result
         assert "Third message" not in result
 
-    def test_prompt_ends_with_user_message_and_response_instruction(self):
+    def test_prompt_ends_with_user_message(self):
         result = build_prompt("Hello", _base_context(), _base_tone())
         assert "User message:\nHello" in result
-        assert result.endswith("Respond naturally.")
+
+
+# =============================================================================
+# Session Anchor (first-message behavior)
+# =============================================================================
+
+
+class TestSessionAnchor:
+    """Tests for first-message anchoring — new user vs returning user."""
+
+    def test_no_anchor_mid_conversation(self):
+        metadata = {
+            "conversation_history": [{"role": "user", "text": "previous message"}],
+            "total_turns": 1,
+        }
+        result = build_prompt("Hello", _base_context(), _base_tone(), metadata=metadata)
+        assert "FIRST MESSAGE" not in result
+
+    def test_new_user_anchor_when_no_history_no_continuity(self):
+        metadata = {"conversation_history": [], "total_turns": 0}
+        result = build_prompt("Hello", _base_context(), _base_tone(), metadata=metadata)
+        assert "FIRST MESSAGE — NEW USER" in result
+        assert "What are you trying to work out" in result
+
+    def test_returning_user_anchor_when_open_decisions_present(self):
+        metadata = {
+            "conversation_history": [],
+            "total_turns": 0,
+            "continuity_pack": {
+                "topic_key": "career",
+                "topic_label": "Career",
+                "history_compact": {
+                    "decision_ledger": [
+                        {"decision": "whether to take the new role", "status": "open", "source": "user"},
+                    ],
+                },
+            },
+        }
+        result = build_prompt("Hello", _base_context(), _base_tone(), metadata=metadata)
+        assert "FIRST MESSAGE — RETURNING USER" in result
+        assert "whether to take the new role" in result
+
+    def test_returning_user_skips_resolved_decisions(self):
+        metadata = {
+            "conversation_history": [],
+            "total_turns": 0,
+            "continuity_pack": {
+                "topic_key": "career",
+                "history_compact": {
+                    "decision_ledger": [
+                        {"decision": "took the role", "status": "resolved", "source": "user"},
+                    ],
+                },
+            },
+        }
+        result = build_prompt("Hello", _base_context(), _base_tone(), metadata=metadata)
+        # All decisions resolved → treated as new user
+        assert "FIRST MESSAGE — NEW USER" in result
+
+    def test_no_anchor_when_total_turns_nonzero(self):
+        metadata = {
+            "conversation_history": [],
+            "total_turns": 3,
+        }
+        result = build_prompt("Hello", _base_context(), _base_tone(), metadata=metadata)
+        assert "FIRST MESSAGE" not in result

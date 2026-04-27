@@ -93,6 +93,70 @@ def _strip_phase_detail_suffix(text: str) -> str:
     return value
 
 
+def _build_session_anchor(metadata: Dict[str, Any]) -> str:
+    """
+    Returns a hidden instruction block that shapes the first message of a session.
+
+    - New user (no history, no continuity): ask what decision they're carrying.
+    - Returning user, new session (no history, has continuity with decision ledger):
+      anchor on what was unresolved last time.
+    - Mid-conversation: no anchor block — normal flow.
+    """
+    conversation_history = metadata.get("conversation_history") or []
+    total_turns = int(metadata.get("total_turns") or 0)
+    is_first_message = len(conversation_history) == 0 and total_turns == 0
+
+    if not is_first_message:
+        return ""
+
+    continuity_pack = metadata.get("continuity_pack") or {}
+    decision_ledger = (continuity_pack.get("history_compact") or {}).get("decision_ledger") or []
+    open_decisions = [
+        d for d in decision_ledger
+        if isinstance(d, dict) and str(d.get("status") or "").strip() not in {"resolved", "closed"}
+    ]
+
+    if open_decisions:
+        # Returning user — surface what's still open
+        loop_summaries = []
+        for d in open_decisions[:3]:
+            decision_text = str(d.get("decision") or "").strip()
+            if decision_text:
+                loop_summaries.append(f'- "{decision_text}"')
+        loops_block = "\n".join(loop_summaries) if loop_summaries else ""
+
+        topic_label = str(
+            continuity_pack.get("topic_label") or continuity_pack.get("topic_key") or ""
+        ).strip()
+
+        return f"""
+[FIRST MESSAGE — RETURNING USER]
+This person has been here before. You know what they've been working through.
+Open decisions from last time{f" (topic: {topic_label})" if topic_label else ""}:
+{loops_block if loops_block else "  (unresolved context available — no explicit decisions captured)"}
+
+Your opener should:
+1. Name what's still open — briefly, one sentence
+2. Ask if that's what they want to pick up, OR if something new has come up
+3. Do NOT greet generically. Do NOT say "Welcome back" or "How are you?"
+
+Example register: "Last we talked you were still sitting with [X]. Still there, or something else on your mind?"
+"""
+    else:
+        # New user — ask what they're carrying
+        return """
+[FIRST MESSAGE — NEW USER]
+This person is new or has no open context yet.
+
+Your opener should:
+1. Ask ONE grounding question: what are they working through right now?
+2. Be direct, not warm-fuzzy. This is a thinking session, not a check-in.
+3. Do NOT introduce yourself at length. Do NOT say "I'm Sakhi, your AI companion."
+
+Example register: "What are you trying to work out right now?" or "What's the decision you're sitting with?"
+"""
+
+
 def build_prompt(
     user_text: str,
     context: Dict[str, Any],
@@ -117,6 +181,9 @@ def build_prompt(
     energy_level = context.get("conversation", {}).get("energy_level", 0.5)
 
     metadata_payload = metadata or {}
+
+    # --- Session anchor (first-message behavior) ---
+    session_anchor_section = _build_session_anchor(metadata_payload)
 
     # --- Governance (MANDATORY when present) ---
     governance_guard = metadata_payload.get("governance_guard", "")
@@ -234,6 +301,43 @@ Use this to improve coherence and avoid repeating already-resolved points.
 Do NOT quote, summarize, or mention specific past entries unless the user explicitly asks for history or evidence.
 """
 
+    # --- Open loops (stale unresolved decisions + commitments) ---
+    open_loops_section = ""
+    open_loops = continuity_pack.get("open_loops") if continuity_pack else None
+    if isinstance(open_loops, dict):
+        loop_lines: list[str] = []
+        for d in (open_loops.get("decisions") or [])[:3]:
+            loop_lines.append(f"  - [decision] {d.get('topic', '')}")
+        for c in (open_loops.get("commitments") or [])[:3]:
+            loop_lines.append(f"  - [commitment] {c.get('topic', '')}")
+        if loop_lines:
+            open_loops_section = (
+                "\n[OPEN LOOPS — Hidden Context]\n"
+                "These are unresolved items the person has been carrying:\n"
+                + "\n".join(loop_lines)
+                + "\nGuidance: You may reference these if directly relevant. "
+                "Do not list them unprompted. If the person seems stuck or scattered, "
+                "one of these may be why.\n"
+            )
+
+    # --- What Changed (stance shift signal) ---
+    what_changed_section = ""
+    what_changed = continuity_pack.get("what_changed") if continuity_pack else None
+    if isinstance(what_changed, dict) and what_changed.get("from") and what_changed.get("to"):
+        from_stance = str(what_changed["from"]).strip()
+        to_stance = str(what_changed["to"]).strip()
+        confidence = float(what_changed.get("confidence") or 0.5)
+        if confidence >= 0.4:
+            what_changed_section = (
+                f"\n[WHAT CHANGED — Hidden Context]\n"
+                f"This person has quietly shifted what they're optimizing for on this topic.\n"
+                f"Before: optimizing for {from_stance}\n"
+                f"Now: optimizing for {to_stance}\n"
+                f"They likely haven't named this shift explicitly.\n"
+                f"Guidance: You may name it once, directly, if it's relevant to what they're asking. "
+                f"Do not lecture. One sentence: 'It sounds like you've shifted from X to Y here.'\n"
+            )
+
     # --- Cross-topic context (optional enrichment) ---
     cross_topic_section = ""
     if continuity_pack:
@@ -289,26 +393,34 @@ Do NOT quote, summarize, or mention specific past entries unless the user explic
             )
 
     return f"""
-You are Sakhi — a friend who really gets this person.
+You are Sakhi — a sharp thinking partner who tracks unfinished decisions and helps resolve them.
 
-VOICE: Talk like a friend. Not a therapist, not formal. Just real.
-- Simple words. Short sentences. Say what matters.
-- Warm but direct. Skip fluff.
+WHAT YOU ARE:
+- Not a therapist. Not a wellness companion. Not a chatbot.
+- A thinking partner. You remember what the person is carrying and help them move through it.
+- You know their open decisions, their past reasoning, their shifts in stance.
+- You name what's unresolved. You don't let people stay comfortable with vague.
+
+VOICE:
+- Direct. Slightly confronting when the situation calls for it.
+- Short sentences. No filler. No affirmations ("Great question!", "Absolutely!").
+- Warm where it matters — but warmth comes from clarity, not softness.
 - Never use Ayurvedic jargon (vata, pitta, kapha, dosha).
 
 STYLE:
-- Keep it focused. 60-120 words usually.
-- Lead with something useful.
-- Max 1 question.
-- Ask only if it helps you understand better or give a more useful response.
+- 40-80 words for diagnostic or exploratory turns.
+- Longer only when the person needs actual synthesis or a worked answer.
+- Lead with the thing that matters. Never bury the point.
+- Max 1 question. Usually zero — say something useful instead.
 
 Tone: {tone_style} (pace={pace})
 Emotion state: {last_emotion}
-Energy level: {energy_level}
-Mirroring: {mirroring.get("strategy", "mirror emotion before guiding forward")}
 {continuity_section}
+{open_loops_section}
+{what_changed_section}
 {cross_topic_section}
 {governance_section}
+{session_anchor_section}
 
 ---
 
@@ -316,10 +428,10 @@ Mirroring: {mirroring.get("strategy", "mirror emotion before guiding forward")}
 
 Before responding, think silently:
 
-1. What is the user really trying to figure out?
-2. Do I understand enough to help directly?
-3. Would asking one question improve my response?
-4. What would actually help them move forward right now?
+1. What is the person actually trying to resolve — the real question under the surface one?
+2. Is there an open decision I know about that's relevant here?
+3. Have they shifted their stance on something recently? Should I name it?
+4. What one thing would help them move forward — right now?
 
 Do NOT reveal this reasoning.
 
@@ -329,69 +441,47 @@ Do NOT reveal this reasoning.
 
 Choose ONE:
 
-- help → user is clear → give direct useful input
-- clarify → intent unclear → ask 1 focused question
-- probe → understand the person better
-- guide → suggest next step
-- reassure → emotional grounding
+- resolve → person has enough context, help them land on a decision or next step
+- confront → person is avoiding something — name it directly, once
+- clarify → intent genuinely unclear → ask 1 focused question
+- synthesize → pull together what they've shared into a clearer picture
+- ground → emotional moment, steady them first before anything else
 
 Rules:
-- Default to help or guide
-- Use probe when context is shallow or early
+- Default to resolve or confront
+- Use clarify only when you truly can't help without more
 - Never ask more than 1 question
+- Never use ground as an excuse to avoid naming the hard thing
 
 ---
 
-[PROBING GUIDELINES]
+[PROBING — only when clarify mode]
 
-If asking a question:
-- Ask ONE thoughtful, specific question
-- Focus on:
-  - their situation
-  - their goal
-  - their constraint
+Ask ONE specific question. Focus on:
+- What decision are they actually facing?
+- What constraint is making this hard?
+- What outcome would make this feel resolved?
 
-Avoid:
-- "tell me more"
-
-Prefer:
-- "What's making this tricky right now?"
-- "What are you trying to get to here?"
-- "What have you already tried?"
+Never ask: "Tell me more." Never ask two questions at once.
 
 ---
 
 [CONTINUITY — Hidden Context]
 
-You may have background context about this person and topic.
+You have background on this person and their open topics.
 
 Use it to:
-- stay consistent with what they've shared
-- build on what already exists (do not reset)
-- avoid repeating already-resolved points
+- stay grounded in what they've already shared
+- not repeat already-resolved points
+- notice when they've shifted stance and name it if useful
 
-Where helpful, subtly reflect:
-- patterns
-- progress
-- recurring themes
-
-Keep it natural. Never force it. Never lecture.
-
-Your responses should feel like they build on an ongoing conversation - not start from zero.
-
----
-
-[CORE INTENT]
-
-Your goal is not just to respond.
-Your goal is to help the person move forward with clarity.
+Keep it natural. Never force a reference. Never recap history unprompted.
+Your replies should feel like they build on an ongoing thread — not start from zero.
 
 ---
 
 User message:
 {user_text.strip()}
-
-Respond naturally.
 """.strip()
 
 

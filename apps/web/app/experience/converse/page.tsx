@@ -48,11 +48,42 @@ interface WholeStorySignal {
   correlation_score: number;
 }
 
+interface WhatChangedSignal {
+  from: string;
+  to: string;
+  confidence: number;
+  topic_key?: string;
+}
+
+interface OpenLoop {
+  id: string;
+  loop_type: "open_decision" | "conversation_commitment";
+  topic: string;
+}
+
+interface OpenLoopsData {
+  decisions: OpenLoop[];
+  commitments: OpenLoop[];
+  total: number;
+}
+
 interface ContinuitySignal {
   topic_key: string;
   topic_label?: string;
   deep_reflect?: DeepReflectSignal;
   whole_story?: WholeStorySignal;
+  what_changed?: WhatChangedSignal;
+  open_loops?: OpenLoopsData;
+}
+
+interface ContinuationPrompt {
+  has_continuation: boolean;
+  display?: string;
+  snippet?: string;
+  topic_label?: string;
+  topic_key?: string;
+  decision_state?: string;
+  hours_since?: number;
 }
 
 const DEEP_POLL_INTERVAL_MS = 2000;
@@ -157,6 +188,12 @@ function ConverseContent() {
   const [deepReflectionStatus, setDeepReflectionStatus] = useState("");
   const [activeContinuitySignal, setActiveContinuitySignal] = useState<ContinuitySignal | null>(null);
   const [latestUserMessage, setLatestUserMessage] = useState("");
+  const [continuationPrompt, setContinuationPrompt] = useState<ContinuationPrompt | null>(null);
+  const [showContinuationCard, setShowContinuationCard] = useState(false);
+  const [openLoops, setOpenLoops] = useState<OpenLoopsData | null>(null);
+  const [dismissedLoopIds, setDismissedLoopIds] = useState<Set<string>>(new Set());
+  const [openLoopsPanelDismissed, setOpenLoopsPanelDismissed] = useState(false);
+  const paywallNudgeFiredRef = useRef(false);
 
   useEffect(() => {
     const loadAuth = async () => {
@@ -271,6 +308,45 @@ function ConverseContent() {
   }, [authLoading, personId]);
 
   useEffect(() => {
+    if (!personId || isHistoryLoading) return;
+    const fetchPrompt = async () => {
+      try {
+        const res = await fetch(`/api/continuity/prompt?person_id=${encodeURIComponent(personId)}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as ContinuationPrompt;
+        if (data.has_continuation) {
+          setContinuationPrompt(data);
+          setShowContinuationCard(true);
+        }
+      } catch {
+        // best-effort — never block the conversation
+      }
+    };
+    void fetchPrompt();
+  }, [personId, isHistoryLoading]);
+
+  useEffect(() => {
+    if (!personId || isHistoryLoading) return;
+    const fetchOpenLoops = async () => {
+      try {
+        const res = await fetch(`/api/continuity/open-loops?person_id=${encodeURIComponent(personId)}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as OpenLoopsData;
+        if ((data.decisions?.length ?? 0) + (data.commitments?.length ?? 0) > 0) {
+          setOpenLoops(data);
+        }
+      } catch {
+        // best-effort — never block the conversation
+      }
+    };
+    void fetchOpenLoops();
+  }, [personId, isHistoryLoading]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -362,6 +438,8 @@ function ConverseContent() {
     setInputText("");
     setIsSending(true);
     setLatestUserMessage(text);
+    setShowContinuationCard(false);
+    setOpenLoopsPanelDismissed(true);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -381,6 +459,34 @@ function ConverseContent() {
         const data = await res.json();
         setActiveContinuitySignal(toContinuitySignal(data.continuity));
 
+        // Check paywall threshold — inject nudge once per session
+        if (!paywallNudgeFiredRef.current) {
+          try {
+            const pwRes = await fetch(
+              `/api/continuity/paywall-status?person_id=${encodeURIComponent(personId)}`,
+              { cache: "no-store" },
+            );
+            if (pwRes.ok) {
+              const pw = await pwRes.json();
+              if (pw.show_upgrade_cta) {
+                paywallNudgeFiredRef.current = true;
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: `paywall-${Date.now()}`,
+                    role: "sakhi" as const,
+                    content: "You've built up real context here. Morning Review and What Changed — the parts that show you what shifted and what's still unresolved — are part of Sakhi Pro.",
+                    timestamp: new Date(),
+                    kind: "system" as const,
+                  },
+                ]);
+              }
+            }
+          } catch {
+            // best-effort — never interrupt the conversation
+          }
+        }
+
         if (data.reply) {
           const sakhiMessage: Message = {
             id: `sakhi-${Date.now()}`,
@@ -389,7 +495,23 @@ function ConverseContent() {
             timestamp: new Date(),
             kind: "normal",
           };
-          setMessages((prev) => [...prev, sakhiMessage]);
+          setMessages((prev) => {
+            const next = [...prev, sakhiMessage];
+            // First-session nudge at exactly 8 messages (4 exchanges)
+            if (next.length === 8) {
+              return [
+                ...next,
+                {
+                  id: `nudge-${Date.now()}`,
+                  role: "sakhi" as const,
+                  content: "I'm tracking where this thinking goes. Come back tomorrow and I'll show you what I noticed.",
+                  timestamp: new Date(),
+                  kind: "system" as const,
+                },
+              ];
+            }
+            return next;
+          });
         }
       } else {
         const sakhiMessage: Message = {
@@ -585,6 +707,12 @@ function ConverseContent() {
     wholeStorySelectedTopics,
   ]);
 
+  const handleDismissLoop = useCallback((loopId: string) => {
+    setDismissedLoopIds((prev) => new Set(Array.from(prev).concat(loopId)));
+    // Fire-and-forget resolve — best effort
+    void fetch(`/api/continuity/open-loops/${loopId}/resolve`, { method: "POST" });
+  }, []);
+
   const openAccountRoute = useCallback(
     (path: string) => {
       setAccountMenuOpen(false);
@@ -638,6 +766,76 @@ function ConverseContent() {
       </header>
 
       <main style={styles.messagesArea}>
+        {!openLoopsPanelDismissed && openLoops && !hasMessages ? (
+          <div style={styles.activeContextPanel}>
+            <div style={styles.activeContextHeader}>
+              <span style={styles.activeContextTitle}>Open threads</span>
+              <button style={styles.activeContextDismissAll} onClick={() => setOpenLoopsPanelDismissed(true)}>
+                ×
+              </button>
+            </div>
+            {openLoops.decisions.filter((l) => !dismissedLoopIds.has(l.id)).length > 0 ? (
+              <div style={styles.activeContextSection}>
+                <p style={styles.activeContextSectionLabel}>Unresolved decisions</p>
+                {openLoops.decisions
+                  .filter((l) => !dismissedLoopIds.has(l.id))
+                  .map((loop) => (
+                    <div key={loop.id} style={styles.activeContextItem}>
+                      <span style={styles.activeContextItemText}>{loop.topic}</span>
+                      <button
+                        style={styles.activeContextItemDismiss}
+                        onClick={() => handleDismissLoop(loop.id)}
+                        title="Mark resolved"
+                      >
+                        ✓
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            ) : null}
+            {openLoops.commitments.filter((l) => !dismissedLoopIds.has(l.id)).length > 0 ? (
+              <div style={styles.activeContextSection}>
+                <p style={styles.activeContextSectionLabel}>Commitments you made</p>
+                {openLoops.commitments
+                  .filter((l) => !dismissedLoopIds.has(l.id))
+                  .map((loop) => (
+                    <div key={loop.id} style={styles.activeContextItem}>
+                      <span style={styles.activeContextItemText}>{loop.topic}</span>
+                      <button
+                        style={styles.activeContextItemDismiss}
+                        onClick={() => handleDismissLoop(loop.id)}
+                        title="Mark done"
+                      >
+                        ✓
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {showContinuationCard && continuationPrompt ? (
+          <div style={styles.continuationCard}>
+            <p style={styles.continuationText}>{continuationPrompt.display}</p>
+            <div style={styles.continuationActions}>
+              <button
+                style={styles.continuationCta}
+                onClick={() => {
+                  setShowContinuationCard(false);
+                  document.querySelector("textarea")?.focus();
+                }}
+              >
+                Continue →
+              </button>
+              <button
+                style={styles.continuationDismiss}
+                onClick={() => setShowContinuationCard(false)}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : null}
         {!hasMessages && isHistoryLoading ? (
           <div style={styles.historyLoadingState}>
             <p style={{ color: palette.muted }}>Loading...</p>
@@ -833,6 +1031,45 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "auto",
     textAlign: "center",
   },
+  continuationCard: {
+    margin: "0 auto 16px",
+    width: "100%",
+    maxWidth: 620,
+    borderRadius: 12,
+    border: `1px solid ${palette.accent}40`,
+    backgroundColor: `${palette.accent}0d`,
+    padding: "14px 18px",
+  },
+  continuationText: {
+    margin: 0,
+    fontSize: 14,
+    lineHeight: "21px",
+    color: palette.fg,
+  },
+  continuationActions: {
+    display: "flex",
+    gap: 12,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  continuationCta: {
+    background: "none",
+    border: "none",
+    padding: 0,
+    fontSize: 13,
+    fontWeight: 600,
+    color: palette.accent,
+    cursor: "pointer",
+    letterSpacing: "0.3px",
+  },
+  continuationDismiss: {
+    background: "none",
+    border: "none",
+    padding: 0,
+    fontSize: 12,
+    color: palette.muted,
+    cursor: "pointer",
+  },
   emptyPrompt: {
     fontSize: 42,
     lineHeight: 1.08,
@@ -966,5 +1203,75 @@ const styles: Record<string, React.CSSProperties> = {
   sendButtonDisabled: {
     opacity: 0.55,
     cursor: "default",
+  },
+  activeContextPanel: {
+    margin: "0 auto 16px",
+    width: "100%",
+    maxWidth: 620,
+    borderRadius: 14,
+    border: `1px solid ${palette.border}`,
+    background: palette.glassStrong,
+    padding: "14px 16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+  },
+  activeContextHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  activeContextTitle: {
+    fontSize: 11,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.12em",
+    color: palette.muted,
+    fontWeight: 600,
+  },
+  activeContextDismissAll: {
+    background: "none",
+    border: "none",
+    color: palette.muted,
+    fontSize: 18,
+    lineHeight: 1,
+    cursor: "pointer",
+    padding: "0 2px",
+  },
+  activeContextSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+  activeContextSectionLabel: {
+    margin: 0,
+    fontSize: 11,
+    color: palette.muted,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase" as const,
+  },
+  activeContextItem: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    borderRadius: 8,
+    border: `1px solid ${palette.border}`,
+    background: palette.glassMuted,
+    padding: "9px 12px",
+  },
+  activeContextItemText: {
+    fontSize: 14,
+    lineHeight: 1.4,
+    color: palette.fg,
+    flex: 1,
+  },
+  activeContextItemDismiss: {
+    background: "none",
+    border: "none",
+    color: palette.muted,
+    fontSize: 15,
+    cursor: "pointer",
+    padding: "0 4px",
+    flexShrink: 0,
   },
 };

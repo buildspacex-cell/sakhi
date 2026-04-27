@@ -5,7 +5,7 @@ POETRY ?= poetry
         quick-test watch-test typecheck new-route new-service status pre-commit-install \
         docs-api docs-schema verify build-check integration-test pre-commit-run \
         test-coverage test-workers test-routes test-unit test-status pre-deploy ready-to-commit \
-        changelog
+        changelog eval-loops
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Development
@@ -120,6 +120,10 @@ test-status:
 # ─────────────────────────────────────────────────────────────────────────────
 # Pre-Deploy Verification
 # ─────────────────────────────────────────────────────────────────────────────
+
+eval-loops:
+	@echo "Running open loop extraction quality eval..."
+	$(POETRY) run python scripts/eval/run_loop_eval.py
 
 pre-deploy: verify test integration-test
 	@echo ""

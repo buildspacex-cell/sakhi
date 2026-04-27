@@ -137,7 +137,27 @@ async def build_continuity_pack(
         now=now,
     )
 
-    return {
+    # What Changed: detect stance shift for this topic
+    what_changed: dict | None = None
+    try:
+        from sakhi.apps.api.services.continuity.stance import detect_stance_shift
+
+        what_changed = await detect_stance_shift(person_id, target_anchor)
+    except Exception as _wc_exc:
+        pass  # non-fatal
+
+    # Open loops: surface stale loops (open > 3 days) for this person
+    open_loops_signal: dict | None = None
+    try:
+        from sakhi.apps.api.services.continuity.loops import get_stale_open_loops
+
+        stale = await get_stale_open_loops(person_id)
+        if stale.get("decisions") or stale.get("commitments"):
+            open_loops_signal = stale
+    except Exception as _ol_exc:
+        pass  # non-fatal
+
+    pack: dict = {
         "topic_key": target_anchor,
         "topic_label": topic.get("label") or target_anchor.replace("_", " ").title(),
         "window_start": from_ts.isoformat(),
@@ -164,7 +184,10 @@ async def build_continuity_pack(
         "cross_context": cross_context,
         "whole_story": whole_story,
         "life_dimensions": life_dimensions,
+        "what_changed": what_changed,
+        "open_loops": open_loops_signal,
     }
+    return pack
 
 
 def _select_target_anchor(user_text: str, explicit_topic: str | None) -> tuple[str | None, dict[str, Any]]:

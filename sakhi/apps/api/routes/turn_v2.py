@@ -227,7 +227,7 @@ class TurnIn(BaseModel):
     media_ids: list[str] | None = None  # Previously uploaded media IDs
 
 
-_DEEP_REFLECT_MIN_MOMENTS = 8
+_DEEP_REFLECT_MIN_MOMENTS = 4
 
 
 def _safe_int(value: Any, default: int = 0) -> int:
@@ -290,7 +290,7 @@ def _build_public_continuity_signal(continuity_pack: Any) -> Dict[str, Any] | No
         "topic_label": topic_label,
         "deep_reflect": _build_deep_reflect_signal(continuity_pack),
     }
-    for optional_key in ("candidate_topics", "cross_context", "whole_story", "life_dimensions"):
+    for optional_key in ("candidate_topics", "cross_context", "whole_story", "life_dimensions", "what_changed", "open_loops"):
         optional_value = continuity_pack.get(optional_key)
         if optional_value not in (None, [], {}, ""):
             payload[optional_key] = optional_value
@@ -577,6 +577,7 @@ async def _run_post_reply_processing(
             "preference_learning",
             "journal_enrich",
             "intent_extraction",
+            "continuity_enrichment",
         ]
         inferred_intent = stored_intents[0] if stored_intents else (
             topics_for_signals[0] if topics_for_signals else None

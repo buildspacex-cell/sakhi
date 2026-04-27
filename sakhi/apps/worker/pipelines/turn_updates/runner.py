@@ -67,6 +67,8 @@ async def _process(job_type: str, turn_id: str, person_id: str, payload: Dict[st
         await _handle_intent_extraction(turn_id, resolved_id, payload)
     elif job_type == "session_compress":
         await _handle_session_compress(turn_id, resolved_id, payload)
+    elif job_type == "continuity_enrichment":
+        await _handle_continuity_enrichment(turn_id, resolved_id, payload)
     else:
         LOGGER.warning("Unknown turn job type=%s (deep workers now run daily via scheduler)", job_type)
 
@@ -286,6 +288,71 @@ async def _handle_session_compress(turn_id: str, person_id: str, payload: Dict[s
         LOGGER.info("[SessionCompress] done session=%s summary_len=%s", session_id, len(summary or ""))
     except Exception as exc:
         LOGGER.exception("[SessionCompress] failed session=%s error=%s", session_id, exc)
+
+
+async def _handle_continuity_enrichment(turn_id: str, person_id: str, payload: Dict[str, Any]) -> None:
+    """Run LLM enrichment for a continuity entry (anchor inference, decision state, epistemic state, affective scalar, stance)."""
+    text = payload.get("text") or ""
+    entry_id = payload.get("entry_id") or turn_id
+    current_anchor = payload.get("anchor")
+    if not text:
+        return
+
+    enrichment_result: dict = {}
+    try:
+        from sakhi.apps.api.services.continuity.llm_enrichment import enrich_entry_continuity
+
+        enrichment_result = await enrich_entry_continuity(person_id, entry_id, text, current_anchor)
+        LOGGER.info("[ContinuityEnrich] done entry=%s person=%s result=%s", entry_id, person_id, enrichment_result)
+    except Exception as exc:
+        LOGGER.exception("[ContinuityEnrich] failed entry=%s person=%s error=%s", entry_id, person_id, exc)
+
+    # Stance extraction — runs after anchor is resolved so we have a topic to attach to
+    resolved_anchor = (
+        enrichment_result.get("inferred_anchor")
+        or current_anchor
+        or payload.get("topic_key")
+    )
+    stance: str | None = None
+    if resolved_anchor and resolved_anchor not in ("unknown", "", None):
+        try:
+            from sakhi.apps.api.services.continuity.stance import extract_and_store_stance
+
+            stance = await extract_and_store_stance(
+                person_id=person_id,
+                topic_key=str(resolved_anchor),
+                text=text,
+                entry_id=str(entry_id) if entry_id else None,
+            )
+            if stance:
+                LOGGER.info(
+                    "[ContinuityEnrich] stance=%s topic=%s entry=%s person=%s",
+                    stance, resolved_anchor, entry_id, person_id,
+                )
+        except Exception as stance_exc:
+            LOGGER.warning("[ContinuityEnrich] stance extraction failed: %s", stance_exc)
+
+    # Loop extraction — decisions and commitments from this turn
+    try:
+        from sakhi.apps.api.services.continuity.loops import run_loop_extraction
+
+        loop_result = await run_loop_extraction(
+            person_id=person_id,
+            text=text,
+            entry_id=str(entry_id) if entry_id else None,
+            topic_key=str(resolved_anchor) if resolved_anchor and resolved_anchor not in ("unknown", "", None) else None,
+            stance=stance,
+        )
+        if loop_result.get("decisions_extracted") or loop_result.get("commitments_extracted") or loop_result.get("resolved"):
+            LOGGER.info(
+                "[ContinuityEnrich] loops: decisions=%d commitments=%d resolved=%d person=%s",
+                loop_result.get("decisions_extracted", 0),
+                loop_result.get("commitments_extracted", 0),
+                len(loop_result.get("resolved", [])),
+                person_id,
+            )
+    except Exception as loop_exc:
+        LOGGER.warning("[ContinuityEnrich] loop extraction failed: %s", loop_exc)
 
 
 __all__ = ["process_turn_job", "process_turn_job_async"]

@@ -39,6 +39,8 @@ const ALLOWED_PREFIXES = [
   "/story",
   "/founder-story",
   "/lab/simulation",
+  "/experience",
+  "/auth",
 ];
 
 function isAllowed(pathname: string): boolean {
@@ -46,11 +48,16 @@ function isAllowed(pathname: string): boolean {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+function isLocalhost(request: NextRequest): boolean {
+  const host = request.headers.get("host") || "";
+  return host.startsWith("localhost") || host.startsWith("127.0.0.1");
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Block all routes not in the allow-list
-  if (!isAllowed(pathname)) {
+  // Localhost: all routes open for development
+  if (!isLocalhost(request) && !isAllowed(pathname)) {
     return new NextResponse(null, { status: 404 });
   }
 

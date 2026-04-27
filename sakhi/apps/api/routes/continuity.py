@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -15,6 +16,7 @@ from sakhi.apps.api.services.continuity import (
     upsert_continuity_label,
     upsert_continuity_policy,
 )
+from sakhi.apps.api.services.continuity.service import get_continuation_prompt
 from sakhi.apps.api.services.continuity.reflection import (
     create_deep_reflection_job,
     get_deep_reflection_result,
@@ -61,6 +63,16 @@ class ContinuityReflectionRunRequest(BaseModel):
     mode: Literal["topic_reflection", "whole_story", "cross_context"] = "topic_reflection"
     topic_keys: list[str] = Field(default_factory=list)
     user_query: str | None = None
+
+
+@router.get("/prompt")
+async def get_continuation_prompt_route(
+    request: Request,
+    person_id: str,
+):
+    """Return a return-visit continuation card for the app home screen."""
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
+    return await get_continuation_prompt(resolved_person_id)
 
 
 @router.get("/policy")
@@ -203,6 +215,167 @@ async def get_continuity_reflection_status_route(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/open-loops")
+async def get_open_loops_route(
+    request: Request,
+    person_id: str,
+    status: str = "open",
+):
+    """Return the open loops ledger for a person, split by type."""
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
+    from sakhi.apps.api.services.continuity.loops import get_open_loops
+
+    loops = await get_open_loops(resolved_person_id, status=status)
+    return {
+        "person_id": resolved_person_id,
+        "status": status,
+        "decisions": loops.get("decisions", []),
+        "commitments": loops.get("commitments", []),
+        "total": len(loops.get("decisions", [])) + len(loops.get("commitments", [])),
+    }
+
+
+@router.post("/open-loops/{loop_id}/resolve")
+async def resolve_open_loop_route(
+    loop_id: str,
+    request: Request,
+    person_id: str | None = Query(default=None),
+):
+    """Mark a loop as resolved (e.g. user dismissed it from the UI)."""
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
+    from sakhi.apps.api.services.continuity.loops import resolve_loop
+
+    await resolve_loop(loop_id)
+    return {"loop_id": loop_id, "status": "resolved"}
+
+
+@router.get("/morning-review")
+async def get_morning_review_route(
+    request: Request,
+    person_id: str,
+):
+    """Return structured Today's Review payload: what changed, one thing, think, act."""
+    from datetime import datetime, timezone
+
+    from sakhi.apps.api.services.continuity.loops import get_open_loops
+    from sakhi.apps.api.services.continuity.stance import get_morning_stance_shift
+
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
+
+    loops, what_changed = await asyncio.gather(
+        get_open_loops(resolved_person_id),
+        get_morning_stance_shift(resolved_person_id),
+        return_exceptions=True,
+    )
+    if isinstance(loops, Exception):
+        loops = {"decisions": [], "commitments": []}
+    if isinstance(what_changed, Exception):
+        what_changed = None
+
+    decisions = loops.get("decisions", [])
+    commitments = loops.get("commitments", [])
+
+    # "One Thing" — oldest unresolved decision first (most stale = highest priority to confront)
+    one_thing = None
+    if decisions:
+        oldest = sorted(decisions, key=lambda x: x.get("first_raised_at") or "")
+        loop = oldest[0]
+        first_raised = loop.get("first_raised_at")
+        days_open = 0
+        if first_raised:
+            try:
+                raised_dt = datetime.fromisoformat(first_raised.replace("Z", "+00:00"))
+                days_open = (datetime.now(timezone.utc) - raised_dt).days
+            except Exception:
+                pass
+        one_thing = {
+            "id": loop["id"],
+            "topic": loop["topic"],
+            "loop_type": loop.get("loop_type", "open_decision"),
+            "days_open": days_open,
+        }
+
+    hour = datetime.now(timezone.utc).hour
+    if hour < 12:
+        time_of_day = "morning"
+    elif hour < 17:
+        time_of_day = "afternoon"
+    else:
+        time_of_day = "evening"
+
+    return {
+        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "time_of_day": time_of_day,
+        "what_changed": what_changed,
+        "one_thing": one_thing,
+        "think": decisions[:3],
+        "act": commitments[:3],
+        "total_open": len(decisions) + len(commitments),
+    }
+
+
+@router.get("/paywall-status")
+async def get_paywall_status_route(
+    request: Request,
+    person_id: str,
+):
+    """Return whether to show the upgrade CTA based on usage thresholds.
+
+    Thresholds (free tier):
+      - 20 total conversation turns  →  trigger = "turns"
+      - 3 open loops surfaced        →  trigger = "loops"
+
+    No DB subscription column yet — tier is always 'free'. Once payment
+    is integrated, add subscription_tier to auth_users and check it here.
+    """
+    from sakhi.apps.api.core.db import q as dbfetch
+    from sakhi.apps.api.services.continuity.loops import get_open_loops
+
+    FREE_TURN_THRESHOLD = 20
+    FREE_LOOPS_THRESHOLD = 3
+
+    resolved_person_id, _, _ = await resolve_person(request, person_id)
+
+    turn_count_result, loops = await asyncio.gather(
+        dbfetch(
+            """
+            SELECT COALESCE(SUM(turn_count), 0) AS total_turns
+            FROM conversation_sessions
+            WHERE user_id = $1
+            """,
+            resolved_person_id,
+        ),
+        get_open_loops(resolved_person_id),
+        return_exceptions=True,
+    )
+
+    turn_count = 0
+    if not isinstance(turn_count_result, Exception) and turn_count_result:
+        turn_count = int(turn_count_result[0]["total_turns"] or 0)
+
+    loops_count = 0
+    if not isinstance(loops, Exception):
+        loops_count = len(loops.get("decisions", [])) + len(loops.get("commitments", []))
+
+    trigger = None
+    if turn_count >= FREE_TURN_THRESHOLD:
+        trigger = "turns"
+    elif loops_count >= FREE_LOOPS_THRESHOLD:
+        trigger = "loops"
+
+    return {
+        "tier": "free",
+        "show_upgrade_cta": trigger is not None,
+        "trigger": trigger,
+        "turn_count": turn_count,
+        "loops_count": loops_count,
+        "thresholds": {
+            "turns": FREE_TURN_THRESHOLD,
+            "loops": FREE_LOOPS_THRESHOLD,
+        },
+    }
 
 
 @router.get("/reflection/result")

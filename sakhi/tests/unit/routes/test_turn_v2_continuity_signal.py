@@ -26,7 +26,7 @@ def test_build_public_continuity_signal_includes_deep_reflect_ready():
         "mirror_allowed": True,
         "detail_allowed": True,
         "selected_count": 10,
-        "min_moments": 8,
+        "min_moments": 4,
     }
 
 
@@ -45,7 +45,7 @@ def test_build_public_continuity_signal_includes_deep_reflect_reason_when_depth_
     assert deep_reflect["ready"] is False
     assert deep_reflect["reason"] == "insufficient_depth"
     assert deep_reflect["selected_count"] == 3
-    assert deep_reflect["min_moments"] == 8
+    assert deep_reflect["min_moments"] == 4
 
 
 def test_build_public_continuity_signal_prefers_effective_topic_depth():
