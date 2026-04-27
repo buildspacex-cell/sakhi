@@ -1,6 +1,11 @@
-// Load environment variables from .env and .env.local
-require("dotenv").config({ path: ".env" });
-require("dotenv").config({ path: ".env.local" });
+const path = require("path");
+const dotenv = require("dotenv");
+
+// Load environment variables relative to this app, not the invoking shell cwd.
+// Fastlane/Xcode often launch from apps/mobile/ios, so plain ".env" lookups can
+// silently miss apps/mobile/.env.local and bundle the wrong Supabase/backend config.
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+dotenv.config({ path: path.resolve(__dirname, ".env.local"), override: true });
 
 const buildProfile = process.env.EAS_BUILD_PROFILE || "";
 const isReleaseLikeBuild = buildProfile === "preview" || buildProfile === "production";

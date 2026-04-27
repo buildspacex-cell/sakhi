@@ -223,7 +223,7 @@ SIMULATION_CONTINUITY_TAXONOMY = ContinuityTaxonomy(
         "career": "Career",
         "generosity": "Generosity",
         "self_care": "Self Care",
-        "sakhi": "Sakhi",
+        "sakhi": "Start Up",
         "life": "Life",
     },
     anchor_priority={

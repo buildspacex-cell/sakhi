@@ -109,17 +109,26 @@ def _normalize_journal_entries(journal_rows: list[dict[str, Any]]) -> list[dict[
             continue
         day = _relative_day(ts.date(), start_day)
         source_id = str(row.get("id") or "").strip()
-        entries.append(
-            {
-                "day": day,
-                "timestamp": ts.isoformat(),
-                "time_of_day": _time_of_day_label(ts),
-                "content": content,
-                "source_type": "journal",
-                "source_id": source_id,
-                "source_ref": f"journal:{source_id}",
-            }
-        )
+        entry: dict[str, Any] = {
+            "day": day,
+            "timestamp": ts.isoformat(),
+            "time_of_day": _time_of_day_label(ts),
+            "content": content,
+            "source_type": "journal",
+            "source_id": source_id,
+            "source_ref": f"journal:{source_id}",
+        }
+        # Preserve LLM-inferred hints so _classify_entry can honour them.
+        for hint_key in (
+            "hint_anchor",
+            "hint_decision_state",
+            "hint_affective_scalar",
+            "hint_epistemic_state",
+        ):
+            val = row.get(hint_key)
+            if val is not None:
+                entry[hint_key] = val
+        entries.append(entry)
     return entries
 
 

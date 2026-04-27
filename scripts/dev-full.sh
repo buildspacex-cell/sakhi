@@ -55,10 +55,20 @@ if ! command -v redis-server &> /dev/null; then
     exit 1
 fi
 
-# Export environment variables
-set -a
-source .env.local
-set +a
+load_env_file() {
+    local env_file="$1"
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            ''|\#*)
+                continue
+                ;;
+        esac
+        export "$line"
+    done < "$env_file"
+}
+
+# Export environment variables safely without shell-evaluating URL query params.
+load_env_file ".env.local"
 
 # Ensure sakhi package is importable from any CWD
 export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}"
@@ -80,6 +90,34 @@ mkdir -p "$LOG_DIR"
 API_PID=""
 WORKER_PID=""
 WEB_PID=""
+
+wait_for_http() {
+    local service_name="$1"
+    local url="$2"
+    local attempts="$3"
+    local pid="$4"
+
+    echo -n "     Waiting for ${service_name}..."
+    for ((i = 1; i <= attempts; i++)); do
+        if curl -fsS "$url" > /dev/null 2>&1; then
+            echo -e " ${GREEN}ready${NC}"
+            return 0
+        fi
+
+        if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
+            echo -e " ${RED}failed${NC}"
+            echo "     ${service_name} exited before becoming ready. See log: $5"
+            return 1
+        fi
+
+        echo -n "."
+        sleep 1
+    done
+
+    echo -e " ${RED}timeout${NC}"
+    echo "     ${service_name} did not become ready in time. See log: $5"
+    return 1
+}
 
 # Function to cleanup on exit
 cleanup() {
@@ -150,32 +188,27 @@ fi
 # Start API server
 echo -e "${GREEN}[2/4] Starting API server (port 8080)...${NC}"
 cd "$PROJECT_ROOT/sakhi"
-uvicorn apps.api.main:app --reload --port 8080 --host 0.0.0.0 2>&1 | tee "$LOG_DIR/api.log" &
+uvicorn apps.api.main:app --reload --port 8080 --host 0.0.0.0 > "$LOG_DIR/api.log" 2>&1 &
 API_PID=$!
+echo -e "     API PID: $API_PID"
 
 # Wait for API to be ready
-echo -n "     Waiting for API..."
-for i in {1..30}; do
-    if curl -s http://localhost:8080/health > /dev/null 2>&1; then
-        echo -e " ${GREEN}ready${NC}"
-        break
-    fi
-    echo -n "."
-    sleep 1
-done
+wait_for_http "API" "http://localhost:8080/health" 30 "$API_PID" "$LOG_DIR/api.log"
 
 # Start worker process
 echo -e "${GREEN}[3/4] Starting Worker process...${NC}"
 cd "$PROJECT_ROOT/sakhi"
-python -m apps.worker.main 2>&1 | tee "$LOG_DIR/worker.log" &
+python -m apps.worker.main > "$LOG_DIR/worker.log" 2>&1 &
 WORKER_PID=$!
 echo -e "     Worker PID: $WORKER_PID"
 
 # Start web server
 echo -e "${GREEN}[4/4] Starting Web server (port 3000)...${NC}"
 cd "$PROJECT_ROOT/apps/web"
-pnpm dev 2>&1 | tee "$LOG_DIR/web.log" &
+pnpm dev > "$LOG_DIR/web.log" 2>&1 &
 WEB_PID=$!
+echo -e "     Web PID: $WEB_PID"
+wait_for_http "Web" "http://localhost:3000" 30 "$WEB_PID" "$LOG_DIR/web.log"
 
 echo ""
 echo -e "${GREEN}============================================================${NC}"

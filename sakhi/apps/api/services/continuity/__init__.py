@@ -12,6 +12,7 @@ __all__ = [
     "enable_continuity_policy",
     "exclude_continuity_ref",
     "get_continuity_arc",
+    "get_continuation_prompt",
     "get_continuity_policy",
     "get_continuity_topics",
     "get_deep_reflection_result",
@@ -52,6 +53,7 @@ def __getattr__(name: str) -> Any:
         "enable_continuity_policy",
         "exclude_continuity_ref",
         "get_continuity_arc",
+        "get_continuation_prompt",
         "get_continuity_topics",
     }:
         from sakhi.apps.api.services.continuity import service

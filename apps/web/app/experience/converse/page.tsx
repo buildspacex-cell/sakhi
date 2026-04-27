@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type React from "react";
 import type { Route } from "next";
@@ -86,8 +86,16 @@ interface ContinuationPrompt {
   hours_since?: number;
 }
 
+interface OffloadItem {
+  clientId: string;
+  text: string;
+  createdAt: string;
+  syncStatus: "saving" | "saved" | "error";
+}
+
 const DEEP_POLL_INTERVAL_MS = 2000;
 const DEEP_POLL_MAX_ATTEMPTS = 70;
+const LAST_MODE_KEY = "sakhi.web.lastEntryMode";
 
 function toNumber(value: unknown, fallback = 0): number {
   const n = Number(value);
@@ -139,9 +147,7 @@ function toContinuitySignal(raw: unknown): ContinuitySignal | null {
 function formatDeepReflectionResult(payload: Record<string, unknown>): string {
   const result = (payload.result as Record<string, unknown> | undefined) || {};
   const chatResponse = String(result.chat_response || "").trim();
-  if (chatResponse) {
-    return chatResponse;
-  }
+  if (chatResponse) return chatResponse;
 
   const topicLabel = String(result.topic_label || payload.topic_key || "this thread");
   const lines: string[] = [`Whole story on ${topicLabel}:`];
@@ -151,9 +157,7 @@ function formatDeepReflectionResult(payload: Record<string, unknown>): string {
   const currentStage = String(result.current_stage || "").trim();
 
   if (originStory) lines.push(`Start: ${originStory}`);
-  if (typeof keyPivots[0] === "string" && keyPivots[0].trim()) {
-    lines.push(`Shift: ${keyPivots[0].trim()}`);
-  }
+  if (typeof keyPivots[0] === "string" && keyPivots[0].trim()) lines.push(`Shift: ${keyPivots[0].trim()}`);
   if (currentStage) lines.push(`Now: ${currentStage}`);
 
   return lines.join("\n");
@@ -161,6 +165,27 @@ function formatDeepReflectionResult(payload: Record<string, unknown>): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatOffloadTimestamp(iso: string): string {
+  const created = new Date(iso);
+  if (Number.isNaN(created.getTime())) return "";
+  const diffMs = Date.now() - created.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return created.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function getOffloadStatusLabel(status: OffloadItem["syncStatus"]): string {
+  switch (status) {
+    case "saving": return "Saving...";
+    case "saved": return "Saved";
+    case "error": return "Retry";
+    default: return status;
+  }
 }
 
 export default function ConversePage() {
@@ -173,8 +198,12 @@ export default function ConversePage() {
 
 function ConverseContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const loadedHistoryForPersonRef = useRef<string | null>(null);
+
+  const routeMode = searchParams?.get("mode") === "offload" ? "offload" : "talk";
+  const isOffloadMode = routeMode === "offload";
 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -183,6 +212,9 @@ function ConverseContent() {
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+
+  const [offloadItems, setOffloadItems] = useState<OffloadItem[]>([]);
+  const [isSavingOffload, setIsSavingOffload] = useState(false);
 
   const [isRunningDeepAnswer, setIsRunningDeepAnswer] = useState(false);
   const [deepReflectionStatus, setDeepReflectionStatus] = useState("");
@@ -194,6 +226,11 @@ function ConverseContent() {
   const [dismissedLoopIds, setDismissedLoopIds] = useState<Set<string>>(new Set());
   const [openLoopsPanelDismissed, setOpenLoopsPanelDismissed] = useState(false);
   const paywallNudgeFiredRef = useRef(false);
+
+  // Persist mode preference so experience gate can resume it
+  useEffect(() => {
+    try { localStorage.setItem(LAST_MODE_KEY, routeMode); } catch { /* noop */ }
+  }, [routeMode]);
 
   useEffect(() => {
     const loadAuth = async () => {
@@ -232,34 +269,18 @@ function ConverseContent() {
   const hasMessages = messages.length > 0;
 
   useEffect(() => {
-    if (authLoading) {
-      return;
-    }
-    if (!personId) {
-      setIsHistoryLoading(false);
-      return;
-    }
-    if (loadedHistoryForPersonRef.current === personId) {
-      setIsHistoryLoading(false);
-      return;
-    }
+    if (isOffloadMode || authLoading) return;
+    if (!personId) { setIsHistoryLoading(false); return; }
+    if (loadedHistoryForPersonRef.current === personId) { setIsHistoryLoading(false); return; }
 
     let cancelled = false;
     setIsHistoryLoading(true);
 
     const loadHistory = async () => {
       try {
-        const params = new URLSearchParams({
-          user: personId,
-          session_slug: "converse",
-          limit: "20",
-        });
-        const response = await fetch(`/api/conversation/history?${params.toString()}`, {
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          return;
-        }
+        const params = new URLSearchParams({ user: personId, session_slug: "converse", limit: "20" });
+        const response = await fetch(`/api/conversation/history?${params.toString()}`, { cache: "no-store" });
+        if (!response.ok) return;
 
         const payload = (await response.json()) as { messages?: HistoryMessagePayload[] };
         const historyMessages = Array.isArray(payload.messages) ? payload.messages : [];
@@ -267,14 +288,9 @@ function ConverseContent() {
           .map((message): Message | null => {
             const role = message.role === "sakhi" || message.role === "assistant"
               ? "sakhi"
-              : message.role === "user"
-                ? "user"
-                : null;
+              : message.role === "user" ? "user" : null;
             const content = String(message.content || "").trim();
-            if (!role || !content) {
-              return null;
-            }
-
+            if (!role || !content) return null;
             return {
               id: String(message.id || `${role}-${content.slice(0, 12)}`),
               role,
@@ -285,66 +301,54 @@ function ConverseContent() {
           })
           .filter((message): message is Message => Boolean(message));
 
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         loadedHistoryForPersonRef.current = personId;
         setMessages((current) => (current.length === 0 ? mappedMessages : current));
       } catch {
-        // Fall back to the current empty state if history cannot be loaded.
+        // fall back to empty state
       } finally {
-        if (!cancelled) {
-          setIsHistoryLoading(false);
-        }
+        if (!cancelled) setIsHistoryLoading(false);
       }
     };
 
     void loadHistory();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, personId]);
+    return () => { cancelled = true; };
+  }, [authLoading, isOffloadMode, personId]);
 
   useEffect(() => {
-    if (!personId || isHistoryLoading) return;
+    if (isOffloadMode || !personId) return;
+    void fetch("/api/continuity/policy/enable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ person_id: personId }),
+    }).catch(() => { /* best-effort */ });
+  }, [isOffloadMode, personId]);
+
+  useEffect(() => {
+    if (isOffloadMode || !personId || isHistoryLoading) return;
     const fetchPrompt = async () => {
       try {
-        const res = await fetch(`/api/continuity/prompt?person_id=${encodeURIComponent(personId)}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(`/api/continuity/prompt?person_id=${encodeURIComponent(personId)}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as ContinuationPrompt;
-        if (data.has_continuation) {
-          setContinuationPrompt(data);
-          setShowContinuationCard(true);
-        }
-      } catch {
-        // best-effort — never block the conversation
-      }
+        if (data.has_continuation) { setContinuationPrompt(data); setShowContinuationCard(true); }
+      } catch { /* best-effort */ }
     };
     void fetchPrompt();
-  }, [personId, isHistoryLoading]);
+  }, [isOffloadMode, personId, isHistoryLoading]);
 
   useEffect(() => {
-    if (!personId || isHistoryLoading) return;
+    if (isOffloadMode || !personId || isHistoryLoading) return;
     const fetchOpenLoops = async () => {
       try {
-        const res = await fetch(`/api/continuity/open-loops?person_id=${encodeURIComponent(personId)}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(`/api/continuity/open-loops?person_id=${encodeURIComponent(personId)}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as OpenLoopsData;
-        if ((data.decisions?.length ?? 0) + (data.commitments?.length ?? 0) > 0) {
-          setOpenLoops(data);
-        }
-      } catch {
-        // best-effort — never block the conversation
-      }
+        if ((data.decisions?.length ?? 0) + (data.commitments?.length ?? 0) > 0) setOpenLoops(data);
+      } catch { /* best-effort */ }
     };
     void fetchOpenLoops();
-  }, [personId, isHistoryLoading]);
+  }, [isOffloadMode, personId, isHistoryLoading]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -352,22 +356,14 @@ function ConverseContent() {
 
   const deepReflectSignal = activeContinuitySignal?.deep_reflect;
   const wholeStorySignal = activeContinuitySignal?.whole_story;
-  const deepThreadLabel =
-    activeContinuitySignal?.topic_label || activeContinuitySignal?.topic_key || "this thread";
+  const deepThreadLabel = activeContinuitySignal?.topic_label || activeContinuitySignal?.topic_key || "this thread";
 
-  const wholeStoryTopics = useMemo(
-    () => wholeStorySignal?.selected_topics || [],
-    [wholeStorySignal?.selected_topics],
-  );
+  const wholeStoryTopics = useMemo(() => wholeStorySignal?.selected_topics || [], [wholeStorySignal?.selected_topics]);
 
   const wholeStorySelectedTopics = useMemo(() => {
     const primary = activeContinuitySignal?.topic_key || "";
-    const normalized = wholeStoryTopics
-      .map((topic) => String(topic || "").trim())
-      .filter(Boolean);
-    if (primary && !normalized.includes(primary)) {
-      normalized.unshift(primary);
-    }
+    const normalized = wholeStoryTopics.map((topic) => String(topic || "").trim()).filter(Boolean);
+    if (primary && !normalized.includes(primary)) normalized.unshift(primary);
     return normalized.slice(0, 3);
   }, [activeContinuitySignal?.topic_key, wholeStoryTopics]);
 
@@ -377,38 +373,19 @@ function ConverseContent() {
   const deepAnswerReady = Boolean(activeContinuitySignal?.topic_key && hasDeepQuery && deepReflectReady);
 
   const deepStatusHint = (() => {
-    if (!activeContinuitySignal?.topic_key) {
-      return "Deep Reflect will appear when this chat forms a clear thread.";
-    }
-    if (!hasDeepQuery) {
-      return "Send one message to set your current question.";
-    }
+    if (!activeContinuitySignal?.topic_key) return "Deep Reflect will appear when this chat forms a clear thread.";
+    if (!hasDeepQuery) return "Send one message to set your current question.";
     if (linkedWholeStoryReady) {
-      const primary = deepThreadLabel;
-      const linked = wholeStorySelectedTopics
-        .filter((topic) => topic !== activeContinuitySignal.topic_key)
-        .slice(0, 2)
-        .join(", ");
-      if (linked) {
-        return `Deep Reflect is ready across ${primary} and ${linked}.`;
-      }
-      return `Deep Reflect is ready with whole-story context for ${primary}.`;
+      const linked = wholeStorySelectedTopics.filter((t) => t !== activeContinuitySignal.topic_key).slice(0, 2).join(", ");
+      if (linked) return `Deep Reflect is ready across ${deepThreadLabel} and ${linked}.`;
+      return `Deep Reflect is ready with whole-story context for ${deepThreadLabel}.`;
     }
-    if (deepReflectReady) {
-      return `Deep Reflect is ready for ${deepThreadLabel}. Linked threads will be woven in when they are clearly relevant.`;
-    }
+    if (deepReflectReady) return `Deep Reflect is ready for ${deepThreadLabel}. Linked threads will be woven in when clearly relevant.`;
     if (deepReflectSignal && !deepReflectSignal.ready) {
       const reason = deepReflectSignal.reason || "insufficient_depth";
-      if (reason === "mirror_blocked") {
-        return "Deep Reflect will unlock once this thread is safe to mirror back clearly.";
-      }
-      if (reason === "detail_blocked") {
-        return "Deep Reflect will unlock once this thread has enough detail to reflect back clearly.";
-      }
-      if (reason === "insufficient_depth") {
-        return `Deep Reflect unlocks once this thread has at least ${deepReflectSignal.min_moments} moments to draw from.`;
-      }
-      return "Deep Reflect unlocks once this thread has enough history to draw from.";
+      if (reason === "mirror_blocked") return "Deep Reflect will unlock once this thread is safe to mirror back clearly.";
+      if (reason === "detail_blocked") return "Deep Reflect will unlock once this thread has enough detail to reflect back clearly.";
+      if (reason === "insufficient_depth") return `Deep Reflect unlocks once this thread has at least ${deepReflectSignal.min_moments} moments to draw from.`;
     }
     return "Deep Reflect unlocks once this thread has enough history to draw from.";
   })();
@@ -421,6 +398,11 @@ function ConverseContent() {
   };
 
   const displayName = authUser?.full_name?.split(" ")[0] || "";
+
+  const switchMode = useCallback((newMode: "talk" | "offload") => {
+    if (newMode === routeMode) return;
+    router.replace(`/experience/converse?mode=${newMode}` as Route);
+  }, [routeMode, router]);
 
   const sendMessage = useCallback(async () => {
     const text = inputText.trim();
@@ -459,13 +441,9 @@ function ConverseContent() {
         const data = await res.json();
         setActiveContinuitySignal(toContinuitySignal(data.continuity));
 
-        // Check paywall threshold — inject nudge once per session
         if (!paywallNudgeFiredRef.current) {
           try {
-            const pwRes = await fetch(
-              `/api/continuity/paywall-status?person_id=${encodeURIComponent(personId)}`,
-              { cache: "no-store" },
-            );
+            const pwRes = await fetch(`/api/continuity/paywall-status?person_id=${encodeURIComponent(personId)}`, { cache: "no-store" });
             if (pwRes.ok) {
               const pw = await pwRes.json();
               if (pw.show_upgrade_cta) {
@@ -482,9 +460,7 @@ function ConverseContent() {
                 ]);
               }
             }
-          } catch {
-            // best-effort — never interrupt the conversation
-          }
+          } catch { /* best-effort */ }
         }
 
         if (data.reply) {
@@ -497,7 +473,6 @@ function ConverseContent() {
           };
           setMessages((prev) => {
             const next = [...prev, sakhiMessage];
-            // First-session nudge at exactly 8 messages (4 exchanges)
             if (next.length === 8) {
               return [
                 ...next,
@@ -514,14 +489,10 @@ function ConverseContent() {
           });
         }
       } else {
-        const sakhiMessage: Message = {
-          id: `error-${Date.now()}`,
-          role: "sakhi",
-          content: `Something went wrong (${res.status}). Try again.`,
-          timestamp: new Date(),
-          kind: "system",
-        };
-        setMessages((prev) => [...prev, sakhiMessage]);
+        setMessages((prev) => [
+          ...prev,
+          { id: `error-${Date.now()}`, role: "sakhi", content: `Something went wrong (${res.status}). Try again.`, timestamp: new Date(), kind: "system" },
+        ]);
       }
     } catch (err: unknown) {
       clearTimeout(timeout);
@@ -529,25 +500,45 @@ function ConverseContent() {
       const errorMsg = isTimeout
         ? "That took too long. Try again — sometimes the first message is slower."
         : `Connection issue: ${err instanceof Error ? err.message : "unknown"}`;
-      const sakhiMessage: Message = {
-        id: `error-${Date.now()}`,
-        role: "sakhi",
-        content: errorMsg,
-        timestamp: new Date(),
-        kind: "system",
-      };
-      setMessages((prev) => [...prev, sakhiMessage]);
+      setMessages((prev) => [
+        ...prev,
+        { id: `error-${Date.now()}`, role: "sakhi", content: errorMsg, timestamp: new Date(), kind: "system" },
+      ]);
     } finally {
       setIsSending(false);
     }
   }, [inputText, isSending, personId]);
 
+  const handleSaveOffload = useCallback(async () => {
+    const text = inputText.trim();
+    if (!text || !personId || isSavingOffload) return;
+
+    const clientId = `offload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const now = new Date().toISOString();
+    const item: OffloadItem = { clientId, text, createdAt: now, syncStatus: "saving" };
+
+    setOffloadItems((prev) => [item, ...prev]);
+    setInputText("");
+    setIsSavingOffload(true);
+
+    try {
+      const res = await fetch(`/api/turn-v2?user=${encodeURIComponent(personId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, capture_only: true, source: "offload", ts: now, client_id: clientId }),
+      });
+      setOffloadItems((prev) => prev.map((i) => i.clientId === clientId ? { ...i, syncStatus: res.ok ? "saved" : "error" } : i));
+    } catch {
+      setOffloadItems((prev) => prev.map((i) => i.clientId === clientId ? { ...i, syncStatus: "error" } : i));
+    } finally {
+      setIsSavingOffload(false);
+    }
+  }, [inputText, isSavingOffload, personId]);
+
   const pollDeepAnswer = useCallback(async (reflectionId: string, person: string): Promise<string | null> => {
     const fetchResult = async (): Promise<string | null> => {
       const params = new URLSearchParams({ id: reflectionId, person_id: person, t: String(Date.now()) });
-      const resultRes = await fetch(`/api/continuity/reflection/result?${params.toString()}`, {
-        cache: "no-store",
-      });
+      const resultRes = await fetch(`/api/continuity/reflection/result?${params.toString()}`, { cache: "no-store" });
       if (!resultRes.ok) return null;
       const resultData = (await resultRes.json()) as Record<string, unknown>;
       if (String(resultData.status || "queued") !== "done") return null;
@@ -556,26 +547,15 @@ function ConverseContent() {
 
     for (let attempt = 0; attempt < DEEP_POLL_MAX_ATTEMPTS; attempt += 1) {
       try {
-        const statusParams = new URLSearchParams({
-          id: reflectionId,
-          person_id: person,
-          t: String(Date.now()),
-        });
-        const statusRes = await fetch(`/api/continuity/reflection/status?${statusParams.toString()}`, {
-          cache: "no-store",
-        });
+        const statusParams = new URLSearchParams({ id: reflectionId, person_id: person, t: String(Date.now()) });
+        const statusRes = await fetch(`/api/continuity/reflection/status?${statusParams.toString()}`, { cache: "no-store" });
         if (!statusRes.ok) break;
         const statusData = (await statusRes.json()) as Record<string, unknown>;
         const status = String(statusData.status || "queued");
         setDeepReflectionStatus(status);
 
-        if (status === "done") {
-          return await fetchResult();
-        }
-        if (status === "failed") {
-          return null;
-        }
-
+        if (status === "done") return await fetchResult();
+        if (status === "failed") return null;
         if (attempt % 3 === 0) {
           const optimistic = await fetchResult();
           if (optimistic) return optimistic;
@@ -584,27 +564,14 @@ function ConverseContent() {
         console.error("[deep-answer] poll error", err);
         break;
       }
-
       await sleep(DEEP_POLL_INTERVAL_MS);
     }
 
-    try {
-      return await fetchResult();
-    } catch {
-      return null;
-    }
+    try { return await fetchResult(); } catch { return null; }
   }, []);
 
   const handleRunDeepAnswer = useCallback(async () => {
-    if (
-      !personId
-      || !activeContinuitySignal?.topic_key
-      || !hasDeepQuery
-      || !deepAnswerReady
-      || isRunningDeepAnswer
-    ) {
-      return;
-    }
+    if (!personId || !activeContinuitySignal?.topic_key || !hasDeepQuery || !deepAnswerReady || isRunningDeepAnswer) return;
 
     const selectedTopics = wholeStorySelectedTopics;
     const pendingId = `deep-pending-${Date.now()}`;
@@ -616,18 +583,15 @@ function ConverseContent() {
       {
         id: pendingId,
         role: "sakhi",
-        content:
-          selectedTopics.length >= 2
-            ? "Deep Reflect is reading your whole story across linked threads..."
-            : "Deep Reflect is reading the full story of this thread...",
+        content: selectedTopics.length >= 2
+          ? "Deep Reflect is reading your whole story across linked threads..."
+          : "Deep Reflect is reading the full story of this thread...",
         timestamp: new Date(),
         kind: "system",
       },
     ]);
 
-    const removePending = () => {
-      setMessages((prev) => prev.filter((msg) => msg.id !== pendingId));
-    };
+    const removePending = () => setMessages((prev) => prev.filter((msg) => msg.id !== pendingId));
 
     try {
       const res = await fetch(`/api/continuity/reflection/run`, {
@@ -643,15 +607,11 @@ function ConverseContent() {
         }),
       });
 
-      if (!res.ok) {
-        throw new Error(`Deep answer request failed (${res.status})`);
-      }
+      if (!res.ok) throw new Error(`Deep answer request failed (${res.status})`);
 
       const data = (await res.json()) as Record<string, unknown>;
       const reflectionId = String(data.reflection_id || "");
-      if (!reflectionId) {
-        throw new Error("Deep answer response missing reflection id");
-      }
+      if (!reflectionId) throw new Error("Deep answer response missing reflection id");
 
       const deepReply = await pollDeepAnswer(reflectionId, personId);
       removePending();
@@ -659,37 +619,19 @@ function ConverseContent() {
       if (deepReply) {
         setMessages((prev) => [
           ...prev,
-          {
-            id: `deep-${Date.now()}`,
-            role: "sakhi",
-            content: deepReply,
-            timestamp: new Date(),
-            kind: "deep",
-          },
+          { id: `deep-${Date.now()}`, role: "sakhi", content: deepReply, timestamp: new Date(), kind: "deep" },
         ]);
       } else {
         setMessages((prev) => [
           ...prev,
-          {
-            id: `deep-fail-${Date.now()}`,
-            role: "sakhi",
-            content: "Deep Reflect did not complete this time. Please try again.",
-            timestamp: new Date(),
-            kind: "system",
-          },
+          { id: `deep-fail-${Date.now()}`, role: "sakhi", content: "Deep Reflect did not complete this time. Please try again.", timestamp: new Date(), kind: "system" },
         ]);
       }
     } catch (err) {
       removePending();
       setMessages((prev) => [
         ...prev,
-        {
-          id: `deep-error-${Date.now()}`,
-          role: "sakhi",
-          content: "Could not run Deep Reflect right now.",
-          timestamp: new Date(),
-          kind: "system",
-        },
+        { id: `deep-error-${Date.now()}`, role: "sakhi", content: "Could not run Deep Reflect right now.", timestamp: new Date(), kind: "system" },
       ]);
       console.error("[deep-answer] run error", err);
     } finally {
@@ -709,7 +651,6 @@ function ConverseContent() {
 
   const handleDismissLoop = useCallback((loopId: string) => {
     setDismissedLoopIds((prev) => new Set(Array.from(prev).concat(loopId)));
-    // Fire-and-forget resolve — best effort
     void fetch(`/api/continuity/open-loops/${loopId}/resolve`, { method: "POST" });
   }, []);
 
@@ -737,8 +678,19 @@ function ConverseContent() {
     );
   }
 
+  const isPrimaryEmpty = isOffloadMode ? offloadItems.length === 0 : !hasMessages;
+  const modeSubcopy = isOffloadMode
+    ? "Drop it. Sakhi picks it up."
+    : "A quiet space to stay with what matters.";
+
   return (
     <div style={styles.container}>
+      {/* Mode-aware ambient backdrop */}
+      <div style={styles.backdropBase} aria-hidden>
+        <div style={{ ...styles.backdropGlow, ...(isOffloadMode ? styles.backdropGlowOffload : styles.backdropGlowTalk) }} />
+        <div style={{ ...styles.backdropWash, ...(isOffloadMode ? styles.backdropWashOffload : styles.backdropWashTalk) }} />
+      </div>
+
       <header style={styles.header}>
         <div style={styles.headerLeft}>
           <div style={styles.brand}>Sakhi</div>
@@ -746,6 +698,7 @@ function ConverseContent() {
             {getGreeting()}
             {displayName ? `, ${displayName}` : ""}
           </div>
+          <div style={styles.headerSubcopy}>{modeSubcopy}</div>
         </div>
 
         <div style={{ position: "relative" }}>
@@ -765,136 +718,177 @@ function ConverseContent() {
         </div>
       </header>
 
-      <main style={styles.messagesArea}>
-        {!openLoopsPanelDismissed && openLoops && !hasMessages ? (
+      <main style={{ ...styles.messagesArea, ...(isPrimaryEmpty ? styles.messagesAreaEmpty : {}) }}>
+        {/* Open loops panel — talk mode only */}
+        {!isOffloadMode && !openLoopsPanelDismissed && openLoops ? (
           <div style={styles.activeContextPanel}>
             <div style={styles.activeContextHeader}>
               <span style={styles.activeContextTitle}>Open threads</span>
-              <button style={styles.activeContextDismissAll} onClick={() => setOpenLoopsPanelDismissed(true)}>
-                ×
-              </button>
+              <button style={styles.activeContextDismissAll} onClick={() => setOpenLoopsPanelDismissed(true)}>×</button>
             </div>
             {openLoops.decisions.filter((l) => !dismissedLoopIds.has(l.id)).length > 0 ? (
               <div style={styles.activeContextSection}>
                 <p style={styles.activeContextSectionLabel}>Unresolved decisions</p>
-                {openLoops.decisions
-                  .filter((l) => !dismissedLoopIds.has(l.id))
-                  .map((loop) => (
-                    <div key={loop.id} style={styles.activeContextItem}>
-                      <span style={styles.activeContextItemText}>{loop.topic}</span>
-                      <button
-                        style={styles.activeContextItemDismiss}
-                        onClick={() => handleDismissLoop(loop.id)}
-                        title="Mark resolved"
-                      >
-                        ✓
-                      </button>
-                    </div>
-                  ))}
+                {openLoops.decisions.filter((l) => !dismissedLoopIds.has(l.id)).map((loop) => (
+                  <div key={loop.id} style={styles.activeContextItem}>
+                    <span style={styles.activeContextItemText}>{loop.topic}</span>
+                    <button style={styles.activeContextItemDismiss} onClick={() => handleDismissLoop(loop.id)} title="Mark resolved">✓</button>
+                  </div>
+                ))}
               </div>
             ) : null}
             {openLoops.commitments.filter((l) => !dismissedLoopIds.has(l.id)).length > 0 ? (
               <div style={styles.activeContextSection}>
                 <p style={styles.activeContextSectionLabel}>Commitments you made</p>
-                {openLoops.commitments
-                  .filter((l) => !dismissedLoopIds.has(l.id))
-                  .map((loop) => (
-                    <div key={loop.id} style={styles.activeContextItem}>
-                      <span style={styles.activeContextItemText}>{loop.topic}</span>
-                      <button
-                        style={styles.activeContextItemDismiss}
-                        onClick={() => handleDismissLoop(loop.id)}
-                        title="Mark done"
-                      >
-                        ✓
-                      </button>
-                    </div>
-                  ))}
+                {openLoops.commitments.filter((l) => !dismissedLoopIds.has(l.id)).map((loop) => (
+                  <div key={loop.id} style={styles.activeContextItem}>
+                    <span style={styles.activeContextItemText}>{loop.topic}</span>
+                    <button style={styles.activeContextItemDismiss} onClick={() => handleDismissLoop(loop.id)} title="Mark done">✓</button>
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
         ) : null}
-        {showContinuationCard && continuationPrompt ? (
-          <div style={styles.continuationCard}>
-            <p style={styles.continuationText}>{continuationPrompt.display}</p>
-            <div style={styles.continuationActions}>
-              <button
-                style={styles.continuationCta}
-                onClick={() => {
-                  setShowContinuationCard(false);
-                  document.querySelector("textarea")?.focus();
-                }}
-              >
-                Continue →
-              </button>
-              <button
-                style={styles.continuationDismiss}
-                onClick={() => setShowContinuationCard(false)}
-              >
-                Dismiss
-              </button>
+
+        {/* Offload mode */}
+        {isOffloadMode ? (
+          offloadItems.length === 0 ? (
+            <div style={styles.emptyState}>
+              <p style={{ ...styles.emptyPrompt, fontSize: "28px" }}>Drop it. No response needed.</p>
+              <p style={styles.emptyHint}>Nothing is sent back to you here. Drops are saved and processed quietly.</p>
             </div>
-          </div>
-        ) : null}
-        {!hasMessages && isHistoryLoading ? (
-          <div style={styles.historyLoadingState}>
-            <p style={{ color: palette.muted }}>Loading...</p>
-          </div>
-        ) : !hasMessages ? (
-          <div style={styles.emptyState}>
-            <p style={styles.emptyPrompt}>A clear space to think out loud.</p>
-            <p style={styles.emptyHint}>Start anywhere. Sakhi keeps context as you talk.</p>
-            <p style={styles.emptyHint}>Deep Reflect unlocks once your story runs long enough to draw from.</p>
-          </div>
-        ) : (
-          <>
-            {messages.map((msg) => {
-              const isUser = msg.role === "user";
-              const isSystem = msg.kind === "system";
-              const isDeep = msg.kind === "deep";
-              return (
-                <div
-                  key={msg.id}
-                  style={{
-                    ...styles.bubble,
-                    ...(isUser
-                      ? styles.userBubble
-                      : isSystem
-                        ? styles.systemBubble
-                        : isDeep
-                          ? styles.deepBubble
-                          : styles.sakhiBubble),
-                  }}
-                >
-                  {isDeep ? <div style={styles.deepBadge}>Whole Story</div> : null}
-                  <div style={styles.bubbleText}>{msg.content}</div>
+          ) : (
+            <div style={styles.offloadList}>
+              {offloadItems.map((item) => (
+                <div key={item.clientId} style={styles.offloadCard}>
+                  <div style={styles.offloadCardHeader}>
+                    <span style={styles.offloadTimestamp}>{formatOffloadTimestamp(item.createdAt)}</span>
+                    <span style={{
+                      ...styles.offloadStatusPill,
+                      ...(item.syncStatus === "error" ? styles.offloadStatusPillWarning : {}),
+                      ...(item.syncStatus === "saving" ? styles.offloadStatusPillMuted : {}),
+                    }}>
+                      {getOffloadStatusLabel(item.syncStatus)}
+                    </span>
+                  </div>
+                  <p style={styles.offloadText}>{item.text}</p>
                 </div>
-              );
-            })}
-            {isSending ? (
-              <div style={{ ...styles.bubble, ...styles.systemBubble, opacity: 0.7 }}>
-                <span style={{ color: palette.muted }}>...</span>
+              ))}
+            </div>
+          )
+        ) : (
+          /* Talk mode */
+          <>
+            {showContinuationCard && continuationPrompt ? (
+              <div style={styles.continuationCard}>
+                <p style={styles.continuationText}>{continuationPrompt.display}</p>
+                <div style={styles.continuationActions}>
+                  <button
+                    style={styles.continuationCta}
+                    onClick={() => {
+                      setShowContinuationCard(false);
+                      (document.querySelector("input[type=text]") as HTMLInputElement | null)?.focus();
+                    }}
+                  >
+                    Continue →
+                  </button>
+                  <button style={styles.continuationDismiss} onClick={() => setShowContinuationCard(false)}>
+                    Dismiss
+                  </button>
+                </div>
               </div>
             ) : null}
+            {!hasMessages && isHistoryLoading ? (
+              <div style={styles.historyLoadingState}>
+                <p style={{ color: palette.muted }}>Loading...</p>
+              </div>
+            ) : !hasMessages ? (
+              <div style={styles.emptyState}>
+                <p style={styles.emptyPrompt}>A clear space to think out loud.</p>
+                <p style={styles.emptyHint}>Start anywhere. Sakhi keeps context as you talk.</p>
+                <p style={styles.emptyHint}>Deep Reflect unlocks once your story runs long enough to draw from.</p>
+              </div>
+            ) : (
+              <>
+                {messages.map((msg) => {
+                  const isUser = msg.role === "user";
+                  const isSystem = msg.kind === "system";
+                  const isDeep = msg.kind === "deep";
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        ...styles.bubble,
+                        ...(isUser ? styles.userBubble : isSystem ? styles.systemBubble : isDeep ? styles.deepBubble : styles.sakhiBubble),
+                      }}
+                    >
+                      {isDeep ? <div style={styles.deepBadge}>Whole Story</div> : null}
+                      <div style={styles.bubbleText}>{msg.content}</div>
+                    </div>
+                  );
+                })}
+                {isSending ? (
+                  <div style={{ ...styles.bubble, ...styles.systemBubble, opacity: 0.7 }}>
+                    <span style={{ color: palette.muted }}>...</span>
+                  </div>
+                ) : null}
+                {deepAnswerReady && !isSending ? (
+                  <button
+                    style={{ ...styles.deepInlineCard, ...(isRunningDeepAnswer ? { opacity: 0.75 } : {}) }}
+                    onClick={() => void handleRunDeepAnswer()}
+                    disabled={isRunningDeepAnswer}
+                  >
+                    <span style={styles.deepInlineIcon}>✦</span>
+                    <span style={styles.deepInlineText}>
+                      {isRunningDeepAnswer
+                        ? (linkedWholeStoryReady ? "Reading across threads..." : "Reading your thread...")
+                        : "Deep Dive"}
+                    </span>
+                  </button>
+                ) : null}
+              </>
+            )}
           </>
         )}
         <div ref={messagesEndRef} />
       </main>
 
       <section style={styles.inputArea}>
-        {hasMessages ? (
+        {/* Talk / Drop mode rail */}
+        <div style={{ ...styles.footerModeRail, ...(isOffloadMode ? styles.footerModeRailOffload : styles.footerModeRailTalk) }}>
+          <button
+            style={{
+              ...styles.footerModePill,
+              ...(!isOffloadMode ? styles.footerModePillTalkActive : {}),
+            }}
+            onClick={() => switchMode("talk")}
+          >
+            <span style={{ ...styles.footerModePillText, ...(!isOffloadMode ? styles.footerModePillTextActive : {}) }}>
+              Talk
+            </span>
+          </button>
+          <button
+            style={{
+              ...styles.footerModePill,
+              ...(isOffloadMode ? styles.footerModePillOffloadActive : {}),
+            }}
+            onClick={() => switchMode("offload")}
+          >
+            <span style={{ ...styles.footerModePillText, ...(isOffloadMode ? styles.footerModePillTextActive : {}) }}>
+              Drop
+            </span>
+          </button>
+        </div>
+
+        {/* Deep action row — talk mode, has messages */}
+        {!isOffloadMode && hasMessages ? (
           <div style={styles.deepActionRow}>
-            <div style={{
-              ...styles.deepInfoPill,
-              ...(deepAnswerReady ? styles.deepInfoPillReady : {}),
-            }}>
+            <div style={{ ...styles.deepInfoPill, ...(deepAnswerReady ? styles.deepInfoPillReady : {}) }}>
               <span style={styles.deepInfoText}>{deepStatusHint}</span>
             </div>
             <button
-              style={{
-                ...styles.deepRunButton,
-                ...((!deepAnswerReady || isRunningDeepAnswer) ? styles.deepRunButtonDisabled : {}),
-              }}
+              style={{ ...styles.deepRunButton, ...((!deepAnswerReady || isRunningDeepAnswer) ? styles.deepRunButtonDisabled : {}) }}
               onClick={() => void handleRunDeepAnswer()}
               disabled={!deepAnswerReady || isRunningDeepAnswer}
               title={deepReflectionStatus || undefined}
@@ -904,31 +898,54 @@ function ConverseContent() {
           </div>
         ) : null}
 
-        <form
-          style={styles.textInputRow}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void sendMessage();
-          }}
-        >
-          <input
-            type="text"
-            value={inputText}
-            placeholder="What's on your mind?"
-            onChange={(event) => setInputText(event.target.value)}
-            style={styles.textInput}
-          />
-          <button
-            type="submit"
-            disabled={!inputText.trim() || isSending}
-            style={{
-              ...styles.sendButton,
-              ...((!inputText.trim() || isSending) ? styles.sendButtonDisabled : {}),
+        {/* Mode-specific input */}
+        {isOffloadMode ? (
+          <div style={styles.offloadInputRow}>
+            <textarea
+              value={inputText}
+              placeholder="Drop it here."
+              onChange={(e) => setInputText(e.target.value)}
+              style={styles.offloadTextarea}
+              disabled={isSavingOffload}
+            />
+            <button
+              onClick={() => void handleSaveOffload()}
+              disabled={!inputText.trim() || isSavingOffload}
+              style={{
+                ...styles.offloadSaveButton,
+                ...(!inputText.trim() || isSavingOffload ? styles.sendButtonDisabled : {}),
+              }}
+            >
+              {isSavingOffload ? "Saving..." : "Save"}
+            </button>
+          </div>
+        ) : (
+          <form
+            style={styles.textInputRow}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void sendMessage();
             }}
           >
-            Send
-          </button>
-        </form>
+            <input
+              type="text"
+              value={inputText}
+              placeholder="What's on your mind?"
+              onChange={(event) => setInputText(event.target.value)}
+              style={styles.textInput}
+            />
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isSending}
+              style={{
+                ...styles.sendButton,
+                ...((!inputText.trim() || isSending) ? styles.sendButtonDisabled : {}),
+              }}
+            >
+              Send
+            </button>
+          </form>
+        )}
       </section>
     </div>
   );
@@ -945,20 +962,57 @@ const styles: Record<string, React.CSSProperties> = {
     position: "relative",
     overflow: "hidden",
   },
+  backdropBase: {
+    position: "absolute",
+    inset: 0,
+    overflow: "hidden",
+    zIndex: 0,
+    pointerEvents: "none",
+  },
+  backdropGlow: {
+    position: "absolute",
+    width: "400px",
+    height: "400px",
+    borderRadius: "50%",
+  },
+  backdropGlowTalk: {
+    top: "40px",
+    right: "-80px",
+    background: "rgba(120, 171, 255, 0.09)",
+  },
+  backdropGlowOffload: {
+    top: "60px",
+    left: "-80px",
+    background: "rgba(196, 166, 105, 0.09)",
+  },
+  backdropWash: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: "240px",
+  },
+  backdropWashTalk: {
+    top: 0,
+    background: "rgba(31, 49, 81, 0.12)",
+  },
+  backdropWashOffload: {
+    bottom: 0,
+    background: "rgba(72, 58, 31, 0.1)",
+  },
   header: {
     position: "relative",
     zIndex: 2,
     borderBottom: `1px solid ${palette.border}`,
     padding: "16px 20px 12px",
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 14,
   },
   headerLeft: {
     display: "flex",
     flexDirection: "column",
-    gap: 6,
+    gap: 4,
   },
   brand: {
     textTransform: "uppercase",
@@ -967,11 +1021,17 @@ const styles: Record<string, React.CSSProperties> = {
     color: palette.muted,
   },
   greeting: {
-    fontSize: 30,
-    lineHeight: 1.08,
-    fontWeight: 560,
+    fontSize: 22,
+    lineHeight: 1.1,
+    fontWeight: 520,
     color: palette.fg,
-    letterSpacing: "-0.03em",
+    letterSpacing: "-0.02em",
+  },
+  headerSubcopy: {
+    fontSize: 13,
+    lineHeight: "18px",
+    color: palette.muted,
+    marginTop: 2,
   },
   accountTrigger: {
     borderRadius: 999,
@@ -985,6 +1045,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 44,
     fontSize: 14,
     cursor: "pointer",
+    fontFamily: editorialFontFamily,
   },
   accountMenu: {
     position: "absolute",
@@ -1011,6 +1072,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     padding: "10px 12px",
     cursor: "pointer",
+    fontFamily: editorialFontFamily,
   },
   messagesArea: {
     position: "relative",
@@ -1021,6 +1083,9 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 12,
+  },
+  messagesAreaEmpty: {
+    justifyContent: "center",
   },
   emptyState: {
     margin: "auto",
@@ -1061,6 +1126,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: palette.accent,
     cursor: "pointer",
     letterSpacing: "0.3px",
+    fontFamily: editorialFontFamily,
   },
   continuationDismiss: {
     background: "none",
@@ -1069,21 +1135,72 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: palette.muted,
     cursor: "pointer",
+    fontFamily: editorialFontFamily,
   },
   emptyPrompt: {
-    fontSize: 42,
-    lineHeight: 1.08,
-    letterSpacing: "-0.03em",
+    fontSize: 38,
+    lineHeight: 1.1,
+    letterSpacing: "-0.025em",
     margin: 0,
     color: palette.fg,
-    fontWeight: 520,
+    fontWeight: 500,
   },
   emptyHint: {
     margin: "14px auto 0",
-    fontSize: 20,
-    lineHeight: 1.32,
+    fontSize: 17,
+    lineHeight: 1.4,
     color: palette.muted,
+    maxWidth: 560,
+  },
+  offloadList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+    width: "100%",
     maxWidth: 620,
+    margin: "0 auto",
+  },
+  offloadCard: {
+    borderRadius: 20,
+    border: `1px solid ${palette.border}`,
+    background: palette.sakhiBubble,
+    padding: "14px 16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  offloadCardHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  offloadTimestamp: {
+    color: palette.muted,
+    fontSize: 12,
+  },
+  offloadStatusPill: {
+    borderRadius: 999,
+    border: `1px solid ${palette.accentBorder}`,
+    background: palette.accentSoft,
+    padding: "4px 10px",
+    fontSize: 11,
+    fontWeight: 600,
+    color: palette.fg,
+  },
+  offloadStatusPillMuted: {
+    borderColor: palette.border,
+    background: palette.glassMuted,
+  },
+  offloadStatusPillWarning: {
+    borderColor: "rgba(239, 111, 126, 0.35)",
+    background: "rgba(88, 33, 44, 0.36)",
+  },
+  offloadText: {
+    margin: 0,
+    fontSize: 15,
+    lineHeight: "22px",
+    color: palette.fg,
   },
   bubble: {
     maxWidth: "78%",
@@ -1124,16 +1241,81 @@ const styles: Record<string, React.CSSProperties> = {
     color: palette.accentText,
     fontWeight: 600,
   },
+  deepInlineCard: {
+    alignSelf: "flex-start",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 4,
+    padding: "10px 16px",
+    borderRadius: 999,
+    border: `1px solid ${palette.accentBorder}`,
+    background: palette.deepBubble,
+    cursor: "pointer",
+    fontFamily: editorialFontFamily,
+  },
+  deepInlineIcon: {
+    fontSize: 12,
+    color: palette.accentText,
+  },
+  deepInlineText: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: palette.accentText,
+    letterSpacing: "0.2px",
+  },
   inputArea: {
     position: "relative",
     zIndex: 2,
     borderTop: `1px solid ${palette.border}`,
-    padding: "10px 20px 18px",
+    padding: "10px 16px 20px",
     background: palette.glassStrong,
     backdropFilter: "blur(8px)",
     display: "flex",
     flexDirection: "column",
     gap: 10,
+  },
+  footerModeRail: {
+    display: "flex",
+    gap: 6,
+    padding: "5px",
+    borderRadius: 999,
+    border: "1px solid",
+  },
+  footerModeRailTalk: {
+    borderColor: "rgba(120, 171, 255, 0.2)",
+    background: "rgba(18, 25, 39, 0.9)",
+  },
+  footerModeRailOffload: {
+    borderColor: "rgba(196, 166, 105, 0.22)",
+    background: "rgba(31, 26, 19, 0.92)",
+  },
+  footerModePill: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 999,
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: editorialFontFamily,
+    transition: "background 150ms ease",
+  },
+  footerModePillTalkActive: {
+    background: "rgba(120, 171, 255, 0.2)",
+  },
+  footerModePillOffloadActive: {
+    background: "rgba(196, 166, 105, 0.22)",
+  },
+  footerModePillText: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: palette.subtle,
+  },
+  footerModePillTextActive: {
+    color: palette.fg,
   },
   deepActionRow: {
     display: "flex",
@@ -1165,6 +1347,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 600,
     cursor: "pointer",
+    fontFamily: editorialFontFamily,
   },
   deepRunButtonDisabled: {
     opacity: 0.58,
@@ -1176,33 +1359,68 @@ const styles: Record<string, React.CSSProperties> = {
   },
   textInput: {
     flex: 1,
-    minHeight: 56,
+    minHeight: 52,
     borderRadius: 22,
     border: `1px solid ${palette.border}`,
     background: palette.glass,
     color: palette.fg,
-    fontSize: 18,
+    fontSize: 16,
     padding: "14px 18px",
     outline: "none",
+    fontFamily: editorialFontFamily,
   },
   sendButton: {
-    minWidth: 112,
-    minHeight: 56,
+    minWidth: 100,
+    minHeight: 52,
     borderRadius: 999,
     border: "none",
     background: palette.accent,
     color: palette.accentInk,
-    padding: "0 22px",
-    fontSize: 16,
+    padding: "0 20px",
+    fontSize: 15,
     fontWeight: 600,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
+    fontFamily: editorialFontFamily,
   },
   sendButtonDisabled: {
     opacity: 0.55,
     cursor: "default",
+  },
+  offloadInputRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  offloadTextarea: {
+    width: "100%",
+    minHeight: 110,
+    borderRadius: 20,
+    border: `1px solid ${palette.border}`,
+    background: palette.glass,
+    color: palette.fg,
+    fontSize: 16,
+    padding: "14px 18px",
+    outline: "none",
+    resize: "none",
+    fontFamily: editorialFontFamily,
+    lineHeight: "22px",
+    boxSizing: "border-box",
+  },
+  offloadSaveButton: {
+    alignSelf: "flex-end",
+    minHeight: 44,
+    borderRadius: 999,
+    border: "none",
+    background: palette.accent,
+    color: palette.accentInk,
+    padding: "0 24px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: editorialFontFamily,
   },
   activeContextPanel: {
     margin: "0 auto 16px",
@@ -1236,6 +1454,7 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1,
     cursor: "pointer",
     padding: "0 2px",
+    fontFamily: editorialFontFamily,
   },
   activeContextSection: {
     display: "flex",
@@ -1273,5 +1492,6 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: "0 4px",
     flexShrink: 0,
+    fontFamily: editorialFontFamily,
   },
 };

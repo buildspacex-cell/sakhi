@@ -21,9 +21,9 @@ const MODE_META = {
     mode: "talk" as const,
   },
   offload: {
-    title: "Offload",
-    body: "Just put it down. No response expected. Works offline too.",
-    cta: "Start Offloading",
+    title: "Drop",
+    body: "Drop it here. No response. Works offline too.",
+    cta: "Drop Something",
     mode: "offload" as const,
   },
 };

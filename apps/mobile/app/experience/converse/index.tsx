@@ -1069,6 +1069,44 @@ export default function ConversationScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {!isOffloadMode && !openLoopsPanelDismissed && openLoops &&
+           ((openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).length > 0) ||
+            (openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).length > 0)) ? (
+            <View style={styles.activeContextPanel}>
+              <View style={styles.activeContextHeader}>
+                <Text style={styles.activeContextTitle}>Open threads</Text>
+                <Pressable onPress={() => setOpenLoopsPanelDismissed(true)} hitSlop={10}>
+                  <Text style={styles.activeContextDismissAll}>×</Text>
+                </Pressable>
+              </View>
+              {openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).length > 0 ? (
+                <View style={styles.activeContextSection}>
+                  <Text style={styles.activeContextSectionLabel}>Unresolved decisions</Text>
+                  {openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).map((loop) => (
+                    <View key={loop.id} style={styles.activeContextItem}>
+                      <Text style={styles.activeContextItemText}>{loop.topic}</Text>
+                      <Pressable onPress={() => handleDismissLoop(loop.id)} hitSlop={10}>
+                        <Text style={styles.activeContextItemCheck}>✓</Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              {openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).length > 0 ? (
+                <View style={styles.activeContextSection}>
+                  <Text style={styles.activeContextSectionLabel}>Commitments you made</Text>
+                  {openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).map((loop) => (
+                    <View key={loop.id} style={styles.activeContextItem}>
+                      <Text style={styles.activeContextItemText}>{loop.topic}</Text>
+                      <Pressable onPress={() => handleDismissLoop(loop.id)} hitSlop={10}>
+                        <Text style={styles.activeContextItemCheck}>✓</Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           {isOffloadMode ? (
             offloadItems.length === 0 ? (
               <View style={styles.emptyState}>
@@ -1114,44 +1152,6 @@ export default function ConversationScreen() {
             </View>
           ) : !hasMessages ? (
             <View style={styles.emptyState}>
-              {!openLoopsPanelDismissed && openLoops &&
-               ((openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).length > 0) ||
-                (openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).length > 0)) ? (
-                <View style={styles.activeContextPanel}>
-                  <View style={styles.activeContextHeader}>
-                    <Text style={styles.activeContextTitle}>Open threads</Text>
-                    <Pressable onPress={() => setOpenLoopsPanelDismissed(true)} hitSlop={10}>
-                      <Text style={styles.activeContextDismissAll}>×</Text>
-                    </Pressable>
-                  </View>
-                  {openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).length > 0 ? (
-                    <View style={styles.activeContextSection}>
-                      <Text style={styles.activeContextSectionLabel}>Unresolved decisions</Text>
-                      {openLoops.decisions.filter(l => !dismissedLoopIds.has(l.id)).map((loop) => (
-                        <View key={loop.id} style={styles.activeContextItem}>
-                          <Text style={styles.activeContextItemText}>{loop.topic}</Text>
-                          <Pressable onPress={() => handleDismissLoop(loop.id)} hitSlop={10}>
-                            <Text style={styles.activeContextItemCheck}>✓</Text>
-                          </Pressable>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
-                  {openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).length > 0 ? (
-                    <View style={styles.activeContextSection}>
-                      <Text style={styles.activeContextSectionLabel}>Commitments you made</Text>
-                      {openLoops.commitments.filter(l => !dismissedLoopIds.has(l.id)).map((loop) => (
-                        <View key={loop.id} style={styles.activeContextItem}>
-                          <Text style={styles.activeContextItemText}>{loop.topic}</Text>
-                          <Pressable onPress={() => handleDismissLoop(loop.id)} hitSlop={10}>
-                            <Text style={styles.activeContextItemCheck}>✓</Text>
-                          </Pressable>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
               <Text style={styles.emptyPrompt}>A clear space to think out loud.</Text>
               <Text style={styles.emptyHint}>Start anywhere. Sakhi keeps context as you talk.</Text>
               <Text style={styles.emptyHint}>Deep Dive unlocks once your thread runs long enough to draw from.</Text>

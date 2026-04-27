@@ -1,18 +1,20 @@
-# Mobile Offload Mode
+# Mobile Drop Mode
 
-> Product + UX spec for adding `Offload` alongside the existing `Talk to Sakhi` mobile experience.
+> Product + UX spec for the `Drop` mode alongside the existing `Talk to Sakhi` mobile experience.
 >
-> Status: proposed
+> Status: shipped
 >
-> Last Updated: 2026-04-10
+> Last Updated: 2026-04-25
+>
+> **Rename note:** This feature was originally called `Drop`. Renamed to `Drop` on 2026-04-25 to align with the continuity-layer positioning (less wellness-adjacent, more action-oriented).
 
 ---
 
 ## Summary
 
-Sakhi mobile keeps the current live conversation mode as `Talk to Sakhi` and adds a second mode, `Offload`.
+Sakhi mobile keeps the current live conversation mode as `Talk to Sakhi` and adds a second mode, `Drop`.
 
-`Offload` is for moments when the user wants to put things into Sakhi without expecting a reply. It must work both:
+`Drop` is for moments when the user wants to put things into Sakhi without expecting a reply. It must work both:
 
 - online, when the user intentionally does not want a response
 - offline, when the user still needs capture even without connectivity
@@ -41,7 +43,7 @@ Add a second mobile mode that lets users safely capture thoughts without requiri
 
 ### Non-Goal
 
-This spec does not add offline AI responses. `Offload` is not "chat without internet." It is safe capture plus later ingestion.
+This spec does not add offline AI responses. `Drop` is not "chat without internet." It is safe capture plus later ingestion.
 
 ### Modes
 
@@ -52,7 +54,7 @@ This spec does not add offline AI responses. `Offload` is not "chat without inte
 - Current online-first chat behavior remains
 - Uses the current synchronous turn path
 
-#### `Offload`
+#### `Drop`
 
 - New mode
 - User does not expect a response
@@ -64,7 +66,7 @@ This spec does not add offline AI responses. `Offload` is not "chat without inte
 
 ### Core Principle
 
-`Offload` is for capture, not conversation.
+`Drop` is for capture, not conversation.
 
 The system should take the user's content seriously, persist it safely, and process it after sync, but the user-facing contract remains:
 
@@ -87,7 +89,7 @@ The system should take the user's content seriously, persist it safely, and proc
 - response expected
 - if offline, current conversation behavior should not silently fabricate a response
 
-#### `Offload`
+#### `Drop`
 
 - save-only mode
 - no response expected
@@ -108,14 +110,14 @@ Each offload item may show one of these states:
 
 ### Backend Contract
 
-`Offload` should not piggyback on the synchronous reply contract of `Talk to Sakhi`.
+`Drop` should not piggyback on the synchronous reply contract of `Talk to Sakhi`.
 
 Recommended behavior:
 
 - `Talk to Sakhi`
   - existing `POST /v2/turn`
   - synchronous reply + worker fan-out
-- `Offload`
+- `Drop`
   - dedicated non-reply ingestion path
   - accepts text capture
   - persists the content
@@ -147,13 +149,13 @@ Local offloads must:
 
 ### Acceptance Criteria
 
-- A user can choose `Offload` and save text online without receiving a reply.
-- A user can choose `Offload` and save text offline without losing it.
+- A user can choose `Drop` and save text online without receiving a reply.
+- A user can choose `Drop` and save text offline without losing it.
 - Saved offline entries survive app relaunch.
 - Pending entries sync automatically when the device reconnects.
 - Synced entries run through the backend ingestion pipeline.
 - `Talk to Sakhi` remains intact for the current online conversation UX.
-- During the current beta, `Talk to Sakhi` and `Offload` both feed one shared active continuity window.
+- During the current beta, `Talk to Sakhi` and `Drop` both feed one shared active continuity window.
 - The beta continuity window is `180 days`; older entries may still exist, but they no longer shape free continuity surfaces unless the user upgrades later.
 
 ---
@@ -164,12 +166,12 @@ Local offloads must:
 
 - Do not make existing users relearn the app just to add offline safety.
 - Do not force the user to choose between modes on every launch.
-- Make `Offload` feel like containment, not like a degraded form of chat.
+- Make `Drop` feel like containment, not like a degraded form of chat.
 - Keep copy simple and emotionally legible.
 
 ### Entry Model
 
-The user should not have to choose between `Talk to Sakhi` and `Offload` every time.
+The user should not have to choose between `Talk to Sakhi` and `Drop` every time.
 
 Recommended behavior:
 
@@ -186,7 +188,7 @@ The two modes should not rely on text alone. Each mode gets a stable icon treatm
 
 - `Talk to Sakhi`
   - chat icon
-- `Offload`
+- `Drop`
   - archive / save icon
 
 Rule:
@@ -197,9 +199,9 @@ Rule:
 - do not repeat the active mode in the top header if the footer toggle is already clear
 - use subtle ambient screen treatment to differentiate modes:
   - `Talk to Sakhi` can feel a little brighter and more live
-  - `Offload` can feel more contained and quieter
+  - `Drop` can feel more contained and quieter
 - pricing pressure should come from continuity duration, not from blocking capture
-- `Offload` remains available in free; what is limited is how long Talk + Offload stay active inside the continuity layer
+- `Drop` remains available in free; what is limited is how long Talk + Drop stay active inside the continuity layer
 
 ### Home Screen Change
 
@@ -227,7 +229,7 @@ Shown only:
 Teach the distinction between:
 
 - `Talk to Sakhi`
-- `Offload`
+- `Drop`
 
 #### Content
 
@@ -244,7 +246,7 @@ Primary cards:
 - `Talk to Sakhi`
   - chat icon
   - `Have a conversation. Get a response.`
-- `Offload`
+- `Drop`
   - archive / save icon
   - `Just put it down. No response expected. Works offline too.`
 
@@ -268,11 +270,11 @@ What do you need right now?
 └──────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────┐
-│ [archive icon] Offload                      │
+│ [archive icon] Drop                      │
 │ Just put it down. No response expected.     │
 │ Works offline too.                          │
 │                                              │
-│ [ Start Offloading ]                        │
+│ [ Start Droping ]                        │
 └──────────────────────────────────────────────┘
 
 You can switch anytime.
@@ -290,17 +292,17 @@ After the first explicit choice, the app remembers the user's last-used mode and
 This is a quiet space to unload your mind.
 
 [ Continue Talking ]      <- primary CTA
-Offload instead
+Drop instead
 ------------------------------------------------
 ```
 
-#### If last used was `Offload`
+#### If last used was `Drop`
 
 ```text
 ------------------------------------------------
 This is a quiet space to unload your mind.
 
-[ Continue Offloading ]   <- primary CTA
+[ Continue Droping ]   <- primary CTA
 Talk to Sakhi instead
 ------------------------------------------------
 ```
@@ -316,7 +318,7 @@ Talk to Sakhi instead
 This remains the current chat screen with only minimal additions:
 
 - one clear top mode switch with strong active highlighting
-- one-tap switch into `Offload`
+- one-tap switch into `Drop`
 - no duplicate mode label near the composer/footer
 - optional offline banner if there is no network
 
@@ -330,7 +332,7 @@ Behavior:
 
 Possible top affordance:
 
-`Mode: Talk to Sakhi    Switch to Offload`
+`Mode: Talk to Sakhi    Switch to Drop`
 
 #### Offline State
 
@@ -338,11 +340,11 @@ If the user is in `Talk to Sakhi` and offline, the UI should make the constraint
 
 Recommended copy:
 
-`You're offline. Switch to Offload to save this without a response.`
+`You're offline. Switch to Drop to save this without a response.`
 
 This avoids quietly changing the meaning of `Talk to Sakhi`.
 
-### Screen 4: Offload
+### Screen 4: Drop
 
 This should feel calmer and more contained than chat.
 
@@ -360,7 +362,7 @@ Let the user put things into Sakhi without expecting a response.
 
 #### Header Copy
 
-- Title: `Offload`
+- Title: `Drop`
 - Subtitle:
   - online: `Put it down. Sakhi will take it in.`
   - offline: `Put it down. I'll save it and sync later.`
@@ -380,7 +382,7 @@ Primary CTA:
 
 ```text
 ------------------------------------------------
-Offload                               [Online]
+Drop                               [Online]
 
 Put it down. Sakhi will take it in.
 
@@ -399,7 +401,7 @@ What do you need to put down?
 
 ```text
 ------------------------------------------------
-Offload                              [Offline]
+Drop                              [Offline]
 
 Put it down. I'll save it and sync later.
 
@@ -416,7 +418,7 @@ What do you need to put down?
 ------------------------------------------------
 ```
 
-### Screen 5: Offload Item States
+### Screen 5: Drop Item States
 
 Each item in the list should show a small, quiet state label.
 
@@ -428,7 +430,7 @@ Examples:
 - `Synced`
 - `Needs retry`
 
-The state styling should be subtle and non-alarming. `Offload` is a calming surface, not a diagnostics console.
+The state styling should be subtle and non-alarming. `Drop` is a calming surface, not a diagnostics console.
 
 ### Screen 6: Reconnect / Sync Flow
 
@@ -472,7 +474,7 @@ Do not present a disruptive modal unless the queue is blocked repeatedly.
 
 1. User signs in or opens the app after the feature release.
 2. App shows mode chooser.
-3. User taps `Talk to Sakhi` or `Offload`.
+3. User taps `Talk to Sakhi` or `Drop`.
 4. App stores `last_used_mode`.
 5. Future launches default into that mode.
 
@@ -480,25 +482,25 @@ Do not present a disruptive modal unless the queue is blocked repeatedly.
 
 1. User opens app.
 2. App routes directly into `Talk to Sakhi`.
-3. User can switch to `Offload` from the header/action.
+3. User can switch to `Drop` from the header/action.
 
-### Flow C: Repeat User, Last Used `Offload`
+### Flow C: Repeat User, Last Used `Drop`
 
 1. User opens app.
-2. App routes directly into `Offload`.
+2. App routes directly into `Drop`.
 3. User can switch to `Talk to Sakhi` from the header/action.
 
-### Flow D: Offload While Online
+### Flow D: Drop While Online
 
-1. User enters `Offload`.
+1. User enters `Drop`.
 2. Types text.
 3. Taps `Save`.
 4. UI shows `Saving...` then `Saved`.
 5. Backend ingestion runs without generating a reply bubble.
 
-### Flow E: Offload While Offline
+### Flow E: Drop While Offline
 
-1. User enters `Offload`.
+1. User enters `Drop`.
 2. Types text.
 3. Taps `Save offline`.
 4. UI shows `Saved offline`.
@@ -510,10 +512,10 @@ Do not present a disruptive modal unless the queue is blocked repeatedly.
 
 ## Open Questions
 
-- Should `Offload` be a visually distinct dedicated screen, or a mode inside the existing chat shell?
+- Should `Drop` be a visually distinct dedicated screen, or a mode inside the existing chat shell?
 - Should offloaded items live in their own timeline, or should they later appear mixed into conversation history with a distinct type marker?
 - What should the dedicated backend route be called for no-reply ingestion?
-- Should `Talk to Sakhi` while offline offer any capture affordance, or always direct the user into `Offload`?
+- Should `Talk to Sakhi` while offline offer any capture affordance, or always direct the user into `Drop`?
 
 ---
 
@@ -522,9 +524,9 @@ Do not present a disruptive modal unless the queue is blocked repeatedly.
 For MVP:
 
 - keep `Talk to Sakhi` exactly as it is when online
-- add `Offload` as a separate explicit mode
+- add `Drop` as a separate explicit mode
 - remember the user's last-used mode
-- make `Offload` the single place where both no-response capture and offline capture live
+- make `Drop` the single place where both no-response capture and offline capture live
 - do not generate automatic Sakhi replies for offloaded content
 
 This keeps the current experience stable while introducing a clear, trustworthy second contract for capture.

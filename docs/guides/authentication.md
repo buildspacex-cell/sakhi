@@ -187,6 +187,32 @@ CREATE TABLE auth_users (
 - Check that the FastAPI backend is running
 - Verify `NEXT_PUBLIC_API_BASE_URL` points to the correct endpoint
 
+## Mobile Auth: Two-Phase Init
+
+> Applies to `apps/mobile/lib/auth/AuthContext.tsx`
+
+Native OAuth note:
+The Expo mobile client is configured for `PKCE` (`apps/mobile/lib/supabase.ts`) and completes the browser callback by exchanging the returned auth code or persisting returned tokens inside the app callback/auth context flow. The Supabase redirect list must therefore include `sakhi://auth/callback`.
+
+Ownership note:
+OAuth callback handling only establishes the Supabase session. The auth screen in `apps/mobile/app/auth/index.tsx` is the single owner for post-auth bootstrap, linked-profile hydration, and routing to `/` or `/onboarding`. This avoids double-processing the same sign-in across callback routes and provider-specific auth helpers.
+
+The mobile app uses a two-phase auth init pattern so returning users see the app immediately without waiting for a network token refresh.
+
+**Phase 1 — fast path (~5ms)**
+`supabase.auth.getSession()` reads directly from the iOS Keychain / AsyncStorage. If a cached session exists (even with an expired access token), auth state is set and `isLoading = false` fires immediately. The app renders.
+
+**Phase 2 — background token refresh**
+`onAuthStateChange` runs concurrently. If the access token was expired, Supabase refreshes it via network (~1–2s). The in-memory session updates silently. If the refresh token itself is expired (>60 days inactive), the user is redirected to login.
+
+**Why this matters**
+Without Phase 1, every open after ~1 hour (access token TTL) waited for a network round-trip before rendering anything. Phase 1 eliminates that wait for all returning users.
+
+**personId caching**
+`personId` is read from AsyncStorage alongside the session in Phase 1. On cache miss (first login or cleared storage), a Supabase DB query fetches it in the background — this no longer blocks the initial render.
+
+Safety timeout: 2500ms (down from 5000ms) — only triggers if both Phase 1 and `onAuthStateChange` fail.
+
 ## Security Notes
 
 - The `person_id` is the `auth_users.id`, NOT the Supabase `auth.users.id`

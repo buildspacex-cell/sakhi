@@ -224,6 +224,125 @@ async def get_continuity_arc(
     return response
 
 
+_DECISION_STATE_COPY: dict[str, str] = {
+    "questioning":  "still working through",
+    "leaning_yes":  "leaning toward yes on",
+    "leaning_no":   "leaning toward no on",
+    "committed":    "committed to moving forward on",
+    "deferred":     "putting on hold",
+    "reversed":     "reconsidering",
+    "resolved":     "resolved",
+}
+
+
+async def get_continuation_prompt(
+    person_id: str,
+    *,
+    min_gap_hours: float = 4.0,
+    scope: str = CONTINUITY_SCOPE,
+) -> dict:
+    """Return a return-visit card for the app home screen.
+
+    Always works — uses conversation turn data as the baseline (no continuity
+    policy required). If continuity is enabled for this user, enriches with
+    topic label and decision state from the arc.
+    """
+    from datetime import UTC, datetime, timedelta
+    from sakhi.apps.api.core.db import q as dbfetch
+
+    now = datetime.now(UTC)
+
+    # ── Last session + last user message (no policy needed) ──────────────────
+    rows = await dbfetch(
+        """
+        SELECT cs.last_active_at,
+               cs.turn_count,
+               ct.text AS last_text
+        FROM conversation_sessions cs
+        LEFT JOIN LATERAL (
+            SELECT text
+            FROM conversation_turns
+            WHERE session_id = cs.id AND role = 'user'
+            ORDER BY created_at DESC
+            LIMIT 1
+        ) ct ON true
+        WHERE cs.user_id = $1
+          AND cs.status  = 'active'
+          AND cs.slug    = 'converse'
+        ORDER BY cs.last_active_at DESC NULLS LAST
+        LIMIT 1
+        """,
+        person_id,
+    )
+    if not rows:
+        return {"has_continuation": False}
+
+    row = rows[0]
+    last_active = row.get("last_active_at")
+    turn_count = int(row.get("turn_count") or 0)
+    last_text = str(row.get("last_text") or "").strip()
+
+    if not last_active or turn_count < 2 or not last_text:
+        return {"has_continuation": False}
+
+    if last_active.tzinfo is None:
+        last_active = last_active.replace(tzinfo=UTC)
+    hours_since = (now - last_active).total_seconds() / 3600
+    if hours_since < min_gap_hours:
+        return {"has_continuation": False}
+
+    snippet = (last_text[:120] + "…") if len(last_text) > 120 else last_text
+
+    # ── Continuity enrichment (best-effort, requires policy) ─────────────────
+    topic_label: str | None = None
+    topic_key: str | None = None
+    decision_state: str | None = None
+    decision_copy: str | None = None
+
+    try:
+        topics_resp = await get_continuity_topics(person_id, window="30d", scope=scope)
+        topics = topics_resp.get("topics") or []
+        if topics:
+            top = topics[0]
+            topic_label = top.get("label") or None
+            topic_key = top.get("anchor") or None
+            moments = _included_moments(
+                next((t for t in (topics_resp.get("topic_details") or [])
+                      if t.get("anchor") == topic_key), {})
+            )
+            # Last moment with a concrete decision state
+            for m in reversed(moments):
+                ds = m.get("decision_state")
+                if ds and ds not in ("resolved",):
+                    decision_state = ds
+                    decision_copy = _DECISION_STATE_COPY.get(ds)
+                    break
+    except (PermissionError, LookupError):
+        pass
+    except Exception:
+        pass
+
+    # ── Build display text ────────────────────────────────────────────────────
+    if topic_label and decision_copy:
+        display = f"You were {decision_copy} {topic_label}."
+    elif topic_label:
+        display = f"Last time you were working through {topic_label}."
+    else:
+        display = f"Last time: \u201c{snippet}\u201d"
+
+    return {
+        "has_continuation": True,
+        "display": display,
+        "snippet": snippet,
+        "topic_label": topic_label,
+        "topic_key": topic_key,
+        "decision_state": decision_state,
+        "hours_since": round(hours_since, 1),
+        "last_active": last_active.isoformat(),
+        "turn_count": turn_count,
+    }
+
+
 async def enable_continuity_policy(
     person_id: str,
     *,

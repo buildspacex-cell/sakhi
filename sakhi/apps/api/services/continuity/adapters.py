@@ -111,12 +111,23 @@ async def upsert_continuity_label(
         )
         VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb)
         ON CONFLICT (person_id, source_type, source_id)
-        DO UPDATE SET anchor = EXCLUDED.anchor,
-                      facets = EXCLUDED.facets,
-                      entities = EXCLUDED.entities,
-                      scalar = EXCLUDED.scalar,
-                      metadata = EXCLUDED.metadata,
-                      updated_at = now()
+        DO UPDATE SET
+            -- Preserve LLM-inferred anchor when lexical pass returns 'unknown'
+            anchor = CASE
+                WHEN continuity_labels.inferred_by = 'llm' AND EXCLUDED.anchor = 'unknown'
+                THEN continuity_labels.anchor
+                ELSE EXCLUDED.anchor
+            END,
+            inferred_by = CASE
+                WHEN continuity_labels.inferred_by = 'llm' AND EXCLUDED.anchor = 'unknown'
+                THEN 'llm'
+                ELSE 'lexical'
+            END,
+            facets = EXCLUDED.facets,
+            entities = EXCLUDED.entities,
+            scalar = EXCLUDED.scalar,
+            metadata = EXCLUDED.metadata,
+            updated_at = now()
         """,
         person_id,
         source_type,
@@ -216,23 +227,34 @@ async def load_journal_entries_for_continuity(
     to_ts: datetime,
     exclusions: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
+    # LEFT JOIN continuity_labels to surface LLM-inferred anchor hints so the
+    # compiler can honour them without re-running classification from scratch.
     rows = await dbfetch(
         """
-        SELECT id,
-               person_id,
-               user_id,
-               ts,
-               created_at,
-               updated_at,
-               content,
-               raw_encrypted,
-               cleaned,
-               title
-        FROM journal_entries
-        WHERE (person_id = $1 OR user_id = $1)
-          AND ts >= $2
-          AND ts < $3
-        ORDER BY ts ASC, created_at ASC, id ASC
+        SELECT je.id,
+               je.person_id,
+               je.user_id,
+               je.ts,
+               je.created_at,
+               je.updated_at,
+               je.content,
+               je.raw_encrypted,
+               je.cleaned,
+               je.title,
+               cl.anchor          AS hint_anchor,
+               cl.inferred_by     AS hint_inferred_by,
+               cl.decision_state  AS hint_decision_state,
+               cl.affective_scalar AS hint_affective_scalar,
+               cl.epistemic_state AS hint_epistemic_state
+        FROM journal_entries je
+        LEFT JOIN continuity_labels cl
+               ON cl.person_id = $1
+              AND cl.source_id  = je.id::text
+              AND cl.inferred_by = 'llm'
+        WHERE (je.person_id = $1 OR je.user_id = $1)
+          AND je.ts >= $2
+          AND je.ts < $3
+        ORDER BY je.ts ASC, je.created_at ASC, je.id ASC
         """,
         person_id,
         from_ts,
@@ -252,16 +274,22 @@ async def load_journal_entries_for_continuity(
         ts = _normalize_ts(row.get("ts"))
         if ts is None:
             continue
-        items.append(
-            {
-                "id": source_id,
-                "person_id": row.get("person_id"),
-                "user_id": row.get("user_id"),
-                "ts": ts,
-                "created_at": _normalize_ts(row.get("created_at")),
-                "updated_at": _normalize_ts(row.get("updated_at")),
-                "content": str(row.get("content") or row.get("cleaned") or row.get("title") or "").strip(),
-                "title": str(row.get("title") or "").strip(),
-            }
-        )
+        hint_anchor = row.get("hint_anchor")
+        item: dict[str, Any] = {
+            "id": source_id,
+            "person_id": row.get("person_id"),
+            "user_id": row.get("user_id"),
+            "ts": ts,
+            "created_at": _normalize_ts(row.get("created_at")),
+            "updated_at": _normalize_ts(row.get("updated_at")),
+            "content": str(row.get("content") or row.get("cleaned") or row.get("title") or "").strip(),
+            "title": str(row.get("title") or "").strip(),
+        }
+        # Attach LLM-inferred hints — compiler will honour these in classification.
+        if hint_anchor:
+            item["hint_anchor"] = str(hint_anchor)
+            item["hint_decision_state"] = row.get("hint_decision_state")
+            item["hint_affective_scalar"] = row.get("hint_affective_scalar")
+            item["hint_epistemic_state"] = row.get("hint_epistemic_state")
+        items.append(item)
     return items

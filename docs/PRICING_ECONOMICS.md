@@ -1,6 +1,6 @@
 # Sakhi Pricing & Unit Economics Assumptions
 
-> Internal working document. Last updated: 2026-04-02
+> Internal working document. Last updated: 2026-04-17
 > Not for distribution. Informs the pre-seed investor deck.
 
 ---
@@ -151,6 +151,8 @@ This is not passive. We have four specific levers to manage cost as we scale:
 **1. Model routing**
 Not every interaction needs GPT-4o. Memory retrieval, simple threading, and short responses route to GPT-4o-mini (~10× cheaper). Target: 40% of total token volume on cheaper models by Month 18 without quality loss.
 
+Cross-model routing is a Pro feature — smart auto-routing by task type plus a capped user override (100 premium turns/month). This is not a separate pricing tier. Full economics and build plan: [docs/features/cross-model-routing.md](features/cross-model-routing.md).
+
 **2. Caching**
 Repeated memory reads (context loading at session start) are expensive and redundant. A caching layer for the top 20% of memory retrievals cuts cost by an estimated 25–30%. Engineering priority in Year 1.
 
@@ -256,3 +258,4 @@ GPT-4o costs ~40% less than GPT-4 did at launch. In 24 months our COGS per user 
 - [ ] What is the referral rate from first cohort? Validates organic CAC assumption.
 - [ ] Fine-tuning timeline: can we reduce frontier model dependency for non-reflection tasks by Month 18?
 - [ ] At what usage level does a $30–35/mo power tier make sense?
+- [ ] Cross-model routing: add Anthropic + Gemini providers, define task routing policy, ship capped user choice — see [docs/features/cross-model-routing.md](features/cross-model-routing.md)

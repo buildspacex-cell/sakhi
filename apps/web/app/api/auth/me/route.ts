@@ -7,8 +7,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const DEV_BYPASS_EMAIL = "localhost-bypass@sakhi.local";
-const DEV_BYPASS_NAME = "Localhost Tester";
+const DEV_BYPASS_EMAIL = "sakhi.vidhya.demo@gmail.com";
+const DEV_BYPASS_NAME = "Vidhya";
+const DEV_BYPASS_FALLBACK_PERSON_ID = "a1b2c3d4-1111-4000-8000-000000000001";
 
 interface AuthMePayload {
   person_id: string;
@@ -41,8 +42,8 @@ async function getDevBypassResponse(
     return null;
   }
 
-  const personId = getDevAuthBypassPersonId();
-  if (!personId) {
+  const identifier = getDevAuthBypassPersonId();
+  if (!identifier) {
     return null;
   }
 
@@ -51,7 +52,7 @@ async function getDevBypassResponse(
     const { data: authUser, error } = await serviceSupabase
       .from("auth_users")
       .select("id, email, full_name, avatar_url, onboarding_completed_at")
-      .eq("id", personId)
+      .or(`id.eq.${identifier},supabase_user_id.eq.${identifier}`)
       .maybeSingle();
 
     if (error) {
@@ -73,7 +74,7 @@ async function getDevBypassResponse(
   }
 
   return withDevBypassCookie(request, {
-    person_id: personId,
+    person_id: DEV_BYPASS_FALLBACK_PERSON_ID,
     email: DEV_BYPASS_EMAIL,
     full_name: DEV_BYPASS_NAME,
     avatar_url: null,

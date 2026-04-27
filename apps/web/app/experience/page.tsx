@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import type { Route } from "next";
@@ -9,6 +9,7 @@ import { editorialFontFamily as fontFamily, midnightEditorial as palette } from 
 export const dynamic = "force-dynamic";
 
 const FADE_DURATION_MS = 400;
+const LAST_MODE_KEY = "sakhi.web.lastEntryMode";
 
 interface AuthUser {
   person_id: string;
@@ -28,9 +29,9 @@ export default function ExperienceGate() {
 function ExperienceGateContent() {
   const router = useRouter();
   const [isFading, setIsFading] = useState(false);
-  const [isHoveringBegin, setIsHoveringBegin] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [showModeChooser, setShowModeChooser] = useState(false);
   const hasNavigated = useRef(false);
 
   useEffect(() => {
@@ -43,9 +44,7 @@ function ExperienceGateContent() {
           signal: controller.signal,
           cache: "no-store",
         });
-        if (!res.ok) {
-          return;
-        }
+        if (!res.ok) return;
 
         const data = await res.json();
         setAuthUser({
@@ -72,47 +71,105 @@ function ExperienceGateContent() {
     };
   }, []);
 
-  const nextPath = useMemo(() => {
-    if (!authUser) {
-      return `/auth/login?redirect=${encodeURIComponent("/experience/converse")}`;
-    }
-
-    const encodedUser = encodeURIComponent(authUser.person_id);
-    const encodedName = encodeURIComponent(authUser.full_name || "");
-    if (authUser.needs_name || !authUser.full_name?.trim()) {
-      return `/experience/onboarding?user=${encodedUser}&name=${encodedName}`;
-    }
-    return `/experience/converse?user=${encodedUser}&name=${encodedName}`;
-  }, [authUser]);
-
   useEffect(() => {
-    if (!authChecked || hasNavigated.current) {
+    if (!authChecked || hasNavigated.current) return;
+
+    if (!authUser) return; // Not logged in — stay on landing
+
+    if (authUser.needs_name || !authUser.full_name?.trim()) {
+      // Need onboarding
+      hasNavigated.current = true;
+      const encodedUser = encodeURIComponent(authUser.person_id);
+      const encodedName = encodeURIComponent(authUser.full_name || "");
+      setIsFading(true);
+      window.setTimeout(() => {
+        router.replace(`/experience/onboarding?user=${encodedUser}&name=${encodedName}` as Route);
+      }, FADE_DURATION_MS);
       return;
     }
-    if (authUser && !authUser.needs_name && authUser.full_name?.trim()) {
+
+    // Check if they have a saved mode preference
+    let savedMode: string | null = null;
+    try { savedMode = localStorage.getItem(LAST_MODE_KEY); } catch { /* noop */ }
+
+    if (savedMode === "talk" || savedMode === "offload") {
+      // Resume their last mode directly
       hasNavigated.current = true;
       setIsFading(true);
       window.setTimeout(() => {
-        router.replace(nextPath as Route);
+        router.replace(`/experience/converse?mode=${savedMode}` as Route);
       }, FADE_DURATION_MS);
+    } else {
+      // First time — show mode chooser
+      setShowModeChooser(true);
     }
-  }, [authChecked, authUser, nextPath, router]);
+  }, [authChecked, authUser, router]);
 
-  const handleBegin = useCallback(() => {
-    if (!authChecked || hasNavigated.current) {
-      return;
-    }
+  const navigateTo = useCallback((path: string) => {
+    if (hasNavigated.current) return;
     hasNavigated.current = true;
     setIsFading(true);
     window.setTimeout(() => {
-      router.replace(nextPath as Route);
+      router.replace(path as Route);
     }, FADE_DURATION_MS);
-  }, [authChecked, nextPath, router]);
+  }, [router]);
+
+  const handleBegin = useCallback(() => {
+    if (!authChecked || hasNavigated.current) return;
+    const dest = authUser
+      ? "/experience/converse"
+      : `/auth/login?redirect=${encodeURIComponent("/experience")}`;
+    navigateTo(dest);
+  }, [authChecked, authUser, navigateTo]);
+
+  const startMode = useCallback((mode: "talk" | "offload") => {
+    try { localStorage.setItem(LAST_MODE_KEY, mode); } catch { /* noop */ }
+    navigateTo(`/experience/converse?mode=${mode}`);
+  }, [navigateTo]);
+
+  if (showModeChooser && authUser) {
+    const displayName = authUser.full_name?.split(" ")[0] || "";
+
+    return (
+      <main style={{ ...containerStyle, opacity: isFading ? 0 : 1 }}>
+        <div style={contentStyle}>
+          <div style={textContainerStyle}>
+            <h1 style={headlineStyle}>
+              This is a quiet space to unload your mind.
+            </h1>
+            <p style={subheadlineStyle}>
+              {displayName ? `Welcome back, ${displayName}. ` : ""}What do you need right now?
+            </p>
+          </div>
+
+          <div style={modeCardsStyle}>
+            <button style={modeCardStyle} onClick={() => startMode("talk")}>
+              <div style={modeCardHeaderStyle}>
+                <span style={modeIconStyle}>◉</span>
+                <span style={modeTitleStyle}>Talk to Sakhi</span>
+              </div>
+              <p style={modeBodyStyle}>Have a conversation. Get a response.</p>
+              <span style={modeCtaStyle}>Start Talking</span>
+            </button>
+
+            <button style={modeCardStyle} onClick={() => startMode("offload")}>
+              <div style={modeCardHeaderStyle}>
+                <span style={modeIconStyle}>↓</span>
+                <span style={modeTitleStyle}>Drop</span>
+              </div>
+              <p style={modeBodyStyle}>Drop it here. No response. Works offline too.</p>
+              <span style={modeCtaStyle}>Drop Something</span>
+            </button>
+          </div>
+
+          <p style={modeHintStyle}>You can switch anytime. Sakhi will remember what you used last.</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main
-      style={{ ...containerStyle, opacity: isFading ? 0 : 1 }}
-    >
+    <main style={{ ...containerStyle, opacity: isFading ? 0 : 1 }}>
       <div style={contentStyle}>
         <div style={textContainerStyle}>
           <h1 style={headlineStyle}>
@@ -126,16 +183,12 @@ function ExperienceGateContent() {
         <button
           style={{
             ...beginButtonStyle,
-            color: !authChecked
-              ? palette.dim
-              : isHoveringBegin
-                ? palette.fg
-                : palette.muted,
+            color: !authChecked ? palette.dim : palette.muted,
             cursor: authChecked ? "pointer" : "default",
           }}
           onClick={handleBegin}
-          onMouseEnter={() => setIsHoveringBegin(true)}
-          onMouseLeave={() => setIsHoveringBegin(false)}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = palette.fg; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = palette.muted; }}
         >
           BEGIN
         </button>
@@ -158,7 +211,7 @@ const containerStyle: React.CSSProperties = {
 
 const contentStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: "640px",
+  maxWidth: "560px",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -167,7 +220,7 @@ const contentStyle: React.CSSProperties = {
 
 const textContainerStyle: React.CSSProperties = {
   textAlign: "center",
-  marginBottom: "44px",
+  marginBottom: "40px",
 };
 
 const headlineStyle: React.CSSProperties = {
@@ -203,4 +256,69 @@ const beginButtonStyle: React.CSSProperties = {
   fontWeight: 500,
   letterSpacing: "0.14em",
   transition: "color 150ms ease",
+  cursor: "pointer",
+};
+
+const modeCardsStyle: React.CSSProperties = {
+  width: "100%",
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+};
+
+const modeCardStyle: React.CSSProperties = {
+  width: "100%",
+  borderRadius: "16px",
+  border: `1px solid ${palette.border}`,
+  background: "rgba(21, 28, 40, 0.78)",
+  padding: "20px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  textAlign: "left",
+  cursor: "pointer",
+  fontFamily,
+  transition: "border-color 150ms ease, background 150ms ease",
+};
+
+const modeCardHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+};
+
+const modeIconStyle: React.CSSProperties = {
+  fontSize: "20px",
+  color: palette.muted,
+  lineHeight: 1,
+};
+
+const modeTitleStyle: React.CSSProperties = {
+  fontSize: "18px",
+  fontWeight: 600,
+  color: palette.fg,
+};
+
+const modeBodyStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: "14px",
+  lineHeight: "21px",
+  color: palette.muted,
+};
+
+const modeCtaStyle: React.CSSProperties = {
+  marginTop: "4px",
+  fontSize: "13px",
+  fontWeight: 600,
+  letterSpacing: "0.4px",
+  color: palette.accent,
+};
+
+const modeHintStyle: React.CSSProperties = {
+  marginTop: "20px",
+  fontSize: "13px",
+  color: palette.dim,
+  textAlign: "center",
+  lineHeight: "20px",
+  maxWidth: "340px",
 };

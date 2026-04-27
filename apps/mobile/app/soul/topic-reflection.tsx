@@ -84,8 +84,8 @@ interface ContinuityArcResponse {
 }
 
 const BACKEND_URL = (config.backendUrl || "").replace(/\/+$/, "");
-const REFLECT_POLL_INTERVAL_MS = 2000;
-const REFLECT_POLL_MAX_ATTEMPTS = 70;
+const REFLECT_POLL_INTERVAL_MS = 800;
+const REFLECT_POLL_MAX_ATTEMPTS = 35;
 const MIN_TOPIC_STORY_MOMENTS = 3;  // <Topic> Story: matches backend min_len=3
 const MIN_CROSS_CONTEXT_MOMENTS = 6;
 const MIN_RELATED_TOPIC_MOMENTS = MIN_TOPIC_STORY_MOMENTS; // Allow lighter supporting threads once the anchor is deep enough.
@@ -440,6 +440,8 @@ export default function TopicReflectionScreen() {
   const threadZoom = useRef(new Animated.Value(0)).current;
   const momentOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debugSequenceRef = useRef(0);
+  // Cache topics for 2 minutes so repeat navigation doesn't re-fetch
+  const topicsCachedAtRef = useRef<number>(0);
 
   const emitDebugEvent = useCallback(
     (event: SupportDebugEventInput) => {
@@ -810,7 +812,9 @@ export default function TopicReflectionScreen() {
     setSelectedMoment(null);
   }, []);
 
-  const loadTopics = useCallback(async () => {
+  const TOPICS_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+  const loadTopics = useCallback(async (force = false) => {
     if (!personId) return;
     if (!backendConfigured) {
       setTopics([]);
@@ -820,12 +824,18 @@ export default function TopicReflectionScreen() {
       return;
     }
 
+    // Skip fetch if cache is fresh and we have topics already (repeat navigation)
+    const cacheAge = Date.now() - topicsCachedAtRef.current;
+    if (!force && cacheAge < TOPICS_CACHE_TTL_MS && topics.length > 0) return;
+
     setLoadingTopics(true);
     setError("");
     setMeStoryError("");
     setMeStoryText("");
 
     try {
+      // Fetch topics — if policy isn't enabled yet (403), enable it and retry once.
+      // This is the only network waterfall we can't avoid on first-ever open.
       let topicItems: ContinuityTopicSummary[] = [];
       try {
         topicItems = await fetchTopics();
@@ -850,11 +860,14 @@ export default function TopicReflectionScreen() {
       });
 
       setTopics(sorted);
+      topicsCachedAtRef.current = Date.now();
 
       if (sorted.length > 0) {
         const initialAnchor = sorted[0].anchor;
         setSelectedAnchor(initialAnchor);
-        await loadArc(initialAnchor);
+        // Fire arc load without awaiting — bubbles render immediately,
+        // arc detail loads in the background as the user taps in.
+        void loadArc(initialAnchor);
       } else {
         setSelectedAnchor("");
         setArc(null);
@@ -1141,19 +1154,19 @@ export default function TopicReflectionScreen() {
         />
         <View style={styles.headerTitleWrap}>
           <Text style={styles.kicker}>Profile</Text>
-          <Text style={styles.title}>Reflection</Text>
+          <Text style={styles.title}>Your Threads</Text>
         </View>
         <IconButton
           icon={<Ionicons name="refresh-outline" size={18} color={palette.fg} />}
-          onPress={() => void loadTopics()}
+          onPress={() => void loadTopics(true)}
         />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.glassCard}>
-          <Text style={styles.cardTitle}>Life Occupancy</Text>
+          <Text style={styles.cardTitle}>Your Threads</Text>
           <Text style={styles.cardSubtitle}>
-            Bubble size reflects how much each thread has occupied your attention in the last {MOBILE_CONTINUITY_PLAN.continuityDays} days.
+            Bubble size reflects how much each thread has featured in your discussions over the last {MOBILE_CONTINUITY_PLAN.continuityDays} days.
           </Text>
           <View style={styles.planBadge}>
             <Text style={styles.planBadgeText}>
@@ -1210,7 +1223,7 @@ export default function TopicReflectionScreen() {
         <View style={styles.glassCard}>
           <Text style={styles.cardTitle}>My Story</Text>
           <Text style={styles.cardSubtitle}>
-            Cross-context reflection across your active topics from the last {MOBILE_CONTINUITY_PLAN.continuityDays} days.
+            Cross-thread synthesis across your active discussions from the last {MOBILE_CONTINUITY_PLAN.continuityDays} days.
           </Text>
           <View style={styles.storyActionBlock}>
             <Pressable
@@ -1280,7 +1293,7 @@ export default function TopicReflectionScreen() {
                 onPress={closeThread}
               />
               <View style={styles.headerTitleWrap}>
-                <Text style={styles.kicker}>Reflection</Text>
+                <Text style={styles.kicker}>Thread</Text>
                 <Text style={styles.title}>{threadLabel}</Text>
               </View>
               <IconButton

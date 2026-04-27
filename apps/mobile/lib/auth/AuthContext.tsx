@@ -12,6 +12,8 @@ import {
   readCachedPersonId,
   writeCachedPersonId,
 } from "./personCache";
+import { recordAuthDebug } from "./authDebug";
+import { completeMobileAuthRedirect, parseAuthRedirectUrl } from "./oauthRedirect";
 
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -40,7 +42,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   authExitIntent: "none" | "signed_out" | "expired";
   isAppleAuthAvailable: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<"success" | "cancelled">;
   signInWithApple: () => Promise<void>;
   signInWithEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -167,10 +169,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthExitIntent("none");
   }, [session?.user?.id, user?.id]);
 
-  // Initialize auth state — onAuthStateChange is the single source of truth.
-  // Supabase fires INITIAL_SESSION immediately when subscribed (handles cached
-  // tokens, token refresh, and no-session equally), so we don't need a separate
-  // getSession() call that can race/conflict.
+  // Two-phase auth init:
+  //
+  // Phase 1 — getSession() reads directly from the iOS Keychain / AsyncStorage
+  // (~5ms, no network). If a cached session exists we unlock the app immediately,
+  // even if the access token is already expired. The Supabase client refreshes
+  // tokens transparently before outbound API calls, so an expired token never
+  // surfaces to the UI.
+  //
+  // Phase 2 — onAuthStateChange fires after Supabase has refreshed an expired
+  // token (network round-trip). It updates the in-memory session and handles
+  // sign-out / token expiry. It no longer gates the initial render.
   useEffect(() => {
     if (isBypassActive) return;
 
@@ -178,6 +187,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let initialResolved = false;
     void clearLegacyPersonIdCache();
 
+    // Phase 1: fast path from local storage
+    supabase.auth.getSession().then(async ({ data: { session: cachedSession } }) => {
+      if (!mounted || initialResolved) return;
+
+      if (cachedSession?.user) {
+        hadSessionRef.current = true;
+        const authUser = transformUser(cachedSession.user);
+        if (authUser) {
+          const cachedPersonId = await readCachedPersonId(cachedSession.user.id);
+          setSession(cachedSession);
+          setUser(cachedPersonId ? { ...authUser, personId: cachedPersonId } : authUser);
+          setAuthExitIntent("none");
+
+          // Fetch personId in background if not in cache — doesn't block render
+          if (!cachedPersonId) {
+            fetchAndCachePersonId(cachedSession.user.id).then((fetchedId) => {
+              if (mounted && fetchedId) {
+                setUser((prev) => prev ? { ...prev, personId: fetchedId } : prev);
+              }
+            });
+          }
+        }
+      }
+
+      // Unlock the app — don't wait for token refresh
+      initialResolved = true;
+      setIsLoading(false);
+    }).catch(() => {
+      if (!mounted || initialResolved) return;
+      initialResolved = true;
+      setIsLoading(false);
+    });
+
+    // Phase 2: background token refresh and ongoing state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
         if (!mounted) return;
@@ -191,14 +234,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const authUser = transformUser(newSession.user);
           if (authUser) {
             const cachedPersonId = await readCachedPersonId(newSession.user.id);
-
             if (cachedPersonId) {
               setUser({ ...authUser, personId: cachedPersonId });
             } else {
               setUser(authUser);
             }
-
-            // Fetch personId in background if not cached
             if (!cachedPersonId) {
               const fetchedId = await fetchAndCachePersonId(newSession.user.id);
               if (mounted && fetchedId) {
@@ -216,7 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           intentionalSignOutRef.current = false;
         }
 
-        // Always resolve loading after first auth event (signed in or not)
+        // Fallback: resolve loading if Phase 1 never completed (e.g. getSession threw)
         if (!initialResolved) {
           initialResolved = true;
           setIsLoading(false);
@@ -224,14 +264,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Safety timeout — if onAuthStateChange never fires (e.g. network issue),
-    // don't leave the user stuck on splash forever
+    // Safety net: if both Phase 1 and onAuthStateChange fail (no network, corrupt storage)
     const timeout = setTimeout(() => {
       if (!initialResolved && mounted) {
         initialResolved = true;
         setIsLoading(false);
       }
-    }, 5000);
+    }, 2500);
 
     return () => {
       mounted = false;
@@ -241,10 +280,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [transformUser, fetchAndCachePersonId, isBypassActive]);
 
   // Sign in with Google
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (): Promise<"success" | "cancelled"> => {
     const redirectUri = AuthSession.makeRedirectUri({
       scheme: "sakhi",
       path: "auth/callback",
+    });
+    await recordAuthDebug("Starting Google OAuth", {
+      platform: Platform.OS,
+      redirectUri,
     });
 
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -261,52 +304,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) throw error;
     if (!data?.url) throw new Error("No OAuth URL returned from Supabase");
+    await recordAuthDebug("Received Supabase OAuth URL");
 
     if (Platform.OS === "android") await WebBrowser.warmUpAsync();
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+    await recordAuthDebug("Browser auth session returned", {
+      resultType: result.type,
+      hasUrl: "url" in result && !!result.url,
+    });
 
     if (Platform.OS === "android") await WebBrowser.coolDownAsync();
 
-    if (result.type === "success" && result.url) {
-      const responseUrl = result.url;
-      const hashIndex = responseUrl.indexOf("#");
-      const queryIndex = responseUrl.indexOf("?");
-
-      let accessToken: string | null = null;
-      let refreshToken: string | null = null;
-      let code: string | null = null;
-      let errorDescription: string | null = null;
-
-      if (hashIndex !== -1) {
-        const hashParams = new URLSearchParams(responseUrl.substring(hashIndex + 1));
-        accessToken = hashParams.get("access_token");
-        refreshToken = hashParams.get("refresh_token");
-        errorDescription = hashParams.get("error_description");
-      }
-
-      if (!accessToken && queryIndex !== -1) {
-        const queryParams = new URLSearchParams(
-          responseUrl.substring(queryIndex + 1, hashIndex !== -1 ? hashIndex : undefined)
-        );
-        code = queryParams.get("code");
-        errorDescription = errorDescription || queryParams.get("error_description");
-      }
-
-      if (errorDescription) throw new Error(errorDescription);
-
-      if (accessToken) {
-        // Fire and forget — onAuthStateChange listener handles the state update.
-        // setSession is slow (>10s on iOS) but eventually completes.
-        supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || "",
-        });
-      } else if (code) {
-        supabase.auth.exchangeCodeForSession(code);
-      }
+    if (result.type !== "success" || !result.url) {
+      await recordAuthDebug("Google OAuth was cancelled or dismissed", {
+        resultType: result.type,
+      });
+      return "cancelled";
     }
-    // cancel/dismiss — do nothing
+    const payload = parseAuthRedirectUrl(result.url);
+    await completeMobileAuthRedirect(payload);
+    await recordAuthDebug("Google OAuth completed successfully");
+    return "success";
   }, []);
 
   // Sign in with Apple (iOS only)

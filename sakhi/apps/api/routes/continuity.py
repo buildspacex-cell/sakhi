@@ -16,7 +16,6 @@ from sakhi.apps.api.services.continuity import (
     upsert_continuity_label,
     upsert_continuity_policy,
 )
-from sakhi.apps.api.services.continuity.service import get_continuation_prompt
 from sakhi.apps.api.services.continuity.reflection import (
     create_deep_reflection_job,
     get_deep_reflection_result,
@@ -25,6 +24,16 @@ from sakhi.apps.api.services.continuity.reflection import (
 from sakhi.apps.api.utils.person_resolver import resolve_person
 
 router = APIRouter(prefix="/continuity", tags=["continuity"])
+
+
+def _load_continuation_prompt_handler():
+    """Resolve lazily so a missing helper doesn't crash API startup."""
+    from sakhi.apps.api.services.continuity import service as continuity_service
+
+    handler = getattr(continuity_service, "get_continuation_prompt", None)
+    if handler is None:
+        raise LookupError("Continuation prompt handler is unavailable in this deployment.")
+    return handler
 
 
 class ContinuityPolicyRequest(BaseModel):
@@ -72,7 +81,11 @@ async def get_continuation_prompt_route(
 ):
     """Return a return-visit continuation card for the app home screen."""
     resolved_person_id, _, _ = await resolve_person(request, person_id)
-    return await get_continuation_prompt(resolved_person_id)
+    try:
+        continuation_prompt = _load_continuation_prompt_handler()
+    except LookupError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return await continuation_prompt(resolved_person_id)
 
 
 @router.get("/policy")

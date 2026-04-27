@@ -49,29 +49,27 @@ function SlideStories() {
     accent,
     items,
     singleLineLabel = false,
-    noWrapItems = false,
   }: {
     label: string;
     accent: string;
     items: string[];
     singleLineLabel?: boolean;
-    noWrapItems?: boolean;
   }) {
     return (
-      <div className="flex items-start gap-2">
+      <div className="grid grid-cols-[4.7rem_minmax(0,1fr)] items-start gap-2">
         <span
-          className={`mt-[0.35em] shrink-0 text-[9px] font-semibold ${
-            singleLineLabel ? "w-20 whitespace-nowrap tracking-[0.18em]" : "w-14 uppercase tracking-[0.22em]"
+          className={`mt-[0.3em] shrink-0 whitespace-nowrap text-[8px] font-semibold uppercase ${
+            singleLineLabel ? "tracking-[0.16em]" : "tracking-[0.18em]"
           }`}
           style={{ color: accent }}
         >
           {label}
         </span>
-        <div className={`flex items-center gap-1 ${noWrapItems ? "whitespace-nowrap" : "flex-wrap"}`}>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
           {items.map((item, i) => (
-            <span key={i} className="flex items-center gap-1">
-              <span className="whitespace-nowrap text-[0.7rem] text-slate-400 font-medium">{item}</span>
-              {i < items.length - 1 && <span className="text-slate-600 text-[0.65rem]">&#8594;</span>}
+            <span key={i} className="flex min-w-0 items-center gap-1">
+              <span className="whitespace-nowrap text-[0.66rem] font-medium leading-[1.35] text-slate-400">{item}</span>
+              {i < items.length - 1 && <span className="text-[0.62rem] leading-none text-slate-600">&#8594;</span>}
             </span>
           ))}
         </div>
@@ -93,9 +91,9 @@ function SlideStories() {
           <p className={S}>Maya is a founder deciding where to wedge first. ICP, pricing, and enterprise vs self-serve keep resurfacing across customer calls and AI sessions.</p>
           <p className={S}>She opens Sakhi. Weeks of strategy discussions, call notes, and drafts stay in one live thread instead of resetting every time.</p>
           <div className="my-1 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-col gap-1.5">
-            <PatternRow label="Week 1" accent="#2dd4bf" items={["ICP broad", "Pricing fuzzy", "No wedge"]} singleLineLabel noWrapItems />
-            <PatternRow label="Week 3" accent="#2dd4bf" items={["Team pain high", "Willingness high", "Same segment"]} singleLineLabel noWrapItems />
-            <PatternRow label="Week 5" accent="#2dd4bf" items={["Operators first", "Workflow pain", "Wedge clear"]} singleLineLabel noWrapItems />
+            <PatternRow label="Week 1" accent="#2dd4bf" items={["ICP broad", "Pricing fuzzy", "No wedge"]} singleLineLabel />
+            <PatternRow label="Week 3" accent="#2dd4bf" items={["Team pain high", "Willingness high", "Same segment"]} singleLineLabel />
+            <PatternRow label="Week 5" accent="#2dd4bf" items={["Operators first", "Workflow pain", "Wedge clear"]} singleLineLabel />
             <p className="text-[0.68rem] text-teal-400/60 font-semibold mt-0.5">Same signal, every pass.</p>
           </div>
           <p className={DLG}>&ldquo;The signal is consistent. Operators with team workflow pain pull hardest.&rdquo;</p>
@@ -123,7 +121,7 @@ function SlideStories() {
             <p className="text-[0.68rem] text-amber-400/60 font-semibold mt-0.5">The thread stays current.</p>
           </div>
           <p className={DLG}>&ldquo;What changed since Wednesday, and what is still open?&rdquo;</p>
-          <p className={PAYOFF}>He moves the launch without rebuilding context.</p>
+          <p className={PAYOFF}>He moves the launch without rebuilding the thread.</p>
         </div>
       ),
       moment: "Execution that stays live across time.",
@@ -161,7 +159,7 @@ function SlideStories() {
         {/* Header */}
         <div className="st-item shrink-0">
           <p className="text-[clamp(0.82rem,1vw,0.9rem)] text-slate-500 leading-[1.6]">
-            Notes app stores. AI chat responds. Nobody compounds thought over time.
+            Notes apps store. AI chat responds. Nobody compounds discussions over time.
           </p>
           <h2 className={DECK_TITLE_CLASS}>
             Sakhi is the continuity layer for how you think with AI.{" "}
@@ -240,7 +238,7 @@ function Slide01ProblemSolution() {
             <span className="text-white/40">They remember context. But they don&apos;t carry your discussions forward.</span>
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Continuity depends on you. You rewrite the prompt, restate the context, come back and start over. Sometimes it works. Often it doesn&apos;t. So nothing really builds.
+            Continuity depends on you. You rewrite the prompt, restate the discussion, come back and start over. Sometimes it works. Often it doesn&apos;t. So nothing really builds.
           </p>
         </div>
 
@@ -297,7 +295,7 @@ function Slide01ProblemSolution() {
 
         {/* Footnote */}
         <div className="cd1-item shrink-0 border-t border-white/[0.05] pt-3 text-[0.68rem] leading-[1.5] text-white/20">
-          6,200 thoughts a day. Most scattered, forgotten. &nbsp;<sup>1</sup> Tseng &amp; Poppenk. <em>Nature Communications</em>, 2020. doi:10.1038/s41467-020-17255-9
+          6,200 mental transitions a day. Most scattered, forgotten. &nbsp;<sup>1</sup> Tseng &amp; Poppenk. <em>Nature Communications</em>, 2020. doi:10.1038/s41467-020-17255-9
         </div>
 
       </div>
@@ -322,7 +320,7 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
     {
       tag: "Capture",
       heading: "Start anywhere.",
-      body: "Thoughts, dilemmas, decisions, and open loops enter naturally. No structure required.",
+      body: "Discussions, dilemmas, decisions, and open loops enter naturally. No structure required.",
       accent: "#f59e0b",
       dim: "rgba(245,158,11,0.07)",
       border: "rgba(245,158,11,0.18)",
@@ -330,8 +328,8 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
     },
     {
       tag: "Thread",
-      heading: "Thinking stays connected.",
-      body: "Scattered thinking becomes a thread you can continue across time.",
+      heading: "Discussions stay connected.",
+      body: "Scattered discussions become threads you can continue across time.",
       accent: "#8cb7ff",
       dim: "rgba(140,183,255,0.07)",
       border: "rgba(140,183,255,0.20)",
@@ -340,7 +338,7 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
     {
       tag: "Reflect",
       heading: "Patterns surface when it matters.",
-      body: "When you return, Sakhi brings back the patterns and prior thinking that matter most.",
+      body: "When you return, Sakhi brings back the patterns and prior discussions that matter most.",
       accent: "#2dd4bf",
       dim: "rgba(45,212,191,0.07)",
       border: "rgba(45,212,191,0.18)",
@@ -358,7 +356,7 @@ function Slide02HowItSolves(_props: { onWatchStory?: () => void }) {
             <span className="h-1.5 w-1.5 rounded-full bg-[#8cb7ff]/70" />How Sakhi Solves It
           </div>
           <h2 className={DECK_TITLE_CLASS}>
-            How Sakhi turns thinking into a thread you can continue.
+            How Sakhi turns discussions into threads you can continue.
           </h2>
           <p className="mt-1.5 max-w-4xl text-[clamp(0.78rem,0.95vw,0.9rem)] leading-[1.55] text-slate-400">
             It captures what matters, organizes it into a thread, and brings it back when it matters.
@@ -425,8 +423,8 @@ function Slide02LongGame() {
   }, []);
 
   const pillars = [
-    { label: "Today", heading: "A continuity product people return to", body: "Sakhi helps people continue their thinking across time, not just within one session. It brings back what matters, so returning feels natural instead of starting over.", detail: "People return because the context continues over time." },
-    { label: "Tomorrow", heading: "A continuity layer across life", body: "Sakhi becomes the system that holds your ongoing context: what you care about, what you are navigating, what keeps repeating, and how your thinking evolves.", detail: "Every AI tool you use already knows where you are." },
+    { label: "Today", heading: "A continuity product people return to", body: "Sakhi helps people continue their discussions across time, not just within one session. It brings back what matters, so returning feels natural instead of starting over.", detail: "People return because the thread continues over time." },
+    { label: "Tomorrow", heading: "A continuity layer across life", body: "Sakhi becomes the system that holds your ongoing threads: what you care about, what you are navigating, what keeps repeating, and how your discussions evolve.", detail: "Every AI tool you use already knows where you are." },
     { label: "The Vision", heading: "Infrastructure for the human mind", body: "Every AI system will get smarter. The missing layer is the one that knows you across time: your threads, patterns, priorities, and becoming. That is the layer Sakhi is building.", detail: "Not a feature. A foundation." },
   ];
 
@@ -515,16 +513,16 @@ function Slide02Market() {
             This is not just a large market. It is a newly opened window, where technical capability, user behavior, and unmet need have finally converged.
           </p>
           <p className="mt-3 max-w-4xl text-[0.84rem] leading-[1.6] text-slate-500">
-            We are starting with founders and high-agency operators managing unresolved decisions across work and life, because they feel the cost of fragmented thinking earliest and most often.
+            We are starting with founders and high-agency operators managing unresolved decisions across work and life, because they feel the cost of fragmented discussions earliest and most often.
           </p>
         </div>
 
         {/* Why Now cards */}
         <div className="cd2-item shrink-0 grid gap-3 sm:grid-cols-3">
           {[
-            { num: "1", label: "The primitives are finally here", tag: "Model Shift", body: "AI can now hold conversations that are richer in thought and nuance, making a continuity layer possible for the first time." },
-            { num: "2", label: "People now think out loud with AI", tag: "Behavior Shift", body: "People now externalize thoughts, dilemmas, and emotions into AI as a natural behavior. Something that barely existed 2–3 years ago." },
-            { num: "3", label: "No one owns continuity", tag: "Category Gap", body: "Notes app stores. AI chat responds. Nobody compounds thought over time." },
+            { num: "1", label: "The primitives are finally here", tag: "Model Shift", body: "AI can now hold conversations with enough depth and nuance, making a continuity layer possible for the first time." },
+            { num: "2", label: "People now work things through with AI", tag: "Behavior Shift", body: "People now work through decisions, dilemmas, and emotions with AI as a natural behavior. Something that barely existed 2–3 years ago." },
+            { num: "3", label: "No one owns continuity", tag: "Category Gap", body: "Notes apps store. AI chat responds. Nobody compounds discussions over time." },
           ].map((w) => (
             <div key={w.num} className="rounded-2xl border border-[#8cb7ff]/12 bg-[#8cb7ff]/[0.04] px-4 py-4">
               <div className="mb-1.5 flex items-center gap-2">
@@ -594,12 +592,12 @@ function Slide03Gap() {
   const competitors = [
     { category: "AI Assistants",   name: "ChatGPT / Claude / Gemini",   does: "Answers questions",           misses: "Resets every session. No model of you." },
     { category: "Knowledge Tools", name: "Notion / Obsidian / Roam",    does: "Stores notes",                misses: "Manual. No inference. No emotional layer." },
-    { category: "Journaling",      name: "Day One / Reflectly",         does: "Captures thoughts",           misses: "No intelligence. Passive archive." },
+    { category: "Journaling",      name: "Day One / Reflectly",         does: "Captures entries",            misses: "No intelligence. Passive archive." },
     { category: "Passive Recall",  name: "Rewind / Limitless",          does: "Records everything",          misses: "No personal model. No meaning-making." },
     { category: "Companionship",   name: "Replika / Pi / Character.AI", does: "Builds relational memory",    misses: "Domain-locked to the relationship. Models the bond, not your life." },
     { category: "Mindfulness",     name: "Headspace / Calm",            does: "Session-based calm",          misses: "No continuity. Resets with every session." },
     { category: "Mental Health",   name: "BetterHelp / Talkspace",      does: "Guided therapy",              misses: "Isolated sessions. No longitudinal picture." },
-    { category: "Personal AI",     name: "Dot / Kin / Personal.ai",     does: "Stores your life context",    misses: "Retrieval, not inference. An archive, not a model." },
+    { category: "Personal AI",     name: "Dot / Kin / Personal.ai",     does: "Stores your life history",    misses: "Retrieval, not inference. An archive, not a model." },
   ];
 
   return (
@@ -614,7 +612,7 @@ function Slide03Gap() {
             Everyone stores. Nobody remembers.
           </h2>
           <p className={DECK_SUBTITLE_CLASS}>
-            Today&apos;s tools either answer, archive, or relate. None help your thinking compound across time.
+            Today&apos;s tools either answer, archive, or relate. None help your discussions compound across time.
           </p>
         </div>
 
@@ -737,7 +735,7 @@ function Slide03Gap() {
           <p className="text-[clamp(0.72rem,0.85vw,0.8rem)] leading-[1.6] text-slate-400">
             <span className="text-white/70">All five retrieve. Sakhi infers.</span>{" "}
             Replika, Pi, Dot, Kin, and Personal.ai are building toward the top-right.{" "}
-            The difference is an archive of what you said versus a model that helps your thinking compound across time.
+            The difference is an archive of what you said versus a model that helps your discussions compound across time.
           </p>
         </div>
 
@@ -763,9 +761,9 @@ function Slide04WhyWeWin() {
   }, []);
 
   const moat = [
-    { label: "Continuity Engine", tag: "Core infrastructure", body: "Sakhi does not just remember what you said. It builds continuity across time, so your context gets stronger every time you return." },
-    { label: "Continuity Arc", tag: "Product expression", body: "A thought, decision, or dilemma does not disappear. You can see how it evolved across time." },
-    { label: "Thinking That Compounds", tag: "Moat", body: "The more you use Sakhi, the more useful it becomes. Your patterns, decisions, and context build on each other instead of resetting." },
+    { label: "Continuity Engine", tag: "Core infrastructure", body: "Sakhi does not just remember what you said. It builds continuity across time, so your threads get stronger every time you return." },
+    { label: "Continuity Arc", tag: "Product expression", body: "A discussion, decision, or dilemma does not disappear. You can see how it evolved across time." },
+    { label: "Discussions That Compound", tag: "Moat", body: "The more you use Sakhi, the more useful it becomes. Your patterns, decisions, and threads build on each other instead of resetting." },
     { label: "Life Occupancy", tag: "Product expression", body: "Sakhi shows what has actually occupied your mind and life across time, not just what you said most recently." },
   ];
 
@@ -861,8 +859,8 @@ function Slide04Revenue() {
 
   const tiers = [
     { name: "Free", price: "$0", color: "border-white/8 bg-white/[0.02]", tag: "Limited continuity", features: ["Start seeing your life more clearly", "30-day active memory window", "3 Deep Reflects/mo. Limited continuity. Your model does not fully compound.."] },
-    { name: "Pro", price: "$20/mo", color: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.05]", tag: "Full continuity across time", features: ["Your thinking compounds instead of resetting.", "Understand what's really going on across weeks, not moments", "See patterns, cycles, and decisions clearly", "Full Arc. Full history. Unlimited Deep Reflect.", "Annual plan: $180/yr"] },
-    { name: "Collective", price: "$30/user/mo", color: "border-amber-400/12 bg-amber-400/[0.04]", tag: "Continuity across people", features: ["Continuity across people. Year 2.", "Each person builds their own model", "Shared context across relationships. Think together, not in fragments.", "Privacy-first by design"] },
+    { name: "Pro", price: "$20/mo", color: "border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.05]", tag: "Full continuity across time", features: ["Your discussions compound instead of resetting.", "Understand what's really going on across weeks, not moments", "See patterns, cycles, and decisions clearly", "Full Arc. Full history. Unlimited Deep Reflect.", "Annual plan: $180/yr"] },
+    { name: "Collective", price: "$30/user/mo", color: "border-amber-400/12 bg-amber-400/[0.04]", tag: "Continuity across people", features: ["Continuity across people. Year 2.", "Each person builds their own model", "Shared understanding across relationships. Work together, not in fragments.", "Privacy-first by design"] },
   ];
 
   const trajectory = [
@@ -909,7 +907,7 @@ function Slide04Revenue() {
             </div>
           ))}
         </div>
-        <p className="cd4-item mt-6 text-[clamp(1rem,1.4vw,1.25rem)] font-bold leading-[1.4] tracking-[-0.02em] text-white">Sakhi is not a subscription for usage.<br /><span className="text-[#8cb7ff]">It is a subscription for thinking that compounds.</span></p>
+        <p className="cd4-item mt-6 text-[clamp(1rem,1.4vw,1.25rem)] font-bold leading-[1.4] tracking-[-0.02em] text-white">Sakhi is not a subscription for usage.<br /><span className="text-[#8cb7ff]">It is a subscription for discussions that compound.</span></p>
 
         <div className="cd4-item mt-5 grid gap-4 sm:grid-cols-2">
           {/* Unit economics */}
@@ -923,7 +921,7 @@ function Slide04Revenue() {
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-[0.72rem] leading-[1.5] text-slate-500">Memory-intensive inference (long-context reflection, thread surfacing) keeps COGS elevated in Year 1. Margin improves as caching and batching mature.</p>
+            <p className="mt-2 text-[0.72rem] leading-[1.5] text-slate-500">Memory-intensive inference (long-history reflection, thread surfacing) keeps COGS elevated in Year 1. Margin improves as caching and batching mature.</p>
             <p className="mt-1.5 text-[0.68rem] leading-[1.5] text-white/20"><sup>8</sup> Blended CAC reflects full channel mix: organic ($0–12), creator partnerships ($8–15), and paid acquisition ($10–20) scaling through Month 18. Gross margin assumes frontier model (GPT-4o / Claude Sonnet) for all substantive interactions; improves as inference costs decline and caching matures.</p>
           </div>
 
@@ -966,9 +964,9 @@ function Slide05Ask() {
   }, []);
 
   const milestones = [
-    { tag: "Product", heading: "Launch a continuity product ready to serve 10K+ users", body: "With Continuity Engine V2, sensing layer, and mobile product live, moving from memory to real-life context." },
-    { tag: "Retention / Behavior", heading: "Prove continuity becomes a retained behavior", body: "Strong Day-30 and 60%+ Day-90 retention in a defined ICP, showing users come back because their context compounds." },
-    { tag: "Monetization", heading: "Validate willingness to pay for thinking that compounds", body: "10,000 active users, 2,000+ paying, and $35–40K MRR run-rate." },
+    { tag: "Product", heading: "Launch a continuity product ready to serve 10K+ users", body: "With Continuity Engine V2, sensing layer, and mobile product live, moving from memory to real-life signals." },
+    { tag: "Retention / Behavior", heading: "Prove continuity becomes a retained behavior", body: "Strong Day-30 and 60%+ Day-90 retention in a defined ICP, showing users come back because their discussions compound." },
+    { tag: "Monetization", heading: "Validate willingness to pay for discussions that compound", body: "10,000 active users, 2,000+ paying, and $35–40K MRR run-rate." },
     { tag: "Fundraise Bridge", heading: "Earn the Seed by proving continuity is both habit-forming and monetizable", body: "Target: Month 12–15 | $4–5M at $15–20M valuation" },
   ];
 
@@ -1197,7 +1195,7 @@ function SlideGTM() {
           bars: [
             { from: 1, to: 1, label: "Make return feel magical.\nWhen users come back, Sakhi remembers what matters and picks up the thread without friction.", theme: "amber" },
             { from: 2, to: 2, label: "Continuity becomes the product.\nSakhi connects moments into patterns. Each return builds on the last. The model of the person deepens.", theme: "blue" },
-            { from: 3, to: 3, label: "The model expands beyond conversation.\nCalendar, communication, and behavioral signal enrich the thread. Context becomes ambient, not manual.", theme: "green" },
+            { from: 3, to: 3, label: "The model expands beyond conversation.\nCalendar, communication, and behavioral signal enrich the thread. Understanding becomes ambient, not manual.", theme: "green" },
           ],
         },
       ],

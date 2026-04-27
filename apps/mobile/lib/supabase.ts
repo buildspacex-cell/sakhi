@@ -66,6 +66,9 @@ export const supabase = createClient(url, key, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
-    flowType: "implicit",
+    // Native OAuth uses the AuthSession browser redirect and can return an auth
+    // code that we exchange manually in the callback path. PKCE keeps that
+    // exchange consistent across fresh installs and release-like builds.
+    flowType: "pkce",
   },
 });

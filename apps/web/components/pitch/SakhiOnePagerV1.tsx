@@ -31,7 +31,7 @@ export default function SakhiOnePagerV1() {
               Continuity depends on you. You have to maintain the thread.
             </p>
             <p className="mt-1.5 text-[0.86rem] leading-[1.6] text-slate-400">
-              Come back later, rewrite the prompt, restate the context. Sometimes it works. Often it doesn&apos;t.
+              Come back later, rewrite the prompt, restate the discussion. Sometimes it works. Often it doesn&apos;t.
             </p>
             <p className="mt-1.5 text-[0.84rem] font-semibold text-white/40">So nothing really builds. Patterns are missed, and the answer never really becomes yours.</p>
           </section>
@@ -41,6 +41,9 @@ export default function SakhiOnePagerV1() {
             <div className="mb-1.5 inline-flex items-center rounded-full border border-[#8cb7ff]/20 bg-[#8cb7ff]/[0.06] px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8cb7ff]/70">Solution</div>
             <p className="text-[0.86rem] leading-[1.6] text-slate-400">
               Sakhi carries the thread. Across days, across topics, it tracks where your discussions go and knows which parts matter to what you&apos;re asking now.
+            </p>
+            <p className="mt-1.5 text-[0.86rem] leading-[1.6] text-slate-400">
+              Sakhi also carries that thread across models and time. Power users can choose the model; everyone else can let Sakhi route the discussion automatically.
             </p>
             <p className="mt-1.5 text-[0.86rem] leading-[1.6] text-slate-400">
               You don&apos;t restate. You don&apos;t restructure. You just continue.
@@ -144,8 +147,8 @@ export default function SakhiOnePagerV1() {
               <div className="space-y-1.5">
                 {[
                   { tag: "Model Shift", body: "AI can now hold conversations rich enough to make a continuity layer possible." },
-                  { tag: "Behavior Shift", body: "People now externalize thoughts and decisions into AI as a natural behavior." },
-                  { tag: "Category Gap", body: "Notes app stores. AI chat responds. Nobody compounds thought over time." },
+                  { tag: "Behavior Shift", body: "People now work through discussions and decisions with AI as a natural behavior." },
+                  { tag: "Category Gap", body: "Notes apps store. AI chat responds. Model memory stays siloed. Nobody compounds discussions across tools over time." },
                 ].map((w) => (
                   <div key={w.tag} className="flex gap-2 text-[0.83rem] leading-[1.5]">
                     <span className="w-[6.5rem] shrink-0 font-semibold text-emerald-400/70">{w.tag}:</span>
@@ -162,7 +165,7 @@ export default function SakhiOnePagerV1() {
               <div className="space-y-1.5">
                 {[
                   { tier: "Free", desc: "Limited continuity." },
-                  { tier: "Pro · $20/mo", desc: "Full continuity across time. Your thinking compounds." },
+                  { tier: "Pro · $20/mo", desc: "Full continuity across models and time. Your discussions compound." },
                   { tier: "Collective · $30/user/mo", desc: "Continuity across people. Year 2." },
                 ].map((t) => (
                   <div key={t.tier} className="flex gap-2.5 text-[0.83rem] leading-[1.5]">
@@ -172,7 +175,7 @@ export default function SakhiOnePagerV1() {
                 ))}
               </div>
               <p className="mt-2 text-[0.83rem] font-semibold text-[#8cb7ff]/70">
-                Not a subscription for usage. A subscription for thinking that compounds.
+                Not a subscription for usage. A subscription for discussions that compound.
               </p>
             </section>
 

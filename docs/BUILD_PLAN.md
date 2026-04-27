@@ -2,25 +2,27 @@
 
 > Living document tracking all planned work. Update checkboxes as items are completed.
 >
-> Last Updated: 2026-03-22
+> Last Updated: 2026-04-25
 >
 > **Coverage**: 100% — All demo capabilities have paths to become REAL (not just simulated)
 >
-> **Latest**: Governance kernel (kala) COMPLETE. Continuity arc surface + deep reflection COMPLETE. "A Day with Sakhi" simulation demo COMPLETE. Conversation quality (personalization, adaptive prompt) COMPLETE. Pipeline fixes (coherence, alignment, identity, themes) COMPLETE. Mobile apps TOP PRIORITY.
+> **Latest**: Active Context & Morning Review is NOW the build priority. Product direction refocused: Sakhi is "AI that keeps track of your unfinished thinking and helps you resolve it over time." New sequence: Session UX rewrite → Stance-shift detection → Decision extraction → Active Context panel → Morning Review home → Paywall.
 
 ---
 
 ## Overview
 
-Sakhi is a personal AI companion with vision-based desktop automation and a self-contained ecosystem for calendar, tasks, notes, contacts, and email.
+Sakhi is a personal AI companion that keeps track of your unfinished thinking and helps you resolve it over time.
 
-**Vision**: "Sakhi: Infrastructure for humans to reclaim their lives."
-- The world comes through YOUR Sakhi
-- You see everything, you decide everything
-- Sakhi handles the friction
-- You live your life — health, joy, connection
+**Vision**: "AI that keeps track of your unfinished thinking and helps you resolve it over time."
+- Remembers every open decision you've been carrying
+- Tracks when your priorities and stance shift
+- Surfaces what needs to be confronted — not just what's convenient
+- Loads prior context before you act, so actions are grounded in your actual thinking
 
-**Strategy**: Web + API foundation ✅ → **Mobile Apps NOW** → Desktop Agent polish
+**Target state**: People with many open loops and high-stakes decisions — founders, operators, anyone navigating multiple simultaneous choices. The pain is acute; they will pay and refer.
+
+**Strategy**: Session UX rewrite → Stance-shift detection → Decision extraction → Active Context panel → Morning Review home → Paywall
 
 ---
 
@@ -107,6 +109,7 @@ Sakhi is a personal AI companion with vision-based desktop automation and a self
 | ✅ | Web continuity controls | Chat continuity toggle + deep reflection actions + proxy routes, with in-chat Deep Reflect now unlocked from single-thread depth (`continuity.deep_reflect`) and linked-thread context woven in only when `whole_story` is ready | `apps/web/app/experience/converse/page.tsx`, `apps/web/app/api/continuity/**/route.ts` |
 | ✅ | Simulation Ask-Sakhi debug inspector | `/demo/simulation/add-journal` returns `turn_debug` (`debug_data`) and simulation UI renders continuity evidence + prompt payload, a cross-topic gate validator (`candidate_topics`, `cross_context`, `whole_story`, `life_dimensions`), and deep reflection run/status/result controls across all modes for rapid product iteration | `sakhi/apps/api/services/demo/simulation_profile_updater.py`, `apps/web/app/lab/simulation/client.tsx` |
 | ✅ | Simulation continuity mirror | Precompiled continuity arcs and explainability views in demo UI, now with thread-aware follow-up attachment for ambiguous entries, contextual multi-thread attachment for near-tied follow-ups, effective same-thread depth accounting (`primary` + `attached` without counting projected overlap), explicit unresolved-entry surfacing in compile output, and journal identity backfill/write consistency for continuity loaders | `sakhi/apps/api/services/demo/simulation_continuity.py`, `sakhi/apps/api/services/continuity/thread_resolver.py`, `sakhi/apps/api/core/person_utils.py`, `sakhi/infra/scripts/migrations/0016_journal_person_id_backfill.sql`, `apps/web/app/lab/simulation/` |
+| ✅ | Hybrid anchor + multi-dimensional enrichment | LLM fallback for unknown anchors via personal taxonomy; decision state, epistemic state, and affective scalar inference as async background job (`continuity_enrichment`); hint_anchor pattern threads LLM-inferred anchors through compiler without re-classifying | `sakhi/apps/api/services/continuity/personal_taxonomy.py`, `sakhi/apps/api/services/continuity/llm_enrichment.py`, `sakhi/infra/scripts/migrations/0018_continuity_personal_taxonomy.sql` |
 
 Feature detail: `docs/features/continuity-arc-surface.md`
 
@@ -118,7 +121,16 @@ Feature detail: `docs/features/continuity-arc-surface.md`
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           SAKHI BUILD SEQUENCE                               │
 │                                                                              │
-│  🎯 PHASE M: MOBILE APPS (NOW)            ← TOP PRIORITY                    │
+│  🎯 PHASE AC: ACTIVE CONTEXT & MORNING REVIEW (NOW) ← TOP PRIORITY          │
+│  ├── AC.1 Session UX rewrite (system prompt + first-message anchoring)      │
+│  ├── AC.2 Stance-shift detection ("What Changed")                           │
+│  ├── AC.3 Decision extraction + Open Loops Ledger (decisions + commitments) │
+│  ├── AC.3a Extraction quality eval (LLM-as-judge, gate before AC.4)         │
+│  ├── AC.4 Active Context panel (pre-action context loading)                 │
+│  ├── AC.5 Morning Review home screen (Think/Act/Review)                     │
+│  └── AC.6 Paywall                                                           │
+│                                                                              │
+│  PHASE M: MOBILE APPS (After AC)                                            │
 │  ├── M.1 React Native + Expo setup                                          │
 │  ├── M.2 Core screens (Voice, Dashboard, Reflection)                        │
 │  ├── M.3 Ayurvedic intelligence UI (dosha state, recommendations)           │
@@ -126,40 +138,13 @@ Feature detail: `docs/features/continuity-arc-surface.md`
 │  └── M.5 Android Play Store submission                                      │
 │                                                                              │
 │  PHASE A: Demo Build ✅ COMPLETE                                            │
-│  ├── ✅ Simulation Personalization (Vidhya, Diya, Big D)                   │
-│  ├── ✅ Personalization Engine                                              │
-│  ├── ✅ Reflective Intelligence                                             │
-│  └── ✅ Demo UI Framework                                                   │
-│                                                                              │
 │  PHASE: Governance Kernel (kala) ✅ COMPLETE                                │
-│  ├── ✅ Constraint evaluation (11 operators, 552 tests)                    │
-│  ├── ✅ Drift gating + contradiction detection                             │
-│  └── ✅ Sakhi pipeline integration                                         │
-│                                                                              │
 │  PHASE: Simulation Demo ✅ COMPLETE                                         │
-│  ├── ✅ Three-act governance demo                                          │
-│  ├── ✅ 30-day conversation replay                                         │
-│  └── ✅ Real persona pipelines (3 personas × 30 days)                      │
-│                                                                              │
 │  PHASE B: Voice Interface ✅ COMPLETE                                       │
-│  ├── ✅ Speech-to-Text input                                                │
-│  ├── ✅ Text-to-Speech output                                               │
-│  └── ✅ Voice conversation mode                                             │
-│                                                                              │
 │  PHASE C: Personal Dashboard ✅ COMPLETE                                    │
-│  ├── ✅ Unified glanceable view                                             │
-│  ├── ✅ Widget system                                                       │
-│  └── ✅ Customization (partial)                                             │
 │                                                                              │
 │  PHASE D: Proactive Intelligence (After Mobile)                             │
-│  ├── Morning Briefing                                                       │
-│  ├── Relationship Nudges                                                    │
-│  └── Focus Protection                                                       │
-│                                                                              │
 │  PHASE E: Bridge Skills (After Mobile)                                      │
-│  ├── Google Calendar Sync                                                   │
-│  ├── Apple Calendar Sync                                                    │
-│  └── Gmail Bridge                                                           │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -733,9 +718,119 @@ Conversation                    Learning Pipeline
 
 ---
 
-## 🎯 PHASE M: MOBILE APPS — TOP PRIORITY
+---
 
-> **Why Now**: Web foundation complete (Voice, Dashboard, Ayurvedic intelligence). Time to put Sakhi in users' pockets. Focus on reflective, ayurvedic intelligence as the core differentiator.
+## 🎯 PHASE AC: ACTIVE CONTEXT & MORNING REVIEW — CURRENT PRIORITY
+
+> **Why Now**: The core product is "AI that keeps track of your unfinished thinking and helps you resolve it over time." All infrastructure (continuity arcs, decision ledger, enrichment workers, session memory) is built. What's missing is the product surface that makes this visible and habitual.
+>
+> **The gating risk**: Decision extraction quality. The Open Loops Ledger is only valuable if loops are real. If Sakhi surfaces a decision the user already closed, the panel feels like a horoscope. Validate extraction internally before any panel goes live.
+>
+> **Build sequence rationale**: "What Changed" (stance-shift detection) is the most differentiated feature — nothing else does it. Build and validate it first. The Morning Review home screen is the delivery vehicle; build it last.
+
+### AC.1 Session UX Rewrite
+
+> **Why first**: Zero infrastructure needed. Immediate product quality lift. The system prompt and first-message anchoring define Sakhi's stance — whether it feels like a sharp thinking partner or a generic chatbot.
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | System prompt stance | Sakhi explicitly knows: you carry open decisions, you're here to resolve thinking | `conversation_reasoner.py` | First message anchors on what the user is working through |
+| ⬜ | First-message anchoring | When no prior context: ask what open decision they're carrying | `conversation_engine.py` | New sessions open with a grounding question, not a generic greeting |
+| ⬜ | Returning user continuity | When prior context exists: open with what was unresolved last session | `conversation_engine.py` | Returning users see their last open thread surfaced in the opener |
+| ⬜ | Fast/sharp register | Replies are direct, slightly confronting, under 3 sentences for diagnostic turns | `conversation_reasoner.py` | Tone matches "thinking partner," not "wellness companion" |
+
+### AC.2 Stance-Shift Detection ("What Changed")
+
+> **Why second**: Most differentiated feature. "You were optimizing for quality last week. Your recent actions suggest you're now optimizing for speed." Nothing else does this. The moment a user reads it, they understand what Sakhi is.
+>
+> **Gating constraint**: Validate detection accuracy internally on demo user before exposing to real users. Must be right 8/10 times or it undermines trust.
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Stance extraction worker | Per-topic: extract current optimization target (quality, speed, safety, cost, etc.) from last N turns | `workers/continuity_enrichment` or new worker | Worker runs after each turn, stores stance per topic |
+| ⬜ | Stance history table | Track stance over time per person+topic | `migrations/` | Migration adds `continuity_stance_history` table |
+| ⬜ | Shift detection logic | Compare current stance to 7-day rolling window; flag when direction changes | `services/continuity/` | Detects shift when stance changes 2+ sessions in a row |
+| ⬜ | Shift signal in continuity pack | "What Changed" signal exposed via continuity pack on turn response | `turn_v2.py` | `continuity.what_changed` present in turn response when shift detected |
+| ⬜ | Internal validation | Run against demo user's 30-day corpus; manually verify 10 shift detections | `scripts/` | 8/10 detections confirmed accurate before going live |
+
+### AC.3 Decision Extraction + Open Loops Ledger
+
+> **Why third**: Feeds everything downstream (Active Context panel, Morning Review, Think/Act/Review). The ledger is the product's memory of what you're carrying.
+>
+> **Two loop types**:
+> - `open_decision` — active deliberations where you're still thinking ("should I hire this person", "do I take this deal"). Requires reasoning to resolve.
+> - `conversation_commitment` — things you heard yourself commit to in conversation ("I'll reach out to him by Friday", "I need to decide this by end of week"). Sakhi witnessed the commitment and surfaces it back. Distinct from explicit task management (todo apps); these are commitments extracted from thinking-out-loud, not set intentionally.
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Open loops table | Store per-person loops: `loop_type` (open_decision / conversation_commitment), topic, stance, first_raised_at, last_updated_at, resolved_at | `migrations/` | Migration adds `open_loops` table with `loop_type` enum |
+| ⬜ | Decision extraction worker | Extract `open_decision` loops from turns: topic, current stance, resolution status | `workers/` | New `loop_extraction` job enqueued per turn |
+| ⬜ | Commitment extraction worker | Extract `conversation_commitment` loops: what was committed to, implied deadline | `workers/` | Same job, second pass for commitment patterns ("I'll...", "I need to...", "by [date]") |
+| ⬜ | Loop resolution detection | Mark loop resolved on closure signals: "I decided...", "we went with...", "done", "sent it" | `services/continuity/` | Resolution detected and loop marked closed within 1 turn |
+| ⬜ | Open loops API | `GET /continuity/open-loops` returns ledger split by type | `routes/continuity.py` | Returns `decisions[]` and `commitments[]`, sorted by last_updated_at |
+| ⬜ | Unresolved entry surfacing | Enrich continuity pack with loops open > 3 days without update | `services/continuity/chat.py` | `continuity.open_loops` present in turn response |
+
+### AC.3a Extraction Quality Evaluation
+
+> **Why a gate**: The entire product depends on extraction being accurate. A loop surfaced that the user already resolved, or a commitment they never actually made, destroys trust immediately. Ship nothing to users until this passes.
+
+**Evaluation approach**: LLM-as-judge. Run extracted loops against a held-out annotated corpus; score each extraction on three axes.
+
+**Scoring axes**:
+- **Precision** — is the extracted loop real? (did the user actually raise this decision / make this commitment?)
+- **Recall** — are real loops being missed? (decisions the user clearly raised but weren't extracted)
+- **Resolution accuracy** — when a loop is marked resolved, was it actually resolved in the conversation?
+
+**Pass threshold**: Precision ≥ 0.80, Recall ≥ 0.70, Resolution accuracy ≥ 0.85. Do not surface loops to users below this bar.
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Annotation corpus | Manually annotate 30 conversations from demo user: mark every real decision and commitment, mark every resolution | `scripts/eval/` | 30 conversations annotated, ground truth JSONL |
+| ⬜ | LLM judge prompt | System prompt for evaluator LLM: given conversation + extracted loops, score precision/recall/resolution per loop | `scripts/eval/loop_judge.py` | Judge produces per-loop scores + reasoning |
+| ⬜ | Eval runner | Script: run extractor on corpus → run judge → aggregate scores → print pass/fail | `scripts/eval/run_loop_eval.py` | `python scripts/eval/run_loop_eval.py` prints score report |
+| ⬜ | Commitment-specific eval | Separate eval pass for `conversation_commitment` type — higher false-positive risk | `scripts/eval/` | Commitment precision ≥ 0.80 before enabling commitment extraction in prod |
+| ⬜ | Regression harness | Add eval to `make verify` so score doesn't silently degrade as prompts change | `Makefile` | `make eval-loops` runs in < 60s, fails build if below threshold |
+
+### AC.4 Active Context Panel
+
+> **Why fourth**: Once extraction is validated, the panel is the product surface. Load prior context before the user acts — this turns "help me write" into "help me act with continuity."
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Open decisions card | Chat sidebar: list of 1–3 current open decisions with stance | `apps/web/components/` or `apps/mobile/` | Visible at conversation start, collapses after first message |
+| ⬜ | What Changed card | When shift detected: show "Last week: X. Now: Y." prominently | `apps/web/components/` | Card appears above open decisions when `what_changed` is present |
+| ⬜ | Pre-action context loading | When user drafts an action (email, message, decision): load relevant prior context before LLM drafts | `conversation_engine.py` | Action-turn prompts include relevant open loop context |
+| ⬜ | Context dismiss | User can dismiss a loop card ("I resolved this") | `apps/web/` | Dismissal calls loop resolution API, card disappears |
+
+### AC.5 Morning Review Home Screen
+
+> **Why fifth**: Delivery surface for everything above. Replaces the current blank/generic home with Today's Review. Fast, sharp, under 2 minutes to value.
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Today's Review page | Replaces home screen: date, greeting, three-card open decisions | `apps/web/app/experience/` or `apps/mobile/` | Loads in < 2s with real data |
+| ⬜ | One Thing To Confront | Editorial discipline: surface the single highest-priority unresolved loop | `services/continuity/` | `GET /continuity/one-thing` returns 1 item with reason |
+| ⬜ | Think / Act / Review split | Three tabs or sections: what to think about, what to do, what changed | Home screen layout | Each section populated with real data from ledger + stance |
+| ⬜ | What Changed section (prominent) | First section on morning review — leads with stance shifts | Home screen layout | `what_changed` renders first, above open loops |
+| ⬜ | Morning review API | `GET /continuity/morning-review` returns structured Today's Review payload | `routes/continuity.py` | Single endpoint returns all three sections |
+
+### AC.6 Paywall
+
+> **Why last**: Only meaningful once users have seen a "What Changed" moment and experienced the Open Loops Ledger. Sell something real and specific.
+
+| Status | Item | Description | Files | Test Criteria |
+|--------|------|-------------|-------|---------------|
+| ⬜ | Paywall trigger | After N turns or N open loops surfaced: show paywall | `apps/web/` | Paywall shown at right moment, not too early |
+| ⬜ | Value proposition copy | "Your open decisions. Your thinking shifts. Yours to keep." | Marketing copy | Copy matches what user just experienced |
+| ⬜ | Subscription gate | Lock Morning Review + What Changed behind paid tier | `apps/web/` | Free tier: chat only. Paid: full Active Context |
+
+---
+
+## 🎯 PHASE M: MOBILE APPS — AFTER PHASE AC
+
+> **Why After AC**: The Active Context product needs to be validated on web first. Once the Morning Review and stance-shift detection are working and users are paying, mobile is the distribution expansion.
+
+> **Original note**: Web foundation complete (Voice, Dashboard, Ayurvedic intelligence). Time to put Sakhi in users' pockets. Focus on reflective, ayurvedic intelligence as the core differentiator.
 
 ### Development Approach
 

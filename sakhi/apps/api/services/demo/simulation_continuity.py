@@ -544,7 +544,44 @@ def classify_simulation_entry(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _classify_entry_from_hint(entry: dict[str, Any], hint_anchor: str) -> dict[str, Any]:
+    """Build a classification result using an LLM-inferred anchor hint.
+
+    Skips the lexical classifier entirely. The hint is marked CONFIDENT so the
+    compiler treats it at the same level as a high-scoring lexical match.
+    """
+    content = str(entry.get("content") or "").strip()
+    text = _normalize_text(content)
+    stance_score = _score_text_direction(text)
+    canonical = _canonicalize_anchor(hint_anchor)
+    return {
+        "entry": entry,
+        "anchor": canonical,
+        "facet": "unknown",
+        "anchor_state": ClassificationState.CONFIDENT.value,
+        "facet_state": ClassificationState.UNKNOWN.value,
+        "anchor_candidates": [canonical],
+        "related_anchors": [],
+        "anchor_score": 0.95,
+        "anchor_hits": ["hint"],
+        "facet_hits": [],
+        "anchor_trace": {},
+        "facet_trace": {},
+        "stance_score": stance_score,
+        "confidence": 0.90,
+        "text": text,
+        "hint_source": "llm",
+    }
+
+
 def _classify_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    # Honour LLM-inferred anchor hint from the enrichment worker. When present
+    # the lexical classifier is skipped entirely for this entry so the personal
+    # taxonomy anchor is preserved rather than overwritten by low-signal keywords.
+    hint_anchor = str(entry.get("hint_anchor") or "").strip().lower()
+    if hint_anchor and hint_anchor not in ("", "unknown"):
+        return _classify_entry_from_hint(entry, hint_anchor)
+
     content = str(entry.get("content") or "").strip()
     text = _normalize_text(content)
     anchor, anchor_state, anchor_trace = _classify_anchor(text)

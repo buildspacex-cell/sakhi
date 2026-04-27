@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type React from "react";
@@ -21,12 +21,49 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams?.get("redirect") || "/experience/converse";
 
+  const [isBypassChecking, setIsBypassChecking] = useState(true);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const tryLocalhostBypass = async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+
+        if (!res.ok) {
+          return;
+        }
+
+        const data = await res.json();
+        if (cancelled || data?.email !== "sakhi.vidhya.demo@gmail.com") {
+          return;
+        }
+
+        router.replace("/experience/me");
+      } catch {
+        // Ignore and fall through to normal login UI.
+      } finally {
+        if (!cancelled) {
+          setIsBypassChecking(false);
+        }
+      }
+    };
+
+    void tryLocalhostBypass();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
@@ -109,6 +146,19 @@ function LoginContent() {
     }
     router.back();
   };
+
+  if (isBypassChecking) {
+    return (
+      <div style={containerStyle}>
+        <main style={contentStyle}>
+          <div style={textContainerStyle}>
+            <h1 style={titleStyle}>Opening your space…</h1>
+            <p style={subtitleStyle}>Checking local access.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (emailSent) {
     return (
